@@ -40,7 +40,6 @@ export interface TileDefinition {
   readonly magnetic: boolean;
   readonly attractionRange: number;
   readonly fill: string;
-  readonly highlight: string;
   readonly shadow: string;
   readonly decorationStyle: TileDecorationStyle;
   readonly decorationColor: string;
@@ -68,7 +67,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     magnetic: false,
     attractionRange: 0,
     fill: "transparent",
-    highlight: "transparent",
     shadow: "transparent",
     decorationStyle: TileDecorationStyle.None,
     decorationColor: "transparent",
@@ -82,7 +80,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     magnetic: false,
     attractionRange: 0,
     fill: "#66717d",
-    highlight: "#95a0ab",
     shadow: "#3c454f",
     decorationStyle: TileDecorationStyle.Crack,
     decorationColor: "#525d68",
@@ -96,7 +93,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     magnetic: false,
     attractionRange: 0,
     fill: "#e7ad4f",
-    highlight: "#ffd37a",
     shadow: "#a86d2b",
     decorationStyle: TileDecorationStyle.Grains,
     decorationColor: "#8d5b26",
@@ -110,7 +106,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     magnetic: false,
     attractionRange: 0,
     fill: "#56736b",
-    highlight: "#85a49a",
     shadow: "#30473f",
     decorationStyle: TileDecorationStyle.Crack,
     decorationColor: "#405b52",
@@ -124,7 +119,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     magnetic: false,
     attractionRange: 1,
     fill: "#b94b52",
-    highlight: "#ee8990",
     shadow: "#6e2930",
     decorationStyle: TileDecorationStyle.Magnet,
     decorationColor: "#f3e5c8",
@@ -138,7 +132,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     magnetic: true,
     attractionRange: 0,
     fill: "#718a9b",
-    highlight: "#abc0cd",
     shadow: "#405767",
     decorationStyle: TileDecorationStyle.Metal,
     decorationColor: "#d5e1e7",

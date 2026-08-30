@@ -1,6 +1,7 @@
 import { Direction, TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
-import { drawTile as drawTileAppearance, InnerCorner } from "./tile-renderer";
+import { expectDefined } from "../util/assert";
+import { type BodyCell, drawBody, drawTile } from "./tile-renderer";
 
 export interface GridCell {
   readonly x: number;
@@ -26,6 +27,9 @@ export class CanvasRenderer {
   private originY = 0;
   private viewportWidth = 0;
   private viewportHeight = 0;
+  private visited = new Uint8Array(0);
+  private bodyStack = new Int32Array(0);
+  private readonly bodyCells: BodyCell[] = [];
   private hoverX = -1;
   private hoverY = -1;
   private hoverEdge: GridEdge | null = null;
@@ -174,90 +178,71 @@ export class CanvasRenderer {
   }
 
   private drawTiles(): void {
-    for (let y = 0; y < this.world.height; y += 1) {
-      for (let x = 0; x < this.world.width; x += 1) {
-        const kind = this.world.kindAt(x, y);
-        if (kind !== TileKind.Empty) {
-          this.drawTile(x, y, kind);
-        }
+    const cellCount = this.world.width * this.world.height;
+    if (this.visited.length !== cellCount) {
+      this.visited = new Uint8Array(cellCount);
+      this.bodyStack = new Int32Array(cellCount);
+    } else {
+      this.visited.fill(0);
+    }
+
+    for (let index = 0; index < cellCount; index += 1) {
+      if (this.visited[index] !== 0 || this.world.kindAtIndex(index) === TileKind.Empty) {
+        continue;
+      }
+      const count = this.collectBody(index);
+      drawBody(this.context, this.originX, this.originY, this.cellSize, this.bodyCells, count);
+    }
+  }
+
+  /** Flood-fills the welded body containing `startIndex` into `bodyCells`; returns its size. */
+  private collectBody(startIndex: number): number {
+    const { world, visited, bodyStack } = this;
+    const width = world.width;
+    let stackSize = 0;
+    let count = 0;
+    visited[startIndex] = 1;
+    bodyStack[stackSize] = startIndex;
+    stackSize += 1;
+
+    while (stackSize > 0) {
+      stackSize -= 1;
+      const index = expectDefined(bodyStack[stackSize], "welded body stack entry");
+      let cell = this.bodyCells[count];
+      if (cell === undefined) {
+        cell = { x: 0, y: 0, kind: TileKind.Empty, orientation: Direction.Up };
+        this.bodyCells.push(cell);
+      }
+      count += 1;
+      const x = index % width;
+      cell.x = x;
+      cell.y = (index - x) / width;
+      cell.kind = world.kindAtIndex(index);
+      cell.orientation = world.orientationAtIndex(index);
+
+      if (world.hasRightWeldAtIndex(index) && visited[index + 1] === 0) {
+        visited[index + 1] = 1;
+        bodyStack[stackSize] = index + 1;
+        stackSize += 1;
+      }
+      if (x > 0 && world.hasRightWeldAtIndex(index - 1) && visited[index - 1] === 0) {
+        visited[index - 1] = 1;
+        bodyStack[stackSize] = index - 1;
+        stackSize += 1;
+      }
+      if (world.hasDownWeldAtIndex(index) && visited[index + width] === 0) {
+        visited[index + width] = 1;
+        bodyStack[stackSize] = index + width;
+        stackSize += 1;
+      }
+      if (index >= width && world.hasDownWeldAtIndex(index - width) && visited[index - width] === 0) {
+        visited[index - width] = 1;
+        bodyStack[stackSize] = index - width;
+        stackSize += 1;
       }
     }
-  }
 
-  private drawTile(x: number, y: number, kind: TileKind): void {
-    const index = y * this.world.width + x;
-    const joinedLeft = x > 0 && this.world.hasRightWeldAtIndex(index - 1);
-    const joinedRight = this.world.hasRightWeldAtIndex(index);
-    const joinedUp = y > 0 && this.world.hasDownWeldAtIndex(index - this.world.width);
-    const joinedDown = this.world.hasDownWeldAtIndex(index);
-    let joinedSides = 0;
-    let innerCorners = InnerCorner.None;
-
-    if (joinedUp) {
-      joinedSides |= 1 << Direction.Up;
-    }
-    if (joinedRight) {
-      joinedSides |= 1 << Direction.Right;
-    }
-    if (joinedDown) {
-      joinedSides |= 1 << Direction.Down;
-    }
-    if (joinedLeft) {
-      joinedSides |= 1 << Direction.Left;
-    }
-    if (joinedUp && joinedLeft && !this.hasContinuousCorner(x, y, Direction.Left, Direction.Up)) {
-      innerCorners |= InnerCorner.UpLeft;
-    }
-    if (joinedUp && joinedRight && !this.hasContinuousCorner(x, y, Direction.Right, Direction.Up)) {
-      innerCorners |= InnerCorner.UpRight;
-    }
-    if (joinedDown && joinedRight && !this.hasContinuousCorner(x, y, Direction.Right, Direction.Down)) {
-      innerCorners |= InnerCorner.DownRight;
-    }
-    if (joinedDown && joinedLeft && !this.hasContinuousCorner(x, y, Direction.Left, Direction.Down)) {
-      innerCorners |= InnerCorner.DownLeft;
-    }
-
-    drawTileAppearance(
-      this.context,
-      this.originX + x * this.cellSize,
-      this.originY + y * this.cellSize,
-      this.cellSize,
-      kind,
-      this.world.orientationAt(x, y),
-      joinedSides,
-      innerCorners,
-    );
-  }
-
-  private hasContinuousCorner(
-    x: number,
-    y: number,
-    horizontalDirection: Direction.Left | Direction.Right,
-    verticalDirection: Direction.Up | Direction.Down,
-  ): boolean {
-    const horizontalX = x + (horizontalDirection === Direction.Right ? 1 : -1);
-    const verticalY = y + (verticalDirection === Direction.Down ? 1 : -1);
-    return this.hasJoinedSide(horizontalX, y, verticalDirection) ||
-      this.hasJoinedSide(x, verticalY, horizontalDirection);
-  }
-
-  private hasJoinedSide(x: number, y: number, direction: Direction): boolean {
-    if (x < 0 || x >= this.world.width || y < 0 || y >= this.world.height) {
-      return false;
-    }
-
-    const index = y * this.world.width + x;
-    switch (direction) {
-      case Direction.Up:
-        return y > 0 && this.world.hasDownWeldAtIndex(index - this.world.width);
-      case Direction.Right:
-        return this.world.hasRightWeldAtIndex(index);
-      case Direction.Down:
-        return this.world.hasDownWeldAtIndex(index);
-      case Direction.Left:
-        return x > 0 && this.world.hasRightWeldAtIndex(index - 1);
-    }
+    return count;
   }
 
 
@@ -290,7 +275,7 @@ export class CanvasRenderer {
     ) {
       this.context.save();
       this.context.globalAlpha = 0.55;
-      drawTileAppearance(
+      drawTile(
         this.context,
         this.originX + this.hoverX * this.cellSize,
         this.originY + this.hoverY * this.cellSize,

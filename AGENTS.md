@@ -93,7 +93,7 @@ The first playable scaffold is implemented:
 * A 20x14 editable Canvas 2D grid with procedural sand, falling stone, magnetic metal, directional magnets, and fixed platform tiles.
 * Build controls for click-and-drag placement, right-click removal, magnet rotation and aiming, stepping, running, pausing, resetting, clearing, and speed selection.
 * A separate weld tool for joining eligible occupied neighbors into rigid bodies and unwelding them, with an immediate held-Control temporary override and red invalid-edge feedback. Sand is not weldable, and magnets reject welds on their pointed side.
-* One shared procedural tile renderer for the Canvas board, placement preview, and component palette. Welded neighbors render continuously without an internal gutter, with inset curved inner borders that clip the fill cleanly on L-shaped bodies.
+* One shared procedural tile renderer for the Canvas board, placement preview, and component palette. Each welded body renders as a single rounded polyomino slab: a traced, inset outline path with convex corner rounding and concave weld fillets, a drop shadow, per-cell fills and decorations clipped to the outline, top-left highlight and bottom-right shade bevels, and a dark rim. Diagonally touching cells render as a rounded pinch.
 * A typed-array world with stable tile IDs, per-tile orientation, edge weld storage, and allocation-free per-tick movement buffers.
 * Deterministic straight-down gravity for stone, metal, magnets, and sand; complete downward body-dependency resolution; parity-selected diagonal gravity for sand; direct-fall priority; equal-priority destination jamming; and reciprocal magnetic attraction that takes priority over gravity for both bodies.
 * Deterministic tests for gravity chains, sand overhangs, welded bodies, conflicts, directional welding, reciprocal magnetic attraction, orientation snapshots, boundaries, stable IDs, and reset behavior.
@@ -104,11 +104,12 @@ The first playable scaffold is implemented:
 * `src/main.ts` — Browser entry point, example world setup, input handling, build tools, and animation loop.
 * `src/styles.css` — Responsive application, palette, board, and control styling.
 * `src/vite-env.d.ts` — Vite client type declarations.
-* `src/render/canvas-renderer.ts` — Responsive Canvas 2D grid, continuous welded-body rendering, hit testing, placement previews, and hover feedback.
-* `src/render/tile-renderer.ts` — Shared definition-driven procedural tile drawing for the board and component palette.
+* `src/render/canvas-renderer.ts` — Responsive Canvas 2D grid, welded-body flood fill, hit testing, placement previews, and hover feedback.
+* `src/render/tile-renderer.ts` — Body outline tracing and rounded-slab drawing (fill, bevel lighting, decorations) for the board and component palette.
 * `src/simulation/tile.ts` — Tile kinds, directions, and immutable tile behavior/render definitions.
 * `src/simulation/world.ts` — Typed-array tile, orientation, and weld storage; stable IDs; snapshots; editing; and body movement commits.
 * `src/simulation/simulation.ts` — Allocation-free welded-body collection, gravity and magnetic intent selection, conflict resolution, and tick advancement.
+* `src/util/assert.ts` — `expectDefined` assertion that crashes loudly on violated lookups instead of falling back silently.
 * `tests/simulation.test.ts` — Deterministic world, gravity, diagonal movement, conflict, weld, magnet, identity, and reset tests.
 * `vite.config.ts` — Vite configuration with Vitest's Node test environment.
 * `tsconfig.json` — Strict browser TypeScript and project build configuration.
