@@ -29,6 +29,7 @@ const MANUAL_STEP_ANIMATION_MS = 200;
 const HIGH_SPEED_TICKS_PER_SECOND = 60;
 const PALETTE_PREVIEW_SUPERSAMPLING = 2;
 const KEYBOARD_PAN_PIXELS = 64;
+const MAX_CLIPBOARD_EXPORT_CHARACTERS = 1_000_000;
 
 function requiredElement<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -404,8 +405,15 @@ clearButton.addEventListener("click", () => {
 });
 
 exportButton.addEventListener("click", () => {
+  const source = serializeBoard(world, simulation.tick);
+  if (source.length <= MAX_CLIPBOARD_EXPORT_CHARACTERS) {
+    void navigator.clipboard.writeText(source).catch((error: unknown) => {
+      console.warn("Could not copy the exported board to the clipboard", error);
+    });
+  }
+
   const objectUrl = URL.createObjectURL(new Blob(
-    [serializeBoard(world, simulation.tick)],
+    [source],
     { type: "application/json" },
   ));
   const download = document.createElement("a");

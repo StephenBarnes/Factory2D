@@ -97,7 +97,7 @@ The first playable scaffold is implemented:
 * Simulation commits remain discrete and deterministic while stable tile IDs drive optional smooth eased rendering between the previous and current positions. Manual steps animate for 200 ms; automatic steps animate for up to 250 ms without delaying simulation ticks. A 60-ticks-per-second mode forces discrete rendering.
 * A responsive top-right cell inspector shows the hovered tile's stable ID, movement behavior, effective weldable sides, current welds, circuit connections and charge, magnetic state, orientation, and attraction direction/range. It refreshes after simulation commits even when the pointer remains stationary.
 * Deterministic tests for gravity chains, sand overhangs, welded and magnetically constrained bodies, circuit propagation, sensor directionality, sensor port isolation and output rendering, isolated directional gate ports and trace rendering, inverter delay, the complete three-input signed combiner truth table, conflicts, directional welding, orientation snapshots and preview resolution, boundaries, stable IDs, reset behavior, and pointer gesture classification.
-* Board export and import controls round-trip deterministic, versioned JSON containing dimensions, simulation tick, non-empty tile kinds, non-up orientations, nonzero circuit charges, and each weld edge once. Imports validate the complete file before replacing the live board, support board sizes up to 400x300, and reconstruct fresh runtime tile IDs because IDs are intentionally excluded from the file.
+* Board export and import controls round-trip deterministic, versioned JSON with a compact fixed-code ASCII tile grid plus sparse non-up orientations, nonzero circuit charges, and weld edges. Exports up to one million characters are also copied to the clipboard. Imports derive dimensions from the grid, validate the complete file before replacing the live board, support board sizes up to 400x300, and reconstruct fresh runtime tile IDs because IDs are intentionally excluded from the file.
 
 ## Code map
 
@@ -111,12 +111,12 @@ The first playable scaffold is implemented:
 * `src/render/tile-renderer.ts` — Body outline tracing and rounded-slab drawing (fill, bevel lighting, decorations) for the board and component palette.
 * `src/simulation/circuit.ts` — Signed-ternary charge type, validation, sum resolution, and render colors.
 * `src/simulation/tile.ts` — Tile kinds, directions, and immutable tile behavior/render definitions.
-* `src/simulation/board-export.ts` — Deterministic, versioned JSON serialization and strict validation/deserialization for sharing board state.
+* `src/simulation/board-export.ts` — Deterministic compact ASCII-grid JSON serialization and strict validation/deserialization for sharing board state.
 * `src/simulation/world.ts` — Typed-array tile, orientation, charge, and weld storage; stable IDs; render revisions; snapshots; editing; and body movement commits.
 * `src/simulation/simulation.ts` — Allocation-free circuit-network and delayed directional-gate resolution, welded and magnetically constrained body collection, gravity intent selection, conflict resolution, and tick advancement.
 * `src/ui/tile-inspector.ts` — Revision-aware hovered-cell property presentation, including effective directional weldability and current welds.
 * `src/util/assert.ts` — `expectDefined` assertion that crashes loudly on violated lookups instead of falling back silently.
-* `tests/board-export.test.ts` — Board export ordering, contents, and tick validation tests.
+* `tests/board-export.test.ts` — Compact board format ordering, round-trip, state, and malformed-input validation tests.
 * `tests/circuit.test.ts` — Instant welded-network propagation, sensor directionality, isolated gate networks and delay, three-input signed combiner behavior, disconnection, and moving-charge tests.
 * `tests/simulation.test.ts` — Deterministic world, gravity, diagonal movement, conflict, weld, magnet, identity, and reset tests.
 * `tests/grid-drag.test.ts` — Continuous tile and weld drag traversal tests, including board-boundary clipping.
@@ -141,10 +141,17 @@ Improvements for current circuit components:
 
 Game flow:
 * Implement a main menu. For now, continue booting straight to the sandbox for faster testing during development, but add a button to go to main menu. Main menu should have buttons for sandbox and puzzles.
-* Implement a system for defining puzzles - probably similar to the current import/export format, with some extra fields. Each puzzle should define the grid size, blocks to pre-place, menu of enabled components with prices in talents, and region where player placement is allowed.
+* Implement a system for defining puzzles - probably similar to the current import/export format, with some extra fields. Each puzzle should define the grid size, blocks to pre-place, and menu of enabled components with prices in talents.
 * Change the editing model when solving puzzles: the player edits the initial board state, but as soon as they've played/run the simulation, they can no longer edit, they have to reset. Because puzzles won't allow modifying the board halfway through running a solution. We can still allow mid-run edits in the sandbox.
-* When exporting, also copy the string to the clipboard unless it's too long.
-* Modify our export/import format to be more compact. For example, instead of a list of `{x, y, kind}`, store a grid of ASCII characters representing the map, either with a legend or with a defined single-character code for every tile. Additional state can still be stored separately; most components won't need any state.
+* Modify our export/import format to represent welds more compactly. Instead of a list of `{x, y, direction}` for each weld, store a grid of ASCII characters representing welds as one of the characters `.|-+` for welds with direction down, right, both, or neither. Most boards will have many welded components. Similarly simplify orientations, and charges, if any; or store charges per-network instead of per-tile. More complex per-tile state we add later (e.g. furnace stored ticks, or target/delivery-block configuration) can be stored more verbosely.
+* Implement puzzle selection and unlocking: puzzles are arranged in a digraph / map, with each puzzle having a set of prerequisites, arranged into groups like "runelore" and "vehicles" and "dealing with elves". Add zoom/pan for the map.
+* Implement a way to show text boxes on the game screen, for tutorial puzzles. Specify their position and text as part of the puzzle definition.
+* Implement restrictions on where the player can place blocks, defined as a region of the game grid. Specify in the puzzle definition.
+* When selecting a puzzle, add a menu that shows saved solutions and their scores, and allows creating a new solution, duplicating an existing solution, editing selected solution, and deleting.
+
+UI:
+* Add a selection tool, for selecting a rectangular region of tiles and copying, pasting, moving, and rotating.
+* Add a way to copy selection to a clipboard, for transferring machines between puzzles.
 
 Some more items in `deferred-todos.md`.
 

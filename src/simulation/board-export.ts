@@ -1,35 +1,43 @@
 import type { Charge } from "./circuit";
-import { Direction, TileKind } from "./tile";
+import { Direction, TILE_DEFINITIONS, TileKind } from "./tile";
 import { World } from "./world";
+import { expectDefined } from "../util/assert";
 
 const FORMAT_NAME = "factory2d-board";
-const FORMAT_VERSION = 2;
+const FORMAT_VERSION = 3;
 const MAX_BOARD_WIDTH = 400;
 const MAX_BOARD_HEIGHT = 300;
 
-const TILE_KIND_NAMES: Readonly<Record<TileKind, string>> = {
-  [TileKind.Empty]: "empty",
-  [TileKind.Stone]: "stone",
-  [TileKind.Sand]: "sand",
-  [TileKind.Platform]: "platform",
-  [TileKind.Magnet]: "magnet",
-  [TileKind.Metal]: "metal",
-  [TileKind.Conduit]: "conduit",
-  [TileKind.Sensor]: "sensor",
-  [TileKind.Inverter]: "inverter",
-  [TileKind.Combiner]: "combiner",
+// TODO refactor this to move these tile codes to the single TILE_DEFINITIONS in
+// tile.ts. We want to avoid having to edit multiple different files every time
+// we add a new tile type. Build the TILE_KINDS_BY_CODE programatically.
+// Maybe move TILE_DEFINITIONS out of `simulation/` since they're also used by
+// rendering and board export, e.g. to a `registry.ts`.
+
+const TILE_CODES: Readonly<Record<TileKind, string>> = {
+  [TileKind.Empty]: ".",
+  [TileKind.Stone]: "#",
+  [TileKind.Sand]: ":",
+  [TileKind.Platform]: "=",
+  [TileKind.Magnet]: "L",
+  [TileKind.Metal]: "M",
+  [TileKind.Conduit]: "C",
+  [TileKind.Sensor]: "S",
+  [TileKind.Inverter]: "I",
+  [TileKind.Combiner]: "+",
 };
 
-const TILE_KINDS_BY_NAME: Readonly<Record<string, TileKind | undefined>> = {
-  stone: TileKind.Stone,
-  sand: TileKind.Sand,
-  platform: TileKind.Platform,
-  magnet: TileKind.Magnet,
-  metal: TileKind.Metal,
-  conduit: TileKind.Conduit,
-  sensor: TileKind.Sensor,
-  inverter: TileKind.Inverter,
-  combiner: TileKind.Combiner,
+const TILE_KINDS_BY_CODE: Readonly<Record<string, TileKind | undefined>> = {
+  ".": TileKind.Empty,
+  "#": TileKind.Stone,
+  ":": TileKind.Sand,
+  "=": TileKind.Platform,
+  L: TileKind.Magnet,
+  M: TileKind.Metal,
+  C: TileKind.Conduit,
+  S: TileKind.Sensor,
+  I: TileKind.Inverter,
+  "+": TileKind.Combiner,
 };
 
 const DIRECTION_NAMES: Readonly<Record<Direction, string>> = {
@@ -46,12 +54,16 @@ const DIRECTIONS_BY_NAME: Readonly<Record<string, Direction | undefined>> = {
   left: Direction.Left,
 };
 
-interface ExportedTile {
+interface ExportedOrientation {
   readonly x: number;
   readonly y: number;
-  readonly kind: string;
-  readonly orientation?: string;
-  readonly charge?: Charge;
+  readonly direction: string;
+}
+
+interface ExportedCharge {
+  readonly x: number;
+  readonly y: number;
+  readonly charge: -1 | 1;
 }
 
 interface ExportedWeld {
@@ -63,10 +75,10 @@ interface ExportedWeld {
 interface ExportedBoard {
   readonly format: typeof FORMAT_NAME;
   readonly version: typeof FORMAT_VERSION;
-  readonly width: number;
-  readonly height: number;
   readonly tick: number;
-  readonly tiles: readonly ExportedTile[];
+  readonly grid: readonly string[];
+  readonly orientations: readonly ExportedOrientation[];
+  readonly charges: readonly ExportedCharge[];
   readonly welds: readonly ExportedWeld[];
 }
 
@@ -80,27 +92,29 @@ export function serializeBoard(world: World, tick: number): string {
     throw new RangeError("Board tick must be a non-negative integer");
   }
 
-  const tiles: ExportedTile[] = [];
+  const grid: string[] = [];
+  const orientations: ExportedOrientation[] = [];
+  const charges: ExportedCharge[] = [];
   const welds: ExportedWeld[] = [];
 
   for (let y = 0; y < world.height; y += 1) {
+    let row = "";
     for (let x = 0; x < world.width; x += 1) {
       const kind = world.kindAt(x, y);
+      row += TILE_CODES[kind];
       if (kind === TileKind.Empty) {
         continue;
       }
 
       const orientation = world.orientationAt(x, y);
+      if (orientation !== Direction.Up) {
+        orientations.push({ x, y, direction: DIRECTION_NAMES[orientation] });
+      }
+
       const charge = world.chargeAt(x, y);
-      tiles.push({
-        x,
-        y,
-        kind: TILE_KIND_NAMES[kind],
-        ...(orientation === Direction.Up
-          ? {}
-          : { orientation: DIRECTION_NAMES[orientation] }),
-        ...(charge === 0 ? {} : { charge }),
-      });
+      if (charge !== 0) {
+        charges.push({ x, y, charge });
+      }
 
       if (x + 1 < world.width && world.isWelded(x, y, x + 1, y)) {
         welds.push({ x, y, direction: "right" });
@@ -109,15 +123,16 @@ export function serializeBoard(world: World, tick: number): string {
         welds.push({ x, y, direction: "down" });
       }
     }
+    grid.push(row);
   }
 
   const board: ExportedBoard = {
     format: FORMAT_NAME,
     version: FORMAT_VERSION,
-    width: world.width,
-    height: world.height,
     tick,
-    tiles,
+    grid,
+    orientations,
+    charges,
     welds,
   };
   return `${JSON.stringify(board, null, 2)}\n`;
@@ -139,47 +154,101 @@ export function deserializeBoard(source: string): ImportedBoard {
     throw new Error(`Board version must be ${FORMAT_VERSION}`);
   }
 
-  const width = requireInteger(board.width, "Board width", 1, MAX_BOARD_WIDTH);
-  const height = requireInteger(board.height, "Board height", 1, MAX_BOARD_HEIGHT);
   const tick = requireInteger(board.tick, "Board tick", 0, Number.MAX_SAFE_INTEGER);
-  const tiles = requireArray(board.tiles, "Board tiles");
-  const welds = requireArray(board.welds, "Board welds");
-  const world = new World(width, height);
-  const occupied = new Uint8Array(world.cellCount);
+  const grid = requireArray(board.grid, "Board grid");
+  requireInteger(grid.length, "Board grid height", 1, MAX_BOARD_HEIGHT);
 
-  for (let index = 0; index < tiles.length; index += 1) {
-    const tile = requireObject(tiles[index], `Tile ${index}`);
-    const x = requireInteger(tile.x, `Tile ${index} x`, 0, width - 1);
-    const y = requireInteger(tile.y, `Tile ${index} y`, 0, height - 1);
-    const cellIndex = y * width + x;
-    if (occupied[cellIndex] === 1) {
-      throw new Error(`Tile ${index} duplicates cell (${x}, ${y})`);
+  const firstRow = requireString(grid[0], "Board grid row 0");
+  const width = requireInteger(firstRow.length, "Board grid width", 1, MAX_BOARD_WIDTH);
+  const height = grid.length;
+  const kinds = new Uint8Array(width * height);
+
+  for (let y = 0; y < height; y += 1) {
+    const row = requireString(grid[y], `Board grid row ${y}`);
+    if (row.length !== width) {
+      throw new Error(`Board grid row ${y} must contain exactly ${width} cells`);
     }
 
-    const kindName = requireString(tile.kind, `Tile ${index} kind`);
-    const kind = TILE_KINDS_BY_NAME[kindName];
-    if (kind === undefined) {
-      throw new Error(`Tile ${index} has unknown kind "${kindName}"`);
-    }
-
-    let orientation = Direction.Up;
-    if (tile.orientation !== undefined) {
-      const orientationName = requireString(tile.orientation, `Tile ${index} orientation`);
-      const parsedOrientation = DIRECTIONS_BY_NAME[orientationName];
-      if (parsedOrientation === undefined) {
-        throw new Error(`Tile ${index} has unknown orientation "${orientationName}"`);
+    for (let x = 0; x < width; x += 1) {
+      const code = expectDefined(row[x], `tile code at (${x}, ${y})`);
+      const kind = TILE_KINDS_BY_CODE[code];
+      if (kind === undefined) {
+        throw new Error(`Board grid cell (${x}, ${y}) has unknown tile code "${code}"`);
       }
-      orientation = parsedOrientation;
+      kinds[y * width + x] = kind;
     }
-
-    world.place(x, y, kind, orientation);
-    if (tile.charge !== undefined) {
-      const charge = requireInteger(tile.charge, `Tile ${index} charge`, -1, 1) as Charge;
-      world.setCharge(x, y, charge);
-    }
-    occupied[cellIndex] = 1;
   }
 
+  const orientations = requireArray(board.orientations, "Board orientations");
+  const orientationByCell = new Uint8Array(width * height);
+  const hasOrientation = new Uint8Array(width * height);
+  for (let index = 0; index < orientations.length; index += 1) {
+    const state = requireObject(orientations[index], `Orientation ${index}`);
+    const x = requireInteger(state.x, `Orientation ${index} x`, 0, width - 1);
+    const y = requireInteger(state.y, `Orientation ${index} y`, 0, height - 1);
+    const cellIndex = y * width + x;
+    if (hasOrientation[cellIndex] === 1) {
+      throw new Error(`Orientation ${index} duplicates cell (${x}, ${y})`);
+    }
+
+    const kind = expectDefined(kinds[cellIndex], `tile kind at (${x}, ${y})`) as TileKind;
+    if (kind === TileKind.Empty || !TILE_DEFINITIONS[kind].usesOrientation) {
+      throw new Error(`Orientation ${index} targets a non-directional tile`);
+    }
+    const directionName = requireString(state.direction, `Orientation ${index} direction`);
+    const direction = DIRECTIONS_BY_NAME[directionName];
+    if (direction === undefined) {
+      throw new Error(`Orientation ${index} has unknown direction "${directionName}"`);
+    }
+    orientationByCell[cellIndex] = direction;
+    hasOrientation[cellIndex] = 1;
+  }
+
+  const charges = requireArray(board.charges, "Board charges");
+  const chargeByCell = new Int8Array(width * height);
+  const hasCharge = new Uint8Array(width * height);
+  for (let index = 0; index < charges.length; index += 1) {
+    const state = requireObject(charges[index], `Charge ${index}`);
+    const x = requireInteger(state.x, `Charge ${index} x`, 0, width - 1);
+    const y = requireInteger(state.y, `Charge ${index} y`, 0, height - 1);
+    const cellIndex = y * width + x;
+    if (hasCharge[cellIndex] === 1) {
+      throw new Error(`Charge ${index} duplicates cell (${x}, ${y})`);
+    }
+
+    const charge = requireInteger(state.charge, `Charge ${index} value`, -1, 1) as Charge;
+    if (charge === 0) {
+      throw new Error(`Charge ${index} value must be -1 or 1`);
+    }
+    chargeByCell[cellIndex] = charge;
+    hasCharge[cellIndex] = 1;
+  }
+
+  const world = new World(width, height);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const cellIndex = y * width + x;
+      const kind = expectDefined(kinds[cellIndex], `tile kind at (${x}, ${y})`) as TileKind;
+      if (kind === TileKind.Empty) {
+        continue;
+      }
+      const orientation = expectDefined(
+        orientationByCell[cellIndex],
+        `tile orientation at (${x}, ${y})`,
+      ) as Direction;
+      world.place(x, y, kind, orientation);
+      if (hasCharge[cellIndex] === 1) {
+        const charge = expectDefined(
+          chargeByCell[cellIndex],
+          `tile charge at (${x}, ${y})`,
+        ) as Charge;
+        world.setCharge(x, y, charge);
+      }
+    }
+  }
+
+  const welds = requireArray(board.welds, "Board welds");
+  const weldDirectionsByCell = new Uint8Array(width * height);
   for (let index = 0; index < welds.length; index += 1) {
     const weld = requireObject(welds[index], `Weld ${index}`);
     const x = requireInteger(weld.x, `Weld ${index} x`, 0, width - 1);
@@ -188,6 +257,17 @@ export function deserializeBoard(source: string): ImportedBoard {
     if (direction !== "right" && direction !== "down") {
       throw new Error(`Weld ${index} direction must be "right" or "down"`);
     }
+
+    const directionBit = direction === "right" ? 1 : 2;
+    const cellIndex = y * width + x;
+    const existingDirections = expectDefined(
+      weldDirectionsByCell[cellIndex],
+      `weld directions at (${x}, ${y})`,
+    );
+    if ((existingDirections & directionBit) !== 0) {
+      throw new Error(`Weld ${index} duplicates the ${direction} edge at (${x}, ${y})`);
+    }
+    weldDirectionsByCell[cellIndex] = existingDirections | directionBit;
 
     const neighborX = direction === "right" ? x + 1 : x;
     const neighborY = direction === "down" ? y + 1 : y;

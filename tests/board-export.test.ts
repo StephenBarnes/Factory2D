@@ -5,7 +5,7 @@ import { Direction, TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
 
 describe("board export", () => {
-  it("serializes tiles, orientations, and welds in grid order", () => {
+  it("serializes the tile grid and sparse state in grid order", () => {
     const world = new World(3, 2);
     world.place(2, 0, TileKind.Magnet, Direction.Left);
     world.place(0, 1, TileKind.Platform);
@@ -16,15 +16,17 @@ describe("board export", () => {
 
     expect(serializeBoard(world, 17)).toBe(`${JSON.stringify({
       format: "factory2d-board",
-      version: 2,
-      width: 3,
-      height: 2,
+      version: 3,
       tick: 17,
-      tiles: [
-        { x: 2, y: 0, kind: "magnet", orientation: "left" },
-        { x: 0, y: 1, kind: "platform" },
-        { x: 1, y: 1, kind: "stone" },
-        { x: 2, y: 1, kind: "conduit", charge: -1 },
+      grid: [
+        "..L",
+        "=#C",
+      ],
+      orientations: [
+        { x: 2, y: 0, direction: "left" },
+      ],
+      charges: [
+        { x: 2, y: 1, charge: -1 },
       ],
       welds: [
         { x: 0, y: 1, direction: "right" },
@@ -39,11 +41,11 @@ describe("board export", () => {
 
     expect(JSON.parse(serializeBoard(world, 0))).toEqual({
       format: "factory2d-board",
-      version: 2,
-      width: 2,
-      height: 1,
+      version: 3,
       tick: 0,
-      tiles: [],
+      grid: [".."],
+      orientations: [],
+      charges: [],
       welds: [],
     });
   });
@@ -59,19 +61,24 @@ describe("board export", () => {
     );
   });
 
-  it("imports exported dimensions, state, orientation, and welds", () => {
+  it("imports grid dimensions, state, orientation, and welds", () => {
     const source = JSON.stringify({
       format: "factory2d-board",
-      version: 2,
-      width: 2,
-      height: 3,
+      version: 3,
       tick: 42,
-      tiles: [
-        { x: 0, y: 0, kind: "magnet", orientation: "left" },
-        { x: 1, y: 0, kind: "metal" },
-        { x: 0, y: 1, kind: "sensor", orientation: "down", charge: 1 },
-        { x: 1, y: 1, kind: "inverter", orientation: "right", charge: -1 },
-        { x: 1, y: 2, kind: "sand" },
+      grid: [
+        "LM",
+        "SI",
+        ".:",
+      ],
+      orientations: [
+        { x: 0, y: 0, direction: "left" },
+        { x: 0, y: 1, direction: "down" },
+        { x: 1, y: 1, direction: "right" },
+      ],
+      charges: [
+        { x: 0, y: 1, charge: 1 },
+        { x: 1, y: 1, charge: -1 },
       ],
       welds: [
         { x: 0, y: 0, direction: "right" },
@@ -110,45 +117,82 @@ describe("board export", () => {
     expect(imported.world.chargeAt(0, 0)).toBe(-1);
   });
 
-  it("rejects duplicate tiles without returning a partial world", () => {
-    const source = JSON.stringify({
+  it("rejects malformed grid rows and unknown tile codes", () => {
+    const unevenRows = JSON.stringify({
       format: "factory2d-board",
-      version: 2,
-      width: 1,
-      height: 1,
+      version: 3,
       tick: 0,
-      tiles: [
-        { x: 0, y: 0, kind: "stone" },
-        { x: 0, y: 0, kind: "metal" },
-      ],
+      grid: ["..", "."],
+      orientations: [],
+      charges: [],
+      welds: [],
+    });
+    const unknownCode = JSON.stringify({
+      format: "factory2d-board",
+      version: 3,
+      tick: 0,
+      grid: ["?"],
+      orientations: [],
+      charges: [],
       welds: [],
     });
 
-    expect(() => deserializeBoard(source)).toThrowError(
-      "Tile 1 duplicates cell (0, 0)",
+    expect(() => deserializeBoard(unevenRows)).toThrowError(
+      "Board grid row 1 must contain exactly 2 cells",
+    );
+    expect(() => deserializeBoard(unknownCode)).toThrowError(
+      'Board grid cell (0, 0) has unknown tile code "?"',
+    );
+  });
+
+  it("rejects duplicate or inapplicable orientation state", () => {
+    const duplicate = JSON.stringify({
+      format: "factory2d-board",
+      version: 3,
+      tick: 0,
+      grid: ["L"],
+      orientations: [
+        { x: 0, y: 0, direction: "right" },
+        { x: 0, y: 0, direction: "left" },
+      ],
+      charges: [],
+      welds: [],
+    });
+    const inapplicable = JSON.stringify({
+      format: "factory2d-board",
+      version: 3,
+      tick: 0,
+      grid: ["#"],
+      orientations: [{ x: 0, y: 0, direction: "right" }],
+      charges: [],
+      welds: [],
+    });
+
+    expect(() => deserializeBoard(duplicate)).toThrowError(
+      "Orientation 1 duplicates cell (0, 0)",
+    );
+    expect(() => deserializeBoard(inapplicable)).toThrowError(
+      "Orientation 0 targets a non-directional tile",
     );
   });
 
   it("rejects welds that point outside the board or join incompatible tiles", () => {
     const outside = JSON.stringify({
       format: "factory2d-board",
-      version: 2,
-      width: 1,
-      height: 1,
+      version: 3,
       tick: 0,
-      tiles: [{ x: 0, y: 0, kind: "stone" }],
+      grid: ["#"],
+      orientations: [],
+      charges: [],
       welds: [{ x: 0, y: 0, direction: "right" }],
     });
     const incompatible = JSON.stringify({
       format: "factory2d-board",
-      version: 2,
-      width: 2,
-      height: 1,
+      version: 3,
       tick: 0,
-      tiles: [
-        { x: 0, y: 0, kind: "sand" },
-        { x: 1, y: 0, kind: "stone" },
-      ],
+      grid: [":#"],
+      orientations: [],
+      charges: [],
       welds: [{ x: 0, y: 0, direction: "right" }],
     });
 
@@ -163,29 +207,28 @@ describe("board export", () => {
   it("rejects invalid charge values and charged non-circuit tiles", () => {
     const invalidValue = JSON.stringify({
       format: "factory2d-board",
-      version: 2,
-      width: 1,
-      height: 1,
+      version: 3,
       tick: 0,
-      tiles: [{ x: 0, y: 0, kind: "conduit", charge: 2 }],
+      grid: ["C"],
+      orientations: [],
+      charges: [{ x: 0, y: 0, charge: 2 }],
       welds: [],
     });
     const invalidTile = JSON.stringify({
       format: "factory2d-board",
-      version: 2,
-      width: 1,
-      height: 1,
+      version: 3,
       tick: 0,
-      tiles: [{ x: 0, y: 0, kind: "stone", charge: 1 }],
+      grid: ["#"],
+      orientations: [],
+      charges: [{ x: 0, y: 0, charge: 1 }],
       welds: [],
     });
 
     expect(() => deserializeBoard(invalidValue)).toThrowError(
-      "Tile 0 charge must be an integer from -1 through 1",
+      "Charge 0 value must be an integer from -1 through 1",
     );
     expect(() => deserializeBoard(invalidTile)).toThrowError(
       "Only circuit-connected tiles can hold a nonzero charge",
     );
   });
-
 });
