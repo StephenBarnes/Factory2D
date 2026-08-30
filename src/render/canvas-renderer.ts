@@ -6,6 +6,13 @@ export interface GridCell {
   readonly y: number;
 }
 
+export interface GridEdge {
+  readonly x1: number;
+  readonly y1: number;
+  readonly x2: number;
+  readonly y2: number;
+}
+
 const DESIGN_TILE_SIZE = 32;
 
 export class CanvasRenderer {
@@ -20,6 +27,7 @@ export class CanvasRenderer {
   private viewportHeight = 0;
   private hoverX = -1;
   private hoverY = -1;
+  private hoverEdge: GridEdge | null = null;
 
   constructor(canvas: HTMLCanvasElement, world: World) {
     const context = canvas.getContext("2d");
@@ -42,6 +50,7 @@ export class CanvasRenderer {
 
     this.drawGrid();
     this.drawTiles();
+    this.drawWelds();
     this.drawHover();
   }
 
@@ -56,9 +65,52 @@ export class CanvasRenderer {
     return { x, y };
   }
 
+  edgeFromClientPoint(clientX: number, clientY: number): GridEdge | null {
+    const bounds = this.canvas.getBoundingClientRect();
+    const localX = clientX - bounds.left - this.originX;
+    const localY = clientY - bounds.top - this.originY;
+    const boardWidth = this.world.width * this.cellSize;
+    const boardHeight = this.world.height * this.cellSize;
+    if (localX < 0 || localX > boardWidth || localY < 0 || localY > boardHeight) {
+      return null;
+    }
+
+    const verticalLine = Math.round(localX / this.cellSize);
+    const horizontalLine = Math.round(localY / this.cellSize);
+    const verticalDistance = Math.abs(localX - verticalLine * this.cellSize);
+    const horizontalDistance = Math.abs(localY - horizontalLine * this.cellSize);
+    const selectionRadius = this.cellSize / 4;
+
+    if (
+      verticalLine > 0 &&
+      verticalLine < this.world.width &&
+      verticalDistance <= selectionRadius &&
+      verticalDistance <= horizontalDistance
+    ) {
+      const y = Math.min(Math.floor(localY / this.cellSize), this.world.height - 1);
+      return { x1: verticalLine - 1, y1: y, x2: verticalLine, y2: y };
+    }
+    if (
+      horizontalLine > 0 &&
+      horizontalLine < this.world.height &&
+      horizontalDistance <= selectionRadius
+    ) {
+      const x = Math.min(Math.floor(localX / this.cellSize), this.world.width - 1);
+      return { x1: x, y1: horizontalLine - 1, x2: x, y2: horizontalLine };
+    }
+    return null;
+  }
+
   setHover(cell: GridCell | null): void {
     this.hoverX = cell?.x ?? -1;
     this.hoverY = cell?.y ?? -1;
+    this.hoverEdge = null;
+  }
+
+  setHoverEdge(edge: GridEdge | null): void {
+    this.hoverEdge = edge;
+    this.hoverX = -1;
+    this.hoverY = -1;
   }
 
   private resizeBackingStore(): void {
@@ -154,7 +206,49 @@ export class CanvasRenderer {
     }
   }
 
+  private drawWelds(): void {
+    const { context } = this;
+    context.strokeStyle = "#f0c75e";
+    context.lineWidth = Math.max(3, Math.floor(this.cellSize / 8));
+    context.beginPath();
+
+    for (let y = 0; y < this.world.height; y += 1) {
+      for (let x = 0; x < this.world.width; x += 1) {
+        const index = y * this.world.width + x;
+        if (this.world.hasRightWeldAtIndex(index)) {
+          const lineX = this.originX + (x + 1) * this.cellSize;
+          context.moveTo(lineX, this.originY + y * this.cellSize + this.cellSize * 0.25);
+          context.lineTo(lineX, this.originY + (y + 1) * this.cellSize - this.cellSize * 0.25);
+        }
+        if (this.world.hasDownWeldAtIndex(index)) {
+          const lineY = this.originY + (y + 1) * this.cellSize;
+          context.moveTo(this.originX + x * this.cellSize + this.cellSize * 0.25, lineY);
+          context.lineTo(this.originX + (x + 1) * this.cellSize - this.cellSize * 0.25, lineY);
+        }
+      }
+    }
+    context.stroke();
+  }
+
   private drawHover(): void {
+    if (this.hoverEdge !== null) {
+      const { x1, y1, x2, y2 } = this.hoverEdge;
+      this.context.strokeStyle = "#78dcca";
+      this.context.lineWidth = 3;
+      this.context.beginPath();
+      if (y1 === y2) {
+        const lineX = this.originX + Math.max(x1, x2) * this.cellSize;
+        this.context.moveTo(lineX, this.originY + y1 * this.cellSize + 2);
+        this.context.lineTo(lineX, this.originY + (y1 + 1) * this.cellSize - 2);
+      } else {
+        const lineY = this.originY + Math.max(y1, y2) * this.cellSize;
+        this.context.moveTo(this.originX + x1 * this.cellSize + 2, lineY);
+        this.context.lineTo(this.originX + (x1 + 1) * this.cellSize - 2, lineY);
+      }
+      this.context.stroke();
+      return;
+    }
+
     if (this.hoverX < 0 || this.hoverY < 0) {
       return;
     }

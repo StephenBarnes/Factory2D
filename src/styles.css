@@ -217,6 +217,20 @@ h1 span {
   background: #66717d;
 }
 
+.weld-swatch {
+  position: relative;
+  border-color: #5f512c;
+  background: #20252a;
+}
+
+.weld-swatch::after {
+  content: "";
+  position: absolute;
+  inset: 4px 13px;
+  background: #f0c75e;
+  box-shadow: 0 0 5px rgb(240 199 94 / 55%);
+}
+
 .eraser-swatch {
   position: relative;
   border-color: #3b4752;
