@@ -7,6 +7,11 @@ import {
 } from "./render/grid-drag";
 import type { GridCell, GridEdge, GridPoint } from "./render/grid-drag";
 import { drawTile } from "./render/tile-renderer";
+import {
+  exceedsPanDragThreshold,
+  pointerGesture,
+} from "./render/pointer-gesture";
+import type { PointerGesture } from "./render/pointer-gesture";
 import { Simulation } from "./simulation/simulation";
 import { Direction, TileKind } from "./simulation/tile";
 import { World } from "./simulation/world";
@@ -63,10 +68,11 @@ let selectedOrientation = Direction.Up;
 let selectedTool: "tile" | "weld" = "tile";
 let temporaryWeldActive = false;
 let activePointerId: number | null = null;
-let activePointerMode: "edit" | "pan" | null = null;
+let activePointerMode: PointerGesture | null = null;
 let activeErase = false;
 let lastPanClientX = 0;
 let lastPanClientY = 0;
+let pendingPickCell: GridCell | null = null;
 let lastEditedCell: GridCell | null = null;
 let lastPointerGridPoint: GridPoint | null = null;
 let hoveredCell: GridCell | null = null;
@@ -375,31 +381,25 @@ clearButton.addEventListener("click", () => {
 canvas.addEventListener("pointerdown", (event) => {
   const point = renderer.gridPointFromClientPoint(event.clientX, event.clientY);
   const cell = renderer.cellFromGridPoint(point);
+  const gesture = pointerGesture(event.button, event.altKey);
 
-  if (event.button === 1) {
-    event.preventDefault();
-    if (cell === null) {
-      return;
-    }
-
-    const kind = world.kindAt(cell.x, cell.y);
-    if (kind === TileKind.Empty) {
-      return;
-    }
-    selectTile(kind);
-    if (kind === TileKind.Magnet) {
-      setSelectedOrientation(world.orientationAt(cell.x, cell.y));
-    }
+  if (gesture === null || (running && gesture === "edit")) {
     return;
   }
 
-  if (event.button === 2 && cell === null) {
-    event.preventDefault();
-    activePointerId = event.pointerId;
-    activePointerMode = "pan";
-    lastPanClientX = event.clientX;
-    lastPanClientY = event.clientY;
-    canvas.setPointerCapture(event.pointerId);
+  event.preventDefault();
+  activePointerId = event.pointerId;
+  activePointerMode = gesture;
+  lastPanClientX = event.clientX;
+  lastPanClientY = event.clientY;
+  pendingPickCell = gesture === "pick-or-pan" ? cell : null;
+  canvas.setPointerCapture(event.pointerId);
+
+  if (gesture === "pick-or-pan") {
+    return;
+  }
+
+  if (gesture === "pan") {
     canvas.classList.add("panning");
     hoveredCell = null;
     hoveredEdge = null;
@@ -407,16 +407,7 @@ canvas.addEventListener("pointerdown", (event) => {
     return;
   }
 
-  if (running || (event.button !== 0 && event.button !== 2)) {
-    return;
-  }
-
-  event.preventDefault();
-  activePointerId = event.pointerId;
-  activePointerMode = "edit";
   activeErase = event.button === 2;
-  canvas.setPointerCapture(event.pointerId);
-
   lastPointerGridPoint = point;
   if (selectedTool === "tile") {
     if (cell !== null) {
@@ -439,6 +430,15 @@ canvas.addEventListener("pointermove", (event) => {
 
   if (event.pointerId !== activePointerId) {
     return;
+  }
+  if (activePointerMode === "pick-or-pan") {
+    const deltaX = event.clientX - lastPanClientX;
+    const deltaY = event.clientY - lastPanClientY;
+    if (!exceedsPanDragThreshold(deltaX, deltaY)) {
+      return;
+    }
+    activePointerMode = "pan";
+    canvas.classList.add("panning");
   }
   if (activePointerMode === "pan") {
     renderer.panByPixels(event.clientX - lastPanClientX, event.clientY - lastPanClientY);
@@ -470,19 +470,35 @@ canvas.addEventListener("pointermove", (event) => {
   lastPointerGridPoint = point;
 });
 
-function finishPointerEdit(event: PointerEvent): void {
+function finishPointerGesture(event: PointerEvent): void {
   if (event.pointerId !== activePointerId) {
     return;
   }
+  if (
+    event.type === "pointerup" &&
+    activePointerMode === "pick-or-pan" &&
+    pendingPickCell !== null
+  ) {
+    const kind = world.kindAt(pendingPickCell.x, pendingPickCell.y);
+    if (kind !== TileKind.Empty) {
+      selectTile(kind);
+      if (kind === TileKind.Magnet) {
+        setSelectedOrientation(
+          world.orientationAt(pendingPickCell.x, pendingPickCell.y),
+        );
+      }
+    }
+  }
   activePointerId = null;
   activePointerMode = null;
+  pendingPickCell = null;
   lastEditedCell = null;
   lastPointerGridPoint = null;
   canvas.classList.remove("panning");
 }
 
-canvas.addEventListener("pointerup", finishPointerEdit);
-canvas.addEventListener("pointercancel", finishPointerEdit);
+canvas.addEventListener("pointerup", finishPointerGesture);
+canvas.addEventListener("pointercancel", finishPointerGesture);
 
 canvas.addEventListener("pointerleave", () => {
   hoveredCell = null;

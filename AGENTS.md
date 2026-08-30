@@ -83,14 +83,14 @@ Keep this section up-to-date.
 The first playable scaffold is implemented:
 
 * A 20x14 editable Canvas 2D grid with procedural sand, falling stone, magnetic metal, directional magnets, and fixed platform tiles.
-* A full-viewport black board layer behind responsive floating left and bottom control panels. The initial view fits the entire grid into the unobscured region; mouse-wheel zoom stays anchored beneath the pointer; and arrow keys or off-grid right-button drags pan within bounds that keep the screen center over the grid.
-* Build controls for gap-free click-and-drag placement and removal, including drags that leave the grid, middle-click picking that preserves magnet orientation, magnet rotation and aiming, stepping, running, pausing, resetting, clearing, speed selection, and an animation toggle.
+* A full-viewport black board layer behind responsive floating left and bottom control panels. The initial view fits the entire grid into the unobscured region; mouse-wheel zoom stays anchored beneath the pointer; and arrow keys, middle-button drags, or Alt-right-button drags pan within bounds that keep the screen center over the grid.
+* Build controls for gap-free click-and-drag placement and removal, including drags that leave the grid, middle-click picking that preserves magnet orientation while middle-button drags pan, magnet rotation and aiming, stepping, running, pausing, resetting, clearing, speed selection, and an animation toggle.
 * A separate weld tool for joining eligible occupied neighbors into rigid bodies and unwelding them, with gap-free fast-drag traversal, an immediate held-Control temporary override, and red invalid-edge feedback. Sand is not weldable, and magnets reject welds on their pointed side.
 * One shared procedural tile renderer for the Canvas board, placement preview, and component palette. Palette previews use density-aware, supersampled backing stores and redraw when browser zoom or display density changes. Each welded body renders from traced, inset rounded-slab outlines whose occupied neighbors merge only across locally welded edges, so unwelded cuts stay visually stable when another cut splits the body and closed seam ends receive rounded caps. Rendering includes a drop shadow, per-cell fills that remain locally stable when different tile kinds are joined, decorations clipped to the outline, and top-left highlight and bottom-right shade bevels. Diagonally touching cells render as a rounded pinch. Per-body cells and `Path2D` outlines are cached across animation frames and rebuilt only after world changes or board geometry changes.
 * A typed-array world with stable tile IDs, per-tile orientation, edge weld storage, and allocation-free per-tick movement buffers.
 * Deterministic straight-down gravity for stone, metal, magnets, and sand; complete downward body-dependency resolution; parity-selected diagonal gravity for sand; direct-fall priority; equal-priority destination jamming; and reciprocal magnetic constraints that hold bodies when supported while allowing unsupported attracting groups to fall.
 * Simulation commits remain discrete and deterministic while stable tile IDs drive optional smooth eased rendering between the previous and current positions. Manual steps animate for 200 ms; automatic steps animate for up to 250 ms without delaying simulation ticks. A 60-ticks-per-second mode forces discrete rendering.
-* Deterministic tests for gravity chains, sand overhangs, welded and magnetically constrained bodies, conflicts, directional welding, orientation snapshots, boundaries, stable IDs, and reset behavior.
+* Deterministic tests for gravity chains, sand overhangs, welded and magnetically constrained bodies, conflicts, directional welding, orientation snapshots, boundaries, stable IDs, reset behavior, and pointer gesture classification.
 
 ## Code map
 
@@ -100,6 +100,7 @@ The first playable scaffold is implemented:
 * `src/vite-env.d.ts` — Vite client type declarations.
 * `src/render/canvas-renderer.ts` — Responsive Canvas 2D grid, overlay-aware camera fitting, bounded pan and pointer-anchored zoom, revision-and-scale-keyed welded-body geometry cache, stable-ID movement interpolation, hit testing, placement previews, and hover feedback.
 * `src/render/grid-drag.ts` — Board-clipped tile-drag endpoints and continuous weld-edge traversal between pointer events.
+* `src/render/pointer-gesture.ts` — Button/modifier gesture classification and middle-click drag-threshold policy.
 * `src/render/tile-renderer.ts` — Body outline tracing and rounded-slab drawing (fill, bevel lighting, decorations) for the board and component palette.
 * `src/simulation/tile.ts` — Tile kinds, directions, and immutable tile behavior/render definitions.
 * `src/simulation/world.ts` — Typed-array tile, orientation, and weld storage; stable IDs; render revisions; snapshots; editing; and body movement commits.
@@ -107,16 +108,14 @@ The first playable scaffold is implemented:
 * `src/util/assert.ts` — `expectDefined` assertion that crashes loudly on violated lookups instead of falling back silently.
 * `tests/simulation.test.ts` — Deterministic world, gravity, diagonal movement, conflict, weld, magnet, identity, and reset tests.
 * `tests/grid-drag.test.ts` — Continuous tile and weld drag traversal tests, including board-boundary clipping.
+* `tests/pointer-gesture.test.ts` — Pointer button, modifier, and drag-threshold regression tests.
 * `tests/tile-renderer.test.ts` — Rounded body-outline and mixed-kind fill stability regression tests.
 * `vite.config.ts` — Vite configuration with Vitest's Node test environment.
 * `tsconfig.json` — Strict browser TypeScript and project build configuration.
 
 ## Current TODOs
 
-* Currently we allow panning with RMB-drag off the grid. Replace that with MMB-drag to pan, and add alt key plus RMB drag to pan, even on the grid. (MMB click on a tile currently picks that tile; but MMB on empty cells does nothing. I think cleanest is to do pick on MMB press if it's followed by release immediately afterwards without moving the mouse, and for other MMB cases we pan.)
-
 New components:
-
 * Design circuit mechanics. Blocks can electrically connect to neighboring blocks on welded edges, and some blocks have distinct ports on different sides. We'll allow 3 different charges (signed ternary): +1, 0, and -1. Visually we color the lines by charge as blue, dark purple, or red; blocks that can connect will have lines rendered on them with these colors. We likely want to allow signals to propagate quickly, not 1 block per tick, so maybe we should find connected circuit regions and identify them by network IDs. For example an inverter gate connects one network ID to a different network ID. Each network has one value. Components submit attempts to drive a network to a specific voltage value, and we resolve conflicts in some way (probably adding and taking the sign). Voltage usually only propagates within one welded group of blocks; we'll later add sensor runes / brushes which read circuit values from neighbors, without needing welding, but those will be different networks, with 1-tick delay on reading. Components like logic gates do not union the networks they connect to, but rather drive the value of on output on tick t+1 using the value on tick t-1; so for example a negate gate with input wired to output will cause its network to flip between +1 and -1 every tick, or stay 0 every tick.
 * Add a conduit/wire block. It should look like a grey block with a dark blue circle in the center; when welded to adjacent blocks with a flag that makes them connect to circuits, also draw a line from the circle to those welded neighbors. Color the lines according to current charge. Propagate charges instantly through connected conduits. A conduit connects all welded neighbor edges' networks together.
 * Add a directional sensor block, which should connect to circuits. When a neighboring block in a direction is non-empty, it should try to drive the circuit with a value.
