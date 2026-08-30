@@ -13,6 +13,7 @@ import { World } from "./simulation/world";
 
 const MAX_AUTOMATIC_ANIMATION_MS = 250;
 const MANUAL_STEP_ANIMATION_MS = 200;
+const PALETTE_PREVIEW_SUPERSAMPLING = 2;
 
 function requiredElement<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -69,6 +70,7 @@ let previousFrameTime = performance.now();
 let animationStartedAt = 0;
 let animationDuration = 0;
 let renderedTick = -1;
+let renderedPaletteDevicePixelRatio = 0;
 
 function updateTransportState(): void {
   playButton.textContent = running ? "Ⅱ PAUSE" : "▶ RUN";
@@ -137,18 +139,44 @@ function selectTile(kind: TileKind): void {
 }
 
 function renderPalettePreviews(): void {
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  const pixelRatio = devicePixelRatio * PALETTE_PREVIEW_SUPERSAMPLING;
+  renderedPaletteDevicePixelRatio = devicePixelRatio;
+
   for (const preview of sidebarControls.querySelectorAll<HTMLCanvasElement>(".tile-preview")) {
+    const logicalWidth = preview.clientWidth;
+    const logicalHeight = preview.clientHeight;
+    if (logicalWidth === 0 || logicalHeight === 0) {
+      continue;
+    }
+    const backingWidth = Math.max(1, Math.round(logicalWidth * pixelRatio));
+    const backingHeight = Math.max(1, Math.round(logicalHeight * pixelRatio));
+    if (preview.width !== backingWidth || preview.height !== backingHeight) {
+      preview.width = backingWidth;
+      preview.height = backingHeight;
+    }
+
     const kind = Number(preview.dataset.tilePreview) as TileKind;
     const context = preview.getContext("2d");
     if (context === null) {
       throw new Error("Canvas 2D is not supported by this browser");
     }
-    context.clearRect(0, 0, preview.width, preview.height);
+    context.setTransform(
+      backingWidth / logicalWidth,
+      0,
+      0,
+      backingHeight / logicalHeight,
+      0,
+      0,
+    );
+    context.clearRect(0, 0, logicalWidth, logicalHeight);
+
+    const tileSize = Math.min(logicalWidth, logicalHeight);
     drawTile(
       context,
-      0,
-      0,
-      preview.width,
+      (logicalWidth - tileSize) / 2,
+      (logicalHeight - tileSize) / 2,
+      tileSize,
       kind,
       kind === TileKind.Magnet ? selectedOrientation : Direction.Up,
     );
@@ -447,6 +475,7 @@ window.addEventListener("blur", () => {
     selectTile(selectedKind);
   }
 });
+window.addEventListener("resize", renderPalettePreviews);
 
 function frame(currentTime: number): void {
   const elapsed = Math.min(currentTime - previousFrameTime, 250);
@@ -463,6 +492,10 @@ function frame(currentTime: number): void {
         currentTime - accumulatedTime,
       );
     }
+  }
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  if (renderedPaletteDevicePixelRatio !== devicePixelRatio) {
+    renderPalettePreviews();
   }
 
   if (renderedTick !== simulation.tick) {
