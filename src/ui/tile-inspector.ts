@@ -63,6 +63,7 @@ export class TileInspector {
   private readonly weldable: HTMLElement;
   private readonly welds: HTMLElement;
   private readonly magnetic: HTMLElement;
+  private readonly attractionRow: HTMLElement;
   private readonly attraction: HTMLElement;
   private lastX = -2;
   private lastY = -2;
@@ -83,6 +84,7 @@ export class TileInspector {
     this.weldable = requiredDescendant(root, "[data-inspector-weldable]");
     this.welds = requiredDescendant(root, "[data-inspector-welds]");
     this.magnetic = requiredDescendant(root, "[data-inspector-magnetic]");
+    this.attractionRow = requiredDescendant(root, "[data-inspector-attraction-row]");
     this.attraction = requiredDescendant(root, "[data-inspector-attraction]");
   }
 
@@ -121,16 +123,19 @@ export class TileInspector {
     this.magnetic.textContent = definition.magnetic ? "YES" : "NO";
     this.orientationRow.hidden = definition.attractionRange === 0 && !definition.excludesFacingWeld;
     this.orientation.textContent = DIRECTION_NAMES[orientation];
-    this.attraction.textContent = definition.attractionRange === 0
-      ? "NONE"
-      : `${DIRECTION_NAMES[orientation]} · ${definition.attractionRange} CELL`;
+    this.attractionRow.hidden = definition.attractionRange === 0;
+    if (definition.attractionRange > 0) {
+      this.attraction.textContent = `${DIRECTION_NAMES[orientation]} · ${definition.attractionRange} CELL`;
+    }
 
     let weldableDirections = "";
+    let weldableSideCount = 0;
     let weldedDirections = "";
     for (const direction of DIRECTIONS) {
       const sideIsWeldable = (definition.weldableSides & (1 << direction)) !== 0 &&
         (!definition.excludesFacingWeld || direction !== orientation);
       if (sideIsWeldable) {
+        weldableSideCount += 1;
         weldableDirections = appendDirection(weldableDirections, direction);
       }
 
@@ -144,7 +149,9 @@ export class TileInspector {
         weldedDirections = appendDirection(weldedDirections, direction);
       }
     }
-    this.weldable.textContent = weldableDirections || "NONE";
+    this.weldable.textContent = weldableSideCount === DIRECTIONS.length
+      ? "ALL"
+      : weldableDirections || "NONE";
     this.welds.textContent = weldedDirections || "NONE";
   }
 

@@ -555,9 +555,6 @@ kbd {
     padding: 9px;
   }
 
-  .tile-inspector .panel-heading {
-    margin-bottom: 9px;
-  }
 
   .inspector-properties {
     font-size: 0.55rem;
