@@ -70,6 +70,7 @@ describe("board export", () => {
         { x: 0, y: 0, kind: "magnet", orientation: "left" },
         { x: 1, y: 0, kind: "metal" },
         { x: 0, y: 1, kind: "sensor", orientation: "down", charge: 1 },
+        { x: 1, y: 1, kind: "inverter", orientation: "right", charge: -1 },
         { x: 1, y: 2, kind: "sand" },
       ],
       welds: [
@@ -88,6 +89,9 @@ describe("board export", () => {
     expect(imported.world.kindAt(0, 1)).toBe(TileKind.Sensor);
     expect(imported.world.orientationAt(0, 1)).toBe(Direction.Down);
     expect(imported.world.chargeAt(0, 1)).toBe(1);
+    expect(imported.world.kindAt(1, 1)).toBe(TileKind.Inverter);
+    expect(imported.world.orientationAt(1, 1)).toBe(Direction.Right);
+    expect(imported.world.chargeAt(1, 1)).toBe(-1);
     expect(imported.world.orientationAt(1, 0)).toBe(Direction.Up);
     expect(imported.world.kindAt(1, 2)).toBe(TileKind.Sand);
     expect(imported.world.isWelded(0, 0, 1, 0)).toBe(true);

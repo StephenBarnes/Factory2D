@@ -1,5 +1,6 @@
 import {
   Direction,
+  oppositeDirection,
   TILE_DEFINITIONS,
   TileKind,
 } from "../simulation/tile";
@@ -140,9 +141,12 @@ export class TileInspector {
     this.chargeRow.hidden = !hasCircuit;
     if (hasCircuit) {
       const charge = this.world.chargeAt(position.x, position.y);
-      this.charge.textContent = charge < 0
+      const chargeLabel = charge < 0
         ? "-1 · NEGATIVE"
         : charge > 0 ? "+1 · POSITIVE" : "0 · NEUTRAL";
+      this.charge.textContent = kind === TileKind.Inverter
+        ? `OUTPUT ${chargeLabel}`
+        : chargeLabel;
     }
 
     let weldableDirections = "";
@@ -175,7 +179,21 @@ export class TileInspector {
       ? "ALL"
       : weldableDirections || "NONE";
     this.welds.textContent = weldedDirections || "NONE";
-    this.circuit.textContent = circuitDirections || "ISOLATED";
+    if (kind === TileKind.Inverter) {
+      const inputDirection = oppositeDirection(orientation);
+      const cellIndex = position.y * this.world.width + position.x;
+      const inputState = this.world.hasCircuitConnectionAtIndex(cellIndex, inputDirection)
+        ? "CONNECTED"
+        : "ISOLATED";
+      const outputState = this.world.hasCircuitConnectionAtIndex(cellIndex, orientation)
+        ? "CONNECTED"
+        : "ISOLATED";
+      this.circuit.textContent =
+        `IN ${DIRECTION_NAMES[inputDirection]} ${inputState} · ` +
+        `OUT ${DIRECTION_NAMES[orientation]} ${outputState}`;
+    } else {
+      this.circuit.textContent = circuitDirections || "ISOLATED";
+    }
   }
 
   private showMessage(name: string, position: string, message: string): void {

@@ -70,4 +70,72 @@ describe("circuit networks", () => {
     expect(world.chargeAt(1, 1)).toBe(1);
     expect(world.isWelded(0, 1, 1, 1)).toBe(true);
   });
+
+  it("connects an inverter only through its rotated input and output ports", () => {
+    const world = new World(3, 3);
+    world.place(1, 1, TileKind.Inverter, Direction.Right);
+    world.place(1, 0, TileKind.Conduit);
+    world.place(2, 1, TileKind.Conduit);
+    world.place(1, 2, TileKind.Conduit);
+    world.place(0, 1, TileKind.Conduit);
+    world.setWeld(1, 1, 1, 0, true);
+    world.setWeld(1, 1, 2, 1, true);
+    world.setWeld(1, 1, 1, 2, true);
+    world.setWeld(1, 1, 0, 1, true);
+    const inverterIndex = 1 * world.width + 1;
+
+    expect(world.hasCircuitConnectionAtIndex(inverterIndex, Direction.Up)).toBe(false);
+    expect(world.hasCircuitConnectionAtIndex(inverterIndex, Direction.Right)).toBe(true);
+    expect(world.hasCircuitConnectionAtIndex(inverterIndex, Direction.Down)).toBe(false);
+    expect(world.hasCircuitConnectionAtIndex(inverterIndex, Direction.Left)).toBe(true);
+  });
+
+  it.each([
+    { input: -1 as const, output: 1 as const },
+    { input: 0 as const, output: 0 as const },
+    { input: 1 as const, output: -1 as const },
+  ])("negates a start-of-tick $input charge across isolated networks", ({ input, output }) => {
+    const world = new World(4, 1);
+    world.place(0, 0, TileKind.Conduit);
+    world.place(1, 0, TileKind.Inverter, Direction.Right);
+    world.place(2, 0, TileKind.Conduit);
+    world.place(3, 0, TileKind.Conduit);
+    world.setWeld(0, 0, 1, 0, true);
+    world.setWeld(1, 0, 2, 0, true);
+    world.setWeld(2, 0, 3, 0, true);
+    world.setCharge(0, 0, input);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+
+    expect(world.chargeAt(0, 0)).toBe(0);
+    expect(world.chargeAt(1, 0)).toBe(output);
+    expect(world.chargeAt(2, 0)).toBe(output);
+    expect(world.chargeAt(3, 0)).toBe(output);
+  });
+
+  it("delays each inverter in a directly connected gate chain by one tick", () => {
+    const world = new World(4, 1);
+    world.place(0, 0, TileKind.Conduit);
+    world.place(1, 0, TileKind.Inverter, Direction.Right);
+    world.place(2, 0, TileKind.Inverter, Direction.Right);
+    world.place(3, 0, TileKind.Conduit);
+    world.setWeld(0, 0, 1, 0, true);
+    world.setWeld(1, 0, 2, 0, true);
+    world.setWeld(2, 0, 3, 0, true);
+    world.setCharge(0, 0, 1);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+
+    expect(world.chargeAt(1, 0)).toBe(-1);
+    expect(world.chargeAt(2, 0)).toBe(0);
+    expect(world.chargeAt(3, 0)).toBe(0);
+
+    simulation.step();
+
+    expect(world.chargeAt(1, 0)).toBe(0);
+    expect(world.chargeAt(2, 0)).toBe(1);
+    expect(world.chargeAt(3, 0)).toBe(1);
+  });
 });

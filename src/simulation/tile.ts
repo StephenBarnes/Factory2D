@@ -7,6 +7,7 @@ export const enum TileKind {
   Metal = 5,
   Conduit = 6,
   Sensor = 7,
+  Inverter = 8,
 }
 
 export const enum Direction {
@@ -33,6 +34,7 @@ export const enum TileDecorationStyle {
   Metal = 4,
   Conduit = 5,
   Sensor = 6,
+  Inverter = 7,
 }
 
 export interface TileDefinition {
@@ -184,8 +186,31 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationStyle: TileDecorationStyle.Sensor,
     decorationColor: "#d9c8ff",
   },
+  [TileKind.Inverter]: {
+    name: "Inverter Rune",
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Up | WeldSide.Down,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#765878",
+    shadow: "#443047",
+    decorationStyle: TileDecorationStyle.Inverter,
+    decorationColor: "#ead2ef",
+  },
 };
 
 export function orientationForKind(kind: TileKind, orientation: Direction): Direction {
   return TILE_DEFINITIONS[kind].usesOrientation ? orientation : Direction.Up;
+}
+
+/** Rotates a side mask from its upward-facing definition to a tile's orientation. */
+export function orientedSides(sides: WeldSide, orientation: Direction): WeldSide {
+  return (
+    ((sides << orientation) | (sides >> (4 - orientation))) &
+    WeldSide.All
+  ) as WeldSide;
 }

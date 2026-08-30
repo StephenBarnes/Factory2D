@@ -1,5 +1,11 @@
 import { isCharge, type Charge } from "./circuit";
-import { Direction, oppositeDirection, TILE_DEFINITIONS, TileKind } from "./tile";
+import {
+  Direction,
+  oppositeDirection,
+  orientedSides,
+  TILE_DEFINITIONS,
+  TileKind,
+} from "./tile";
 import { expectDefined } from "../util/assert";
 
 export interface Tile {
@@ -219,8 +225,13 @@ export class World {
       return false;
     }
 
-    const ownPorts = TILE_DEFINITIONS[this.kinds[index] as TileKind].circuitPorts;
-    const neighborPorts = TILE_DEFINITIONS[this.kinds[neighbor] as TileKind].circuitPorts;
+    const ownDefinition = TILE_DEFINITIONS[this.kinds[index] as TileKind];
+    const neighborDefinition = TILE_DEFINITIONS[this.kinds[neighbor] as TileKind];
+    const ownPorts = orientedSides(ownDefinition.circuitPorts, this.orientations[index] as Direction);
+    const neighborPorts = orientedSides(
+      neighborDefinition.circuitPorts,
+      this.orientations[neighbor] as Direction,
+    );
     return (
       (ownPorts & (1 << direction)) !== 0 &&
       (neighborPorts & (1 << oppositeDirection(direction))) !== 0

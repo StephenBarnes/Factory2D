@@ -16,6 +16,7 @@ const TILE_KIND_NAMES: Readonly<Record<TileKind, string>> = {
   [TileKind.Metal]: "metal",
   [TileKind.Conduit]: "conduit",
   [TileKind.Sensor]: "sensor",
+  [TileKind.Inverter]: "inverter",
 };
 
 const TILE_KINDS_BY_NAME: Readonly<Record<string, TileKind | undefined>> = {
@@ -26,6 +27,7 @@ const TILE_KINDS_BY_NAME: Readonly<Record<string, TileKind | undefined>> = {
   metal: TileKind.Metal,
   conduit: TileKind.Conduit,
   sensor: TileKind.Sensor,
+  inverter: TileKind.Inverter,
 };
 
 const DIRECTION_NAMES: Readonly<Record<Direction, string>> = {

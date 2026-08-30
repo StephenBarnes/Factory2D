@@ -448,6 +448,28 @@ function drawDecoration(
       context.fill();
       context.restore();
       break;
+    case TileDecorationStyle.Inverter: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.lineWidth = Math.max(1.5, size * 0.055);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.beginPath();
+      context.moveTo(-size * 0.2, size * 0.16);
+      context.lineTo(0, -size * 0.17);
+      context.lineTo(size * 0.2, size * 0.16);
+      context.closePath();
+      context.stroke();
+      context.fillStyle = CIRCUIT_CHARGE_COLORS[charge];
+      context.beginPath();
+      drawDot(context, 0, -size * 0.27, Math.max(1.5, size * 0.075));
+      context.fill();
+      context.strokeStyle = definition.decorationColor;
+      context.stroke();
+      context.restore();
+      break;
+    }
     case TileDecorationStyle.None:
       break;
   }
