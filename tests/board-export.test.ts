@@ -112,6 +112,8 @@ describe("board export", () => {
   it.each([
     { kind: TileKind.Combiner, code: "+" },
     { kind: TileKind.Rectifier, code: "R" },
+    { kind: TileKind.Multiplier, code: "*" },
+    { kind: TileKind.Subtractor, code: "-" },
   ])("round-trips directional gate $kind with code $code", ({ kind, code }) => {
     const world = new World(1, 1);
     world.place(0, 0, kind, Direction.Right);

@@ -130,6 +130,8 @@ export class Simulation {
       const orientation = this.world.orientationAtIndex(index);
       const inputSides = orientedSides(definition.circuitInputPorts, orientation);
       let inputSum = 0;
+      let leftInput: Charge = 0;
+      let rightInput: Charge = 0;
       for (let value = Direction.Up; value <= Direction.Left; value += 1) {
         const direction = value as Direction;
         if (
@@ -142,7 +144,14 @@ export class Simulation {
         if (inputIndex < 0) {
           throw new Error(`Connected circuit input at index ${index} has no neighbor`);
         }
-        inputSum += this.world.chargeAtIndex(inputIndex);
+        const inputCharge = this.world.chargeAtIndex(inputIndex);
+        inputSum += inputCharge;
+        const relativeDirection = ((direction - orientation + 4) & 3) as Direction;
+        if (relativeDirection === Direction.Left) {
+          leftInput = inputCharge;
+        } else if (relativeDirection === Direction.Right) {
+          rightInput = inputCharge;
+        }
       }
 
       let outputCharge: Charge;
@@ -155,6 +164,12 @@ export class Simulation {
           break;
         case TileKind.Rectifier:
           outputCharge = inputSum > 0 ? 1 : 0;
+          break;
+        case TileKind.Multiplier:
+          outputCharge = chargeFromSum(leftInput * rightInput);
+          break;
+        case TileKind.Subtractor:
+          outputCharge = chargeFromSum(leftInput - rightInput);
           break;
         default:
           throw new Error(`Tile kind ${kind} defines circuit inputs without a gate behavior`);

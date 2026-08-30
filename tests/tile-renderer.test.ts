@@ -236,19 +236,25 @@ describe("circuit rendering", () => {
     expect(context.fillStyles).not.toContain(CIRCUIT_CHARGE_COLORS[-1]);
   });
 
-  it.each([TileKind.Inverter, TileKind.Combiner, TileKind.Rectifier])(
-    "keeps %s input and output traces separate and individually colored",
-    (kind) => {
+  it.each([
+    { kind: TileKind.Inverter, inputDirection: Direction.Down },
+    { kind: TileKind.Combiner, inputDirection: Direction.Down },
+    { kind: TileKind.Rectifier, inputDirection: Direction.Down },
+    { kind: TileKind.Multiplier, inputDirection: Direction.Left },
+    { kind: TileKind.Subtractor, inputDirection: Direction.Left },
+  ])(
+    "keeps $kind input and output traces separate and individually colored",
+    ({ kind, inputDirection }) => {
       const context = new RecordingCanvasContext();
       let portCharges = setCircuitPortCharge(0, Direction.Up, 1);
-      portCharges = setCircuitPortCharge(portCharges, Direction.Down, -1);
+      portCharges = setCircuitPortCharge(portCharges, inputDirection, -1);
       const gate: BodyCell = {
         x: 0,
         y: 0,
         kind,
         orientation: Direction.Up,
         outputCharge: 1,
-        circuitConnections: WeldSide.Up | WeldSide.Down,
+        circuitConnections: (WeldSide.Up | (1 << inputDirection)) as WeldSide,
         circuitPortCharges: portCharges,
         seamRight: false,
         seamDown: false,
@@ -275,10 +281,10 @@ describe("circuit rendering", () => {
       const inputSegment = context.strokes.find(
         (stroke) => stroke.strokeStyle === CIRCUIT_CHARGE_COLORS[-1],
       )?.segments[0];
-      expect(inputSegment?.fromX).toBe(16);
-      expect(inputSegment?.fromY).toBe(32);
-      expect(inputSegment?.toX).toBe(16);
-      expect(inputSegment?.toY).toBeCloseTo(24.32);
+      expect(inputSegment?.fromX).toBe(inputDirection === Direction.Left ? 0 : 16);
+      expect(inputSegment?.fromY).toBe(inputDirection === Direction.Down ? 32 : 16);
+      expect(inputSegment?.toX).toBeCloseTo(inputDirection === Direction.Left ? 7.68 : 16);
+      expect(inputSegment?.toY).toBeCloseTo(inputDirection === Direction.Down ? 24.32 : 16);
     },
   );
 });

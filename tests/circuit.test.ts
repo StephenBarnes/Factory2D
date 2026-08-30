@@ -264,4 +264,71 @@ describe("circuit networks", () => {
       expect(world.chargeAt(1, 0)).toBe(output);
     },
   );
+
+  it.each(
+    ([-1, 0, 1] as const).flatMap((left) =>
+      ([-1, 0, 1] as const).map((right) => ({
+        left,
+        right,
+        output: left === 0 || right === 0 ? 0 : left * right,
+      })),
+    ),
+  )(
+    "multiplies isolated inputs $left × $right to $output",
+    ({ left, right, output }) => {
+      const world = new World(3, 2);
+      world.place(1, 0, TileKind.Conduit);
+      world.place(0, 1, TileKind.Conduit);
+      world.place(1, 1, TileKind.Multiplier, Direction.Up);
+      world.place(2, 1, TileKind.Conduit);
+      world.setWeld(1, 0, 1, 1, true);
+      world.setWeld(0, 1, 1, 1, true);
+      world.setWeld(1, 1, 2, 1, true);
+      world.setCharge(0, 1, left);
+      world.setCharge(2, 1, right);
+      const simulation = new Simulation(world);
+
+      simulation.step();
+
+      expect(world.chargeAt(0, 1)).toBe(0);
+      expect(world.chargeAt(2, 1)).toBe(0);
+      expect(world.chargeAt(1, 1)).toBe(output);
+      expect(world.chargeAt(1, 0)).toBe(output);
+    },
+  );
+
+  it.each(
+    ([-1, 0, 1] as const).flatMap((left) =>
+      ([-1, 0, 1] as const).map((right) => {
+        const difference = left - right;
+        return {
+          left,
+          right,
+          output: difference < 0 ? -1 : difference > 0 ? 1 : 0,
+        };
+      }),
+    ),
+  )(
+    "subtracts isolated inputs sign($left − $right) to $output",
+    ({ left, right, output }) => {
+      const world = new World(3, 2);
+      world.place(1, 0, TileKind.Conduit);
+      world.place(0, 1, TileKind.Conduit);
+      world.place(1, 1, TileKind.Subtractor, Direction.Up);
+      world.place(2, 1, TileKind.Conduit);
+      world.setWeld(1, 0, 1, 1, true);
+      world.setWeld(0, 1, 1, 1, true);
+      world.setWeld(1, 1, 2, 1, true);
+      world.setCharge(0, 1, left);
+      world.setCharge(2, 1, right);
+      const simulation = new Simulation(world);
+
+      simulation.step();
+
+      expect(world.chargeAt(0, 1)).toBe(0);
+      expect(world.chargeAt(2, 1)).toBe(0);
+      expect(world.chargeAt(1, 1)).toBe(output);
+      expect(world.chargeAt(1, 0)).toBe(output);
+    },
+  );
 });

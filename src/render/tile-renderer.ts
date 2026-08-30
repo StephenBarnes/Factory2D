@@ -545,6 +545,48 @@ function drawDecoration(
       context.restore();
       break;
     }
+    case TileDecorationStyle.Multiplier: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.lineWidth = Math.max(1.5, size * 0.055);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.beginPath();
+      context.moveTo(-size * 0.1, -size * 0.1);
+      context.lineTo(size * 0.1, size * 0.1);
+      context.moveTo(size * 0.1, -size * 0.1);
+      context.lineTo(-size * 0.1, size * 0.1);
+      context.stroke();
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
+      context.beginPath();
+      context.moveTo(-size * 0.14, -size * 0.14);
+      context.lineTo(0, -size * 0.22);
+      context.lineTo(size * 0.14, -size * 0.14);
+      context.stroke();
+      context.restore();
+      break;
+    }
+    case TileDecorationStyle.Subtractor: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.lineWidth = Math.max(1.5, size * 0.055);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.beginPath();
+      context.moveTo(-size * 0.12, 0);
+      context.lineTo(size * 0.12, 0);
+      context.stroke();
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
+      context.beginPath();
+      context.moveTo(-size * 0.14, -size * 0.14);
+      context.lineTo(0, -size * 0.22);
+      context.lineTo(size * 0.14, -size * 0.14);
+      context.stroke();
+      context.restore();
+      break;
+    }
     case TileDecorationStyle.None:
       break;
   }

@@ -21,6 +21,7 @@ Performance:
 
 Circuit network:
 
-* Figure out how to handle wires that become split or welded together.
-* Extend the set of charges (0, +1, -1) to add orthogonal +i and -i charges, or add a 2-wire tile with components for reading the different wires.
-* There are some fun gates unique to signed signals. ABS gate (-1 -> 1), rectifier (negative to zero), min, max, select (control -1 or +1).
+* Figure out how to handle wires that become split or welded together while a game runs.
+* Maybe: extend the set of charges (0, +1, -1) to add orthogonal +i and -i charges, or add a 2-wire tile with components for reading the different wires.
+* Potentially add min() and max() gates.
+* Implement a "rune array" component. When placed, or when clicking on the circuit board with circuit board tile selected, open a modal box that allows configuring it by placing "miniature" components on a 5x5 grid. The 4 edge-center tiles of the array's grid are logically connected to the rune array's 4 sides.

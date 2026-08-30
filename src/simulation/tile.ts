@@ -10,6 +10,8 @@ export const enum TileKind {
   Inverter = 8,
   Combiner = 9,
   Rectifier = 10,
+  Multiplier = 11,
+  Subtractor = 12,
 }
 
 export const enum Direction {
@@ -39,6 +41,8 @@ export const enum TileDecorationStyle {
   Inverter = 7,
   Combiner = 8,
   Rectifier = 9,
+  Multiplier = 10,
+  Subtractor = 11,
 }
 
 export interface TileDefinition {
@@ -247,6 +251,38 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     shadow: "#463821",
     decorationStyle: TileDecorationStyle.Rectifier,
     decorationColor: "#f1dfb8",
+  },
+  [TileKind.Multiplier]: {
+    name: "Multiplier Rune",
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Up | WeldSide.Right | WeldSide.Left,
+    circuitInputPorts: WeldSide.Right | WeldSide.Left,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#51657b",
+    shadow: "#2d3a49",
+    decorationStyle: TileDecorationStyle.Multiplier,
+    decorationColor: "#d4e4f5",
+  },
+  [TileKind.Subtractor]: {
+    name: "Subtractor Rune",
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Up | WeldSide.Right | WeldSide.Left,
+    circuitInputPorts: WeldSide.Right | WeldSide.Left,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#745b50",
+    shadow: "#44332c",
+    decorationStyle: TileDecorationStyle.Subtractor,
+    decorationColor: "#f0d7ca",
   },
 };
 
