@@ -104,6 +104,7 @@ export function drawTile(
       break;
   }
 
+  context.fillStyle = definition.shadow;
   context.strokeStyle = definition.shadow;
   context.lineWidth = Math.max(1, Math.floor(edge / 2));
   if ((innerCorners & InnerCorner.UpLeft) !== 0) {
@@ -130,16 +131,25 @@ function drawInnerFillet(
 ): void {
   const inset = 1;
   const depth = edge + inset;
+  const curveStartX = cornerX - horizontalSign * depth;
+  const curveStartY = cornerY - verticalSign * inset;
+  const curveEndX = cornerX - horizontalSign * inset;
+  const curveEndY = cornerY - verticalSign * depth;
+  const controlX = cornerX - horizontalSign * depth;
+  const controlY = cornerY - verticalSign * depth;
+
   context.beginPath();
-  context.moveTo(
-    cornerX - horizontalSign * depth,
-    cornerY - verticalSign * inset,
-  );
-  context.quadraticCurveTo(
-    cornerX - horizontalSign * depth,
-    cornerY - verticalSign * depth,
-    cornerX - horizontalSign * inset,
-    cornerY - verticalSign * depth,
-  );
+  context.moveTo(curveStartX, curveStartY);
+  context.lineTo(cornerX, curveStartY);
+  context.lineTo(cornerX, cornerY);
+  context.lineTo(curveEndX, cornerY);
+  context.lineTo(curveEndX, curveEndY);
+  context.quadraticCurveTo(controlX, controlY, curveStartX, curveStartY);
+  context.closePath();
+  context.fill();
+
+  context.beginPath();
+  context.moveTo(curveStartX, curveStartY);
+  context.quadraticCurveTo(controlX, controlY, curveEndX, curveEndY);
   context.stroke();
 }
