@@ -15,6 +15,7 @@ const MAX_AUTOMATIC_ANIMATION_MS = 250;
 const MANUAL_STEP_ANIMATION_MS = 200;
 const HIGH_SPEED_TICKS_PER_SECOND = 60;
 const PALETTE_PREVIEW_SUPERSAMPLING = 2;
+const KEYBOARD_PAN_PIXELS = 64;
 
 function requiredElement<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -45,6 +46,7 @@ const previousWorld = world.clone();
 const canvas = requiredElement<HTMLCanvasElement>("game-canvas");
 const renderer = new CanvasRenderer(canvas, world);
 const sidebarControls = requiredElement<HTMLElement>("sidebar-controls");
+const bottomControls = requiredElement<HTMLElement>("bottom-controls");
 const playButton = requiredElement<HTMLButtonElement>("play-button");
 const stepButton = requiredElement<HTMLButtonElement>("step-button");
 const resetButton = requiredElement<HTMLButtonElement>("reset-button");
@@ -61,7 +63,10 @@ let selectedOrientation = Direction.Up;
 let selectedTool: "tile" | "weld" = "tile";
 let temporaryWeldActive = false;
 let activePointerId: number | null = null;
+let activePointerMode: "edit" | "pan" | null = null;
 let activeErase = false;
+let lastPanClientX = 0;
+let lastPanClientY = 0;
 let lastEditedCell: GridCell | null = null;
 let lastPointerGridPoint: GridPoint | null = null;
 let hoveredCell: GridCell | null = null;
@@ -73,6 +78,23 @@ let animationStartedAt = 0;
 let animationDuration = 0;
 let renderedTick = -1;
 let renderedPaletteDevicePixelRatio = 0;
+
+function updateViewportInsets(): void {
+  const canvasBounds = canvas.getBoundingClientRect();
+  const sidebarBounds = sidebarControls.getBoundingClientRect();
+  const controlsBounds = bottomControls.getBoundingClientRect();
+  renderer.setViewportInsets({
+    top: 16,
+    right: 16,
+    bottom: Math.max(16, canvasBounds.bottom - controlsBounds.top + 16),
+    left: Math.max(16, sidebarBounds.right - canvasBounds.left + 16),
+  });
+}
+
+const overlayResizeObserver = new ResizeObserver(updateViewportInsets);
+overlayResizeObserver.observe(sidebarControls);
+overlayResizeObserver.observe(bottomControls);
+updateViewportInsets();
 
 function updateTransportState(): void {
   playButton.textContent = running ? "Ⅱ PAUSE" : "▶ RUN";
@@ -351,10 +373,11 @@ clearButton.addEventListener("click", () => {
 });
 
 canvas.addEventListener("pointerdown", (event) => {
+  const point = renderer.gridPointFromClientPoint(event.clientX, event.clientY);
+  const cell = renderer.cellFromGridPoint(point);
+
   if (event.button === 1) {
     event.preventDefault();
-    const point = renderer.gridPointFromClientPoint(event.clientX, event.clientY);
-    const cell = renderer.cellFromGridPoint(point);
     if (cell === null) {
       return;
     }
@@ -369,19 +392,33 @@ canvas.addEventListener("pointerdown", (event) => {
     }
     return;
   }
+
+  if (event.button === 2 && cell === null) {
+    event.preventDefault();
+    activePointerId = event.pointerId;
+    activePointerMode = "pan";
+    lastPanClientX = event.clientX;
+    lastPanClientY = event.clientY;
+    canvas.setPointerCapture(event.pointerId);
+    canvas.classList.add("panning");
+    hoveredCell = null;
+    hoveredEdge = null;
+    refreshPointerHover();
+    return;
+  }
+
   if (running || (event.button !== 0 && event.button !== 2)) {
     return;
   }
 
   event.preventDefault();
   activePointerId = event.pointerId;
+  activePointerMode = "edit";
   activeErase = event.button === 2;
   canvas.setPointerCapture(event.pointerId);
 
-  const point = renderer.gridPointFromClientPoint(event.clientX, event.clientY);
   lastPointerGridPoint = point;
   if (selectedTool === "tile") {
-    const cell = renderer.cellFromGridPoint(point);
     if (cell !== null) {
       editCellLine(cell, cell, activeErase);
       lastEditedCell = cell;
@@ -403,8 +440,17 @@ canvas.addEventListener("pointermove", (event) => {
   if (event.pointerId !== activePointerId) {
     return;
   }
-  if (lastPointerGridPoint === null) {
-    throw new Error("Active pointer is missing its previous grid position");
+  if (activePointerMode === "pan") {
+    renderer.panByPixels(event.clientX - lastPanClientX, event.clientY - lastPanClientY);
+    lastPanClientX = event.clientX;
+    lastPanClientY = event.clientY;
+    hoveredCell = null;
+    hoveredEdge = null;
+    refreshPointerHover();
+    return;
+  }
+  if (activePointerMode !== "edit" || lastPointerGridPoint === null) {
+    throw new Error("Active edit pointer is missing its edit state");
   }
 
   if (selectedTool === "tile") {
@@ -429,8 +475,10 @@ function finishPointerEdit(event: PointerEvent): void {
     return;
   }
   activePointerId = null;
+  activePointerMode = null;
   lastEditedCell = null;
   lastPointerGridPoint = null;
+  canvas.classList.remove("panning");
 }
 
 canvas.addEventListener("pointerup", finishPointerEdit);
@@ -445,6 +493,15 @@ canvas.addEventListener("pointerleave", () => {
 canvas.addEventListener("contextmenu", (event) => {
   event.preventDefault();
 });
+
+canvas.addEventListener("wheel", (event) => {
+  event.preventDefault();
+  renderer.zoomAtClientPoint(event.clientX, event.clientY, event.deltaY);
+  const point = renderer.gridPointFromClientPoint(event.clientX, event.clientY);
+  hoveredCell = renderer.cellFromGridPoint(point);
+  hoveredEdge = renderer.edgeFromGridPoint(point);
+  refreshPointerHover();
+}, { passive: false });
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Control") {
@@ -462,6 +519,25 @@ document.addEventListener("keydown", (event) => {
     event.target instanceof HTMLTextAreaElement ||
     event.target instanceof HTMLSelectElement
   ) {
+    return;
+  }
+  if (event.code === "ArrowLeft") {
+    event.preventDefault();
+    renderer.panByPixels(KEYBOARD_PAN_PIXELS, 0);
+  } else if (event.code === "ArrowRight") {
+    event.preventDefault();
+    renderer.panByPixels(-KEYBOARD_PAN_PIXELS, 0);
+  } else if (event.code === "ArrowUp") {
+    event.preventDefault();
+    renderer.panByPixels(0, KEYBOARD_PAN_PIXELS);
+  } else if (event.code === "ArrowDown") {
+    event.preventDefault();
+    renderer.panByPixels(0, -KEYBOARD_PAN_PIXELS);
+  }
+  if (event.code.startsWith("Arrow")) {
+    hoveredCell = null;
+    hoveredEdge = null;
+    refreshPointerHover();
     return;
   }
   if (selectedTool === "tile" && selectedKind === TileKind.Magnet && !running) {
@@ -522,7 +598,10 @@ window.addEventListener("blur", () => {
     selectTile(selectedKind);
   }
 });
-window.addEventListener("resize", renderPalettePreviews);
+window.addEventListener("resize", () => {
+  renderPalettePreviews();
+  updateViewportInsets();
+});
 
 function frame(currentTime: number): void {
   const elapsed = Math.min(currentTime - previousFrameTime, 250);

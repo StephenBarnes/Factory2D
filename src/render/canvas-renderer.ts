@@ -5,7 +5,16 @@ import type { GridCell, GridEdge, GridPoint } from "./grid-drag";
 import { type BodyCell, createBodyPath, drawBody, drawTile } from "./tile-renderer";
 
 
-const DESIGN_TILE_SIZE = 32;
+const MAX_TILE_SIZE = 64;
+const MIN_TILE_SIZE = 2;
+const GRID_EDGE_EPSILON = 1e-6;
+
+export interface ViewportInsets {
+  readonly top: number;
+  readonly right: number;
+  readonly bottom: number;
+  readonly left: number;
+}
 
 interface CachedBody {
   readonly cells: readonly BodyCell[];
@@ -17,18 +26,21 @@ export class CanvasRenderer {
   private readonly context: CanvasRenderingContext2D;
   private readonly world: World;
 
-  private cellSize = DESIGN_TILE_SIZE;
+  private cellSize = MAX_TILE_SIZE;
   private originX = 0;
   private originY = 0;
   private viewportWidth = 0;
   private viewportHeight = 0;
+  private viewCenterX: number;
+  private viewCenterY: number;
+  private viewportInsets: ViewportInsets = { top: 0, right: 0, bottom: 0, left: 0 };
+  private viewInitialized = false;
+  private viewModified = false;
   /** Per-cell body stamp: 0 = unvisited, otherwise the body's start index + 1. */
   private bodyStamps = new Int32Array(0);
   private bodyStack = new Int32Array(0);
   private readonly bodyCells: BodyCell[] = [];
   private cachedWorldRevision = -1;
-  private cachedOriginX = Number.NaN;
-  private cachedOriginY = Number.NaN;
   private cachedCellSize = 0;
   private readonly cachedBodies: CachedBody[] = [];
   private hoverX = -1;
@@ -46,6 +58,56 @@ export class CanvasRenderer {
     this.canvas = canvas;
     this.context = context;
     this.world = world;
+    this.viewCenterX = world.width / 2;
+    this.viewCenterY = world.height / 2;
+  }
+
+  setViewportInsets(insets: ViewportInsets): void {
+    if (
+      this.viewportInsets.top === insets.top &&
+      this.viewportInsets.right === insets.right &&
+      this.viewportInsets.bottom === insets.bottom &&
+      this.viewportInsets.left === insets.left
+    ) {
+      return;
+    }
+    this.viewportInsets = insets;
+    if (this.viewInitialized && !this.viewModified) {
+      this.fitView();
+    } else {
+      this.updateOrigin();
+    }
+  }
+
+  zoomAtClientPoint(clientX: number, clientY: number, wheelDeltaY: number): void {
+    this.resizeBackingStore();
+    const bounds = this.canvas.getBoundingClientRect();
+    const localX = clientX - bounds.left;
+    const localY = clientY - bounds.top;
+    const gridX = (localX - this.originX) / this.cellSize;
+    const gridY = (localY - this.originY) / this.cellSize;
+    const nextSize = Math.max(
+      MIN_TILE_SIZE,
+      Math.min(MAX_TILE_SIZE, this.cellSize * Math.exp(-wheelDeltaY * 0.0015)),
+    );
+    if (nextSize === this.cellSize) {
+      return;
+    }
+
+    const { centerX, centerY } = this.safeViewport();
+    this.cellSize = nextSize;
+    this.viewCenterX = gridX - (localX - centerX) / nextSize;
+    this.viewCenterY = gridY - (localY - centerY) / nextSize;
+    this.viewModified = true;
+    this.updateOrigin();
+  }
+
+  /** Moves the rendered board by the supplied screen-space delta. */
+  panByPixels(deltaX: number, deltaY: number): void {
+    this.viewCenterX -= deltaX / this.cellSize;
+    this.viewCenterY -= deltaY / this.cellSize;
+    this.viewModified = true;
+    this.updateOrigin();
   }
 
   render(previousWorld: World | null = null, progress = 1): void {
@@ -135,6 +197,7 @@ export class CanvasRenderer {
   private resizeBackingStore(): void {
     const width = this.canvas.clientWidth;
     const height = this.canvas.clientHeight;
+    const sizeChanged = width !== this.viewportWidth || height !== this.viewportHeight;
     const devicePixelRatio = window.devicePixelRatio || 1;
     const backingWidth = Math.round(width * devicePixelRatio);
     const backingHeight = Math.round(height * devicePixelRatio);
@@ -149,12 +212,57 @@ export class CanvasRenderer {
     this.viewportWidth = width;
     this.viewportHeight = height;
 
-    const fittedSize = Math.floor(
-      Math.min(width / this.world.width, height / this.world.height, DESIGN_TILE_SIZE),
+    if (!this.viewInitialized || (sizeChanged && !this.viewModified)) {
+      this.fitView();
+      this.viewInitialized = true;
+    } else if (sizeChanged) {
+      this.updateOrigin();
+    }
+  }
+
+  private fitView(): void {
+    const { width, height } = this.safeViewport();
+    this.cellSize = Math.max(
+      MIN_TILE_SIZE,
+      Math.min(width / this.world.width, height / this.world.height, MAX_TILE_SIZE),
     );
-    this.cellSize = Math.max(12, fittedSize);
-    this.originX = Math.floor((width - this.world.width * this.cellSize) / 2);
-    this.originY = Math.floor((height - this.world.height * this.cellSize) / 2);
+    this.viewCenterX = this.world.width / 2;
+    this.viewCenterY = this.world.height / 2;
+    this.updateOrigin();
+  }
+
+  private safeViewport(): {
+    readonly centerX: number;
+    readonly centerY: number;
+    readonly width: number;
+    readonly height: number;
+  } {
+    const left = Math.max(0, Math.min(this.viewportInsets.left, this.viewportWidth - 1));
+    const top = Math.max(0, Math.min(this.viewportInsets.top, this.viewportHeight - 1));
+    const width = Math.max(1, this.viewportWidth - left - Math.max(0, this.viewportInsets.right));
+    const height = Math.max(1, this.viewportHeight - top - Math.max(0, this.viewportInsets.bottom));
+    return {
+      centerX: left + width / 2,
+      centerY: top + height / 2,
+      width,
+      height,
+    };
+  }
+
+  private updateOrigin(): void {
+    const { centerX, centerY } = this.safeViewport();
+    const screenCenterOffsetX = (this.viewportWidth / 2 - centerX) / this.cellSize;
+    const screenCenterOffsetY = (this.viewportHeight / 2 - centerY) / this.cellSize;
+    this.viewCenterX = Math.max(
+      -screenCenterOffsetX,
+      Math.min(this.world.width - GRID_EDGE_EPSILON - screenCenterOffsetX, this.viewCenterX),
+    );
+    this.viewCenterY = Math.max(
+      -screenCenterOffsetY,
+      Math.min(this.world.height - GRID_EDGE_EPSILON - screenCenterOffsetY, this.viewCenterY),
+    );
+    this.originX = centerX - this.viewCenterX * this.cellSize;
+    this.originY = centerY - this.viewCenterY * this.cellSize;
   }
 
   private drawGrid(): void {
@@ -211,11 +319,11 @@ export class CanvasRenderer {
       }
 
       this.context.save();
-      this.context.translate(offsetX, offsetY);
+      this.context.translate(this.originX + offsetX, this.originY + offsetY);
       drawBody(
         this.context,
-        this.originX,
-        this.originY,
+        0,
+        0,
         this.cellSize,
         body.cells,
         body.cells.length,
@@ -228,16 +336,12 @@ export class CanvasRenderer {
   private rebuildBodyCache(): void {
     if (
       this.cachedWorldRevision === this.world.revision &&
-      this.cachedOriginX === this.originX &&
-      this.cachedOriginY === this.originY &&
       this.cachedCellSize === this.cellSize
     ) {
       return;
     }
 
     this.cachedWorldRevision = this.world.revision;
-    this.cachedOriginX = this.originX;
-    this.cachedOriginY = this.originY;
     this.cachedCellSize = this.cellSize;
     this.cachedBodies.length = 0;
 
@@ -262,7 +366,7 @@ export class CanvasRenderer {
       }
       this.cachedBodies.push({
         cells,
-        path: createBodyPath(this.originX, this.originY, this.cellSize, cells, count),
+        path: createBodyPath(0, 0, this.cellSize, cells, count),
       });
     }
   }

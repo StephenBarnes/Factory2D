@@ -83,7 +83,7 @@ Keep this section up-to-date.
 The first playable scaffold is implemented:
 
 * A 20x14 editable Canvas 2D grid with procedural sand, falling stone, magnetic metal, directional magnets, and fixed platform tiles.
-* A responsive board canvas whose backing-store resolution follows browser zoom without contributing its intrinsic pixel dimensions to page layout.
+* A full-viewport black board layer behind responsive floating left and bottom control panels. The initial view fits the entire grid into the unobscured region; mouse-wheel zoom stays anchored beneath the pointer; and arrow keys or off-grid right-button drags pan within bounds that keep the screen center over the grid.
 * Build controls for gap-free click-and-drag placement and removal, including drags that leave the grid, middle-click picking that preserves magnet orientation, magnet rotation and aiming, stepping, running, pausing, resetting, clearing, speed selection, and an animation toggle.
 * A separate weld tool for joining eligible occupied neighbors into rigid bodies and unwelding them, with gap-free fast-drag traversal, an immediate held-Control temporary override, and red invalid-edge feedback. Sand is not weldable, and magnets reject welds on their pointed side.
 * One shared procedural tile renderer for the Canvas board, placement preview, and component palette. Palette previews use density-aware, supersampled backing stores and redraw when browser zoom or display density changes. Each welded body renders from traced, inset rounded-slab outlines whose occupied neighbors merge only across locally welded edges, so unwelded cuts stay visually stable when another cut splits the body and closed seam ends receive rounded caps. Rendering includes a drop shadow, per-cell fills that remain locally stable when different tile kinds are joined, decorations clipped to the outline, and top-left highlight and bottom-right shade bevels. Diagonally touching cells render as a rounded pinch. Per-body cells and `Path2D` outlines are cached across animation frames and rebuilt only after world changes or board geometry changes.
@@ -95,10 +95,10 @@ The first playable scaffold is implemented:
 ## Code map
 
 * `index.html` — Application shell, tile and weld palette, canvas, and simulation controls.
-* `src/main.ts` — Browser entry point, example world setup, input handling, build tools, and animation loop.
+* `src/main.ts` — Browser entry point, example world setup, input handling, build tools, bounded pan/zoom controls, overlay-aware viewport insets, and animation loop.
 * `src/styles.css` — Responsive application, palette, board, and control styling.
 * `src/vite-env.d.ts` — Vite client type declarations.
-* `src/render/canvas-renderer.ts` — Responsive Canvas 2D grid, revision-keyed welded-body geometry cache, stable-ID movement interpolation, hit testing, placement previews, and hover feedback.
+* `src/render/canvas-renderer.ts` — Responsive Canvas 2D grid, overlay-aware camera fitting, bounded pan and pointer-anchored zoom, revision-and-scale-keyed welded-body geometry cache, stable-ID movement interpolation, hit testing, placement previews, and hover feedback.
 * `src/render/grid-drag.ts` — Board-clipped tile-drag endpoints and continuous weld-edge traversal between pointer events.
 * `src/render/tile-renderer.ts` — Body outline tracing and rounded-slab drawing (fill, bevel lighting, decorations) for the board and component palette.
 * `src/simulation/tile.ts` — Tile kinds, directions, and immutable tile behavior/render definitions.
@@ -113,8 +113,8 @@ The first playable scaffold is implemented:
 
 ## Current TODOs
 
-* Rework the overall UI. Currently the grid is a small region of the screen, and there's no way to zoom in or pan; this will be a problem for larger puzzle maps later. Instead, make the grid the background layer. Add the sidebars (palette, run/step/reset/clear, etc.) as panels floating on top of this. Start with the grid centered and zoomed in a way that allows seeing the whole grid with none of it hidden behind panels. Allow zooming the grid with mousewheel, and panning with arrow keys or RMB-drag on an empty region of the screen. Draw space outside the tile grid as black. Allow panning as long as the center of the screen is still over the tile grid (or any similar rule that ensures players don't accidentally get lost when panning and end up unable to find the grid again). Remove unnecessary UI elements like the title at the top; keep only left panel (tools, components, controls) and bottom panel (run, step, simulation speed).
-* Compute the next simulation step async, while the last update is still being animated. Would improve performance if simulation step time grows over frame time.
+* Currently we allow panning with RMB-drag off the grid. Replace that with MMB-drag to pan, and add alt key plus RMB drag to pan, even on the grid. (MMB click on a tile currently picks that tile; but MMB on empty cells does nothing. I think cleanest is to do pick on MMB press, and also allow MMB-drag anywhere to pan.)
+* Compute the next simulation step async, while the last update is still being animated. Would improve performance if simulation step time grows to exceed frame time.
 * Add a conveyor-belt block: applies forces to its 4 neighbors, if they're not welded to it, either clockwise or counterclockwise; applies the reaction force to itself. Rotation controls (Q/E or WASD) should instead set clockwise/counterclockwise. For rendering, draw a block with a dashed line, animated to move along each side. Later, control with charge (positive, negative, or zero).
 * Add a conduit/wire block. It should look like a grey stone block with a dull blue circle in the center; when welded to adjacent blocks with a flag set, also draw a line from the circle to those welded neighbors. Store a charge; if the charge is nonzero, change the dull blue color to bright blue.
 * Add a piston block. It should be one block showing the arm and base of the piston overlapping. When it receives a charge, it should extend the arm, making it two separate blocks (considered welded together). When no charge is received, it should try to retract. This is a special case because we have effectively 2 blocks that can overlap, which is not usually allowed; but we could model it without overlaps, as 3 separate block types (arm, base, and combined arm+base), though we would still need to modify animation to show the arm extending.

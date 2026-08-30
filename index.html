@@ -8,93 +8,86 @@
   </head>
   <body>
     <main class="app-shell">
-      <header class="topbar">
-        <div>
-          <p class="eyebrow">SIMULATION PROTOTYPE</p>
-          <h1>Factory <span>2D</span></h1>
-        </div>
-        <div class="simulation-state" aria-live="polite">
-          <span class="state-light" id="state-light"></span>
-          <span id="state-label">BUILD MODE</span>
-          <span class="tick-counter" id="tick-counter">TICK 0000</span>
-        </div>
-      </header>
-
-      <section class="workspace">
-        <aside class="sidebar" id="sidebar-controls" aria-label="Build tools and components">
-          <div class="panel-heading">
-            <span>TOOLS</span>
-            <span class="panel-number">01</span>
-          </div>
-          <div class="palette">
-            <button class="palette-item" data-tool="weld" type="button">
-              <span class="swatch weld-swatch"></span>
-              <span><strong>Weld</strong><small>Join adjacent blocks into one body</small></span>
-              <kbd>Ctrl</kbd>
-            </button>
-          </div>
-          <div class="panel-heading">
-            <span>COMPONENTS</span>
-            <span class="panel-number">02</span>
-          </div>
-          <div class="palette">
-            <button class="palette-item selected" data-tile="2" type="button">
-              <canvas class="tile-preview" data-tile-preview="2" width="32" height="32"></canvas>
-              <span><strong>Sand</strong><small>Falls and slides around obstacles</small></span>
-              <kbd>1</kbd>
-            </button>
-            <button class="palette-item" data-tile="1" type="button">
-              <canvas class="tile-preview" data-tile-preview="1" width="32" height="32"></canvas>
-              <span><strong>Stone</strong><small>Solid block affected by gravity</small></span>
-              <kbd>2</kbd>
-            </button>
-            <button class="palette-item" data-tile="3" type="button">
-              <canvas class="tile-preview" data-tile-preview="3" width="32" height="32"></canvas>
-              <span><strong>Platform</strong><small>Fixed structural block</small></span>
-              <kbd>3</kbd>
-            </button>
-            <button class="palette-item" data-tile="4" type="button">
-              <canvas class="tile-preview" data-tile-preview="4" width="32" height="32"></canvas>
-              <span><strong>Magnet</strong><small>Holds magnetic blocks on its pointed side</small></span>
-              <kbd>4</kbd>
-            </button>
-            <button class="palette-item" data-tile="5" type="button">
-              <canvas class="tile-preview" data-tile-preview="5" width="32" height="32"></canvas>
-              <span><strong>Metal</strong><small>Magnetic structural block</small></span>
-              <kbd>5</kbd>
-            </button>
-          </div>
-          <div class="instructions">
-            <p><span>PLACE / WELD</span> Left click or drag</p>
-            <p><span>REMOVE / UNWELD</span> Right click or drag</p>
-            <p><span>HOLD WELD TOOL</span> Ctrl</p>
-            <p><span>ROTATE / AIM MAGNET</span> Q / E or WASD</p>
-            <p><span>RUN / PAUSE</span> Space</p>
-            <p><span>STEP</span> N</p>
-          </div>
-        </aside>
-
-        <section class="board-panel" aria-label="Factory simulation">
-          <div class="board-frame" id="board-frame">
-            <canvas id="game-canvas" aria-label="Editable tile simulation grid"></canvas>
-          </div>
-          <div class="coordinates" id="coordinates">X -- &nbsp; Y --</div>
-        </section>
+      <section class="board-panel" aria-label="Factory simulation">
+        <canvas
+          id="game-canvas"
+          aria-label="Editable tile simulation grid. Use the mouse wheel to zoom and arrow keys to pan."
+        ></canvas>
       </section>
 
-      <footer class="controls">
+      <aside class="sidebar floating-panel" id="sidebar-controls" aria-label="Build tools and components">
+        <div class="panel-heading">
+          <span>TOOLS</span>
+          <span class="panel-number">01</span>
+        </div>
+        <div class="palette">
+          <button class="palette-item" data-tool="weld" type="button">
+            <span class="swatch weld-swatch"></span>
+            <span><strong>Weld</strong><small>Join adjacent blocks into one body</small></span>
+            <kbd>Ctrl</kbd>
+          </button>
+        </div>
+        <div class="panel-heading">
+          <span>COMPONENTS</span>
+          <span class="panel-number">02</span>
+        </div>
+        <div class="palette">
+          <button class="palette-item selected" data-tile="2" type="button">
+            <canvas class="tile-preview" data-tile-preview="2" width="32" height="32"></canvas>
+            <span><strong>Sand</strong><small>Falls and slides around obstacles</small></span>
+            <kbd>1</kbd>
+          </button>
+          <button class="palette-item" data-tile="1" type="button">
+            <canvas class="tile-preview" data-tile-preview="1" width="32" height="32"></canvas>
+            <span><strong>Stone</strong><small>Solid block affected by gravity</small></span>
+            <kbd>2</kbd>
+          </button>
+          <button class="palette-item" data-tile="3" type="button">
+            <canvas class="tile-preview" data-tile-preview="3" width="32" height="32"></canvas>
+            <span><strong>Platform</strong><small>Fixed structural block</small></span>
+            <kbd>3</kbd>
+          </button>
+          <button class="palette-item" data-tile="4" type="button">
+            <canvas class="tile-preview" data-tile-preview="4" width="32" height="32"></canvas>
+            <span><strong>Magnet</strong><small>Holds magnetic blocks on its pointed side</small></span>
+            <kbd>4</kbd>
+          </button>
+          <button class="palette-item" data-tile="5" type="button">
+            <canvas class="tile-preview" data-tile-preview="5" width="32" height="32"></canvas>
+            <span><strong>Metal</strong><small>Magnetic structural block</small></span>
+            <kbd>5</kbd>
+          </button>
+        </div>
+        <div class="instructions">
+          <p><span>PLACE / WELD</span> Left click or drag</p>
+          <p><span>REMOVE / UNWELD</span> Right click or drag</p>
+          <p><span>PAN</span> Arrows or right-drag off-grid</p>
+          <p><span>ZOOM</span> Mouse wheel</p>
+          <p><span>ROTATE / AIM MAGNET</span> Q / E or WASD</p>
+          <p><span>RUN / PAUSE</span> Space</p>
+          <p><span>STEP</span> N</p>
+        </div>
+        <div class="coordinates" id="coordinates">X -- &nbsp; Y --</div>
+      </aside>
+
+      <footer class="controls floating-panel" id="bottom-controls">
         <div class="transport">
           <button class="primary-control" id="play-button" type="button">▶ RUN</button>
           <button id="step-button" type="button">STEP</button>
           <button id="reset-button" type="button">RESET</button>
           <button id="clear-button" type="button">CLEAR</button>
         </div>
+        <div class="simulation-state" aria-live="polite">
+          <span class="state-light" id="state-light"></span>
+          <span id="state-label">BUILD MODE</span>
+          <span class="tick-counter" id="tick-counter">TICK 0000</span>
+        </div>
         <label class="animation-control">
           <input id="animation-toggle" type="checkbox" checked />
-          ANIMATE MOVEMENT
+          ANIMATE
         </label>
         <label class="speed-control">
-          SIMULATION SPEED
+          SPEED
           <select id="speed-select">
             <option value="1">1 tick / sec</option>
             <option value="2">2 ticks / sec</option>
@@ -103,7 +96,6 @@
             <option value="60">60 ticks / sec</option>
           </select>
         </label>
-        <p class="build-note">Build while paused. Reset restores the last edited layout.</p>
       </footer>
     </main>
     <script type="module" src="/src/main.ts"></script>
