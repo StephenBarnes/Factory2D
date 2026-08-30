@@ -13,6 +13,7 @@ export class Simulation {
   private readonly bodyHeads: Int32Array;
   private readonly nextBodyMember: Int32Array;
   private readonly bodyFalls: Uint8Array;
+  private readonly bodySlidesDiagonally: Uint8Array;
   private readonly horizontalMoves: Int8Array;
   private readonly jammedBodies: Uint8Array;
   private readonly destinationOwners: Int32Array;
@@ -23,6 +24,7 @@ export class Simulation {
     this.bodyHeads = new Int32Array(world.cellCount);
     this.nextBodyMember = new Int32Array(world.cellCount);
     this.bodyFalls = new Uint8Array(world.cellCount);
+    this.bodySlidesDiagonally = new Uint8Array(world.cellCount);
     this.horizontalMoves = new Int8Array(world.cellCount);
     this.jammedBodies = new Uint8Array(world.cellCount);
     this.destinationOwners = new Int32Array(world.cellCount);
@@ -65,6 +67,7 @@ export class Simulation {
 
     this.bodyHeads.fill(-1);
     this.bodyFalls.fill(1);
+    this.bodySlidesDiagonally.fill(1);
     for (let index = this.world.cellCount - 1; index >= 0; index -= 1) {
       if ((this.bodyRoots[index] ?? -1) < 0) {
         continue;
@@ -74,9 +77,12 @@ export class Simulation {
       this.bodyRoots[index] = root;
       this.nextBodyMember[index] = this.bodyHeads[root] ?? -1;
       this.bodyHeads[root] = index;
-      const kind = this.world.kindAtIndex(index);
-      if (!TILE_DEFINITIONS[kind].affectedByGravity) {
+      const definition = TILE_DEFINITIONS[this.world.kindAtIndex(index)];
+      if (!definition.affectedByGravity) {
         this.bodyFalls[root] = 0;
+      }
+      if (!definition.slidesDiagonally) {
+        this.bodySlidesDiagonally[root] = 0;
       }
     }
   }
@@ -90,6 +96,9 @@ export class Simulation {
 
       if (this.canBodyMove(root, 0)) {
         this.horizontalMoves[root] = 0;
+        continue;
+      }
+      if (this.bodySlidesDiagonally[root] === 0) {
         continue;
       }
 
@@ -110,8 +119,34 @@ export class Simulation {
     this.jammedBodies.fill(0);
 
     for (let root = 0; root < this.world.cellCount; root += 1) {
+      if (this.horizontalMoves[root] !== 0) {
+        continue;
+      }
+      for (let member = this.bodyHeads[root] ?? -1; member >= 0; member = this.nextBodyMember[member] ?? -1) {
+        this.destinationOwners[member + this.world.width] = root;
+      }
+    }
+
+    for (let root = 0; root < this.world.cellCount; root += 1) {
       const horizontalMove = this.horizontalMoves[root] ?? 2;
-      if (horizontalMove < -1 || horizontalMove > 1) {
+      if (horizontalMove !== -1 && horizontalMove !== 1) {
+        continue;
+      }
+      for (let member = this.bodyHeads[root] ?? -1; member >= 0; member = this.nextBodyMember[member] ?? -1) {
+        const destination = member + this.world.width + horizontalMove;
+        if ((this.destinationOwners[destination] ?? -1) >= 0) {
+          this.jammedBodies[root] = 1;
+          break;
+        }
+      }
+    }
+
+    for (let root = 0; root < this.world.cellCount; root += 1) {
+      const horizontalMove = this.horizontalMoves[root] ?? 2;
+      if (
+        this.jammedBodies[root] === 1 ||
+        (horizontalMove !== -1 && horizontalMove !== 1)
+      ) {
         continue;
       }
 

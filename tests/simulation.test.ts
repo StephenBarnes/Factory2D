@@ -31,13 +31,34 @@ describe("gravity simulation", () => {
   it("does not move sand through fixed blocks or the world boundary", () => {
     const world = new World(2, 3);
     world.place(0, 1, TileKind.Sand);
-    world.place(0, 2, TileKind.Stone);
+    world.place(0, 2, TileKind.Platform);
     world.place(1, 2, TileKind.Sand);
     const simulation = new Simulation(world);
 
     expect(simulation.step()).toBe(0);
     expect(world.kindAt(0, 1)).toBe(TileKind.Sand);
     expect(world.kindAt(1, 2)).toBe(TileKind.Sand);
+  });
+
+  it("moves stone down while a fixed platform stays in place", () => {
+    const world = new World(2, 3);
+    world.place(0, 0, TileKind.Stone);
+    world.place(1, 0, TileKind.Platform);
+    const simulation = new Simulation(world);
+
+    expect(simulation.step()).toBe(1);
+    expect(world.kindAt(0, 1)).toBe(TileKind.Stone);
+    expect(world.kindAt(1, 0)).toBe(TileKind.Platform);
+  });
+
+  it("does not slide stone diagonally around an obstacle", () => {
+    const world = new World(3, 3);
+    world.place(1, 0, TileKind.Stone);
+    world.place(1, 1, TileKind.Platform);
+    const simulation = new Simulation(world);
+
+    expect(simulation.step()).toBe(0);
+    expect(world.kindAt(1, 0)).toBe(TileKind.Stone);
   });
 
   it("resets both world state and tick count to an edited snapshot", () => {
@@ -59,7 +80,7 @@ describe("diagonal sand gravity", () => {
   it("uses coordinate and tick parity to choose between open lower diagonals", () => {
     const evenTickWorld = new World(3, 3);
     evenTickWorld.place(1, 0, TileKind.Sand);
-    evenTickWorld.place(1, 1, TileKind.Stone);
+    evenTickWorld.place(1, 1, TileKind.Platform);
     const evenTickSimulation = new Simulation(evenTickWorld);
 
     expect(evenTickSimulation.step()).toBe(1);
@@ -67,7 +88,7 @@ describe("diagonal sand gravity", () => {
 
     const oddTickWorld = new World(3, 3);
     oddTickWorld.place(1, 0, TileKind.Sand);
-    oddTickWorld.place(1, 1, TileKind.Stone);
+    oddTickWorld.place(1, 1, TileKind.Platform);
     const oddTickSimulation = new Simulation(oddTickWorld);
     oddTickSimulation.tick = 1;
 
@@ -78,8 +99,8 @@ describe("diagonal sand gravity", () => {
   it("falls through the other lower diagonal when the preferred side is blocked", () => {
     const world = new World(3, 3);
     world.place(1, 0, TileKind.Sand);
-    world.place(1, 1, TileKind.Stone);
-    world.place(2, 1, TileKind.Stone);
+    world.place(1, 1, TileKind.Platform);
+    world.place(2, 1, TileKind.Platform);
     const simulation = new Simulation(world);
 
     expect(simulation.step()).toBe(1);
@@ -90,14 +111,31 @@ describe("diagonal sand gravity", () => {
     const world = new World(3, 3);
     world.place(0, 0, TileKind.Sand);
     world.place(2, 0, TileKind.Sand);
-    world.place(0, 1, TileKind.Stone);
-    world.place(2, 1, TileKind.Stone);
+    world.place(0, 1, TileKind.Platform);
+    world.place(2, 1, TileKind.Platform);
     const simulation = new Simulation(world);
 
     expect(simulation.step()).toBe(0);
     expect(world.kindAt(0, 0)).toBe(TileKind.Sand);
     expect(world.kindAt(2, 0)).toBe(TileKind.Sand);
     expect(world.kindAt(1, 1)).toBe(TileKind.Empty);
+  });
+
+  it("lets unsupported overhangs fall before blocked sand can move diagonally", () => {
+    const world = new World(7, 4);
+    for (let x = 1; x <= 5; x += 1) {
+      world.place(x, 1, TileKind.Sand);
+    }
+    for (let x = 2; x <= 4; x += 1) {
+      world.place(x, 2, TileKind.Platform);
+    }
+    const simulation = new Simulation(world);
+
+    expect(simulation.step()).toBe(2);
+    expect(world.kindAt(1, 2)).toBe(TileKind.Sand);
+    expect(world.kindAt(5, 2)).toBe(TileKind.Sand);
+    expect(world.kindAt(2, 1)).toBe(TileKind.Sand);
+    expect(world.kindAt(4, 1)).toBe(TileKind.Sand);
   });
 });
 
@@ -131,13 +169,13 @@ describe("welded bodies", () => {
   it("does not move a body containing a fixed block", () => {
     const world = new World(2, 3);
     world.place(0, 0, TileKind.Sand);
-    world.place(1, 0, TileKind.Stone);
+    world.place(1, 0, TileKind.Platform);
     world.setWeld(0, 0, 1, 0, true);
     const simulation = new Simulation(world);
 
     expect(simulation.step()).toBe(0);
     expect(world.kindAt(0, 0)).toBe(TileKind.Sand);
-    expect(world.kindAt(1, 0)).toBe(TileKind.Stone);
+    expect(world.kindAt(1, 0)).toBe(TileKind.Platform);
   });
 });
 

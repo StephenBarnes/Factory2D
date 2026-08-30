@@ -1,4 +1,4 @@
-import { TILE_DEFINITIONS, TileKind } from "../simulation/tile";
+import { TILE_DEFINITIONS, TileDecorationStyle, TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
 
 export interface GridCell {
@@ -50,7 +50,6 @@ export class CanvasRenderer {
 
     this.drawGrid();
     this.drawTiles();
-    this.drawWelds();
     this.drawHover();
   }
 
@@ -178,57 +177,65 @@ export class CanvasRenderer {
 
   private drawTile(x: number, y: number, kind: TileKind): void {
     const definition = TILE_DEFINITIONS[kind];
-    const left = this.originX + x * this.cellSize + 2;
-    const top = this.originY + y * this.cellSize + 2;
-    const size = this.cellSize - 4;
+    const index = y * this.world.width + x;
+    const weldedLeft = x > 0 && this.world.hasRightWeldAtIndex(index - 1);
+    const weldedRight = this.world.hasRightWeldAtIndex(index);
+    const weldedUp = y > 0 && this.world.hasDownWeldAtIndex(index - this.world.width);
+    const weldedDown = this.world.hasDownWeldAtIndex(index);
+    const cellLeft = this.originX + x * this.cellSize;
+    const cellTop = this.originY + y * this.cellSize;
+    const left = cellLeft + (weldedLeft ? 0 : 2);
+    const top = cellTop + (weldedUp ? 0 : 2);
+    const right = cellLeft + this.cellSize - (weldedRight ? 0 : 2);
+    const bottom = cellTop + this.cellSize - (weldedDown ? 0 : 2);
+    const width = right - left;
+    const height = bottom - top;
     const edge = Math.max(2, Math.floor(this.cellSize / 8));
     const { context } = this;
 
     context.fillStyle = definition.shadow;
-    context.fillRect(left, top, size, size);
+    context.fillRect(left, top, width, height);
     context.fillStyle = definition.fill;
-    context.fillRect(left, top, size - edge, size - edge);
-    context.fillStyle = definition.highlight;
-    context.fillRect(left + edge, top + edge, size - edge * 2, Math.max(2, edge / 2));
+    context.fillRect(
+      left,
+      top,
+      width - (weldedRight ? 0 : edge),
+      height - (weldedDown ? 0 : edge),
+    );
 
-    if (kind === TileKind.Stone) {
-      context.strokeStyle = "#525d68";
-      context.beginPath();
-      context.moveTo(left + size * 0.35, top + edge);
-      context.lineTo(left + size * 0.48, top + size * 0.45);
-      context.lineTo(left + size * 0.37, top + size - edge);
-      context.stroke();
-    } else if (kind === TileKind.Sand) {
-      context.fillStyle = "#8d5b26";
-      const grainSize = Math.max(1, Math.floor(this.cellSize / 16));
-      context.fillRect(left + size * 0.25, top + size * 0.42, grainSize, grainSize);
-      context.fillRect(left + size * 0.68, top + size * 0.7, grainSize, grainSize);
+    if (!weldedUp) {
+      const highlightLeft = left + (weldedLeft ? 0 : edge);
+      const highlightRight = right - (weldedRight ? 0 : edge);
+      context.fillStyle = definition.highlight;
+      context.fillRect(
+        highlightLeft,
+        top + edge,
+        highlightRight - highlightLeft,
+        Math.max(2, edge / 2),
+      );
     }
-  }
 
-  private drawWelds(): void {
-    const { context } = this;
-    context.strokeStyle = "#f0c75e";
-    context.lineWidth = Math.max(3, Math.floor(this.cellSize / 8));
-    context.beginPath();
-
-    for (let y = 0; y < this.world.height; y += 1) {
-      for (let x = 0; x < this.world.width; x += 1) {
-        const index = y * this.world.width + x;
-        if (this.world.hasRightWeldAtIndex(index)) {
-          const lineX = this.originX + (x + 1) * this.cellSize;
-          context.moveTo(lineX, this.originY + y * this.cellSize + this.cellSize * 0.25);
-          context.lineTo(lineX, this.originY + (y + 1) * this.cellSize - this.cellSize * 0.25);
-        }
-        if (this.world.hasDownWeldAtIndex(index)) {
-          const lineY = this.originY + (y + 1) * this.cellSize;
-          context.moveTo(this.originX + x * this.cellSize + this.cellSize * 0.25, lineY);
-          context.lineTo(this.originX + (x + 1) * this.cellSize - this.cellSize * 0.25, lineY);
-        }
+    context.fillStyle = definition.decorationColor;
+    context.strokeStyle = definition.decorationColor;
+    switch (definition.decorationStyle) {
+      case TileDecorationStyle.Crack:
+        context.beginPath();
+        context.moveTo(left + width * 0.35, top + edge);
+        context.lineTo(left + width * 0.48, top + height * 0.45);
+        context.lineTo(left + width * 0.37, top + height - edge);
+        context.stroke();
+        break;
+      case TileDecorationStyle.Grains: {
+        const grainSize = Math.max(1, Math.floor(this.cellSize / 16));
+        context.fillRect(left + width * 0.25, top + height * 0.42, grainSize, grainSize);
+        context.fillRect(left + width * 0.68, top + height * 0.7, grainSize, grainSize);
+        break;
       }
+      case TileDecorationStyle.None:
+        break;
     }
-    context.stroke();
   }
+
 
   private drawHover(): void {
     if (this.hoverEdge !== null) {

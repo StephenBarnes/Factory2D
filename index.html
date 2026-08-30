@@ -21,36 +21,43 @@
       </header>
 
       <section class="workspace">
-        <aside class="sidebar" aria-label="Tile palette">
+        <aside class="sidebar" id="sidebar-controls" aria-label="Build tools and components">
           <div class="panel-heading">
-            <span>COMPONENTS</span>
+            <span>TOOLS</span>
             <span class="panel-number">01</span>
           </div>
-          <div class="palette" id="palette">
+          <div class="palette">
+            <button class="palette-item" data-tool="weld" type="button">
+              <span class="swatch weld-swatch"></span>
+              <span><strong>Weld</strong><small>Join adjacent blocks into one body</small></span>
+              <kbd>Ctrl</kbd>
+            </button>
+          </div>
+          <div class="panel-heading">
+            <span>COMPONENTS</span>
+            <span class="panel-number">02</span>
+          </div>
+          <div class="palette">
             <button class="palette-item selected" data-tile="sand" type="button">
               <span class="swatch sand-swatch"></span>
-              <span><strong>Sand</strong><small>Falls one cell per tick</small></span>
+              <span><strong>Sand</strong><small>Falls and slides around obstacles</small></span>
               <kbd>1</kbd>
             </button>
             <button class="palette-item" data-tile="stone" type="button">
               <span class="swatch stone-swatch"></span>
-              <span><strong>Stone</strong><small>Fixed structural block</small></span>
+              <span><strong>Stone</strong><small>Solid block affected by gravity</small></span>
               <kbd>2</kbd>
             </button>
-            <button class="palette-item" data-tool="weld" type="button">
-              <span class="swatch weld-swatch"></span>
-              <span><strong>Weld</strong><small>Join adjacent blocks into one body</small></span>
+            <button class="palette-item" data-tile="platform" type="button">
+              <span class="swatch platform-swatch"></span>
+              <span><strong>Platform</strong><small>Fixed structural block</small></span>
               <kbd>3</kbd>
-            </button>
-            <button class="palette-item" data-tile="empty" type="button">
-              <span class="swatch eraser-swatch"></span>
-              <span><strong>Erase</strong><small>Remove a block</small></span>
-              <kbd>0</kbd>
             </button>
           </div>
           <div class="instructions">
             <p><span>PLACE / WELD</span> Left click or drag</p>
             <p><span>REMOVE / UNWELD</span> Right click or drag</p>
+            <p><span>HOLD WELD TOOL</span> Ctrl</p>
             <p><span>RUN / PAUSE</span> Space</p>
             <p><span>STEP</span> N</p>
           </div>

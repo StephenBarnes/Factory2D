@@ -16,13 +16,13 @@ function requiredElement<T extends HTMLElement>(id: string): T {
 
 const world = new World(20, 14);
 for (let x = 0; x < world.width; x += 1) {
-  world.place(x, world.height - 1, TileKind.Stone);
+  world.place(x, world.height - 1, TileKind.Platform);
 }
 for (let x = 3; x <= 7; x += 1) {
-  world.place(x, 9, TileKind.Stone);
+  world.place(x, 9, TileKind.Platform);
 }
 for (let x = 13; x <= 16; x += 1) {
-  world.place(x, 11, TileKind.Stone);
+  world.place(x, 11, TileKind.Platform);
 }
 world.place(5, 3, TileKind.Sand);
 world.place(5, 4, TileKind.Sand);
@@ -33,7 +33,7 @@ const simulation = new Simulation(world);
 const baseline = world.clone();
 const canvas = requiredElement<HTMLCanvasElement>("game-canvas");
 const renderer = new CanvasRenderer(canvas, world);
-const palette = requiredElement<HTMLDivElement>("palette");
+const sidebarControls = requiredElement<HTMLElement>("sidebar-controls");
 const playButton = requiredElement<HTMLButtonElement>("play-button");
 const stepButton = requiredElement<HTMLButtonElement>("step-button");
 const resetButton = requiredElement<HTMLButtonElement>("reset-button");
@@ -46,6 +46,7 @@ const coordinates = requiredElement<HTMLDivElement>("coordinates");
 
 let selectedKind = TileKind.Sand;
 let selectedTool: "tile" | "weld" = "tile";
+let temporaryWeldActive = false;
 let activePointerId: number | null = null;
 let activeErase = false;
 let lastEditedCell: GridCell | null = null;
@@ -71,12 +72,17 @@ function setRunning(nextRunning: boolean): void {
 
 function selectTile(kind: TileKind): void {
   selectedKind = kind;
+  if (temporaryWeldActive) {
+    selectWeldTool();
+    return;
+  }
+
   selectedTool = "tile";
   const selectedName =
     kind === TileKind.Sand ? "sand" :
     kind === TileKind.Stone ? "stone" :
-    "empty";
-  for (const item of palette.querySelectorAll<HTMLButtonElement>(".palette-item")) {
+    "platform";
+  for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
     item.classList.toggle("selected", item.dataset.tile === selectedName);
   }
   renderer.setHover(null);
@@ -84,7 +90,7 @@ function selectTile(kind: TileKind): void {
 
 function selectWeldTool(): void {
   selectedTool = "weld";
-  for (const item of palette.querySelectorAll<HTMLButtonElement>(".palette-item")) {
+  for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
     item.classList.toggle("selected", item.dataset.tool === "weld");
   }
   renderer.setHoverEdge(null);
@@ -148,15 +154,15 @@ function edgesMatch(first: GridEdge | null, second: GridEdge): boolean {
     first.y2 === second.y2;
 }
 
-palette.addEventListener("click", (event) => {
+sidebarControls.addEventListener("click", (event) => {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".palette-item");
   const tileName = button?.dataset.tile;
   if (tileName === "sand") {
     selectTile(TileKind.Sand);
   } else if (tileName === "stone") {
     selectTile(TileKind.Stone);
-  } else if (tileName === "empty") {
-    selectTile(TileKind.Empty);
+  } else if (tileName === "platform") {
+    selectTile(TileKind.Platform);
   } else if (button?.dataset.tool === "weld") {
     selectWeldTool();
   }
@@ -261,7 +267,21 @@ canvas.addEventListener("contextmenu", (event) => {
 });
 
 document.addEventListener("keydown", (event) => {
-  if (event.target instanceof HTMLSelectElement) {
+  if (event.key === "Control") {
+    if (!event.repeat && selectedTool === "tile") {
+      temporaryWeldActive = true;
+      selectWeldTool();
+    }
+    return;
+  }
+  if (
+    event.ctrlKey ||
+    event.metaKey ||
+    event.altKey ||
+    event.target instanceof HTMLInputElement ||
+    event.target instanceof HTMLTextAreaElement ||
+    event.target instanceof HTMLSelectElement
+  ) {
     return;
   }
 
@@ -278,9 +298,21 @@ document.addEventListener("keydown", (event) => {
   } else if (event.code === "Digit2") {
     selectTile(TileKind.Stone);
   } else if (event.code === "Digit3") {
-    selectWeldTool();
-  } else if (event.code === "Digit0") {
-    selectTile(TileKind.Empty);
+    selectTile(TileKind.Platform);
+  }
+});
+
+document.addEventListener("keyup", (event) => {
+  if (event.key === "Control" && temporaryWeldActive) {
+    temporaryWeldActive = false;
+    selectTile(selectedKind);
+  }
+});
+
+window.addEventListener("blur", () => {
+  if (temporaryWeldActive) {
+    temporaryWeldActive = false;
+    selectTile(selectedKind);
   }
 });
 

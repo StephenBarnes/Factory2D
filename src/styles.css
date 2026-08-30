@@ -156,6 +156,10 @@ h1 span {
   gap: 8px;
 }
 
+.palette + .panel-heading {
+  margin-top: 20px;
+}
+
 .palette-item {
   width: 100%;
   min-height: 68px;
@@ -217,6 +221,11 @@ h1 span {
   background: #66717d;
 }
 
+.platform-swatch {
+  border-color: #30473f;
+  background: #56736b;
+}
+
 .weld-swatch {
   position: relative;
   border-color: #5f512c;
@@ -231,19 +240,6 @@ h1 span {
   box-shadow: 0 0 5px rgb(240 199 94 / 55%);
 }
 
-.eraser-swatch {
-  position: relative;
-  border-color: #3b4752;
-  background: repeating-linear-gradient(135deg, #111820 0 5px, #202b35 5px 10px);
-}
-
-.eraser-swatch::after {
-  content: "";
-  position: absolute;
-  inset: 13px 4px;
-  background: #a95b5b;
-  transform: rotate(-45deg);
-}
 
 kbd {
   min-width: 20px;

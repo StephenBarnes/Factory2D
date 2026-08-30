@@ -86,14 +86,17 @@ The current engine implements observation, intent conflict resolution, and commi
 
 ## Development state
 
+Keep this section up-to-date.
+
 The first playable scaffold is implemented:
 
-* A 20x14 editable Canvas 2D grid with procedural sand and stone tiles.
-* Build controls for click-and-drag placement and erasing, stepping, running, pausing, resetting, clearing, and speed selection.
-* A weld tool for joining occupied neighbors into rigid bodies and unwelding them.
+* A 20x14 editable Canvas 2D grid with procedural sand, falling stone, and fixed platform tiles.
+* Build controls for click-and-drag placement, right-click removal, stepping, running, pausing, resetting, clearing, and speed selection.
+* A separate weld tool for joining occupied neighbors into rigid bodies and unwelding them, with a held-Control temporary override.
+* Welded neighbors render as continuous bodies without an internal tile gutter.
 * A typed-array world with stable tile IDs, edge weld storage, and allocation-free per-tick movement buffers.
-* Deterministic straight-down and parity-selected diagonal gravity, including same-priority destination jamming.
-* Deterministic tests for gravity, welded bodies, conflicts, tick snapshots, boundaries, stable IDs, and reset behavior.
+* Deterministic straight-down gravity for stone and sand, parity-selected diagonal gravity for sand, direct-fall priority, and equal-priority destination jamming.
+* Deterministic tests for gravity, sand overhangs, welded bodies, conflicts, tick snapshots, boundaries, stable IDs, and reset behavior.
 
 ## Code map
 
@@ -101,7 +104,7 @@ The first playable scaffold is implemented:
 * `src/main.ts` — Browser entry point, example world setup, input handling, build tools, and animation loop.
 * `src/styles.css` — Responsive application, palette, board, and control styling.
 * `src/vite-env.d.ts` — Vite client type declarations.
-* `src/render/canvas-renderer.ts` — Responsive Canvas 2D grid, procedural tile and weld rendering, hit testing, and hover feedback.
+* `src/render/canvas-renderer.ts` — Responsive Canvas 2D grid, definition-driven procedural tiles, continuous welded-body rendering, hit testing, and hover feedback.
 * `src/simulation/tile.ts` — Tile kind enum and immutable tile behavior/render definitions.
 * `src/simulation/world.ts` — Typed-array tile and weld storage, stable IDs, snapshots, editing, and body movement commits.
 * `src/simulation/simulation.ts` — Allocation-free welded-body collection, gravity intent selection, conflict resolution, and tick advancement.
@@ -109,18 +112,16 @@ The first playable scaffold is implemented:
 * `vite.config.ts` — Vite configuration with Vitest's Node test environment.
 * `tsconfig.json` — Strict browser TypeScript and project build configuration.
 
-## TODOs currently actionable
+## Current TODOs
 
-* Remove the "erase" tool. Because selecting any block already allows erasing with right-click.
-* Move the weld tool to be separate from and above the components list, because it's not a component/tile. Place it above the list. Start with the first component/tile selected.
-* Allow pressing tab to switch to weld tool, and tab again to switch back to last-selected tile.
-* Refactor src/render/canvas-renderer.ts:194. The renderer should not check specific tile types. Instead control this via some "decoration style" and decoration color in `TILE_DEFINITIONS`, and then the renderer can switch based on the decoration style. So later we can make other tiles that reuse the same decoration types.
-* Modify how we're rendering welded groups. Instead of the current yellow lines, instead expand the base tile image to eliminate the border and empty background / gutter space between the two tiles. Two welded tiles should look like one 1x2 or 2x1 rectangle, not like two separate tiles with a line joining them.
-* Bug: Create a 3x1 stone platform (currently no gravity). Place 5x1 row of sand blocks above it, centered horizontally, so it hangs over by 1 tile on each side. Sometimes the sand that's over empty space does not fall down, it stays in place.
-* Enable gravity on stone blocks. To make platforms for testing, define a separate no-gravity solid tile type.
+Small:
+* Add a tile definition flag to allow/ban welding a block. Sand blocks should not be weldable.
+* Draw decorations for tiles in the components menu.
+* Color the weld visualization (a small bar) red if welding is not allowed - e.g. welding to an empty block, or welding sand.
+* Bug: When ctrl is pressed, we currently don't draw the weld visualization until the mouse moves slightly.
 
 Larger:
-* Implement the core force and resolution simulation. For example, a column of solid blocks with gravity should fall downwards with the entire column moving one step, even though the state in the next step makes blocks overlap with the previous state of their neighbor below them.
+* If we make a column of non-welded stone blocks, they currently fall one at a time, because only the bottom one has empty space below it. We need to implement a force/push-resolution simulation system that lets them all fall together. This is necessary for later features, e.g. a piston should be able to push a row of unwelded blocks as one unit.
 
 ## Development guidelines
 
