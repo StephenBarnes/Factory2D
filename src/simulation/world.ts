@@ -88,6 +88,49 @@ export class World {
     this.revisionValue += 1;
     return true;
   }
+  weldEligibleNeighbors(x: number, y: number): boolean {
+    const index = this.indexOf(x, y);
+    let changed = false;
+
+    if (
+      x > 0 &&
+      this.rightWelds[index - 1] === 0 &&
+      this.canWeldIndices(index - 1, index)
+    ) {
+      this.rightWelds[index - 1] = 1;
+      changed = true;
+    }
+    if (
+      x < this.width - 1 &&
+      this.rightWelds[index] === 0 &&
+      this.canWeldIndices(index, index + 1)
+    ) {
+      this.rightWelds[index] = 1;
+      changed = true;
+    }
+    if (
+      y > 0 &&
+      this.downWelds[index - this.width] === 0 &&
+      this.canWeldIndices(index - this.width, index)
+    ) {
+      this.downWelds[index - this.width] = 1;
+      changed = true;
+    }
+    if (
+      y < this.height - 1 &&
+      this.downWelds[index] === 0 &&
+      this.canWeldIndices(index, index + this.width)
+    ) {
+      this.downWelds[index] = 1;
+      changed = true;
+    }
+
+    if (changed) {
+      this.revisionValue += 1;
+    }
+    return changed;
+  }
+
 
 
   place(

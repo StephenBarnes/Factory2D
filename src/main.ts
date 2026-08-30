@@ -10,6 +10,7 @@ import { drawTile } from "./render/tile-renderer";
 import {
   exceedsPanDragThreshold,
   pointerGesture,
+  shouldWeldPlacedTile,
 } from "./render/pointer-gesture";
 import type { PointerGesture } from "./render/pointer-gesture";
 import { deserializeBoard, serializeBoard } from "./simulation/board-export";
@@ -77,6 +78,7 @@ let temporaryWeldActive = false;
 let activePointerId: number | null = null;
 let activePointerMode: PointerGesture | null = null;
 let activeErase = false;
+let activeWeldPlacement = false;
 let lastPanClientX = 0;
 let lastPanClientY = 0;
 let pendingPickCell: GridCell | null = null;
@@ -259,7 +261,12 @@ function saveEditedBaseline(): void {
   finishAnimation();
 }
 
-function editCellLine(from: GridCell, to: GridCell, erase: boolean): void {
+function editCellLine(
+  from: GridCell,
+  to: GridCell,
+  erase: boolean,
+  weldPlacedTiles: boolean,
+): void {
   if (running) {
     return;
   }
@@ -285,6 +292,9 @@ function editCellLine(from: GridCell, to: GridCell, erase: boolean): void {
     ) {
       world.place(x, y, kind, orientation);
       changed = true;
+    }
+    if (weldPlacedTiles && kind !== TileKind.Empty) {
+      changed = world.weldEligibleNeighbors(x, y) || changed;
     }
     if (x === to.x && y === to.y) {
       break;
@@ -470,10 +480,11 @@ canvas.addEventListener("pointerdown", (event) => {
   }
 
   activeErase = event.button === 2;
+  activeWeldPlacement = shouldWeldPlacedTile(event.button, event.shiftKey);
   lastPointerGridPoint = point;
   if (selectedTool === "tile") {
     if (cell !== null) {
-      editCellLine(cell, cell, activeErase);
+      editCellLine(cell, cell, activeErase, activeWeldPlacement);
       lastEditedCell = cell;
     }
   } else {
@@ -523,7 +534,12 @@ canvas.addEventListener("pointermove", (event) => {
       world.height,
     );
     if (segment !== null) {
-      editCellLine(lastEditedCell ?? segment.from, segment.to, activeErase);
+      editCellLine(
+        lastEditedCell ?? segment.from,
+        segment.to,
+        activeErase,
+        activeWeldPlacement,
+      );
       lastEditedCell = segment.to;
     }
   } else {
@@ -553,6 +569,7 @@ function finishPointerGesture(event: PointerEvent): void {
   }
   activePointerId = null;
   activePointerMode = null;
+  activeWeldPlacement = false;
   pendingPickCell = null;
   lastEditedCell = null;
   lastPointerGridPoint = null;

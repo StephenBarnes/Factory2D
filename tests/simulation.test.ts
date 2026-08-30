@@ -236,6 +236,22 @@ describe("world editing", () => {
     world.place(1, 0, TileKind.Empty);
     expect(world.isWelded(0, 0, 1, 0)).toBe(false);
   });
+
+  it("welds a tile to every eligible occupied neighbor", () => {
+    const world = new World(3, 3);
+    world.place(1, 1, TileKind.Magnet, Direction.Right);
+    world.place(0, 1, TileKind.Metal);
+    world.place(2, 1, TileKind.Metal);
+    world.place(1, 0, TileKind.Stone);
+    world.place(1, 2, TileKind.Sand);
+
+    expect(world.weldEligibleNeighbors(1, 1)).toBe(true);
+    expect(world.isWelded(1, 1, 0, 1)).toBe(true);
+    expect(world.isWelded(1, 1, 1, 0)).toBe(true);
+    expect(world.isWelded(1, 1, 2, 1)).toBe(false);
+    expect(world.isWelded(1, 1, 1, 2)).toBe(false);
+    expect(world.weldEligibleNeighbors(1, 1)).toBe(false);
+  });
 });
 
 describe("directional magnets", () => {

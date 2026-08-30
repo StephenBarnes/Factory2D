@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   exceedsPanDragThreshold,
   pointerGesture,
+  shouldWeldPlacedTile,
 } from "../src/render/pointer-gesture";
 
 describe("board pointer gestures", () => {
@@ -19,6 +20,12 @@ describe("board pointer gestures", () => {
     expect(pointerGesture(0, true)).toBe("edit");
     expect(pointerGesture(3, false)).toBeNull();
   });
+  it("welds placed tiles only for Shift-left placement gestures", () => {
+    expect(shouldWeldPlacedTile(0, true)).toBe(true);
+    expect(shouldWeldPlacedTile(0, false)).toBe(false);
+    expect(shouldWeldPlacedTile(2, true)).toBe(false);
+  });
+
 
   it("requires a four-pixel middle-button movement before panning", () => {
     expect(exceedsPanDragThreshold(2, 3)).toBe(false);

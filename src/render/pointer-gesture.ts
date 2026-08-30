@@ -16,6 +16,11 @@ export function pointerGesture(button: number, altKey: boolean): PointerGesture 
   }
   return null;
 }
+/** Returns whether a pointer press requests placing tiles welded to every eligible neighbor. */
+export function shouldWeldPlacedTile(button: number, shiftKey: boolean): boolean {
+  return button === 0 && shiftKey;
+}
+
 
 /** Distinguishes a middle click from a middle-button pan without reacting to pointer jitter. */
 export function exceedsPanDragThreshold(deltaX: number, deltaY: number): boolean {
