@@ -7,7 +7,13 @@ import {
 } from "../src/simulation/tile";
 
 describe("tile orientation", () => {
-  it.each([TileKind.Magnet, TileKind.Sensor, TileKind.Inverter])(
+  it.each([
+    TileKind.Magnet,
+    TileKind.Sensor,
+    TileKind.Inverter,
+    TileKind.Diode,
+    TileKind.Sum,
+  ])(
     "preserves the selected orientation for directional kind %s",
     (kind) => {
       expect(orientationForKind(kind, Direction.Left)).toBe(Direction.Left);

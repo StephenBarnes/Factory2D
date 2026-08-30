@@ -8,6 +8,8 @@ export const enum TileKind {
   Conduit = 6,
   Sensor = 7,
   Inverter = 8,
+  Diode = 9,
+  Sum = 10,
 }
 
 export const enum Direction {
@@ -35,6 +37,8 @@ export const enum TileDecorationStyle {
   Conduit = 5,
   Sensor = 6,
   Inverter = 7,
+  Diode = 8,
+  Sum = 9,
 }
 
 export interface TileDefinition {
@@ -44,6 +48,8 @@ export interface TileDefinition {
   readonly excludesFacingWeld: boolean;
   readonly usesOrientation: boolean;
   readonly circuitPorts: WeldSide;
+  /** Gate input ports relative to an upward-facing tile; each remains an isolated network. */
+  readonly circuitInputPorts: WeldSide;
   readonly slidesDiagonally: boolean;
   readonly magnetic: boolean;
   readonly attractionRange: number;
@@ -74,6 +80,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     excludesFacingWeld: false,
     usesOrientation: false,
     circuitPorts: WeldSide.None,
+    circuitInputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
     fill: "transparent",
@@ -89,6 +96,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     excludesFacingWeld: false,
     usesOrientation: false,
     circuitPorts: WeldSide.None,
+    circuitInputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
     fill: "#66717d",
@@ -104,6 +112,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     excludesFacingWeld: false,
     usesOrientation: false,
     circuitPorts: WeldSide.None,
+    circuitInputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
     fill: "#e7ad4f",
@@ -119,6 +128,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     excludesFacingWeld: false,
     usesOrientation: false,
     circuitPorts: WeldSide.None,
+    circuitInputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
     fill: "#56736b",
@@ -134,6 +144,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     excludesFacingWeld: true,
     usesOrientation: true,
     circuitPorts: WeldSide.None,
+    circuitInputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 1,
     fill: "#b94b52",
@@ -149,6 +160,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     excludesFacingWeld: false,
     usesOrientation: false,
     circuitPorts: WeldSide.None,
+    circuitInputPorts: WeldSide.None,
     magnetic: true,
     attractionRange: 0,
     fill: "#718a9b",
@@ -164,6 +176,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     excludesFacingWeld: false,
     usesOrientation: false,
     circuitPorts: WeldSide.All,
+    circuitInputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
     fill: "#69727b",
@@ -179,6 +192,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     excludesFacingWeld: false,
     usesOrientation: true,
     circuitPorts: WeldSide.All,
+    circuitInputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
     fill: "#675d77",
@@ -194,12 +208,45 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     excludesFacingWeld: false,
     usesOrientation: true,
     circuitPorts: WeldSide.Up | WeldSide.Down,
+    circuitInputPorts: WeldSide.Down,
     magnetic: false,
     attractionRange: 0,
     fill: "#765878",
     shadow: "#443047",
     decorationStyle: TileDecorationStyle.Inverter,
     decorationColor: "#ead2ef",
+  },
+  [TileKind.Diode]: {
+    name: "Diode Rune",
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Up | WeldSide.Down,
+    circuitInputPorts: WeldSide.Down,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#536f7c",
+    shadow: "#2e414b",
+    decorationStyle: TileDecorationStyle.Diode,
+    decorationColor: "#d0ecf3",
+  },
+  [TileKind.Sum]: {
+    name: "Sum Rune",
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Up | WeldSide.Right | WeldSide.Left,
+    circuitInputPorts: WeldSide.Right | WeldSide.Left,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#526f69",
+    shadow: "#2e413d",
+    decorationStyle: TileDecorationStyle.Sum,
+    decorationColor: "#d2f0df",
   },
 };
 

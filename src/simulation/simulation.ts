@@ -1,9 +1,9 @@
-import { chargeFromSum } from "./circuit";
+import { chargeFromSum, type Charge } from "./circuit";
 import {
   Direction,
   directionX,
   directionY,
-  oppositeDirection,
+  orientedSides,
   TILE_DEFINITIONS,
   TileKind,
 } from "./tile";
@@ -77,8 +77,11 @@ export class Simulation {
     this.nextCircuitCharges.fill(0);
 
     for (let index = 0; index < this.world.cellCount; index += 1) {
-      const kind = this.world.kindAtIndex(index);
-      if (kind !== TileKind.Inverter && TILE_DEFINITIONS[kind].circuitPorts !== 0) {
+      const definition = TILE_DEFINITIONS[this.world.kindAtIndex(index)];
+      if (
+        definition.circuitPorts !== 0 &&
+        definition.circuitInputPorts === 0
+      ) {
         this.circuitRoots[index] = index;
       }
     }
@@ -128,31 +131,43 @@ export class Simulation {
     }
 
     for (let index = 0; index < this.world.cellCount; index += 1) {
-      if (this.world.kindAtIndex(index) !== TileKind.Inverter) {
+      const kind = this.world.kindAtIndex(index);
+      const definition = TILE_DEFINITIONS[kind];
+      if (definition.circuitInputPorts === 0) {
         continue;
       }
 
-      const outputDirection = this.world.orientationAtIndex(index);
-      const inputDirection = oppositeDirection(outputDirection);
-      const inputIndex = this.neighborIndex(index, inputDirection);
-      const inputCharge =
-        inputIndex >= 0 && this.world.hasCircuitConnectionAtIndex(index, inputDirection)
-          ? this.world.chargeAtIndex(inputIndex)
-          : 0;
-      const outputCharge = -inputCharge;
-      this.nextCircuitCharges[index] = outputCharge;
-
-      const outputIndex = this.neighborIndex(index, outputDirection);
-      if (
-        outputIndex < 0 ||
-        !this.world.hasCircuitConnectionAtIndex(index, outputDirection) ||
-        expectDefined(this.circuitRoots[outputIndex], "output circuit root marker") < 0
-      ) {
-        continue;
+      const orientation = this.world.orientationAtIndex(index);
+      const inputSides = orientedSides(definition.circuitInputPorts, orientation);
+      let inputSum = 0;
+      for (let value = Direction.Up; value <= Direction.Left; value += 1) {
+        const direction = value as Direction;
+        if (
+          (inputSides & (1 << direction)) === 0 ||
+          !this.world.hasCircuitConnectionAtIndex(index, direction)
+        ) {
+          continue;
+        }
+        const inputIndex = this.neighborIndex(index, direction);
+        if (inputIndex < 0) {
+          throw new Error(`Connected circuit input at index ${index} has no neighbor`);
+        }
+        inputSum += this.world.chargeAtIndex(inputIndex);
       }
-      const outputRoot = this.findCircuitRoot(outputIndex);
-      this.circuitDriveSums[outputRoot] =
-        expectDefined(this.circuitDriveSums[outputRoot], "circuit drive sum") + outputCharge;
+
+      let outputCharge: Charge;
+      switch (kind) {
+        case TileKind.Inverter:
+          outputCharge = chargeFromSum(-inputSum);
+          break;
+        case TileKind.Diode:
+        case TileKind.Sum:
+          outputCharge = chargeFromSum(inputSum);
+          break;
+        default:
+          throw new Error(`Tile kind ${kind} defines circuit inputs without a gate behavior`);
+      }
+      this.driveGateOutput(index, orientation, outputCharge);
     }
 
     for (let index = 0; index < this.world.cellCount; index += 1) {
@@ -165,6 +180,25 @@ export class Simulation {
       );
     }
     this.world.applyCircuitCharges(this.nextCircuitCharges);
+  }
+
+  private driveGateOutput(
+    index: number,
+    outputDirection: Direction,
+    outputCharge: Charge,
+  ): void {
+    this.nextCircuitCharges[index] = outputCharge;
+    const outputIndex = this.neighborIndex(index, outputDirection);
+    if (
+      outputIndex < 0 ||
+      !this.world.hasCircuitConnectionAtIndex(index, outputDirection) ||
+      expectDefined(this.circuitRoots[outputIndex], "output circuit root marker") < 0
+    ) {
+      return;
+    }
+    const outputRoot = this.findCircuitRoot(outputIndex);
+    this.circuitDriveSums[outputRoot] =
+      expectDefined(this.circuitDriveSums[outputRoot], "circuit drive sum") + outputCharge;
   }
 
   private unionCircuitTiles(first: number, second: number): void {

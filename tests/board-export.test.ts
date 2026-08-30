@@ -97,6 +97,24 @@ describe("board export", () => {
     expect(imported.world.isWelded(0, 0, 1, 0)).toBe(true);
   });
 
+  it("round-trips diode and sum rune state", () => {
+    const world = new World(2, 1);
+    world.place(0, 0, TileKind.Diode, Direction.Right);
+    world.place(1, 0, TileKind.Sum, Direction.Left);
+    world.setCharge(0, 0, -1);
+    world.setCharge(1, 0, 1);
+
+    const imported = deserializeBoard(serializeBoard(world, 3));
+
+    expect(imported.tick).toBe(3);
+    expect(imported.world.kindAt(0, 0)).toBe(TileKind.Diode);
+    expect(imported.world.orientationAt(0, 0)).toBe(Direction.Right);
+    expect(imported.world.chargeAt(0, 0)).toBe(-1);
+    expect(imported.world.kindAt(1, 0)).toBe(TileKind.Sum);
+    expect(imported.world.orientationAt(1, 0)).toBe(Direction.Left);
+    expect(imported.world.chargeAt(1, 0)).toBe(1);
+  });
+
   it("rejects duplicate tiles without returning a partial world", () => {
     const source = JSON.stringify({
       format: "factory2d-board",
