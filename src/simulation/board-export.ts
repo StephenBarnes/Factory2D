@@ -25,6 +25,7 @@ const TILE_CODES: Readonly<Record<TileKind, string>> = {
   [TileKind.Sensor]: "S",
   [TileKind.Inverter]: "I",
   [TileKind.Combiner]: "+",
+  [TileKind.Rectifier]: "R",
 };
 
 const TILE_KINDS_BY_CODE: Readonly<Record<string, TileKind | undefined>> = {
@@ -38,6 +39,7 @@ const TILE_KINDS_BY_CODE: Readonly<Record<string, TileKind | undefined>> = {
   S: TileKind.Sensor,
   I: TileKind.Inverter,
   "+": TileKind.Combiner,
+  R: TileKind.Rectifier,
 };
 
 const DIRECTION_NAMES: Readonly<Record<Direction, string>> = {

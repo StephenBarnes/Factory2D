@@ -12,6 +12,7 @@ describe("tile orientation", () => {
     TileKind.Sensor,
     TileKind.Inverter,
     TileKind.Combiner,
+    TileKind.Rectifier,
   ])(
     "preserves the selected orientation for directional kind %s",
     (kind) => {

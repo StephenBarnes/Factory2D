@@ -153,6 +153,9 @@ export class Simulation {
         case TileKind.Combiner:
           outputCharge = chargeFromSum(inputSum);
           break;
+        case TileKind.Rectifier:
+          outputCharge = inputSum > 0 ? 1 : 0;
+          break;
         default:
           throw new Error(`Tile kind ${kind} defines circuit inputs without a gate behavior`);
       }

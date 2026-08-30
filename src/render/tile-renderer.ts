@@ -506,6 +506,23 @@ function drawDecoration(
       context.restore();
       break;
     }
+    case TileDecorationStyle.Rectifier: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.lineWidth = Math.max(1.5, size * 0.055);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.beginPath();
+      context.moveTo(-size * 0.18, size * 0.12);
+      context.lineTo(0, -size * 0.11);
+      context.lineTo(size * 0.18, size * 0.12);
+      context.moveTo(-size * 0.18, -size * 0.18);
+      context.lineTo(size * 0.18, -size * 0.18);
+      context.stroke();
+      context.restore();
+      break;
+    }
     case TileDecorationStyle.Combiner: {
       context.save();
       context.translate(left + size / 2, top + size / 2);

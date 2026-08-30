@@ -109,15 +109,20 @@ describe("board export", () => {
     expect(imported.world.isWelded(0, 0, 0, 1)).toBe(true);
   });
 
-  it("round-trips combiner rune state", () => {
+  it.each([
+    { kind: TileKind.Combiner, code: "+" },
+    { kind: TileKind.Rectifier, code: "R" },
+  ])("round-trips directional gate $kind with code $code", ({ kind, code }) => {
     const world = new World(1, 1);
-    world.place(0, 0, TileKind.Combiner, Direction.Right);
+    world.place(0, 0, kind, Direction.Right);
     world.setCharge(0, 0, -1);
 
-    const imported = deserializeBoard(serializeBoard(world, 3));
+    const serialized = serializeBoard(world, 3);
+    const imported = deserializeBoard(serialized);
 
+    expect(JSON.parse(serialized).grid).toEqual([code]);
     expect(imported.tick).toBe(3);
-    expect(imported.world.kindAt(0, 0)).toBe(TileKind.Combiner);
+    expect(imported.world.kindAt(0, 0)).toBe(kind);
     expect(imported.world.orientationAt(0, 0)).toBe(Direction.Right);
     expect(imported.world.chargeAt(0, 0)).toBe(-1);
   });

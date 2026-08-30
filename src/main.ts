@@ -361,7 +361,7 @@ sidebarControls.addEventListener("click", (event) => {
   if (
     Number.isInteger(tileKind) &&
     tileKind >= TileKind.Stone &&
-    tileKind <= TileKind.Combiner
+    tileKind <= TileKind.Rectifier
   ) {
     selectTile(tileKind as TileKind);
   } else if (button?.dataset.tool === "weld") {
@@ -698,6 +698,8 @@ document.addEventListener("keydown", (event) => {
     selectTile(TileKind.Inverter);
   } else if (event.code === "Digit9") {
     selectTile(TileKind.Combiner);
+  } else if (event.code === "Digit0") {
+    selectTile(TileKind.Rectifier);
   }
 });
 

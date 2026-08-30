@@ -9,6 +9,7 @@ export const enum TileKind {
   Sensor = 7,
   Inverter = 8,
   Combiner = 9,
+  Rectifier = 10,
 }
 
 export const enum Direction {
@@ -37,6 +38,7 @@ export const enum TileDecorationStyle {
   Sensor = 6,
   Inverter = 7,
   Combiner = 8,
+  Rectifier = 9,
 }
 
 export interface TileDefinition {
@@ -229,6 +231,22 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     shadow: "#2e413d",
     decorationStyle: TileDecorationStyle.Combiner,
     decorationColor: "#d2f0df",
+  },
+  [TileKind.Rectifier]: {
+    name: "Rectifier Rune",
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Up | WeldSide.Down,
+    circuitInputPorts: WeldSide.Down,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#786448",
+    shadow: "#463821",
+    decorationStyle: TileDecorationStyle.Rectifier,
+    decorationColor: "#f1dfb8",
   },
 };
 
