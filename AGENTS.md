@@ -47,7 +47,9 @@ Example puzzles:
 * Build a vehicle that picks up a block in one location and moves it to the target.
 * Tree farms - trees grow in irregular patterns; once grown high enough, their leaves must be burned off and their wood blocks unwelded and packaged for delivery.
 
-While the simulation has movement in discrete time steps and one-tile steps, we animate the tiles moving.
+While the simulation has movement in discrete time steps and one-tile steps, we animate the tiles moving from one state to the next.
+
+We'll give the game a "dwarven engineering" theme. So replace magnets with lodestones, electrical components with glowing runes. Puzzles range from heavy industry based on moving around big chunks of stone/metal, bottling beer, circuit puzzles (runes and conduits), minecart control systems, bar challenges (remove this block without spilling the mug of ale on top), destroying elven defenses by building missiles or dwarven mechs, etc.
 
 ## Stack
 
@@ -84,7 +86,7 @@ The first playable scaffold is implemented:
 * A responsive board canvas whose backing-store resolution follows browser zoom without contributing its intrinsic pixel dimensions to page layout.
 * Build controls for gap-free click-and-drag placement and removal, including drags that leave the grid, plus magnet rotation and aiming, stepping, running, pausing, resetting, clearing, speed selection, and an animation toggle.
 * A separate weld tool for joining eligible occupied neighbors into rigid bodies and unwelding them, with gap-free fast-drag traversal, an immediate held-Control temporary override, and red invalid-edge feedback. Sand is not weldable, and magnets reject welds on their pointed side.
-* One shared procedural tile renderer for the Canvas board, placement preview, and component palette. Palette previews use density-aware, supersampled backing stores and redraw when browser zoom or display density changes. Each welded body renders as a single rounded polyomino slab: a traced, inset outline path with convex corner rounding and concave weld fillets, a drop shadow, per-cell fills and decorations clipped to the outline, top-left highlight and bottom-right shade bevels, and a dark rim. Diagonally touching cells render as a rounded pinch, and unwelded edges interior to a body render as dark seam grooves. Per-body cells and `Path2D` outlines are cached across animation frames and rebuilt only after world changes or board geometry changes.
+* One shared procedural tile renderer for the Canvas board, placement preview, and component palette. Palette previews use density-aware, supersampled backing stores and redraw when browser zoom or display density changes. Each welded body renders from traced, inset rounded-slab outlines whose occupied neighbors merge only across locally welded edges, so unwelded cuts stay visually stable when another cut splits the body and closed seam ends receive rounded caps. Rendering includes a drop shadow, per-cell fills and decorations clipped to the outline, top-left highlight and bottom-right shade bevels, and a dark rim. Diagonally touching cells render as a rounded pinch. Per-body cells and `Path2D` outlines are cached across animation frames and rebuilt only after world changes or board geometry changes.
 * A typed-array world with stable tile IDs, per-tile orientation, edge weld storage, and allocation-free per-tick movement buffers.
 * Deterministic straight-down gravity for stone, metal, magnets, and sand; complete downward body-dependency resolution; parity-selected diagonal gravity for sand; direct-fall priority; equal-priority destination jamming; and reciprocal magnetic constraints that hold bodies when supported while allowing unsupported attracting groups to fall.
 * Simulation commits remain discrete and deterministic while stable tile IDs drive optional smooth eased rendering between the previous and current positions. Manual steps animate for 200 ms; automatic steps animate for up to 250 ms without delaying simulation ticks. A 60-ticks-per-second mode forces discrete rendering.
@@ -105,16 +107,19 @@ The first playable scaffold is implemented:
 * `src/util/assert.ts` — `expectDefined` assertion that crashes loudly on violated lookups instead of falling back silently.
 * `tests/simulation.test.ts` — Deterministic world, gravity, diagonal movement, conflict, weld, magnet, identity, and reset tests.
 * `tests/grid-drag.test.ts` — Continuous tile and weld drag traversal tests, including board-boundary clipping.
+* `tests/tile-renderer.test.ts` — Rounded body-outline regression tests for local unwelded-edge geometry.
 * `vite.config.ts` — Vite configuration with Vitest's Node test environment.
 * `tsconfig.json` — Strict browser TypeScript and project build configuration.
 
 ## Current TODOs
 
-* Bug with rendering connected bodies: Place 8 stone blocks a ring, with 1 empty space in the center. Weld them all together. Unweld one edge A. Then unweld a different edge B on the other side. Unwelding B causes the appearance of edge A to change. The problem is basically that we're drawing one path for the entire connected body's outline, and then adding a seam line for one unwelded edge, but it looks wrong because it's patched on afterwards. Really our outline paths should depend on local weld states / connectivity.
 * Rework the overall UI. Currently the grid is a small region of the screen, and there's no way to zoom in or pan; this will be a problem for larger puzzle maps later. Instead, make the grid the background layer. Add the sidebars (palette, run/step/reset/clear, etc.) as panels floating on top of this. Start with the grid centered and zoomed in a way that allows seeing the whole grid with none of it hidden behind panels. Allow zooming the grid with mousewheel, and panning with arrow keys or RMB-drag on an empty region of the screen. Draw space outside the tile grid as black. Allow panning as long as the center of the screen is still over the tile grid (or any similar rule that ensures players don't accidentally get lost when panning and end up unable to find the grid again). Remove unnecessary UI elements like the title at the top; keep only left panel (tools, components, controls) and bottom panel (run, step, simulation speed).
-
-Related to animation system recently implemented:
+* Minor visual bug: If I have a row of 3 platform tiles welded together, and then I place a stone tile below and weld it on, the entire border of the connected body seems to change, even in places that I didn't modify. It looks like the outer border disappears. This is jarring / looks like a glitch because of this action-at-a-distance. Does not occur if the new tile is of the same type (platform). Seems caused by `uniformKind` in `src/render/tile-renderer.ts:89`. We could remove the outline entirely (it's barely noticeable), or modify it to handle non-uniform bodies in a way that still draws the boundary.
+* Add middle-click on a block to pick it (setting current palette selection), including its rotation if any.
 * Compute the next simulation step async, while the last update is still being animated. Would improve performance if simulation step time grows over frame time.
+* Add a conveyor-belt block: applies forces to its 4 neighbors, if they're not welded to it, either clockwise or counterclockwise; applies the reaction force to itself. Rotation controls (Q/E or WASD) should instead set clockwise/counterclockwise. For rendering, draw a block with a dashed line, animated to move along each side. Later, control with charge (positive, negative, or zero).
+* Add a conduit/wire block. It should look like a grey stone block with a dull blue circle in the center; when welded to adjacent blocks with a flag set, also draw a line from the circle to those welded neighbors. Store a charge; if the charge is nonzero, change the dull blue color to bright blue.
+* Add a piston block. It should be one block showing the arm and base of the piston overlapping. When it receives a charge, it should extend the arm, making it two separate blocks (considered welded together). When no charge is received, it should try to retract. This is a special case because we have effectively 2 blocks that can overlap, which is not usually allowed; but we could model it without overlaps, as 3 separate block types (arm, base, and combined arm+base), though we would still need to modify animation to show the arm extending.
 
 ## Development guidelines
 

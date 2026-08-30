@@ -31,13 +31,10 @@ const BEVEL_RATIO = 0.05;
 const OUTLINE_RATIO = 0.025;
 const DROP_SHADOW_X_RATIO = 0.05;
 const DROP_SHADOW_Y_RATIO = 0.1;
-/** Thickness of the groove marking an unwelded edge interior to a body. */
-const SEAM_RATIO = 0.08;
 
 const HIGHLIGHT_STYLE = "rgba(255, 255, 255, 0.25)";
 const SHADE_STYLE = "rgba(0, 0, 0, 0.28)";
 const DROP_SHADOW_STYLE = "rgba(0, 0, 0, 0.35)";
-const SEAM_STYLE = "rgba(0, 0, 0, 0.4)";
 const MIXED_BODY_OUTLINE_STYLE = "#161d26";
 
 /** Cells and vertices are keyed on a fixed grid stride; supports coordinates up to 4095. */
@@ -66,9 +63,9 @@ function rotateClockwise(direction: Direction): Direction {
 }
 
 /**
- * Draws one welded body as a single rounded polyomino slab: drop shadow, per-cell
- * fill and decorations clipped to the outline, top-left/bottom-right bevel
- * lighting, dark grooves along unwelded interior edges, and a dark rim.
+ * Draws one welded body as rounded slabs whose shared edges merge only where
+ * welded: drop shadow, per-cell fill and decorations clipped to the outline,
+ * top-left/bottom-right bevel lighting, and a dark rim.
  */
 export function drawBody(
   context: CanvasRenderingContext2D,
@@ -138,22 +135,6 @@ export function drawBody(
   context.strokeStyle = SHADE_STYLE;
   context.stroke(bodyPath);
 
-  context.lineCap = "butt";
-  context.strokeStyle = SEAM_STYLE;
-  context.lineWidth = Math.max(1.5, cellSize * SEAM_RATIO);
-  context.beginPath();
-  for (let i = 0; i < cellCount; i += 1) {
-    const cell = expectDefined(cells[i], "body cell");
-    if (cell.seamRight) {
-      context.moveTo(originX + (cell.x + 1) * cellSize, originY + cell.y * cellSize);
-      context.lineTo(originX + (cell.x + 1) * cellSize, originY + (cell.y + 1) * cellSize);
-    }
-    if (cell.seamDown) {
-      context.moveTo(originX + cell.x * cellSize, originY + (cell.y + 1) * cellSize);
-      context.lineTo(originX + (cell.x + 1) * cellSize, originY + (cell.y + 1) * cellSize);
-    }
-  }
-  context.stroke();
   context.restore();
 
   context.strokeStyle = uniformKind ? firstDefinition.shadow : MIXED_BODY_OUTLINE_STYLE;
@@ -180,12 +161,14 @@ export function drawTile(
 }
 
 /**
- * Traces the boundary of a polyomino cell set into a rounded outline path.
+ * Traces the boundary of a cell set into a rounded outline path. Occupied
+ * neighbors merge only across welded edges, so an unwelded edge has the same
+ * local geometry whether or not another weld path still connects the cells.
  *
  * Boundary edges are directed so the body interior lies to their right, which
  * makes outer loops wind clockwise and hole loops counterclockwise; nonzero
  * winding then fills holes correctly. Edges are inset toward the interior so
- * separate bodies never touch, and every corner is rounded with `arcTo`, which
+ * separate slabs never touch, and every corner is rounded with `arcTo`, which
  * yields convex rounding and concave weld fillets from the same construction.
  */
 export function createBodyPath(
@@ -195,10 +178,10 @@ export function createBodyPath(
   cells: readonly BodyCell[],
   cellCount: number,
 ): Path2D {
-  const occupied = new Set<number>();
+  const bodyCells = new Map<number, BodyCell>();
   for (let i = 0; i < cellCount; i += 1) {
     const cell = expectDefined(cells[i], "body cell");
-    occupied.add(pointKey(cell.x, cell.y));
+    bodyCells.set(pointKey(cell.x, cell.y), cell);
   }
 
   const edges: BoundaryEdge[] = [];
@@ -216,17 +199,22 @@ export function createBodyPath(
   };
 
   for (let i = 0; i < cellCount; i += 1) {
-    const { x, y } = expectDefined(cells[i], "body cell");
-    if (!occupied.has(pointKey(x, y - 1))) {
+    const cell = expectDefined(cells[i], "body cell");
+    const { x, y } = cell;
+    const above = bodyCells.get(pointKey(x, y - 1));
+    if (above === undefined || above.seamDown) {
       addEdge(x, y, Direction.Right);
     }
-    if (!occupied.has(pointKey(x + 1, y))) {
+    const right = bodyCells.get(pointKey(x + 1, y));
+    if (right === undefined || cell.seamRight) {
       addEdge(x + 1, y, Direction.Down);
     }
-    if (!occupied.has(pointKey(x, y + 1))) {
+    const below = bodyCells.get(pointKey(x, y + 1));
+    if (below === undefined || cell.seamDown) {
       addEdge(x + 1, y + 1, Direction.Left);
     }
-    if (!occupied.has(pointKey(x - 1, y))) {
+    const left = bodyCells.get(pointKey(x - 1, y));
+    if (left === undefined || left.seamRight) {
       addEdge(x, y + 1, Direction.Up);
     }
   }
@@ -247,7 +235,7 @@ export function createBodyPath(
     while (true) {
       const vertexX = edge.x + directionX(edge.direction);
       const vertexY = edge.y + directionY(edge.direction);
-      const next = takeNextEdge(edgesByVertex, vertexX, vertexY, edge.direction, firstEdge);
+      const next = takeNextEdge(edgesByVertex, vertexX, vertexY, edge.direction);
       if (next.direction !== edge.direction) {
         appendCorner(
           corners,
@@ -260,6 +248,9 @@ export function createBodyPath(
           edge.direction,
           next.direction,
         );
+      }
+      if (next.used && next !== firstEdge) {
+        throw new Error("Body outline loops overlap");
       }
       if (next === firstEdge) {
         break;
@@ -275,37 +266,35 @@ export function createBodyPath(
 }
 
 /**
- * Picks the boundary edge continuing from a vertex. Where two body cells touch
- * only diagonally, four edges meet at one vertex; preferring the clockwise
- * (interior-hugging) turn keeps the contour from crossing itself and renders
- * the diagonal contact as two rounded corners meeting in a pinch.
+ * Picks the boundary edge continuing from a vertex by following the body wall:
+ * turn clockwise if possible, then continue straight, turn counterclockwise,
+ * and reverse only for a closed seam endpoint. This fixed ordering is
+ * independent of cell collection order. At a diagonal contact it chooses the
+ * clockwise turn, keeping the contour from crossing itself and rendering two
+ * rounded corners meeting in a pinch.
  */
 function takeNextEdge(
   edgesByVertex: ReadonlyMap<number, readonly BoundaryEdge[]>,
   vertexX: number,
   vertexY: number,
   incomingDirection: Direction,
-  firstEdge: BoundaryEdge,
 ): BoundaryEdge {
   const candidates = edgesByVertex.get(pointKey(vertexX, vertexY));
   if (candidates === undefined) {
     throw new Error("Body outline is not closed");
   }
-  const preferredDirection = rotateClockwise(incomingDirection);
-  let fallback: BoundaryEdge | null = null;
+
+  let next: BoundaryEdge | undefined;
+  let bestPriority = 4;
   for (const candidate of candidates) {
-    if (candidate.used && candidate !== firstEdge) {
-      continue;
+    const turn = (candidate.direction - incomingDirection + 4) & 3;
+    const priority = turn === 1 ? 0 : turn === 0 ? 1 : turn === 3 ? 2 : 3;
+    if (priority < bestPriority) {
+      next = candidate;
+      bestPriority = priority;
     }
-    if (candidate.direction === preferredDirection) {
-      return candidate;
-    }
-    fallback = candidate;
   }
-  if (fallback === null) {
-    throw new Error("Body outline is not closed");
-  }
-  return fallback;
+  return expectDefined(next, "body outline successor edge");
 }
 
 function appendCorner(
@@ -321,11 +310,24 @@ function appendCorner(
 ): void {
   const inwardIncoming = rotateClockwise(incomingDirection);
   const inwardOutgoing = rotateClockwise(outgoingDirection);
+  const vertexScreenX = originX + vertexX * cellSize;
+  const vertexScreenY = originY + vertexY * cellSize;
+  if (outgoingDirection === ((incomingDirection + 2) & 3)) {
+    corners.push({
+      x: vertexScreenX + directionX(inwardIncoming) * inset,
+      y: vertexScreenY + directionY(inwardIncoming) * inset,
+      radius: 0,
+    });
+    corners.push({
+      x: vertexScreenX + directionX(inwardOutgoing) * inset,
+      y: vertexScreenY + directionY(inwardOutgoing) * inset,
+      radius: 0,
+    });
+    return;
+  }
   corners.push({
-    x: originX + vertexX * cellSize +
-      (directionX(inwardIncoming) + directionX(inwardOutgoing)) * inset,
-    y: originY + vertexY * cellSize +
-      (directionY(inwardIncoming) + directionY(inwardOutgoing)) * inset,
+    x: vertexScreenX + (directionX(inwardIncoming) + directionX(inwardOutgoing)) * inset,
+    y: vertexScreenY + (directionY(inwardIncoming) + directionY(inwardOutgoing)) * inset,
     radius: 0,
   });
 }
