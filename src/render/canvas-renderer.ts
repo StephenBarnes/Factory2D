@@ -1,8 +1,22 @@
-import { Direction, TileKind, WeldSide } from "../simulation/tile";
+import {
+  Direction,
+  directionX,
+  directionY,
+  orientedSides,
+  TILE_DEFINITIONS,
+  TileKind,
+  WeldSide,
+} from "../simulation/tile";
 import type { World } from "../simulation/world";
 import { expectDefined } from "../util/assert";
 import type { GridCell, GridEdge, GridPoint } from "./grid-drag";
-import { type BodyCell, createBodyPath, drawBody, drawTile } from "./tile-renderer";
+import {
+  type BodyCell,
+  createBodyPath,
+  drawBody,
+  drawTile,
+  setCircuitPortCharge,
+} from "./tile-renderer";
 
 
 const MAX_TILE_SIZE = 64;
@@ -392,9 +406,9 @@ export class CanvasRenderer {
           y: 0,
           kind: TileKind.Empty,
           orientation: Direction.Up,
-          charge: 0,
           outputCharge: 0,
           circuitConnections: WeldSide.None,
+          circuitPortCharges: 0,
           seamRight: false,
           seamDown: false,
         };
@@ -406,16 +420,32 @@ export class CanvasRenderer {
       cell.y = (index - x) / width;
       cell.kind = world.kindAtIndex(index);
       cell.orientation = world.orientationAtIndex(index);
-      cell.charge = world.chargeAtIndex(index);
+      const networkCharge = world.chargeAtIndex(index);
       cell.outputCharge = cell.kind === TileKind.Sensor
         ? world.sensorOutputAtIndex(index)
-        : cell.charge;
+        : networkCharge;
       cell.circuitConnections = WeldSide.None;
+      cell.circuitPortCharges = 0;
+      const inputPorts = orientedSides(
+        TILE_DEFINITIONS[cell.kind].circuitInputPorts,
+        cell.orientation,
+      );
       for (let value = Direction.Up; value <= Direction.Left; value += 1) {
         const direction = value as Direction;
-        if (world.hasCircuitConnectionAtIndex(index, direction)) {
-          cell.circuitConnections |= 1 << direction;
+        if (!world.hasCircuitConnectionAtIndex(index, direction)) {
+          continue;
         }
+        cell.circuitConnections |= 1 << direction;
+        const portCharge = (inputPorts & (1 << direction)) !== 0
+          ? world.chargeAtIndex(
+            index + directionX(direction) + directionY(direction) * width,
+          )
+          : networkCharge;
+        cell.circuitPortCharges = setCircuitPortCharge(
+          cell.circuitPortCharges,
+          direction,
+          portCharge,
+        );
       }
 
       if (world.hasRightWeldAtIndex(index) && bodyStamps[index + 1] !== stamp) {

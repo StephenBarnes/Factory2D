@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createBodyPath, drawBody, type BodyCell } from "../src/render/tile-renderer";
+import {
+  createBodyPath,
+  drawBody,
+  setCircuitPortCharge,
+  type BodyCell,
+} from "../src/render/tile-renderer";
 import { CIRCUIT_CHARGE_COLORS } from "../src/simulation/circuit";
 import { Direction, TileKind, WeldSide } from "../src/simulation/tile";
 
@@ -42,6 +47,18 @@ interface FillRectCommand {
   readonly fillStyle: string | CanvasGradient | CanvasPattern;
 }
 
+interface LineSegment {
+  readonly fromX: number;
+  readonly fromY: number;
+  readonly toX: number;
+  readonly toY: number;
+}
+
+interface StrokeCommand {
+  readonly strokeStyle: string | CanvasGradient | CanvasPattern;
+  readonly segments: readonly LineSegment[];
+}
+
 class RecordingCanvasContext {
   fillStyle: string | CanvasGradient | CanvasPattern = "";
   strokeStyle: string | CanvasGradient | CanvasPattern = "";
@@ -51,6 +68,10 @@ class RecordingCanvasContext {
   readonly fillRects: FillRectCommand[] = [];
   readonly fillStyles: Array<string | CanvasGradient | CanvasPattern> = [];
   readonly strokeStyles: Array<string | CanvasGradient | CanvasPattern> = [];
+  readonly strokes: StrokeCommand[] = [];
+  private currentX = 0;
+  private currentY = 0;
+  private currentSegments: LineSegment[] = [];
 
   save(): void {}
   restore(): void {}
@@ -60,12 +81,30 @@ class RecordingCanvasContext {
     this.fillStyles.push(this.fillStyle);
   }
   clip(_path: Path2D): void {}
-  beginPath(): void {}
-  moveTo(_x: number, _y: number): void {}
-  lineTo(_x: number, _y: number): void {}
+  beginPath(): void {
+    this.currentSegments = [];
+  }
+  moveTo(x: number, y: number): void {
+    this.currentX = x;
+    this.currentY = y;
+  }
+  lineTo(x: number, y: number): void {
+    this.currentSegments.push({
+      fromX: this.currentX,
+      fromY: this.currentY,
+      toX: x,
+      toY: y,
+    });
+    this.currentX = x;
+    this.currentY = y;
+  }
   closePath(): void {}
   stroke(_path?: Path2D): void {
     this.strokeStyles.push(this.strokeStyle);
+    this.strokes.push({
+      strokeStyle: this.strokeStyle,
+      segments: [...this.currentSegments],
+    });
   }
   arc(
     _x: number,
@@ -86,8 +125,8 @@ function stone(x: number, y: number, seamRight = false, seamDown = false): BodyC
     y,
     kind: TileKind.Stone,
     orientation: Direction.Up,
-    charge: 0,
     outputCharge: 0,
+    circuitPortCharges: 0,
     circuitConnections: WeldSide.None,
     seamRight,
     seamDown,
@@ -132,8 +171,8 @@ describe("body drawing", () => {
       y: 0,
       kind: TileKind.Platform,
       orientation: Direction.Up,
-      charge: 0,
       outputCharge: 0,
+      circuitPortCharges: 0,
       circuitConnections: WeldSide.None,
       seamRight: false,
       seamDown: false,
@@ -167,6 +206,7 @@ describe("body drawing", () => {
   });
 });
 
+describe("circuit rendering", () => {
   it("colors sensor wires by network charge and its arrow by sensed output", () => {
     const context = new RecordingCanvasContext();
     const sensor: BodyCell = {
@@ -174,9 +214,9 @@ describe("body drawing", () => {
       y: 0,
       kind: TileKind.Sensor,
       orientation: Direction.Up,
-      charge: -1,
       outputCharge: 1,
       circuitConnections: WeldSide.Right,
+      circuitPortCharges: setCircuitPortCharge(0, Direction.Right, -1),
       seamRight: false,
       seamDown: false,
     };
@@ -195,6 +235,53 @@ describe("body drawing", () => {
     expect(context.fillStyles).toContain(CIRCUIT_CHARGE_COLORS[1]);
     expect(context.fillStyles).not.toContain(CIRCUIT_CHARGE_COLORS[-1]);
   });
+
+  it.each([TileKind.Inverter, TileKind.Diode])(
+    "keeps %s input and output traces separate and individually colored",
+    (kind) => {
+      const context = new RecordingCanvasContext();
+      let portCharges = setCircuitPortCharge(0, Direction.Up, 1);
+      portCharges = setCircuitPortCharge(portCharges, Direction.Down, -1);
+      const gate: BodyCell = {
+        x: 0,
+        y: 0,
+        kind,
+        orientation: Direction.Up,
+        outputCharge: 1,
+        circuitConnections: WeldSide.Up | WeldSide.Down,
+        circuitPortCharges: portCharges,
+        seamRight: false,
+        seamDown: false,
+      };
+
+      drawBody(
+        context as unknown as CanvasRenderingContext2D,
+        0,
+        0,
+        32,
+        [gate],
+        1,
+        new RecordingPath2D() as unknown as Path2D,
+      );
+
+      const outputSegment = context.strokes.find(
+        (stroke) => stroke.strokeStyle === CIRCUIT_CHARGE_COLORS[1],
+      )?.segments[0];
+      expect(outputSegment?.fromX).toBe(16);
+      expect(outputSegment?.fromY).toBe(0);
+      expect(outputSegment?.toX).toBe(16);
+      expect(outputSegment?.toY).toBeCloseTo(7.68);
+
+      const inputSegment = context.strokes.find(
+        (stroke) => stroke.strokeStyle === CIRCUIT_CHARGE_COLORS[-1],
+      )?.segments[0];
+      expect(inputSegment?.fromX).toBe(16);
+      expect(inputSegment?.fromY).toBe(32);
+      expect(inputSegment?.toX).toBe(16);
+      expect(inputSegment?.toY).toBeCloseTo(24.32);
+    },
+  );
+});
 
 describe("body outline tracing", () => {
   it("keeps an unwelded edge's local outline when another cut splits a ring", () => {

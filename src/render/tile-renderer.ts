@@ -17,14 +17,37 @@ export interface BodyCell {
   y: number;
   kind: TileKind;
   orientation: Direction;
-  charge: Charge;
   /** Charge emitted by this tile, independent of its connected network's resolved charge. */
   outputCharge: Charge;
+  /** Two signed bits per direction, used to color each connected circuit port. */
+  circuitPortCharges: number;
   circuitConnections: WeldSide;
   /** The right neighbor belongs to the same body but this edge is not welded. */
   seamRight: boolean;
   /** The down neighbor belongs to the same body but this edge is not welded. */
   seamDown: boolean;
+}
+
+export function setCircuitPortCharge(
+  charges: number,
+  direction: Direction,
+  charge: Charge,
+): number {
+  const shift = direction * 2;
+  const mask = 3 << shift;
+  const encodedCharge = charge < 0 ? 3 : charge;
+  return (charges & ~mask) | (encodedCharge << shift);
+}
+
+function circuitPortCharge(charges: number, direction: Direction): Charge {
+  const encodedCharge = (charges >>> (direction * 2)) & 3;
+  if (encodedCharge === 0 || encodedCharge === 1) {
+    return encodedCharge;
+  }
+  if (encodedCharge === 3) {
+    return -1;
+  }
+  throw new Error(`Invalid packed circuit port charge ${encodedCharge}`);
 }
 
 /** Corner rounding radius for convex corners and concave weld fillets. */
@@ -112,9 +135,9 @@ export function drawBody(
       cellSize,
       TILE_DEFINITIONS[cell.kind],
       cell.orientation,
-      cell.charge,
       cell.outputCharge,
       cell.circuitConnections,
+      cell.circuitPortCharges,
     );
   }
 
@@ -137,9 +160,9 @@ const SINGLE_CELL: [BodyCell] = [
     y: 0,
     kind: 0 as TileKind,
     orientation: Direction.Up,
-    charge: 0,
     outputCharge: 0,
     circuitConnections: WeldSide.None,
+    circuitPortCharges: 0,
     seamRight: false,
     seamDown: false,
   },
@@ -365,12 +388,20 @@ function drawDecoration(
   size: number,
   definition: TileDefinition,
   orientation: Direction,
-  charge: Charge,
   outputCharge: Charge,
   circuitConnections: WeldSide,
+  circuitPortCharges: number,
 ): void {
   if (circuitConnections !== WeldSide.None) {
-    drawCircuitConnections(context, left, top, size, charge, circuitConnections);
+    drawCircuitConnections(
+      context,
+      left,
+      top,
+      size,
+      circuitConnections,
+      circuitPortCharges,
+      definition.circuitInputPorts !== WeldSide.None,
+    );
   }
   context.fillStyle = definition.decorationColor;
   context.strokeStyle = definition.decorationColor;
@@ -428,7 +459,7 @@ function drawDecoration(
       context.beginPath();
       drawDot(context, left + size / 2, top + size / 2, Math.max(2, size * 0.19));
       context.fill();
-      context.strokeStyle = CIRCUIT_CHARGE_COLORS[charge];
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
       context.lineWidth = Math.max(1, size * 0.045);
       context.stroke();
       break;
@@ -525,27 +556,53 @@ function drawCircuitConnections(
   left: number,
   top: number,
   size: number,
-  charge: Charge,
   connections: WeldSide,
+  portCharges: number,
+  isolatePorts: boolean,
 ): void {
   const centerX = left + size / 2;
   const centerY = top + size / 2;
-  context.strokeStyle = CIRCUIT_CHARGE_COLORS[charge];
   context.lineWidth = Math.max(2, size * 0.12);
   context.lineCap = "round";
-  context.beginPath();
-  for (let value = Direction.Up; value <= Direction.Left; value += 1) {
-    const direction = value as Direction;
-    if ((connections & (1 << direction)) === 0) {
-      continue;
+
+  for (let chargeValue = -1; chargeValue <= 1; chargeValue += 1) {
+    const charge = chargeValue as Charge;
+    let hasCharge = false;
+    context.beginPath();
+    for (let value = Direction.Up; value <= Direction.Left; value += 1) {
+      const direction = value as Direction;
+      if (
+        (connections & (1 << direction)) === 0 ||
+        circuitPortCharge(portCharges, direction) !== charge
+      ) {
+        continue;
+      }
+
+      const offsetX = directionX(direction);
+      const offsetY = directionY(direction);
+      if (isolatePorts) {
+        context.moveTo(
+          centerX + offsetX * size / 2,
+          centerY + offsetY * size / 2,
+        );
+        context.lineTo(
+          centerX + offsetX * size * 0.26,
+          centerY + offsetY * size * 0.26,
+        );
+      } else {
+        context.moveTo(centerX, centerY);
+        context.lineTo(
+          centerX + offsetX * size / 2,
+          centerY + offsetY * size / 2,
+        );
+      }
+      hasCharge = true;
     }
-    context.moveTo(centerX, centerY);
-    context.lineTo(
-      centerX + directionX(direction) * size / 2,
-      centerY + directionY(direction) * size / 2,
-    );
+    if (hasCharge) {
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[charge];
+      context.stroke();
+    }
   }
-  context.stroke();
 }
 
 /** Adds one filled circle to the current path without a connecting chord from the previous subpath. */
