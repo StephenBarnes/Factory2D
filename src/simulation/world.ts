@@ -1,6 +1,8 @@
 import { isCharge, type Charge } from "./circuit";
 import {
   Direction,
+  directionX,
+  directionY,
   oppositeDirection,
   orientedSides,
   TILE_DEFINITIONS,
@@ -322,6 +324,26 @@ export class World {
   chargeAtIndex(index: number): Charge {
     this.assertIndex(index);
     return this.charges[index] as Charge;
+  }
+
+  sensorOutputAtIndex(index: number): Charge {
+    this.assertIndex(index);
+    if (this.kinds[index] !== TileKind.Sensor) {
+      throw new Error(`Tile at index ${index} is not a sensor`);
+    }
+
+    const x = index % this.width;
+    const y = (index - x) / this.width;
+    const orientation = this.orientations[index] as Direction;
+    const sensedX = x + directionX(orientation);
+    const sensedY = y + directionY(orientation);
+    return sensedX >= 0 &&
+        sensedX < this.width &&
+        sensedY >= 0 &&
+        sensedY < this.height &&
+        this.kinds[sensedY * this.width + sensedX] !== TileKind.Empty
+      ? 1
+      : 0;
   }
 
   hasRightWeldAtIndex(index: number): boolean {

@@ -393,6 +393,7 @@ export class CanvasRenderer {
           kind: TileKind.Empty,
           orientation: Direction.Up,
           charge: 0,
+          outputCharge: 0,
           circuitConnections: WeldSide.None,
           seamRight: false,
           seamDown: false,
@@ -406,6 +407,9 @@ export class CanvasRenderer {
       cell.kind = world.kindAtIndex(index);
       cell.orientation = world.orientationAtIndex(index);
       cell.charge = world.chargeAtIndex(index);
+      cell.outputCharge = cell.kind === TileKind.Sensor
+        ? world.sensorOutputAtIndex(index)
+        : cell.charge;
       cell.circuitConnections = WeldSide.None;
       for (let value = Direction.Up; value <= Direction.Left; value += 1) {
         const direction = value as Direction;

@@ -112,21 +112,11 @@ export class Simulation {
         continue;
       }
 
-      const orientation = this.world.orientationAtIndex(index);
-      const x = index % this.world.width;
-      const y = (index - x) / this.world.width;
-      const sensedX = x + directionX(orientation);
-      const sensedY = y + directionY(orientation);
-      if (
-        sensedX >= 0 &&
-        sensedX < this.world.width &&
-        sensedY >= 0 &&
-        sensedY < this.world.height &&
-        this.world.kindAtIndex(sensedY * this.world.width + sensedX) !== TileKind.Empty
-      ) {
+      const outputCharge = this.world.sensorOutputAtIndex(index);
+      if (outputCharge !== 0) {
         const root = this.findCircuitRoot(index);
         this.circuitDriveSums[root] =
-          expectDefined(this.circuitDriveSums[root], "circuit drive sum") + 1;
+          expectDefined(this.circuitDriveSums[root], "circuit drive sum") + outputCharge;
       }
     }
 

@@ -18,6 +18,8 @@ export interface BodyCell {
   kind: TileKind;
   orientation: Direction;
   charge: Charge;
+  /** Charge emitted by this tile, independent of its connected network's resolved charge. */
+  outputCharge: Charge;
   circuitConnections: WeldSide;
   /** The right neighbor belongs to the same body but this edge is not welded. */
   seamRight: boolean;
@@ -111,6 +113,7 @@ export function drawBody(
       TILE_DEFINITIONS[cell.kind],
       cell.orientation,
       cell.charge,
+      cell.outputCharge,
       cell.circuitConnections,
     );
   }
@@ -135,6 +138,7 @@ const SINGLE_CELL: [BodyCell] = [
     kind: 0 as TileKind,
     orientation: Direction.Up,
     charge: 0,
+    outputCharge: 0,
     circuitConnections: WeldSide.None,
     seamRight: false,
     seamDown: false,
@@ -362,6 +366,7 @@ function drawDecoration(
   definition: TileDefinition,
   orientation: Direction,
   charge: Charge,
+  outputCharge: Charge,
   circuitConnections: WeldSide,
 ): void {
   if (circuitConnections !== WeldSide.None) {
@@ -431,7 +436,7 @@ function drawDecoration(
       context.save();
       context.translate(left + size / 2, top + size / 2);
       context.rotate(orientation * Math.PI / 2);
-      context.fillStyle = CIRCUIT_CHARGE_COLORS[charge];
+      context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
       context.beginPath();
       context.moveTo(0, -size * 0.34);
       context.lineTo(size * 0.14, -size * 0.12);
@@ -461,7 +466,7 @@ function drawDecoration(
       context.lineTo(size * 0.2, size * 0.16);
       context.closePath();
       context.stroke();
-      context.fillStyle = CIRCUIT_CHARGE_COLORS[charge];
+      context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
       context.beginPath();
       drawDot(context, 0, -size * 0.27, Math.max(1.5, size * 0.075));
       context.fill();
@@ -484,7 +489,7 @@ function drawDecoration(
       context.moveTo(-size * 0.2, -size * 0.2);
       context.lineTo(size * 0.2, -size * 0.2);
       context.stroke();
-      context.fillStyle = CIRCUIT_CHARGE_COLORS[charge];
+      context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
       context.beginPath();
       drawDot(context, 0, -size * 0.3, Math.max(1.5, size * 0.065));
       context.fill();
@@ -503,7 +508,7 @@ function drawDecoration(
       context.moveTo(0, -size * 0.17);
       context.lineTo(0, size * 0.17);
       context.stroke();
-      context.fillStyle = CIRCUIT_CHARGE_COLORS[charge];
+      context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
       context.beginPath();
       drawDot(context, 0, -size * 0.3, Math.max(1.5, size * 0.065));
       context.fill();

@@ -55,20 +55,47 @@ describe("circuit networks", () => {
     expect(world.chargeAt(1, 1)).toBe(1);
   });
 
-  it("moves the resolved charge with an unsupported welded circuit body", () => {
-    const world = new World(2, 3);
-    world.place(0, 0, TileKind.Sensor, Direction.Right);
+  it.each([
+    Direction.Up,
+    Direction.Right,
+    Direction.Down,
+    Direction.Left,
+  ])("keeps a %s-facing sensor's front circuit port isolated", (orientation) => {
+    const world = new World(3, 3);
+    world.place(1, 1, TileKind.Sensor, orientation);
     world.place(1, 0, TileKind.Conduit);
-    world.setWeld(0, 0, 1, 0, true);
+    world.place(2, 1, TileKind.Conduit);
+    world.place(1, 2, TileKind.Conduit);
+    world.place(0, 1, TileKind.Conduit);
+    world.setWeld(1, 1, 1, 0, true);
+    world.setWeld(1, 1, 2, 1, true);
+    world.setWeld(1, 1, 1, 2, true);
+    world.setWeld(1, 1, 0, 1, true);
+    const sensorIndex = 1 * world.width + 1;
+
+    for (let value = Direction.Up; value <= Direction.Left; value += 1) {
+      const direction = value as Direction;
+      expect(world.hasCircuitConnectionAtIndex(sensorIndex, direction)).toBe(
+        direction !== orientation,
+      );
+    }
+  });
+
+  it("moves the resolved charge with an unsupported welded circuit body", () => {
+    const world = new World(2, 4);
+    world.place(0, 0, TileKind.Sensor, Direction.Right);
+    world.place(1, 0, TileKind.Stone);
+    world.place(0, 1, TileKind.Conduit);
+    world.place(1, 1, TileKind.Platform);
+    world.setWeld(0, 0, 0, 1, true);
     const simulation = new Simulation(world);
 
     expect(simulation.step()).toBe(2);
 
     expect(world.chargeAt(0, 0)).toBe(0);
-    expect(world.chargeAt(1, 0)).toBe(0);
     expect(world.chargeAt(0, 1)).toBe(1);
-    expect(world.chargeAt(1, 1)).toBe(1);
-    expect(world.isWelded(0, 1, 1, 1)).toBe(true);
+    expect(world.chargeAt(0, 2)).toBe(1);
+    expect(world.isWelded(0, 1, 0, 2)).toBe(true);
   });
 
   it("connects an inverter only through its rotated input and output ports", () => {

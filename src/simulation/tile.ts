@@ -191,7 +191,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
     usesOrientation: true,
-    circuitPorts: WeldSide.All,
+    circuitPorts: WeldSide.Right | WeldSide.Down | WeldSide.Left,
     circuitInputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,

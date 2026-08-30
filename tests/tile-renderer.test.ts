@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createBodyPath, drawBody, type BodyCell } from "../src/render/tile-renderer";
+import { CIRCUIT_CHARGE_COLORS } from "../src/simulation/circuit";
 import { Direction, TileKind, WeldSide } from "../src/simulation/tile";
 
 interface ArcCommand {
@@ -48,17 +49,24 @@ class RecordingCanvasContext {
   lineCap: CanvasLineCap = "butt";
   lineJoin: CanvasLineJoin = "miter";
   readonly fillRects: FillRectCommand[] = [];
+  readonly fillStyles: Array<string | CanvasGradient | CanvasPattern> = [];
+  readonly strokeStyles: Array<string | CanvasGradient | CanvasPattern> = [];
 
   save(): void {}
   restore(): void {}
   translate(_x: number, _y: number): void {}
-  fill(_path?: Path2D): void {}
+  rotate(_angle: number): void {}
+  fill(_path?: Path2D): void {
+    this.fillStyles.push(this.fillStyle);
+  }
   clip(_path: Path2D): void {}
   beginPath(): void {}
   moveTo(_x: number, _y: number): void {}
   lineTo(_x: number, _y: number): void {}
   closePath(): void {}
-  stroke(_path?: Path2D): void {}
+  stroke(_path?: Path2D): void {
+    this.strokeStyles.push(this.strokeStyle);
+  }
   arc(
     _x: number,
     _y: number,
@@ -79,6 +87,7 @@ function stone(x: number, y: number, seamRight = false, seamDown = false): BodyC
     kind: TileKind.Stone,
     orientation: Direction.Up,
     charge: 0,
+    outputCharge: 0,
     circuitConnections: WeldSide.None,
     seamRight,
     seamDown,
@@ -124,6 +133,7 @@ describe("body drawing", () => {
       kind: TileKind.Platform,
       orientation: Direction.Up,
       charge: 0,
+      outputCharge: 0,
       circuitConnections: WeldSide.None,
       seamRight: false,
       seamDown: false,
@@ -156,6 +166,35 @@ describe("body drawing", () => {
     expect(mixedContext.fillRects[0]).toEqual(uniformContext.fillRects[0]);
   });
 });
+
+  it("colors sensor wires by network charge and its arrow by sensed output", () => {
+    const context = new RecordingCanvasContext();
+    const sensor: BodyCell = {
+      x: 0,
+      y: 0,
+      kind: TileKind.Sensor,
+      orientation: Direction.Up,
+      charge: -1,
+      outputCharge: 1,
+      circuitConnections: WeldSide.Right,
+      seamRight: false,
+      seamDown: false,
+    };
+
+    drawBody(
+      context as unknown as CanvasRenderingContext2D,
+      0,
+      0,
+      32,
+      [sensor],
+      1,
+      new RecordingPath2D() as unknown as Path2D,
+    );
+
+    expect(context.strokeStyles).toContain(CIRCUIT_CHARGE_COLORS[-1]);
+    expect(context.fillStyles).toContain(CIRCUIT_CHARGE_COLORS[1]);
+    expect(context.fillStyles).not.toContain(CIRCUIT_CHARGE_COLORS[-1]);
+  });
 
 describe("body outline tracing", () => {
   it("keeps an unwelded edge's local outline when another cut splits a ring", () => {
