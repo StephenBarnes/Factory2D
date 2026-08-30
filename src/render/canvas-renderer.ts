@@ -1,19 +1,9 @@
 import { Direction, TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
 import { expectDefined } from "../util/assert";
+import type { GridCell, GridEdge, GridPoint } from "./grid-drag";
 import { type BodyCell, drawBody, drawTile } from "./tile-renderer";
 
-export interface GridCell {
-  readonly x: number;
-  readonly y: number;
-}
-
-export interface GridEdge {
-  readonly x1: number;
-  readonly y1: number;
-  readonly x2: number;
-  readonly y2: number;
-}
 
 const DESIGN_TILE_SIZE = 32;
 
@@ -61,10 +51,17 @@ export class CanvasRenderer {
     this.drawHover();
   }
 
-  cellFromClientPoint(clientX: number, clientY: number): GridCell | null {
+  gridPointFromClientPoint(clientX: number, clientY: number): GridPoint {
     const bounds = this.canvas.getBoundingClientRect();
-    const x = Math.floor((clientX - bounds.left - this.originX) / this.cellSize);
-    const y = Math.floor((clientY - bounds.top - this.originY) / this.cellSize);
+    return {
+      x: (clientX - bounds.left - this.originX) / this.cellSize,
+      y: (clientY - bounds.top - this.originY) / this.cellSize,
+    };
+  }
+
+  cellFromGridPoint(point: GridPoint): GridCell | null {
+    const x = Math.floor(point.x);
+    const y = Math.floor(point.y);
 
     if (x < 0 || x >= this.world.width || y < 0 || y >= this.world.height) {
       return null;
@@ -72,18 +69,17 @@ export class CanvasRenderer {
     return { x, y };
   }
 
-  edgeFromClientPoint(clientX: number, clientY: number): GridEdge | null {
-    const bounds = this.canvas.getBoundingClientRect();
-    const localX = clientX - bounds.left - this.originX;
-    const localY = clientY - bounds.top - this.originY;
+  edgeFromGridPoint(point: GridPoint): GridEdge | null {
+    const localX = point.x * this.cellSize;
+    const localY = point.y * this.cellSize;
     const boardWidth = this.world.width * this.cellSize;
     const boardHeight = this.world.height * this.cellSize;
     if (localX < 0 || localX > boardWidth || localY < 0 || localY > boardHeight) {
       return null;
     }
 
-    const verticalLine = Math.round(localX / this.cellSize);
-    const horizontalLine = Math.round(localY / this.cellSize);
+    const verticalLine = Math.round(point.x);
+    const horizontalLine = Math.round(point.y);
     const verticalDistance = Math.abs(localX - verticalLine * this.cellSize);
     const horizontalDistance = Math.abs(localY - horizontalLine * this.cellSize);
     const selectionRadius = this.cellSize / 4;
@@ -94,7 +90,7 @@ export class CanvasRenderer {
       verticalDistance <= selectionRadius &&
       verticalDistance <= horizontalDistance
     ) {
-      const y = Math.min(Math.floor(localY / this.cellSize), this.world.height - 1);
+      const y = Math.min(Math.floor(point.y), this.world.height - 1);
       return { x1: verticalLine - 1, y1: y, x2: verticalLine, y2: y };
     }
     if (
@@ -102,7 +98,7 @@ export class CanvasRenderer {
       horizontalLine < this.world.height &&
       horizontalDistance <= selectionRadius
     ) {
-      const x = Math.min(Math.floor(localX / this.cellSize), this.world.width - 1);
+      const x = Math.min(Math.floor(point.x), this.world.width - 1);
       return { x1: x, y1: horizontalLine - 1, x2: x, y2: horizontalLine };
     }
     return null;

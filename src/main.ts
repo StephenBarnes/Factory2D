@@ -1,7 +1,11 @@
 import "./styles.css";
 
 import { CanvasRenderer } from "./render/canvas-renderer";
-import type { GridCell, GridEdge } from "./render/canvas-renderer";
+import {
+  cellsOnGridSegment,
+  visitCrossedGridEdges,
+} from "./render/grid-drag";
+import type { GridCell, GridEdge, GridPoint } from "./render/grid-drag";
 import { drawTile } from "./render/tile-renderer";
 import { Simulation } from "./simulation/simulation";
 import { Direction, TileKind } from "./simulation/tile";
@@ -52,7 +56,7 @@ let temporaryWeldActive = false;
 let activePointerId: number | null = null;
 let activeErase = false;
 let lastEditedCell: GridCell | null = null;
-let lastEditedEdge: GridEdge | null = null;
+let lastPointerGridPoint: GridPoint | null = null;
 let hoveredCell: GridCell | null = null;
 let hoveredEdge: GridEdge | null = null;
 let running = false;
@@ -193,12 +197,32 @@ function editWeld(edge: GridEdge, erase: boolean): void {
   }
 }
 
-function edgesMatch(first: GridEdge | null, second: GridEdge): boolean {
-  return first !== null &&
-    first.x1 === second.x1 &&
-    first.y1 === second.y1 &&
-    first.x2 === second.x2 &&
-    first.y2 === second.y2;
+function editWeldSegment(
+  from: GridPoint,
+  to: GridPoint,
+  endpointEdge: GridEdge | null,
+  erase: boolean,
+): void {
+  if (running) {
+    return;
+  }
+
+  let changed = false;
+  visitCrossedGridEdges(from, to, world.width, world.height, (x1, y1, x2, y2) => {
+    changed = world.setWeld(x1, y1, x2, y2, !erase) || changed;
+  });
+  if (endpointEdge !== null) {
+    changed = world.setWeld(
+      endpointEdge.x1,
+      endpointEdge.y1,
+      endpointEdge.x2,
+      endpointEdge.y2,
+      !erase,
+    ) || changed;
+  }
+  if (changed) {
+    saveEditedBaseline();
+  }
 }
 
 sidebarControls.addEventListener("click", (event) => {
@@ -247,40 +271,50 @@ canvas.addEventListener("pointerdown", (event) => {
   activeErase = event.button === 2;
   canvas.setPointerCapture(event.pointerId);
 
+  const point = renderer.gridPointFromClientPoint(event.clientX, event.clientY);
+  lastPointerGridPoint = point;
   if (selectedTool === "tile") {
-    const cell = renderer.cellFromClientPoint(event.clientX, event.clientY);
+    const cell = renderer.cellFromGridPoint(point);
     if (cell !== null) {
       editCellLine(cell, cell, activeErase);
       lastEditedCell = cell;
     }
   } else {
-    const edge = renderer.edgeFromClientPoint(event.clientX, event.clientY);
+    const edge = renderer.edgeFromGridPoint(point);
     if (edge !== null) {
       editWeld(edge, activeErase);
-      lastEditedEdge = edge;
     }
   }
 });
 
 canvas.addEventListener("pointermove", (event) => {
-  hoveredCell = renderer.cellFromClientPoint(event.clientX, event.clientY);
-  hoveredEdge = renderer.edgeFromClientPoint(event.clientX, event.clientY);
+  const point = renderer.gridPointFromClientPoint(event.clientX, event.clientY);
+  hoveredCell = renderer.cellFromGridPoint(point);
+  hoveredEdge = renderer.edgeFromGridPoint(point);
   refreshPointerHover();
 
   if (event.pointerId !== activePointerId) {
     return;
   }
-  if (selectedTool === "tile" && hoveredCell !== null) {
-    editCellLine(lastEditedCell ?? hoveredCell, hoveredCell, activeErase);
-    lastEditedCell = hoveredCell;
-  } else if (
-    selectedTool === "weld" &&
-    hoveredEdge !== null &&
-    !edgesMatch(lastEditedEdge, hoveredEdge)
-  ) {
-    editWeld(hoveredEdge, activeErase);
-    lastEditedEdge = hoveredEdge;
+  if (lastPointerGridPoint === null) {
+    throw new Error("Active pointer is missing its previous grid position");
   }
+
+  if (selectedTool === "tile") {
+    const segment = cellsOnGridSegment(
+      lastPointerGridPoint,
+      point,
+      world.width,
+      world.height,
+    );
+    if (segment !== null) {
+      editCellLine(lastEditedCell ?? segment.from, segment.to, activeErase);
+      lastEditedCell = segment.to;
+    }
+  } else {
+    editWeldSegment(lastPointerGridPoint, point, hoveredEdge, activeErase);
+  }
+  lastPointerGridPoint = point;
 });
 
 function finishPointerEdit(event: PointerEvent): void {
@@ -289,7 +323,7 @@ function finishPointerEdit(event: PointerEvent): void {
   }
   activePointerId = null;
   lastEditedCell = null;
-  lastEditedEdge = null;
+  lastPointerGridPoint = null;
 }
 
 canvas.addEventListener("pointerup", finishPointerEdit);
