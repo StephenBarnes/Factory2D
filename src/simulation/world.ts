@@ -16,6 +16,7 @@ export class World {
   private nextTileId = 1;
   private readonly rightWelds: Uint8Array;
   private readonly downWelds: Uint8Array;
+  private revisionValue = 0;
 
   constructor(width: number, height: number) {
     if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
@@ -30,6 +31,11 @@ export class World {
     this.orientations = new Uint8Array(this.cellCount);
     this.rightWelds = new Uint8Array(this.cellCount);
     this.downWelds = new Uint8Array(this.cellCount);
+  }
+
+  /** Monotonically increases whenever this world's renderable state may have changed. */
+  get revision(): number {
+    return this.revisionValue;
   }
 
   kindAt(x: number, y: number): TileKind {
@@ -79,6 +85,7 @@ export class World {
       return false;
     }
     storage.welds[storage.index] = value;
+    this.revisionValue += 1;
     return true;
   }
 
@@ -94,7 +101,11 @@ export class World {
       throw new RangeError(`Invalid tile orientation ${orientation}`);
     }
     if (kind === TileKind.Empty) {
+      if (this.kinds[index] === TileKind.Empty) {
+        return 0;
+      }
       this.clearIndex(index);
+      this.revisionValue += 1;
       return 0;
     }
 
@@ -102,6 +113,7 @@ export class World {
       if (this.orientations[index] !== orientation) {
         this.orientations[index] = orientation;
         this.clearDisallowedWeldsAtIndex(index);
+        this.revisionValue += 1;
       }
       return this.ids[index] ?? 0;
     }
@@ -112,6 +124,7 @@ export class World {
     this.kinds[index] = kind;
     this.ids[index] = id;
     this.orientations[index] = orientation;
+    this.revisionValue += 1;
     return id;
   }
 
@@ -121,6 +134,7 @@ export class World {
     this.orientations.fill(Direction.Up);
     this.rightWelds.fill(0);
     this.downWelds.fill(0);
+    this.revisionValue += 1;
   }
 
   clone(): World {
@@ -140,6 +154,7 @@ export class World {
     this.rightWelds.set(source.rightWelds);
     this.downWelds.set(source.downWelds);
     this.nextTileId = source.nextTileId;
+    this.revisionValue += 1;
   }
 
   kindAtIndex(index: number): TileKind {
@@ -190,6 +205,9 @@ export class World {
       this.rightWelds[source] = 0;
       this.downWelds[source] = 0;
       movementCount += 1;
+    }
+    if (movementCount > 0) {
+      this.revisionValue += 1;
     }
     return movementCount;
   }

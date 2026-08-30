@@ -77,11 +77,13 @@ export function drawBody(
   cellSize: number,
   cells: readonly BodyCell[],
   cellCount: number = cells.length,
+  path?: Path2D,
 ): void {
   if (cellCount === 0) {
     return;
   }
   const firstCell = expectDefined(cells[0], "first body cell");
+  const bodyPath = path ?? createBodyPath(originX, originY, cellSize, cells, cellCount);
 
   const firstDefinition = TILE_DEFINITIONS[firstCell.kind];
   let uniformKind = true;
@@ -92,18 +94,17 @@ export function drawBody(
     }
   }
 
-  const path = buildBodyOutline(originX, originY, cellSize, cells, cellCount);
 
   context.save();
   context.translate(cellSize * DROP_SHADOW_X_RATIO, cellSize * DROP_SHADOW_Y_RATIO);
   context.fillStyle = DROP_SHADOW_STYLE;
-  context.fill(path);
+  context.fill(bodyPath);
   context.restore();
 
   context.save();
-  context.clip(path);
+  context.clip(bodyPath);
   context.fillStyle = firstDefinition.fill;
-  context.fill(path);
+  context.fill(bodyPath);
   if (!uniformKind) {
     for (let i = 0; i < cellCount; i += 1) {
       const cell = expectDefined(cells[i], "body cell");
@@ -132,10 +133,10 @@ export function drawBody(
   context.lineWidth = bevel * 2;
   context.translate(bevel, bevel);
   context.strokeStyle = HIGHLIGHT_STYLE;
-  context.stroke(path);
+  context.stroke(bodyPath);
   context.translate(-2 * bevel, -2 * bevel);
   context.strokeStyle = SHADE_STYLE;
-  context.stroke(path);
+  context.stroke(bodyPath);
 
   context.lineCap = "butt";
   context.strokeStyle = SEAM_STYLE;
@@ -157,7 +158,7 @@ export function drawBody(
 
   context.strokeStyle = uniformKind ? firstDefinition.shadow : MIXED_BODY_OUTLINE_STYLE;
   context.lineWidth = Math.max(1, cellSize * OUTLINE_RATIO);
-  context.stroke(path);
+  context.stroke(bodyPath);
 }
 
 const SINGLE_CELL: [BodyCell] = [
@@ -187,7 +188,7 @@ export function drawTile(
  * separate bodies never touch, and every corner is rounded with `arcTo`, which
  * yields convex rounding and concave weld fillets from the same construction.
  */
-function buildBodyOutline(
+export function createBodyPath(
   originX: number,
   originY: number,
   cellSize: number,

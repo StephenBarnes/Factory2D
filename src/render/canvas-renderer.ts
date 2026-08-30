@@ -2,10 +2,15 @@ import { Direction, TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
 import { expectDefined } from "../util/assert";
 import type { GridCell, GridEdge, GridPoint } from "./grid-drag";
-import { type BodyCell, drawBody, drawTile } from "./tile-renderer";
+import { type BodyCell, createBodyPath, drawBody, drawTile } from "./tile-renderer";
 
 
 const DESIGN_TILE_SIZE = 32;
+
+interface CachedBody {
+  readonly cells: readonly BodyCell[];
+  readonly path: Path2D;
+}
 
 export class CanvasRenderer {
   private readonly canvas: HTMLCanvasElement;
@@ -21,6 +26,11 @@ export class CanvasRenderer {
   private bodyStamps = new Int32Array(0);
   private bodyStack = new Int32Array(0);
   private readonly bodyCells: BodyCell[] = [];
+  private cachedWorldRevision = -1;
+  private cachedOriginX = Number.NaN;
+  private cachedOriginY = Number.NaN;
+  private cachedCellSize = 0;
+  private readonly cachedBodies: CachedBody[] = [];
   private hoverX = -1;
   private hoverY = -1;
   private hoverEdge: GridEdge | null = null;
@@ -175,7 +185,63 @@ export class CanvasRenderer {
   }
 
   private drawTiles(previousWorld: World | null, progress: number): void {
-    const cellCount = this.world.width * this.world.height;
+    this.rebuildBodyCache();
+
+    for (const body of this.cachedBodies) {
+      let offsetX = 0;
+      let offsetY = 0;
+      const remainingProgress = 1 - progress;
+      if (previousWorld !== null && remainingProgress > 0) {
+        const firstCell = expectDefined(body.cells[0], "first animated body cell");
+        const tileId = this.world.idAt(firstCell.x, firstCell.y);
+        if (previousWorld.idAt(firstCell.x, firstCell.y) !== tileId && firstCell.y > 0) {
+          for (let horizontalMove = -1; horizontalMove <= 1; horizontalMove += 1) {
+            const previousX = firstCell.x - horizontalMove;
+            if (
+              previousX >= 0 &&
+              previousX < this.world.width &&
+              previousWorld.idAt(previousX, firstCell.y - 1) === tileId
+            ) {
+              offsetX = -horizontalMove * this.cellSize * remainingProgress;
+              offsetY = -this.cellSize * remainingProgress;
+              break;
+            }
+          }
+        }
+      }
+
+      this.context.save();
+      this.context.translate(offsetX, offsetY);
+      drawBody(
+        this.context,
+        this.originX,
+        this.originY,
+        this.cellSize,
+        body.cells,
+        body.cells.length,
+        body.path,
+      );
+      this.context.restore();
+    }
+  }
+
+  private rebuildBodyCache(): void {
+    if (
+      this.cachedWorldRevision === this.world.revision &&
+      this.cachedOriginX === this.originX &&
+      this.cachedOriginY === this.originY &&
+      this.cachedCellSize === this.cellSize
+    ) {
+      return;
+    }
+
+    this.cachedWorldRevision = this.world.revision;
+    this.cachedOriginX = this.originX;
+    this.cachedOriginY = this.originY;
+    this.cachedCellSize = this.cellSize;
+    this.cachedBodies.length = 0;
+
+    const cellCount = this.world.cellCount;
     if (this.bodyStamps.length !== cellCount) {
       this.bodyStamps = new Int32Array(cellCount);
       this.bodyStack = new Int32Array(cellCount);
@@ -187,29 +253,17 @@ export class CanvasRenderer {
       if (this.bodyStamps[index] !== 0 || this.world.kindAtIndex(index) === TileKind.Empty) {
         continue;
       }
+
       const count = this.collectBody(index);
-      let drawOriginX = this.originX;
-      let drawOriginY = this.originY;
-      const remainingProgress = 1 - progress;
-      if (previousWorld !== null && remainingProgress > 0) {
-        const firstCell = expectDefined(this.bodyCells[0], "first animated body cell");
-        const tileId = this.world.idAt(firstCell.x, firstCell.y);
-        if (previousWorld.idAt(firstCell.x, firstCell.y) !== tileId && firstCell.y > 0) {
-          for (let horizontalMove = -1; horizontalMove <= 1; horizontalMove += 1) {
-            const previousX = firstCell.x - horizontalMove;
-            if (
-              previousX >= 0 &&
-              previousX < this.world.width &&
-              previousWorld.idAt(previousX, firstCell.y - 1) === tileId
-            ) {
-              drawOriginX -= horizontalMove * this.cellSize * remainingProgress;
-              drawOriginY -= this.cellSize * remainingProgress;
-              break;
-            }
-          }
-        }
+      const cells = new Array<BodyCell>(count);
+      for (let cellIndex = 0; cellIndex < count; cellIndex += 1) {
+        const cell = expectDefined(this.bodyCells[cellIndex], "cached body cell");
+        cells[cellIndex] = { ...cell };
       }
-      drawBody(this.context, drawOriginX, drawOriginY, this.cellSize, this.bodyCells, count);
+      this.cachedBodies.push({
+        cells,
+        path: createBodyPath(this.originX, this.originY, this.cellSize, cells, count),
+      });
     }
   }
 
