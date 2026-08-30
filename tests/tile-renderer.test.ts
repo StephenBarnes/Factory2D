@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createBodyPath, type BodyCell } from "../src/render/tile-renderer";
+import { createBodyPath, drawBody, type BodyCell } from "../src/render/tile-renderer";
 import { Direction, TileKind } from "../src/simulation/tile";
 
 interface ArcCommand {
@@ -30,6 +30,45 @@ class RecordingPath2D {
 
   closePath(): void {
     this.commands.push({ type: "closePath" });
+  }
+}
+
+interface FillRectCommand {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly fillStyle: string | CanvasGradient | CanvasPattern;
+}
+
+class RecordingCanvasContext {
+  fillStyle: string | CanvasGradient | CanvasPattern = "";
+  strokeStyle: string | CanvasGradient | CanvasPattern = "";
+  lineWidth = 1;
+  lineCap: CanvasLineCap = "butt";
+  lineJoin: CanvasLineJoin = "miter";
+  readonly fillRects: FillRectCommand[] = [];
+
+  save(): void {}
+  restore(): void {}
+  translate(_x: number, _y: number): void {}
+  fill(_path?: Path2D): void {}
+  clip(_path: Path2D): void {}
+  beginPath(): void {}
+  moveTo(_x: number, _y: number): void {}
+  lineTo(_x: number, _y: number): void {}
+  closePath(): void {}
+  stroke(_path?: Path2D): void {}
+  arc(
+    _x: number,
+    _y: number,
+    _radius: number,
+    _startAngle: number,
+    _endAngle: number,
+  ): void {}
+
+  fillRect(x: number, y: number, width: number, height: number): void {
+    this.fillRects.push({ x, y, width, height, fillStyle: this.fillStyle });
   }
 }
 
@@ -73,6 +112,45 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe("body drawing", () => {
+  it("paints an existing cell identically when another tile kind joins its body", () => {
+    const platform: BodyCell = {
+      x: 0,
+      y: 0,
+      kind: TileKind.Platform,
+      orientation: Direction.Up,
+      seamRight: false,
+      seamDown: false,
+    };
+    const uniformContext = new RecordingCanvasContext();
+    const mixedContext = new RecordingCanvasContext();
+    const path = new RecordingPath2D() as unknown as Path2D;
+
+    drawBody(
+      uniformContext as unknown as CanvasRenderingContext2D,
+      0,
+      0,
+      32,
+      [platform],
+      1,
+      path,
+    );
+    drawBody(
+      mixedContext as unknown as CanvasRenderingContext2D,
+      0,
+      0,
+      32,
+      [platform, stone(1, 0)],
+      2,
+      path,
+    );
+
+    expect(uniformContext.fillRects).toHaveLength(1);
+    expect(mixedContext.fillRects).toHaveLength(2);
+    expect(mixedContext.fillRects[0]).toEqual(uniformContext.fillRects[0]);
+  });
 });
 
 describe("body outline tracing", () => {

@@ -27,15 +27,12 @@ const CORNER_RADIUS_RATIO = 0.15;
 const INSET_RATIO = 0.05;
 /** Thickness of the top-left highlight and bottom-right shade bands. */
 const BEVEL_RATIO = 0.05;
-/** Thickness of the dark rim around a body. */
-const OUTLINE_RATIO = 0.025;
 const DROP_SHADOW_X_RATIO = 0.05;
 const DROP_SHADOW_Y_RATIO = 0.1;
 
 const HIGHLIGHT_STYLE = "rgba(255, 255, 255, 0.25)";
 const SHADE_STYLE = "rgba(0, 0, 0, 0.28)";
 const DROP_SHADOW_STYLE = "rgba(0, 0, 0, 0.35)";
-const MIXED_BODY_OUTLINE_STYLE = "#161d26";
 
 /** Cells and vertices are keyed on a fixed grid stride; supports coordinates up to 4095. */
 const KEY_STRIDE = 4096;
@@ -79,17 +76,7 @@ export function drawBody(
   if (cellCount === 0) {
     return;
   }
-  const firstCell = expectDefined(cells[0], "first body cell");
   const bodyPath = path ?? createBodyPath(originX, originY, cellSize, cells, cellCount);
-
-  const firstDefinition = TILE_DEFINITIONS[firstCell.kind];
-  let uniformKind = true;
-  for (let i = 1; i < cellCount; i += 1) {
-    if (expectDefined(cells[i], "body cell").kind !== firstCell.kind) {
-      uniformKind = false;
-      break;
-    }
-  }
 
 
   context.save();
@@ -100,19 +87,15 @@ export function drawBody(
 
   context.save();
   context.clip(bodyPath);
-  context.fillStyle = firstDefinition.fill;
-  context.fill(bodyPath);
-  if (!uniformKind) {
-    for (let i = 0; i < cellCount; i += 1) {
-      const cell = expectDefined(cells[i], "body cell");
-      context.fillStyle = TILE_DEFINITIONS[cell.kind].fill;
-      context.fillRect(
-        originX + cell.x * cellSize,
-        originY + cell.y * cellSize,
-        cellSize,
-        cellSize,
-      );
-    }
+  for (let i = 0; i < cellCount; i += 1) {
+    const cell = expectDefined(cells[i], "body cell");
+    context.fillStyle = TILE_DEFINITIONS[cell.kind].fill;
+    context.fillRect(
+      originX + cell.x * cellSize,
+      originY + cell.y * cellSize,
+      cellSize,
+      cellSize,
+    );
   }
   for (let i = 0; i < cellCount; i += 1) {
     const cell = expectDefined(cells[i], "body cell");
@@ -137,9 +120,6 @@ export function drawBody(
 
   context.restore();
 
-  context.strokeStyle = uniformKind ? firstDefinition.shadow : MIXED_BODY_OUTLINE_STYLE;
-  context.lineWidth = Math.max(1, cellSize * OUTLINE_RATIO);
-  context.stroke(bodyPath);
 }
 
 const SINGLE_CELL: [BodyCell] = [

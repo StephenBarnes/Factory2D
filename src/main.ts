@@ -351,6 +351,24 @@ clearButton.addEventListener("click", () => {
 });
 
 canvas.addEventListener("pointerdown", (event) => {
+  if (event.button === 1) {
+    event.preventDefault();
+    const point = renderer.gridPointFromClientPoint(event.clientX, event.clientY);
+    const cell = renderer.cellFromGridPoint(point);
+    if (cell === null) {
+      return;
+    }
+
+    const kind = world.kindAt(cell.x, cell.y);
+    if (kind === TileKind.Empty) {
+      return;
+    }
+    selectTile(kind);
+    if (kind === TileKind.Magnet) {
+      setSelectedOrientation(world.orientationAt(cell.x, cell.y));
+    }
+    return;
+  }
   if (running || (event.button !== 0 && event.button !== 2)) {
     return;
   }
