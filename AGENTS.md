@@ -47,11 +47,7 @@ Example puzzles:
 * Build a vehicle that picks up a block in one location and moves it to the target.
 * Tree farms - trees grow in irregular patterns; once grown high enough, their leaves must be burned off and their wood blocks unwelded and packaged for delivery.
 
-While the simulation has movement in sharp one-tile increments, we want to animate them moving. So the loop is:
-* Every n frames, compute what happens in the next simulation step - a motion direction for each connected group of tiles.
-* For n frames, animate them moving or rotating from previous to new state.
-We could compute the simulation step while the last update is still being animated.
-We'll have time settings to disable animation for faster verification.
+While the simulation has movement in discrete time steps and one-tile steps, we animate the tiles moving.
 
 ## Stack
 
@@ -91,6 +87,7 @@ The first playable scaffold is implemented:
 * One shared procedural tile renderer for the Canvas board, placement preview, and component palette. Each welded body renders as a single rounded polyomino slab: a traced, inset outline path with convex corner rounding and concave weld fillets, a drop shadow, per-cell fills and decorations clipped to the outline, top-left highlight and bottom-right shade bevels, and a dark rim. Diagonally touching cells render as a rounded pinch, and unwelded edges interior to a body render as dark seam grooves.
 * A typed-array world with stable tile IDs, per-tile orientation, edge weld storage, and allocation-free per-tick movement buffers.
 * Deterministic straight-down gravity for stone, metal, magnets, and sand; complete downward body-dependency resolution; parity-selected diagonal gravity for sand; direct-fall priority; equal-priority destination jamming; and reciprocal magnetic constraints that hold bodies when supported while allowing unsupported attracting groups to fall.
+* Simulation commits remain discrete and deterministic while stable tile IDs drive smooth eased rendering between the previous and current positions. Manual steps animate for 200 ms; automatic steps animate for up to 250 ms without delaying simulation ticks.
 * Deterministic tests for gravity chains, sand overhangs, welded and magnetically constrained bodies, conflicts, directional welding, orientation snapshots, boundaries, stable IDs, and reset behavior.
 
 ## Code map
@@ -99,7 +96,7 @@ The first playable scaffold is implemented:
 * `src/main.ts` — Browser entry point, example world setup, input handling, build tools, and animation loop.
 * `src/styles.css` — Responsive application, palette, board, and control styling.
 * `src/vite-env.d.ts` — Vite client type declarations.
-* `src/render/canvas-renderer.ts` — Responsive Canvas 2D grid, welded-body flood fill, hit testing, placement previews, and hover feedback.
+* `src/render/canvas-renderer.ts` — Responsive Canvas 2D grid, welded-body flood fill, stable-ID movement interpolation, hit testing, placement previews, and hover feedback.
 * `src/render/grid-drag.ts` — Board-clipped tile-drag endpoints and continuous weld-edge traversal between pointer events.
 * `src/render/tile-renderer.ts` — Body outline tracing and rounded-slab drawing (fill, bevel lighting, decorations) for the board and component palette.
 * `src/simulation/tile.ts` — Tile kinds, directions, and immutable tile behavior/render definitions.
@@ -116,8 +113,12 @@ The first playable scaffold is implemented:
 * The component palette's tile images look pixelated; the actual game board's tiles look fine. Could we render the palette images as SVG? Or render them with a larger resolution.
 * Bug with rendering connected bodies: Place 8 stone blocks a ring, with 1 empty space in the center. Weld them all together. Unweld one edge A. Then unweld a different edge B on the other side. Unwelding B causes the appearance of edge A to change. The problem is basically that we're drawing one path for the entire connected body's outline, and then adding a seam line for one unwelded edge, but it looks wrong because it's patched on afterwards. Really our outline paths should depend on local weld states / connectivity.
 * Rework the overall UI. Currently the grid is a small region of the screen, and there's no way to zoom in or pan; this will be a problem for larger puzzle maps later. Instead, make the grid the background layer. Add the sidebars (palette, run/step/reset/clear, etc.) as panels floating on top of this. Start with the grid centered and zoomed in a way that allows seeing the whole grid with none of it hidden behind panels. Allow zooming the grid with mousewheel, and panning with arrow keys or RMB-drag on an empty region of the screen. Draw space outside the tile grid as black. Allow panning as long as the center of the screen is still over the tile grid (or any similar rule that ensures players don't accidentally get lost when panning and end up unable to find the grid again).
-* Animate movement. Currently we draw each simulation step until the next simulation step, so blocks snap sharply to new positions. We should instead animate them moving between previous and next states. We could compute the next simulation step async over multiple frames of animation, or leave that as follow-up optimization.
 * Rendering optimization: currently outline `Path2D`s are rebuilt every frame. We should instead cache per-body paths keyed on world edits/ticks.
+
+Related to animation system recently implemented:
+* Compute the next simulation step async, while the last update is still being animated. Would improve performance if simulation step time grows over frame time.
+* Add an option to disable animations.
+* Add a 60 ticks per second option (or "max" option) for simulation speed. Disable animations in this case.
 
 ## Development guidelines
 

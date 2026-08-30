@@ -11,6 +11,9 @@ import { Simulation } from "./simulation/simulation";
 import { Direction, TileKind } from "./simulation/tile";
 import { World } from "./simulation/world";
 
+const MAX_AUTOMATIC_ANIMATION_MS = 250;
+const MANUAL_STEP_ANIMATION_MS = 200;
+
 function requiredElement<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
   if (element === null) {
@@ -36,6 +39,7 @@ world.place(15, 5, TileKind.Sand);
 
 const simulation = new Simulation(world);
 const baseline = world.clone();
+const previousWorld = world.clone();
 const canvas = requiredElement<HTMLCanvasElement>("game-canvas");
 const renderer = new CanvasRenderer(canvas, world);
 const sidebarControls = requiredElement<HTMLElement>("sidebar-controls");
@@ -62,6 +66,8 @@ let hoveredEdge: GridEdge | null = null;
 let running = false;
 let accumulatedTime = 0;
 let previousFrameTime = performance.now();
+let animationStartedAt = 0;
+let animationDuration = 0;
 let renderedTick = -1;
 
 function updateTransportState(): void {
@@ -76,6 +82,29 @@ function setRunning(nextRunning: boolean): void {
   running = nextRunning;
   accumulatedTime = 0;
   updateTransportState();
+}
+
+function finishAnimation(): void {
+  previousWorld.copyFrom(world);
+  animationDuration = 0;
+}
+
+function advanceSimulation(duration: number, startedAt = performance.now()): void {
+  previousWorld.copyFrom(world);
+  simulation.step();
+  animationStartedAt = startedAt;
+  animationDuration = duration;
+}
+
+function easedAnimationProgress(currentTime: number): number {
+  if (animationDuration === 0) {
+    return 1;
+  }
+  const progress = Math.min(1, Math.max(0, (currentTime - animationStartedAt) / animationDuration));
+  if (progress === 1) {
+    animationDuration = 0;
+  }
+  return progress * progress * (3 - 2 * progress);
 }
 
 function refreshPointerHover(): void {
@@ -143,6 +172,7 @@ function selectWeldTool(): void {
 function saveEditedBaseline(): void {
   baseline.copyFrom(world);
   simulation.tick = 0;
+  finishAnimation();
 }
 
 function editCellLine(from: GridCell, to: GridCell, erase: boolean): void {
@@ -244,12 +274,13 @@ playButton.addEventListener("click", () => {
 });
 
 stepButton.addEventListener("click", () => {
-  simulation.step();
+  advanceSimulation(MANUAL_STEP_ANIMATION_MS);
 });
 
 resetButton.addEventListener("click", () => {
   setRunning(false);
   simulation.resetTo(baseline);
+  finishAnimation();
 });
 
 clearButton.addEventListener("click", () => {
@@ -259,6 +290,7 @@ clearButton.addEventListener("click", () => {
   world.clear();
   baseline.copyFrom(world);
   simulation.tick = 0;
+  finishAnimation();
 });
 
 canvas.addEventListener("pointerdown", (event) => {
@@ -384,10 +416,11 @@ document.addEventListener("keydown", (event) => {
     event.preventDefault();
     setRunning(!running);
   } else if (event.code === "KeyN" && !running) {
-    simulation.step();
+    advanceSimulation(MANUAL_STEP_ANIMATION_MS);
   } else if (event.code === "KeyR") {
     setRunning(false);
     simulation.resetTo(baseline);
+    finishAnimation();
   } else if (event.code === "Digit1") {
     selectTile(TileKind.Sand);
   } else if (event.code === "Digit2") {
@@ -424,8 +457,11 @@ function frame(currentTime: number): void {
     const ticksPerSecond = Number(speedSelect.value);
     const tickDuration = 1000 / ticksPerSecond;
     while (accumulatedTime >= tickDuration) {
-      simulation.step();
       accumulatedTime -= tickDuration;
+      advanceSimulation(
+        Math.min(tickDuration, MAX_AUTOMATIC_ANIMATION_MS),
+        currentTime - accumulatedTime,
+      );
     }
   }
 
@@ -433,7 +469,8 @@ function frame(currentTime: number): void {
     tickCounter.textContent = `TICK ${simulation.tick.toString().padStart(4, "0")}`;
     renderedTick = simulation.tick;
   }
-  renderer.render();
+  const animationProgress = easedAnimationProgress(currentTime);
+  renderer.render(animationDuration === 0 ? null : previousWorld, animationProgress);
   requestAnimationFrame(frame);
 }
 

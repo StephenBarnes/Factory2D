@@ -38,7 +38,7 @@ export class CanvasRenderer {
     this.world = world;
   }
 
-  render(): void {
+  render(previousWorld: World | null = null, progress = 1): void {
     this.resizeBackingStore();
 
     const { context } = this;
@@ -47,7 +47,7 @@ export class CanvasRenderer {
     context.fillRect(0, 0, this.viewportWidth, this.viewportHeight);
 
     this.drawGrid();
-    this.drawTiles();
+    this.drawTiles(previousWorld, Math.max(0, Math.min(1, progress)));
     this.drawHover();
   }
 
@@ -174,7 +174,7 @@ export class CanvasRenderer {
     context.strokeRect(this.originX + 0.5, this.originY + 0.5, boardWidth, boardHeight);
   }
 
-  private drawTiles(): void {
+  private drawTiles(previousWorld: World | null, progress: number): void {
     const cellCount = this.world.width * this.world.height;
     if (this.bodyStamps.length !== cellCount) {
       this.bodyStamps = new Int32Array(cellCount);
@@ -188,7 +188,28 @@ export class CanvasRenderer {
         continue;
       }
       const count = this.collectBody(index);
-      drawBody(this.context, this.originX, this.originY, this.cellSize, this.bodyCells, count);
+      let drawOriginX = this.originX;
+      let drawOriginY = this.originY;
+      const remainingProgress = 1 - progress;
+      if (previousWorld !== null && remainingProgress > 0) {
+        const firstCell = expectDefined(this.bodyCells[0], "first animated body cell");
+        const tileId = this.world.idAt(firstCell.x, firstCell.y);
+        if (previousWorld.idAt(firstCell.x, firstCell.y) !== tileId && firstCell.y > 0) {
+          for (let horizontalMove = -1; horizontalMove <= 1; horizontalMove += 1) {
+            const previousX = firstCell.x - horizontalMove;
+            if (
+              previousX >= 0 &&
+              previousX < this.world.width &&
+              previousWorld.idAt(previousX, firstCell.y - 1) === tileId
+            ) {
+              drawOriginX -= horizontalMove * this.cellSize * remainingProgress;
+              drawOriginY -= this.cellSize * remainingProgress;
+              break;
+            }
+          }
+        }
+      }
+      drawBody(this.context, drawOriginX, drawOriginY, this.cellSize, this.bodyCells, count);
     }
   }
 
