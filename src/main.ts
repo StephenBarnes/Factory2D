@@ -12,6 +12,7 @@ import {
   pointerGesture,
 } from "./render/pointer-gesture";
 import type { PointerGesture } from "./render/pointer-gesture";
+import { serializeBoard } from "./simulation/board-export";
 import { Simulation } from "./simulation/simulation";
 import { Direction, TileKind } from "./simulation/tile";
 import { World } from "./simulation/world";
@@ -59,6 +60,7 @@ const playButton = requiredElement<HTMLButtonElement>("play-button");
 const stepButton = requiredElement<HTMLButtonElement>("step-button");
 const resetButton = requiredElement<HTMLButtonElement>("reset-button");
 const clearButton = requiredElement<HTMLButtonElement>("clear-button");
+const exportButton = requiredElement<HTMLButtonElement>("export-button");
 const animationToggle = requiredElement<HTMLInputElement>("animation-toggle");
 const speedSelect = requiredElement<HTMLSelectElement>("speed-select");
 const stateLight = requiredElement<HTMLSpanElement>("state-light");
@@ -382,6 +384,20 @@ clearButton.addEventListener("click", () => {
   baseline.copyFrom(world);
   simulation.tick = 0;
   finishAnimation();
+});
+
+exportButton.addEventListener("click", () => {
+  const objectUrl = URL.createObjectURL(new Blob(
+    [serializeBoard(world, simulation.tick)],
+    { type: "application/json" },
+  ));
+  const download = document.createElement("a");
+  download.href = objectUrl;
+  download.download = "factory2d-board.json";
+  document.body.append(download);
+  download.click();
+  download.remove();
+  URL.revokeObjectURL(objectUrl);
 });
 
 canvas.addEventListener("pointerdown", (event) => {

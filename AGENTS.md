@@ -92,6 +92,7 @@ The first playable scaffold is implemented:
 * Simulation commits remain discrete and deterministic while stable tile IDs drive optional smooth eased rendering between the previous and current positions. Manual steps animate for 200 ms; automatic steps animate for up to 250 ms without delaying simulation ticks. A 60-ticks-per-second mode forces discrete rendering.
 * A responsive top-right cell inspector shows the hovered tile's stable ID, movement behavior, effective weldable sides, current welds, magnetic state, orientation, and attraction direction/range. It refreshes after simulation commits even when the pointer remains stationary.
 * Deterministic tests for gravity chains, sand overhangs, welded and magnetically constrained bodies, conflicts, directional welding, orientation snapshots, boundaries, stable IDs, reset behavior, and pointer gesture classification.
+* A board export control downloads deterministic, versioned JSON containing dimensions, simulation tick, non-empty tile kinds and orientations, and each weld edge once. Runtime tile IDs are intentionally excluded.
 
 ## Code map
 
@@ -104,10 +105,12 @@ The first playable scaffold is implemented:
 * `src/render/pointer-gesture.ts` — Button/modifier gesture classification and middle-click drag-threshold policy.
 * `src/render/tile-renderer.ts` — Body outline tracing and rounded-slab drawing (fill, bevel lighting, decorations) for the board and component palette.
 * `src/simulation/tile.ts` — Tile kinds, directions, and immutable tile behavior/render definitions.
+* `src/simulation/board-export.ts` — Deterministic, versioned JSON serialization for sharing the current board state.
 * `src/simulation/world.ts` — Typed-array tile, orientation, and weld storage; stable IDs; render revisions; snapshots; editing; and body movement commits.
 * `src/simulation/simulation.ts` — Allocation-free welded and magnetically constrained body collection, gravity intent selection, conflict resolution, and tick advancement.
 * `src/ui/tile-inspector.ts` — Revision-aware hovered-cell property presentation, including effective directional weldability and current welds.
 * `src/util/assert.ts` — `expectDefined` assertion that crashes loudly on violated lookups instead of falling back silently.
+* `tests/board-export.test.ts` — Board export ordering, contents, and tick validation tests.
 * `tests/simulation.test.ts` — Deterministic world, gravity, diagonal movement, conflict, weld, magnet, identity, and reset tests.
 * `tests/grid-drag.test.ts` — Continuous tile and weld drag traversal tests, including board-boundary clipping.
 * `tests/pointer-gesture.test.ts` — Pointer button, modifier, and drag-threshold regression tests.
@@ -125,13 +128,17 @@ New components:
 * Add a conveyor-belt block: applies forces to its 4 neighbors, if they're not welded to it, either clockwise or counterclockwise; applies the reaction force to itself. Rotation controls (Q/E or WASD) should instead set clockwise/counterclockwise. For rendering, draw a block with a dashed line, animated to move along each side. Later, control with charge (positive, negative, or zero).
 * Add a piston block. It should be one block showing the arm and base of the piston overlapping. When it receives a charge, it should extend the arm, making it two separate blocks (considered welded together). When no charge is received, it should try to retract. This is a special case because we have effectively 2 blocks that can overlap, which is not usually allowed; but we could model it without overlaps, as 3 separate block types (arm, base, and combined arm+base), though we would still need to modify animation to show the arm extending.
 
+UI:
+* Allow shift-LMB to place a block already welded on all of its sides that can be welded.
+
 Game flow:
 * Implement a main menu. For now, continue booting straight to the sandbox for faster testing during development, but add a button to go to main menu. Main menu should have buttons for sandbox and puzzles.
 * Implement a system for defining puzzles. Each puzzle should define the grid size, blocks to pre-place, menu of enabled components with prices in talents, region where player placement is allowed. Puzzles should be defined in a shareable text format, maybe with the map specified as a 2D grid of ASCII characters (one for each tile), plus additional text data like state for any pre-placed components.
 * Implement target component that absorbs adjacent blocks of a specified type, and marks the puzzle as completed once some number have been absorbed. Requires a UI for setting which block to absorb, and how many. This will be used in the sandbox for designing puzzles.
 * Add a dispenser component that dispenses a selected block when it receives charge. Used for creating puzzle inputs.
-* Add a button for exporting the current board state. Useful for creating test cases and puzzles, or sharing solutions.
 * Change the editing model when solving puzzles: the player edits the initial board state, but as soon as they've played/run the simulation, they can no longer edit, they have to reset. Because puzzles won't allow modifying the board halfway through running a solution. We can still allow mid-run edits in the sandbox.
+* Modify save-file format to assume "up" orientation as the default in the `tiles` list. Most blocks are not orientable, they default to up.
+* Add a way to import files that were previously exported.
 
 Some more items in `deferred-todos.md`.
 
