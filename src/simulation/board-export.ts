@@ -17,8 +17,7 @@ const TILE_KIND_NAMES: Readonly<Record<TileKind, string>> = {
   [TileKind.Conduit]: "conduit",
   [TileKind.Sensor]: "sensor",
   [TileKind.Inverter]: "inverter",
-  [TileKind.Diode]: "diode",
-  [TileKind.Sum]: "sum",
+  [TileKind.Combiner]: "combiner",
 };
 
 const TILE_KINDS_BY_NAME: Readonly<Record<string, TileKind | undefined>> = {
@@ -30,8 +29,7 @@ const TILE_KINDS_BY_NAME: Readonly<Record<string, TileKind | undefined>> = {
   conduit: TileKind.Conduit,
   sensor: TileKind.Sensor,
   inverter: TileKind.Inverter,
-  diode: TileKind.Diode,
-  sum: TileKind.Sum,
+  combiner: TileKind.Combiner,
 };
 
 const DIRECTION_NAMES: Readonly<Record<Direction, string>> = {

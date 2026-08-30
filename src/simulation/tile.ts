@@ -8,8 +8,7 @@ export const enum TileKind {
   Conduit = 6,
   Sensor = 7,
   Inverter = 8,
-  Diode = 9,
-  Sum = 10,
+  Combiner = 9,
 }
 
 export const enum Direction {
@@ -37,8 +36,7 @@ export const enum TileDecorationStyle {
   Conduit = 5,
   Sensor = 6,
   Inverter = 7,
-  Diode = 8,
-  Sum = 9,
+  Combiner = 8,
 }
 
 export interface TileDefinition {
@@ -216,36 +214,20 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationStyle: TileDecorationStyle.Inverter,
     decorationColor: "#ead2ef",
   },
-  [TileKind.Diode]: {
-    name: "Diode Rune",
+  [TileKind.Combiner]: {
+    name: "Combiner Rune",
     affectedByGravity: true,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
     usesOrientation: true,
-    circuitPorts: WeldSide.Up | WeldSide.Down,
-    circuitInputPorts: WeldSide.Down,
-    magnetic: false,
-    attractionRange: 0,
-    fill: "#536f7c",
-    shadow: "#2e414b",
-    decorationStyle: TileDecorationStyle.Diode,
-    decorationColor: "#d0ecf3",
-  },
-  [TileKind.Sum]: {
-    name: "Sum Rune",
-    affectedByGravity: true,
-    slidesDiagonally: false,
-    weldableSides: WeldSide.All,
-    excludesFacingWeld: false,
-    usesOrientation: true,
-    circuitPorts: WeldSide.Up | WeldSide.Right | WeldSide.Left,
-    circuitInputPorts: WeldSide.Right | WeldSide.Left,
+    circuitPorts: WeldSide.All,
+    circuitInputPorts: WeldSide.Right | WeldSide.Down | WeldSide.Left,
     magnetic: false,
     attractionRange: 0,
     fill: "#526f69",
     shadow: "#2e413d",
-    decorationStyle: TileDecorationStyle.Sum,
+    decorationStyle: TileDecorationStyle.Combiner,
     decorationColor: "#d2f0df",
   },
 };

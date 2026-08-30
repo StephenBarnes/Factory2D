@@ -236,7 +236,7 @@ describe("circuit rendering", () => {
     expect(context.fillStyles).not.toContain(CIRCUIT_CHARGE_COLORS[-1]);
   });
 
-  it.each([TileKind.Inverter, TileKind.Diode])(
+  it.each([TileKind.Inverter, TileKind.Combiner])(
     "keeps %s input and output traces separate and individually colored",
     (kind) => {
       const context = new RecordingCanvasContext();

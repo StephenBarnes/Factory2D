@@ -14,8 +14,7 @@ Implemented components:
 * Conduits instantly share signed-ternary charge across welded circuit connections.
 * Directional sensor runes emit +1 when the neighboring cell on their pointed side is occupied.
 * Directional inverter runes negate signed-ternary charge from an isolated back input network onto their pointed output network one tick later.
-* Directional diode runes forward signed-ternary charge from an isolated back input network onto their pointed output network one tick later.
-* Sum runes take two isolated side inputs and drive the sign of their sum onto a pointed output network one tick later.
+* Directional combiner runes sum up to three isolated input networks and drive the sign of their sum onto a pointed output network one tick later.
 
 Planned components:
 * Furnace blocks that transform one neighbor cell into a different one after a delay: sand to glass, ore to metal.
@@ -23,7 +22,7 @@ Planned components:
 * Welders and splitters - weld or unweld all sides of the block they're facing. Laser splitters. Riveters that weld 2 blocks in a straight line.
 * Pistons - 1 block which expands to 2 blocks when given a signal, pushing things around.
 * Sensors that detect pushing force from a direction.
-* Electrical components like logic gates, delays, diodes, and brush connectors.
+* Electrical components like logic gates, delays, fixed inputs, and brush connectors.
 * Assemblers that convert a group of blocks welded in a specific way into one block. For example iron and copper blocks welded in a specific way are converted to a piston block.
 * Flipper: attaches to one block, then flips the entire connected/welded group of blocks around that line horizontally or vertically, if it would not collide/overlap other blocks.
 * Laser splitter: splits everything in a line.
@@ -86,18 +85,18 @@ Keep this section up-to-date.
 
 The first playable scaffold is implemented:
 
-* A 20x14 editable Canvas 2D grid with procedural sand, falling stone, magnetic metal, directional magnets, circuit conduits, and sensor, inverter, diode, and sum runes.
+* A 20x14 editable Canvas 2D grid with procedural sand, falling stone, magnetic metal, directional magnets, circuit conduits, and sensor, inverter, and combiner runes.
 * A full-viewport black board layer behind responsive floating left and bottom control panels. The initial view fits the entire grid into the unobscured region; mouse-wheel zoom stays anchored beneath the pointer; and arrow keys, middle-button drags, or Alt-right-button drags pan within bounds that keep the screen center over the grid.
 * Build controls for gap-free click-and-drag placement and removal, including Shift-left placement welded to every eligible occupied neighbor, drags that leave the grid, middle-click picking that preserves directional component orientation while middle-button drags pan, metadata-driven rotation and aiming shared by palette previews, placement ghosts, and placed tiles, stepping, running, pausing, resetting, clearing, speed selection, and an animation toggle.
 * A separate weld tool for joining eligible occupied neighbors into rigid bodies and unwelding them, with gap-free fast-drag traversal, an immediate held-Control temporary override, and red invalid-edge feedback. Sand is not weldable, and magnets reject welds on their pointed side.
 * One shared procedural tile renderer for the Canvas board, placement preview, and component palette. Palette previews use density-aware, supersampled backing stores and redraw when browser zoom or display density changes. Each welded body renders from traced, inset rounded-slab outlines whose occupied neighbors merge only across locally welded edges, so unwelded cuts stay visually stable when another cut splits the body and closed seam ends receive rounded caps. Rendering includes a drop shadow, per-cell fills that remain locally stable when different tile kinds are joined, decorations clipped to the outline, and top-left highlight and bottom-right shade bevels. Diagonally touching cells render as a rounded pinch. Per-body cells and `Path2D` outlines are cached across animation frames and rebuilt only after world changes or board geometry changes.
-* Circuit-capable tiles render charge-colored traces only across welded circuit connections. Conduits have a dark center socket; sensor runes isolate their pointed side from circuit links and color their arrow by sensed output independently from the connected network's charge; inverter and diode runes render isolated input and output segments in each port's own charge color; and sum runes show a distinct directional symbol and resolved output charge.
+* Circuit-capable tiles render charge-colored traces only across welded circuit connections. Conduits have a dark center socket; sensor runes isolate their pointed side from circuit links and color their arrow by sensed output independently from the connected network's charge; inverter runes render isolated input and output segments in each port's own charge color; and combiner runes terminate all four individually colored ports before a directional sum symbol.
 * A typed-array world with stable tile IDs, per-tile orientation and signed-ternary charge, edge weld storage, and allocation-free per-tick movement and circuit-network buffers.
 * Deterministic straight-down gravity for stone, metal, magnets, and sand; complete downward body-dependency resolution; parity-selected diagonal gravity for sand; direct-fall priority; equal-priority destination jamming; and reciprocal magnetic constraints that hold bodies when supported while allowing unsupported attracting groups to fall.
-* Deterministic circuit resolution rebuilds welded networks from the start-of-tick state, sums their drivers, takes the sign, and commits the result before movement. Directional sensor runes contribute +1 when their pointed neighboring cell is occupied. Gates keep every input and output network isolated and drive tick t+1 from charges observed at tick t: inverters negate one back input, diodes forward one back input, and sum runes resolve the sign of two side inputs.
+* Deterministic circuit resolution rebuilds welded networks from the start-of-tick state, sums their drivers, takes the sign, and commits the result before movement. Directional sensor runes contribute +1 when their pointed neighboring cell is occupied. Gates keep every input and output network isolated and drive tick t+1 from charges observed at tick t: inverters negate one back input, and combiners resolve the sign of up to three inputs.
 * Simulation commits remain discrete and deterministic while stable tile IDs drive optional smooth eased rendering between the previous and current positions. Manual steps animate for 200 ms; automatic steps animate for up to 250 ms without delaying simulation ticks. A 60-ticks-per-second mode forces discrete rendering.
 * A responsive top-right cell inspector shows the hovered tile's stable ID, movement behavior, effective weldable sides, current welds, circuit connections and charge, magnetic state, orientation, and attraction direction/range. It refreshes after simulation commits even when the pointer remains stationary.
-* Deterministic tests for gravity chains, sand overhangs, welded and magnetically constrained bodies, circuit propagation, sensor directionality, sensor port isolation and output rendering, isolated directional gate ports and trace rendering, inverter and diode delay, the complete signed sum truth table, conflicts, directional welding, orientation snapshots and preview resolution, boundaries, stable IDs, reset behavior, and pointer gesture classification.
+* Deterministic tests for gravity chains, sand overhangs, welded and magnetically constrained bodies, circuit propagation, sensor directionality, sensor port isolation and output rendering, isolated directional gate ports and trace rendering, inverter delay, the complete three-input signed combiner truth table, conflicts, directional welding, orientation snapshots and preview resolution, boundaries, stable IDs, reset behavior, and pointer gesture classification.
 * Board export and import controls round-trip deterministic, versioned JSON containing dimensions, simulation tick, non-empty tile kinds, non-up orientations, nonzero circuit charges, and each weld edge once. Imports validate the complete file before replacing the live board, support board sizes up to 400x300, and reconstruct fresh runtime tile IDs because IDs are intentionally excluded from the file.
 
 ## Code map
@@ -118,7 +117,7 @@ The first playable scaffold is implemented:
 * `src/ui/tile-inspector.ts` — Revision-aware hovered-cell property presentation, including effective directional weldability and current welds.
 * `src/util/assert.ts` — `expectDefined` assertion that crashes loudly on violated lookups instead of falling back silently.
 * `tests/board-export.test.ts` — Board export ordering, contents, and tick validation tests.
-* `tests/circuit.test.ts` — Instant welded-network propagation, sensor directionality, isolated gate networks and delay, signed sum behavior, disconnection, and moving-charge tests.
+* `tests/circuit.test.ts` — Instant welded-network propagation, sensor directionality, isolated gate networks and delay, three-input signed combiner behavior, disconnection, and moving-charge tests.
 * `tests/simulation.test.ts` — Deterministic world, gravity, diagonal movement, conflict, weld, magnet, identity, and reset tests.
 * `tests/grid-drag.test.ts` — Continuous tile and weld drag traversal tests, including board-boundary clipping.
 * `tests/pointer-gesture.test.ts` — Pointer button, modifier, and drag-threshold regression tests.
@@ -130,7 +129,7 @@ The first playable scaffold is implemented:
 ## Current TODOs
 
 New components:
-* Add more signed-ternary circuit components beyond the current sensor, inverter, diode, and sum runes: transistors, logic gates, charge-sensor runes (as a dwarven equivalent of electrical brushes), wire-crossings. Logic gates should keep input and output networks separate and drive tick t+1 from values observed at tick t, so feedback remains deterministic. Add small tests.
+* Add more signed-ternary circuit components beyond the current sensor, inverter, and combiner runes: transistors, logic gates, charge-sensor runes (as a dwarven equivalent of electrical brushes), wire-crossings. Logic gates should keep input and output networks separate and drive tick t+1 from values observed at tick t, so feedback remains deterministic. Add small tests.
 * Add a directional furnace block, and some simple solid blocks to process (glass, iron ore, and iron replacing generic "metal" currently). Make the furnace block transform the block in its specified direction, according to a table of recipes and bake times - sand to glass, ore to iron. The furnace would need to store how long it's baked and count up to the bake time; baking should be cut short if the tile it's baking moves away. Allow circuit connections: back side charge deactivates the furnace, furnace outputs current bake state on the other 2 sides.
 * Add a conveyor-belt block: applies forces to its 4 neighbors, if they're not welded to it, either clockwise or counterclockwise; applies the reaction force to itself. For rendering, draw a block with a dashed line, animated to move along each side. Allow connecting all sides to circuits (like a conduit, single network) and drive with charges - +1 clockwise, -1 counterclockwise, 0 stops.
 * Add a piston block. It should be one block showing the arm and base of the piston overlapping. When it receives a charge, it should extend the arm, making it two separate blocks (considered welded together). When no charge is received, it should try to retract. This is a special case because we have effectively 2 blocks that can overlap, which is not usually allowed; but we could model it without overlaps, as 3 separate block types (arm, base, and combined arm+base), though we would still need to modify animation to show the arm extending.
@@ -138,8 +137,7 @@ New components:
 * Add a dispenser component that dispenses a selected block when it receives charge. Used for creating puzzle inputs.
 
 Improvements for current circuit components:
-* Replace the sum and diode runes with a single "combiner rune" which sums up to three inputs and drives that sum to its one output. The inputs' networks should not be joined to each other by the combiner. Use a directional symbol, so output direction is obvious. The up to 3 inputs and output should not visually connect with each other in the center of the block, but rather terminate a short distance inside the block, and be colored according to their individual charges.
-* Figure out which ternary logic gates are not special cases of small numbers (up to 3) of inverters, combiners, and fixed inputs, and then implement them. Potentially rectifiers (-1 to zero, others unchanged), absolute-value gates (-1 to +1, others unchanged), and ternary variants of logic gates like AND/OR/XOR. We want to avoid adding gates that the player can build themselves easily.
+* Figure out which ternary logic gates are not special cases of small numbers (up to 3) of inverters, combiners, and fixed inputs, and then implement them. Potentially rectifiers (-1 to zero, others unchanged), absolute-value gates (-1 to +1, others unchanged), and ternary variants of logic gates like AND/OR/XOR. Maybe edge detectors. We want to avoid adding gates that the player can build themselves easily.
 
 Game flow:
 * Implement a main menu. For now, continue booting straight to the sandbox for faster testing during development, but add a button to go to main menu. Main menu should have buttons for sandbox and puzzles.

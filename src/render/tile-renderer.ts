@@ -506,7 +506,7 @@ function drawDecoration(
       context.restore();
       break;
     }
-    case TileDecorationStyle.Diode: {
+    case TileDecorationStyle.Combiner: {
       context.save();
       context.translate(left + size / 2, top + size / 2);
       context.rotate(orientation * Math.PI / 2);
@@ -514,35 +514,17 @@ function drawDecoration(
       context.lineCap = "round";
       context.lineJoin = "round";
       context.beginPath();
-      context.moveTo(-size * 0.19, size * 0.13);
-      context.lineTo(0, -size * 0.13);
-      context.lineTo(size * 0.19, size * 0.13);
-      context.moveTo(-size * 0.2, -size * 0.2);
-      context.lineTo(size * 0.2, -size * 0.2);
+      context.moveTo(-size * 0.11, 0);
+      context.lineTo(size * 0.11, 0);
+      context.moveTo(0, -size * 0.11);
+      context.lineTo(0, size * 0.11);
       context.stroke();
-      context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
       context.beginPath();
-      drawDot(context, 0, -size * 0.3, Math.max(1.5, size * 0.065));
-      context.fill();
-      context.restore();
-      break;
-    }
-    case TileDecorationStyle.Sum: {
-      context.save();
-      context.translate(left + size / 2, top + size / 2);
-      context.rotate(orientation * Math.PI / 2);
-      context.lineWidth = Math.max(1.5, size * 0.06);
-      context.lineCap = "round";
-      context.beginPath();
-      context.moveTo(-size * 0.17, 0);
-      context.lineTo(size * 0.17, 0);
-      context.moveTo(0, -size * 0.17);
-      context.lineTo(0, size * 0.17);
+      context.moveTo(-size * 0.14, -size * 0.14);
+      context.lineTo(0, -size * 0.22);
+      context.lineTo(size * 0.14, -size * 0.14);
       context.stroke();
-      context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
-      context.beginPath();
-      drawDot(context, 0, -size * 0.3, Math.max(1.5, size * 0.065));
-      context.fill();
       context.restore();
       break;
     }

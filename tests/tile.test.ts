@@ -11,8 +11,7 @@ describe("tile orientation", () => {
     TileKind.Magnet,
     TileKind.Sensor,
     TileKind.Inverter,
-    TileKind.Diode,
-    TileKind.Sum,
+    TileKind.Combiner,
   ])(
     "preserves the selected orientation for directional kind %s",
     (kind) => {

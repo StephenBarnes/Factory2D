@@ -170,10 +170,10 @@ describe("circuit networks", () => {
     { input: -1 as const, output: -1 as const },
     { input: 0 as const, output: 0 as const },
     { input: 1 as const, output: 1 as const },
-  ])("forwards a start-of-tick $input charge through a diode", ({ input, output }) => {
+  ])("combines a single connected input charge of $input", ({ input, output }) => {
     const world = new World(3, 1);
     world.place(0, 0, TileKind.Conduit);
-    world.place(1, 0, TileKind.Diode, Direction.Right);
+    world.place(1, 0, TileKind.Combiner, Direction.Right);
     world.place(2, 0, TileKind.Conduit);
     world.setWeld(0, 0, 1, 0, true);
     world.setWeld(1, 0, 2, 0, true);
@@ -187,9 +187,9 @@ describe("circuit networks", () => {
     expect(world.chargeAt(2, 0)).toBe(output);
   });
 
-  it("rotates a sum rune's two isolated inputs and pointed output", () => {
+  it("rotates a combiner's isolated inputs and pointed output", () => {
     const world = new World(3, 3);
-    world.place(1, 1, TileKind.Sum, Direction.Right);
+    world.place(1, 1, TileKind.Combiner, Direction.Right);
     world.place(1, 0, TileKind.Conduit);
     world.place(2, 1, TileKind.Conduit);
     world.place(1, 2, TileKind.Conduit);
@@ -198,42 +198,46 @@ describe("circuit networks", () => {
     world.setWeld(1, 1, 2, 1, true);
     world.setWeld(1, 1, 1, 2, true);
     world.setWeld(1, 1, 0, 1, true);
-    const sumIndex = 1 * world.width + 1;
+    const combinerIndex = 1 * world.width + 1;
 
-    expect(world.hasCircuitConnectionAtIndex(sumIndex, Direction.Up)).toBe(true);
-    expect(world.hasCircuitConnectionAtIndex(sumIndex, Direction.Right)).toBe(true);
-    expect(world.hasCircuitConnectionAtIndex(sumIndex, Direction.Down)).toBe(true);
-    expect(world.hasCircuitConnectionAtIndex(sumIndex, Direction.Left)).toBe(false);
+    for (let value = Direction.Up; value <= Direction.Left; value += 1) {
+      expect(
+        world.hasCircuitConnectionAtIndex(combinerIndex, value as Direction),
+      ).toBe(true);
+    }
   });
 
-  it.each([
-    { first: -1 as const, second: -1 as const, output: -1 as const },
-    { first: -1 as const, second: 0 as const, output: -1 as const },
-    { first: -1 as const, second: 1 as const, output: 0 as const },
-    { first: 0 as const, second: -1 as const, output: -1 as const },
-    { first: 0 as const, second: 0 as const, output: 0 as const },
-    { first: 0 as const, second: 1 as const, output: 1 as const },
-    { first: 1 as const, second: -1 as const, output: 0 as const },
-    { first: 1 as const, second: 0 as const, output: 1 as const },
-    { first: 1 as const, second: 1 as const, output: 1 as const },
-  ])(
-    "resolves signed sum inputs $first and $second to $output",
-    ({ first, second, output }) => {
-      const world = new World(3, 2);
+  it.each(
+    ([-1, 0, 1] as const).flatMap((left) =>
+      ([-1, 0, 1] as const).flatMap((rear) =>
+        ([-1, 0, 1] as const).map((right) => {
+          const sum = left + rear + right;
+          return { left, rear, right, output: sum < 0 ? -1 : sum > 0 ? 1 : 0 };
+        }),
+      ),
+    ),
+  )(
+    "resolves three isolated inputs $left + $rear + $right to $output",
+    ({ left, rear, right, output }) => {
+      const world = new World(3, 3);
       world.place(1, 0, TileKind.Conduit);
       world.place(0, 1, TileKind.Conduit);
-      world.place(1, 1, TileKind.Sum, Direction.Up);
+      world.place(1, 1, TileKind.Combiner, Direction.Up);
       world.place(2, 1, TileKind.Conduit);
+      world.place(1, 2, TileKind.Conduit);
       world.setWeld(1, 0, 1, 1, true);
       world.setWeld(0, 1, 1, 1, true);
       world.setWeld(1, 1, 2, 1, true);
-      world.setCharge(0, 1, first);
-      world.setCharge(2, 1, second);
+      world.setWeld(1, 1, 1, 2, true);
+      world.setCharge(0, 1, left);
+      world.setCharge(1, 2, rear);
+      world.setCharge(2, 1, right);
       const simulation = new Simulation(world);
 
       simulation.step();
 
       expect(world.chargeAt(0, 1)).toBe(0);
+      expect(world.chargeAt(1, 2)).toBe(0);
       expect(world.chargeAt(2, 1)).toBe(0);
       expect(world.chargeAt(1, 1)).toBe(output);
       expect(world.chargeAt(1, 0)).toBe(output);

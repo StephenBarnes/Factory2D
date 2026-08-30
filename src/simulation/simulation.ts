@@ -150,8 +150,7 @@ export class Simulation {
         case TileKind.Inverter:
           outputCharge = chargeFromSum(-inputSum);
           break;
-        case TileKind.Diode:
-        case TileKind.Sum:
+        case TileKind.Combiner:
           outputCharge = chargeFromSum(inputSum);
           break;
         default:
