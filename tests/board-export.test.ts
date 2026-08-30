@@ -13,10 +13,11 @@ describe("board export", () => {
     world.place(2, 1, TileKind.Conduit);
     world.setCharge(2, 1, -1);
     world.setWeld(0, 1, 1, 1, true);
+    world.setWeld(2, 0, 2, 1, true);
 
     expect(serializeBoard(world, 17)).toBe(`${JSON.stringify({
       format: "factory2d-board",
-      version: 3,
+      version: 4,
       tick: 17,
       grid: [
         "..L",
@@ -29,7 +30,8 @@ describe("board export", () => {
         { x: 2, y: 1, charge: -1 },
       ],
       welds: [
-        { x: 0, y: 1, direction: "right" },
+        "..|",
+        "-..",
       ],
     }, null, 2)}\n`);
   });
@@ -41,12 +43,12 @@ describe("board export", () => {
 
     expect(JSON.parse(serializeBoard(world, 0))).toEqual({
       format: "factory2d-board",
-      version: 3,
+      version: 4,
       tick: 0,
       grid: [".."],
       orientations: [],
       charges: [],
-      welds: [],
+      welds: [".."],
     });
   });
 
@@ -64,7 +66,7 @@ describe("board export", () => {
   it("imports grid dimensions, state, orientation, and welds", () => {
     const source = JSON.stringify({
       format: "factory2d-board",
-      version: 3,
+      version: 4,
       tick: 42,
       grid: [
         "LM",
@@ -81,7 +83,9 @@ describe("board export", () => {
         { x: 1, y: 1, charge: -1 },
       ],
       welds: [
-        { x: 0, y: 0, direction: "right" },
+        "+.",
+        "..",
+        "..",
       ],
     });
 
@@ -102,6 +106,7 @@ describe("board export", () => {
     expect(imported.world.orientationAt(1, 0)).toBe(Direction.Up);
     expect(imported.world.kindAt(1, 2)).toBe(TileKind.Sand);
     expect(imported.world.isWelded(0, 0, 1, 0)).toBe(true);
+    expect(imported.world.isWelded(0, 0, 0, 1)).toBe(true);
   });
 
   it("round-trips combiner rune state", () => {
@@ -120,21 +125,21 @@ describe("board export", () => {
   it("rejects malformed grid rows and unknown tile codes", () => {
     const unevenRows = JSON.stringify({
       format: "factory2d-board",
-      version: 3,
+      version: 4,
       tick: 0,
       grid: ["..", "."],
       orientations: [],
       charges: [],
-      welds: [],
+      welds: ["..", ".."],
     });
     const unknownCode = JSON.stringify({
       format: "factory2d-board",
-      version: 3,
+      version: 4,
       tick: 0,
       grid: ["?"],
       orientations: [],
       charges: [],
-      welds: [],
+      welds: ["."],
     });
 
     expect(() => deserializeBoard(unevenRows)).toThrowError(
@@ -148,7 +153,7 @@ describe("board export", () => {
   it("rejects duplicate or inapplicable orientation state", () => {
     const duplicate = JSON.stringify({
       format: "factory2d-board",
-      version: 3,
+      version: 4,
       tick: 0,
       grid: ["L"],
       orientations: [
@@ -156,16 +161,16 @@ describe("board export", () => {
         { x: 0, y: 0, direction: "left" },
       ],
       charges: [],
-      welds: [],
+      welds: ["."],
     });
     const inapplicable = JSON.stringify({
       format: "factory2d-board",
-      version: 3,
+      version: 4,
       tick: 0,
       grid: ["#"],
       orientations: [{ x: 0, y: 0, direction: "right" }],
       charges: [],
-      welds: [],
+      welds: ["."],
     });
 
     expect(() => deserializeBoard(duplicate)).toThrowError(
@@ -176,52 +181,88 @@ describe("board export", () => {
     );
   });
 
-  it("rejects welds that point outside the board or join incompatible tiles", () => {
-    const outside = JSON.stringify({
+  it("rejects malformed weld grids and welds that cannot be applied", () => {
+    const wrongHeight = JSON.stringify({
       format: "factory2d-board",
-      version: 3,
+      version: 4,
+      tick: 0,
+      grid: ["##", "##"],
+      orientations: [],
+      charges: [],
+      welds: [".."],
+    });
+    const wrongWidth = JSON.stringify({
+      format: "factory2d-board",
+      version: 4,
+      tick: 0,
+      grid: ["##"],
+      orientations: [],
+      charges: [],
+      welds: ["."],
+    });
+    const unknownCode = JSON.stringify({
+      format: "factory2d-board",
+      version: 4,
       tick: 0,
       grid: ["#"],
       orientations: [],
       charges: [],
-      welds: [{ x: 0, y: 0, direction: "right" }],
+      welds: ["?"],
+    });
+    const outside = JSON.stringify({
+      format: "factory2d-board",
+      version: 4,
+      tick: 0,
+      grid: ["#"],
+      orientations: [],
+      charges: [],
+      welds: ["-"],
     });
     const incompatible = JSON.stringify({
       format: "factory2d-board",
-      version: 3,
+      version: 4,
       tick: 0,
       grid: [":#"],
       orientations: [],
       charges: [],
-      welds: [{ x: 0, y: 0, direction: "right" }],
+      welds: ["-."],
     });
 
+    expect(() => deserializeBoard(wrongHeight)).toThrowError(
+      "Board weld grid must contain exactly 2 rows",
+    );
+    expect(() => deserializeBoard(wrongWidth)).toThrowError(
+      "Board weld grid row 0 must contain exactly 2 cells",
+    );
+    expect(() => deserializeBoard(unknownCode)).toThrowError(
+      'Board weld grid cell (0, 0) has unknown weld code "?"',
+    );
     expect(() => deserializeBoard(outside)).toThrowError(
-      "Weld 0 points outside the board",
+      "Board weld grid cell (0, 0) points right outside the board",
     );
     expect(() => deserializeBoard(incompatible)).toThrowError(
-      "Weld 0 cannot join its two cells",
+      "Board weld grid cell (0, 0) cannot weld right",
     );
   });
 
   it("rejects invalid charge values and charged non-circuit tiles", () => {
     const invalidValue = JSON.stringify({
       format: "factory2d-board",
-      version: 3,
+      version: 4,
       tick: 0,
       grid: ["C"],
       orientations: [],
       charges: [{ x: 0, y: 0, charge: 2 }],
-      welds: [],
+      welds: ["."],
     });
     const invalidTile = JSON.stringify({
       format: "factory2d-board",
-      version: 3,
+      version: 4,
       tick: 0,
       grid: ["#"],
       orientations: [],
       charges: [{ x: 0, y: 0, charge: 1 }],
-      welds: [],
+      welds: ["."],
     });
 
     expect(() => deserializeBoard(invalidValue)).toThrowError(

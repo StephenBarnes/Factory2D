@@ -4,7 +4,7 @@ import { World } from "./world";
 import { expectDefined } from "../util/assert";
 
 const FORMAT_NAME = "factory2d-board";
-const FORMAT_VERSION = 3;
+const FORMAT_VERSION = 4;
 const MAX_BOARD_WIDTH = 400;
 const MAX_BOARD_HEIGHT = 300;
 
@@ -66,11 +66,6 @@ interface ExportedCharge {
   readonly charge: -1 | 1;
 }
 
-interface ExportedWeld {
-  readonly x: number;
-  readonly y: number;
-  readonly direction: "right" | "down";
-}
 
 interface ExportedBoard {
   readonly format: typeof FORMAT_NAME;
@@ -79,7 +74,7 @@ interface ExportedBoard {
   readonly grid: readonly string[];
   readonly orientations: readonly ExportedOrientation[];
   readonly charges: readonly ExportedCharge[];
-  readonly welds: readonly ExportedWeld[];
+  readonly welds: readonly string[];
 }
 
 export interface ImportedBoard {
@@ -95,13 +90,17 @@ export function serializeBoard(world: World, tick: number): string {
   const grid: string[] = [];
   const orientations: ExportedOrientation[] = [];
   const charges: ExportedCharge[] = [];
-  const welds: ExportedWeld[] = [];
+  const welds: string[] = [];
 
   for (let y = 0; y < world.height; y += 1) {
     let row = "";
+    let weldRow = "";
     for (let x = 0; x < world.width; x += 1) {
       const kind = world.kindAt(x, y);
       row += TILE_CODES[kind];
+      const hasRightWeld = x + 1 < world.width && world.isWelded(x, y, x + 1, y);
+      const hasDownWeld = y + 1 < world.height && world.isWelded(x, y, x, y + 1);
+      weldRow += hasDownWeld ? (hasRightWeld ? "+" : "|") : hasRightWeld ? "-" : ".";
       if (kind === TileKind.Empty) {
         continue;
       }
@@ -116,14 +115,9 @@ export function serializeBoard(world: World, tick: number): string {
         charges.push({ x, y, charge });
       }
 
-      if (x + 1 < world.width && world.isWelded(x, y, x + 1, y)) {
-        welds.push({ x, y, direction: "right" });
-      }
-      if (y + 1 < world.height && world.isWelded(x, y, x, y + 1)) {
-        welds.push({ x, y, direction: "down" });
-      }
     }
     grid.push(row);
+    welds.push(weldRow);
   }
 
   const board: ExportedBoard = {
@@ -224,6 +218,46 @@ export function deserializeBoard(source: string): ImportedBoard {
     hasCharge[cellIndex] = 1;
   }
 
+  const welds = requireArray(board.welds, "Board weld grid");
+  if (welds.length !== height) {
+    throw new Error(`Board weld grid must contain exactly ${height} rows`);
+  }
+  const weldDirectionsByCell = new Uint8Array(width * height);
+  for (let y = 0; y < height; y += 1) {
+    const row = requireString(welds[y], `Board weld grid row ${y}`);
+    if (row.length !== width) {
+      throw new Error(`Board weld grid row ${y} must contain exactly ${width} cells`);
+    }
+
+    for (let x = 0; x < width; x += 1) {
+      const code = expectDefined(row[x], `weld code at (${x}, ${y})`);
+      let directions: number;
+      switch (code) {
+        case ".":
+          directions = 0;
+          break;
+        case "-":
+          directions = 1;
+          break;
+        case "|":
+          directions = 2;
+          break;
+        case "+":
+          directions = 3;
+          break;
+        default:
+          throw new Error(`Board weld grid cell (${x}, ${y}) has unknown weld code "${code}"`);
+      }
+      if ((directions & 1) !== 0 && x + 1 >= width) {
+        throw new Error(`Board weld grid cell (${x}, ${y}) points right outside the board`);
+      }
+      if ((directions & 2) !== 0 && y + 1 >= height) {
+        throw new Error(`Board weld grid cell (${x}, ${y}) points down outside the board`);
+      }
+      weldDirectionsByCell[y * width + x] = directions;
+    }
+  }
+
   const world = new World(width, height);
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
@@ -247,35 +281,18 @@ export function deserializeBoard(source: string): ImportedBoard {
     }
   }
 
-  const welds = requireArray(board.welds, "Board welds");
-  const weldDirectionsByCell = new Uint8Array(width * height);
-  for (let index = 0; index < welds.length; index += 1) {
-    const weld = requireObject(welds[index], `Weld ${index}`);
-    const x = requireInteger(weld.x, `Weld ${index} x`, 0, width - 1);
-    const y = requireInteger(weld.y, `Weld ${index} y`, 0, height - 1);
-    const direction = requireString(weld.direction, `Weld ${index} direction`);
-    if (direction !== "right" && direction !== "down") {
-      throw new Error(`Weld ${index} direction must be "right" or "down"`);
-    }
-
-    const directionBit = direction === "right" ? 1 : 2;
-    const cellIndex = y * width + x;
-    const existingDirections = expectDefined(
-      weldDirectionsByCell[cellIndex],
-      `weld directions at (${x}, ${y})`,
-    );
-    if ((existingDirections & directionBit) !== 0) {
-      throw new Error(`Weld ${index} duplicates the ${direction} edge at (${x}, ${y})`);
-    }
-    weldDirectionsByCell[cellIndex] = existingDirections | directionBit;
-
-    const neighborX = direction === "right" ? x + 1 : x;
-    const neighborY = direction === "down" ? y + 1 : y;
-    if (neighborX >= width || neighborY >= height) {
-      throw new Error(`Weld ${index} points outside the board`);
-    }
-    if (!world.setWeld(x, y, neighborX, neighborY, true)) {
-      throw new Error(`Weld ${index} cannot join its two cells`);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const directions = expectDefined(
+        weldDirectionsByCell[y * width + x],
+        `weld directions at (${x}, ${y})`,
+      );
+      if ((directions & 1) !== 0 && !world.setWeld(x, y, x + 1, y, true)) {
+        throw new Error(`Board weld grid cell (${x}, ${y}) cannot weld right`);
+      }
+      if ((directions & 2) !== 0 && !world.setWeld(x, y, x, y + 1, true)) {
+        throw new Error(`Board weld grid cell (${x}, ${y}) cannot weld down`);
+      }
     }
   }
 

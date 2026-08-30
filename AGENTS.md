@@ -52,7 +52,7 @@ Example puzzles:
 
 While the simulation has movement in discrete time steps and one-tile steps, we animate the tiles moving from one state to the next.
 
-We'll give the game a "dwarven engineering" theme. So replace magnets with lodestones, electrical components with glowing runes. Puzzles range from heavy industry based on moving around big chunks of stone/metal, bottling beer, circuit puzzles (runes and conduits), minecart control systems, bar challenges (remove this block without spilling the mug of ale on top), destroying elven defenses by building missiles or dwarven mechs, etc.
+We'll give the game a "dwarven engineering" theme. So replace magnets with lodestones, electrical components with glowing runes. Puzzles range from heavy industry based on moving around big chunks of stone/metal, bottling beer, circuit puzzles (runes and conduits), minecart control systems, bar challenges (remove this block without spilling the mug of ale on top), destroying elven defenses by building missiles or dwarven mechs. Solutions will be rated by percentile as coal, iron, silver, gold, mithril, etc.
 
 ## Stack
 
@@ -83,7 +83,7 @@ The current engine implements observation, intent conflict resolution, and commi
 
 Keep this section up-to-date.
 
-The first playable scaffold is implemented:
+The game is in early development. Currently implemented:
 
 * A 20x14 editable Canvas 2D grid with procedural sand, falling stone, magnetic metal, directional magnets, circuit conduits, and sensor, inverter, and combiner runes.
 * A full-viewport black board layer behind responsive floating left and bottom control panels. The initial view fits the entire grid into the unobscured region; mouse-wheel zoom stays anchored beneath the pointer; and arrow keys, middle-button drags, or Alt-right-button drags pan within bounds that keep the screen center over the grid.
@@ -97,7 +97,7 @@ The first playable scaffold is implemented:
 * Simulation commits remain discrete and deterministic while stable tile IDs drive optional smooth eased rendering between the previous and current positions. Manual steps animate for 200 ms; automatic steps animate for up to 250 ms without delaying simulation ticks. A 60-ticks-per-second mode forces discrete rendering.
 * A responsive top-right cell inspector shows the hovered tile's stable ID, movement behavior, effective weldable sides, current welds, circuit connections and charge, magnetic state, orientation, and attraction direction/range. It refreshes after simulation commits even when the pointer remains stationary.
 * Deterministic tests for gravity chains, sand overhangs, welded and magnetically constrained bodies, circuit propagation, sensor directionality, sensor port isolation and output rendering, isolated directional gate ports and trace rendering, inverter delay, the complete three-input signed combiner truth table, conflicts, directional welding, orientation snapshots and preview resolution, boundaries, stable IDs, reset behavior, and pointer gesture classification.
-* Board export and import controls round-trip deterministic, versioned JSON with a compact fixed-code ASCII tile grid plus sparse non-up orientations, nonzero circuit charges, and weld edges. Exports up to one million characters are also copied to the clipboard. Imports derive dimensions from the grid, validate the complete file before replacing the live board, support board sizes up to 400x300, and reconstruct fresh runtime tile IDs because IDs are intentionally excluded from the file.
+* Board export and import controls round-trip deterministic, versioned JSON with compact fixed-code ASCII tile and weld grids plus sparse non-up orientations and nonzero circuit charges. Weld cells use `.`, `-`, `|`, or `+` for no forward weld, right, down, or both. Exports up to one million characters are also copied to the clipboard. Imports derive dimensions from the tile grid, validate both grids and all sparse state before replacing the live board, support board sizes up to 400x300, and reconstruct fresh runtime tile IDs because IDs are intentionally excluded from the file.
 
 ## Code map
 
@@ -111,7 +111,7 @@ The first playable scaffold is implemented:
 * `src/render/tile-renderer.ts` — Body outline tracing and rounded-slab drawing (fill, bevel lighting, decorations) for the board and component palette.
 * `src/simulation/circuit.ts` — Signed-ternary charge type, validation, sum resolution, and render colors.
 * `src/simulation/tile.ts` — Tile kinds, directions, and immutable tile behavior/render definitions.
-* `src/simulation/board-export.ts` — Deterministic compact ASCII-grid JSON serialization and strict validation/deserialization for sharing board state.
+* `src/simulation/board-export.ts` — Deterministic compact ASCII tile-and-weld-grid JSON serialization and strict validation/deserialization for sharing board state.
 * `src/simulation/world.ts` — Typed-array tile, orientation, charge, and weld storage; stable IDs; render revisions; snapshots; editing; and body movement commits.
 * `src/simulation/simulation.ts` — Allocation-free circuit-network and delayed directional-gate resolution, welded and magnetically constrained body collection, gravity intent selection, conflict resolution, and tick advancement.
 * `src/ui/tile-inspector.ts` — Revision-aware hovered-cell property presentation, including effective directional weldability and current welds.
@@ -143,7 +143,7 @@ Game flow:
 * Implement a main menu. For now, continue booting straight to the sandbox for faster testing during development, but add a button to go to main menu. Main menu should have buttons for sandbox and puzzles.
 * Implement a system for defining puzzles - probably similar to the current import/export format, with some extra fields. Each puzzle should define the grid size, blocks to pre-place, and menu of enabled components with prices in talents.
 * Change the editing model when solving puzzles: the player edits the initial board state, but as soon as they've played/run the simulation, they can no longer edit, they have to reset. Because puzzles won't allow modifying the board halfway through running a solution. We can still allow mid-run edits in the sandbox.
-* Modify our export/import format to represent welds more compactly. Instead of a list of `{x, y, direction}` for each weld, store a grid of ASCII characters representing welds as one of the characters `.|-+` for welds with direction down, right, both, or neither. Most boards will have many welded components. Similarly simplify orientations, and charges, if any; or store charges per-network instead of per-tile. More complex per-tile state we add later (e.g. furnace stored ticks, or target/delivery-block configuration) can be stored more verbosely.
+* Further compact orientations and charges in the export/import format, possibly storing charges per network instead of per tile. More complex per-tile state added later (e.g. furnace stored ticks or target/delivery-block configuration) can remain verbose.
 * Implement puzzle selection and unlocking: puzzles are arranged in a digraph / map, with each puzzle having a set of prerequisites, arranged into groups like "runelore" and "vehicles" and "dealing with elves". Add zoom/pan for the map.
 * Implement a way to show text boxes on the game screen, for tutorial puzzles. Specify their position and text as part of the puzzle definition.
 * Implement restrictions on where the player can place blocks, defined as a region of the game grid. Specify in the puzzle definition.
