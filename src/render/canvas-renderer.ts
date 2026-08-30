@@ -27,7 +27,8 @@ export class CanvasRenderer {
   private originY = 0;
   private viewportWidth = 0;
   private viewportHeight = 0;
-  private visited = new Uint8Array(0);
+  /** Per-cell body stamp: 0 = unvisited, otherwise the body's start index + 1. */
+  private bodyStamps = new Int32Array(0);
   private bodyStack = new Int32Array(0);
   private readonly bodyCells: BodyCell[] = [];
   private hoverX = -1;
@@ -179,15 +180,15 @@ export class CanvasRenderer {
 
   private drawTiles(): void {
     const cellCount = this.world.width * this.world.height;
-    if (this.visited.length !== cellCount) {
-      this.visited = new Uint8Array(cellCount);
+    if (this.bodyStamps.length !== cellCount) {
+      this.bodyStamps = new Int32Array(cellCount);
       this.bodyStack = new Int32Array(cellCount);
     } else {
-      this.visited.fill(0);
+      this.bodyStamps.fill(0);
     }
 
     for (let index = 0; index < cellCount; index += 1) {
-      if (this.visited[index] !== 0 || this.world.kindAtIndex(index) === TileKind.Empty) {
+      if (this.bodyStamps[index] !== 0 || this.world.kindAtIndex(index) === TileKind.Empty) {
         continue;
       }
       const count = this.collectBody(index);
@@ -197,11 +198,12 @@ export class CanvasRenderer {
 
   /** Flood-fills the welded body containing `startIndex` into `bodyCells`; returns its size. */
   private collectBody(startIndex: number): number {
-    const { world, visited, bodyStack } = this;
+    const { world, bodyStamps, bodyStack } = this;
     const width = world.width;
+    const stamp = startIndex + 1;
     let stackSize = 0;
     let count = 0;
-    visited[startIndex] = 1;
+    bodyStamps[startIndex] = stamp;
     bodyStack[stackSize] = startIndex;
     stackSize += 1;
 
@@ -210,7 +212,14 @@ export class CanvasRenderer {
       const index = expectDefined(bodyStack[stackSize], "welded body stack entry");
       let cell = this.bodyCells[count];
       if (cell === undefined) {
-        cell = { x: 0, y: 0, kind: TileKind.Empty, orientation: Direction.Up };
+        cell = {
+          x: 0,
+          y: 0,
+          kind: TileKind.Empty,
+          orientation: Direction.Up,
+          seamRight: false,
+          seamDown: false,
+        };
         this.bodyCells.push(cell);
       }
       count += 1;
@@ -220,26 +229,37 @@ export class CanvasRenderer {
       cell.kind = world.kindAtIndex(index);
       cell.orientation = world.orientationAtIndex(index);
 
-      if (world.hasRightWeldAtIndex(index) && visited[index + 1] === 0) {
-        visited[index + 1] = 1;
+      if (world.hasRightWeldAtIndex(index) && bodyStamps[index + 1] !== stamp) {
+        bodyStamps[index + 1] = stamp;
         bodyStack[stackSize] = index + 1;
         stackSize += 1;
       }
-      if (x > 0 && world.hasRightWeldAtIndex(index - 1) && visited[index - 1] === 0) {
-        visited[index - 1] = 1;
+      if (x > 0 && world.hasRightWeldAtIndex(index - 1) && bodyStamps[index - 1] !== stamp) {
+        bodyStamps[index - 1] = stamp;
         bodyStack[stackSize] = index - 1;
         stackSize += 1;
       }
-      if (world.hasDownWeldAtIndex(index) && visited[index + width] === 0) {
-        visited[index + width] = 1;
+      if (world.hasDownWeldAtIndex(index) && bodyStamps[index + width] !== stamp) {
+        bodyStamps[index + width] = stamp;
         bodyStack[stackSize] = index + width;
         stackSize += 1;
       }
-      if (index >= width && world.hasDownWeldAtIndex(index - width) && visited[index - width] === 0) {
-        visited[index - width] = 1;
+      if (index >= width && world.hasDownWeldAtIndex(index - width) && bodyStamps[index - width] !== stamp) {
+        bodyStamps[index - width] = stamp;
         bodyStack[stackSize] = index - width;
         stackSize += 1;
       }
+    }
+
+    for (let i = 0; i < count; i += 1) {
+      const cell = expectDefined(this.bodyCells[i], "collected body cell");
+      const index = cell.y * width + cell.x;
+      cell.seamRight = cell.x < width - 1 &&
+        bodyStamps[index + 1] === stamp &&
+        !world.hasRightWeldAtIndex(index);
+      cell.seamDown = cell.y < world.height - 1 &&
+        bodyStamps[index + width] === stamp &&
+        !world.hasDownWeldAtIndex(index);
     }
 
     return count;

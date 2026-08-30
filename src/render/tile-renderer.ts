@@ -15,10 +15,14 @@ export interface BodyCell {
   y: number;
   kind: TileKind;
   orientation: Direction;
+  /** The right neighbor belongs to the same body but this edge is not welded. */
+  seamRight: boolean;
+  /** The down neighbor belongs to the same body but this edge is not welded. */
+  seamDown: boolean;
 }
 
 /** Corner rounding radius for convex corners and concave weld fillets. */
-const CORNER_RADIUS_RATIO = 0.26;
+const CORNER_RADIUS_RATIO = 0.2;
 /** Gap between a body outline and its cell boundary, so unwelded neighbors stay visually separate. */
 const INSET_RATIO = 0.05;
 /** Thickness of the top-left highlight and bottom-right shade bands. */
@@ -27,10 +31,13 @@ const BEVEL_RATIO = 0.12;
 const OUTLINE_RATIO = 0.055;
 const DROP_SHADOW_X_RATIO = 0.05;
 const DROP_SHADOW_Y_RATIO = 0.1;
+/** Thickness of the groove marking an unwelded edge interior to a body. */
+const SEAM_RATIO = 0.08;
 
 const HIGHLIGHT_STYLE = "rgba(255, 255, 255, 0.25)";
 const SHADE_STYLE = "rgba(0, 0, 0, 0.28)";
 const DROP_SHADOW_STYLE = "rgba(0, 0, 0, 0.35)";
+const SEAM_STYLE = "rgba(0, 0, 0, 0.4)";
 const MIXED_BODY_OUTLINE_STYLE = "#161d26";
 
 /** Cells and vertices are keyed on a fixed grid stride; supports coordinates up to 4095. */
@@ -61,7 +68,7 @@ function rotateClockwise(direction: Direction): Direction {
 /**
  * Draws one welded body as a single rounded polyomino slab: drop shadow, per-cell
  * fill and decorations clipped to the outline, top-left/bottom-right bevel
- * lighting, and a dark rim.
+ * lighting, dark grooves along unwelded interior edges, and a dark rim.
  */
 export function drawBody(
   context: CanvasRenderingContext2D,
@@ -129,6 +136,23 @@ export function drawBody(
   context.translate(-2 * bevel, -2 * bevel);
   context.strokeStyle = SHADE_STYLE;
   context.stroke(path);
+
+  context.lineCap = "butt";
+  context.strokeStyle = SEAM_STYLE;
+  context.lineWidth = Math.max(1.5, cellSize * SEAM_RATIO);
+  context.beginPath();
+  for (let i = 0; i < cellCount; i += 1) {
+    const cell = expectDefined(cells[i], "body cell");
+    if (cell.seamRight) {
+      context.moveTo(originX + (cell.x + 1) * cellSize, originY + cell.y * cellSize);
+      context.lineTo(originX + (cell.x + 1) * cellSize, originY + (cell.y + 1) * cellSize);
+    }
+    if (cell.seamDown) {
+      context.moveTo(originX + cell.x * cellSize, originY + (cell.y + 1) * cellSize);
+      context.lineTo(originX + (cell.x + 1) * cellSize, originY + (cell.y + 1) * cellSize);
+    }
+  }
+  context.stroke();
   context.restore();
 
   context.strokeStyle = uniformKind ? firstDefinition.shadow : MIXED_BODY_OUTLINE_STYLE;
@@ -137,7 +161,7 @@ export function drawBody(
 }
 
 const SINGLE_CELL: [BodyCell] = [
-  { x: 0, y: 0, kind: 0 as TileKind, orientation: Direction.Up },
+  { x: 0, y: 0, kind: 0 as TileKind, orientation: Direction.Up, seamRight: false, seamDown: false },
 ];
 
 /** Draws a lone tile (palette previews and placement hover). */

@@ -93,7 +93,7 @@ The first playable scaffold is implemented:
 * A 20x14 editable Canvas 2D grid with procedural sand, falling stone, magnetic metal, directional magnets, and fixed platform tiles.
 * Build controls for click-and-drag placement, right-click removal, magnet rotation and aiming, stepping, running, pausing, resetting, clearing, and speed selection.
 * A separate weld tool for joining eligible occupied neighbors into rigid bodies and unwelding them, with an immediate held-Control temporary override and red invalid-edge feedback. Sand is not weldable, and magnets reject welds on their pointed side.
-* One shared procedural tile renderer for the Canvas board, placement preview, and component palette. Each welded body renders as a single rounded polyomino slab: a traced, inset outline path with convex corner rounding and concave weld fillets, a drop shadow, per-cell fills and decorations clipped to the outline, top-left highlight and bottom-right shade bevels, and a dark rim. Diagonally touching cells render as a rounded pinch.
+* One shared procedural tile renderer for the Canvas board, placement preview, and component palette. Each welded body renders as a single rounded polyomino slab: a traced, inset outline path with convex corner rounding and concave weld fillets, a drop shadow, per-cell fills and decorations clipped to the outline, top-left highlight and bottom-right shade bevels, and a dark rim. Diagonally touching cells render as a rounded pinch, and unwelded edges interior to a body render as dark seam grooves.
 * A typed-array world with stable tile IDs, per-tile orientation, edge weld storage, and allocation-free per-tick movement buffers.
 * Deterministic straight-down gravity for stone, metal, magnets, and sand; complete downward body-dependency resolution; parity-selected diagonal gravity for sand; direct-fall priority; equal-priority destination jamming; and reciprocal magnetic attraction that takes priority over gravity for both bodies.
 * Deterministic tests for gravity chains, sand overhangs, welded bodies, conflicts, directional welding, reciprocal magnetic attraction, orientation snapshots, boundaries, stable IDs, and reset behavior.
@@ -114,9 +114,20 @@ The first playable scaffold is implemented:
 * `vite.config.ts` — Vite configuration with Vitest's Node test environment.
 * `tsconfig.json` — Strict browser TypeScript and project build configuration.
 
+## Current TODOs
+
+* UI bug: if I zoom out, and then zoom in, the screen height seems to grow every tick, slowly, causing the page to extend vertically further and further, and making the game grid drop lower on the page.
+* Rendering optimization: currently outline `Path2D`s are rebuilt every frame. We should instead cache per-body paths keyed on world edits/ticks.
+* Bug with rendering connected bodies: Place 8 stone blocks a ring, with 1 empty space in the center. Weld them all together. Unweld one edge A. Then unweld a different edge B on the other side. Unwelding B causes the appearance of edge A to change. The problem is basically that we're drawing one path for the entire connected body's outline, and then adding a seam line for one unwelded edge, but it looks wrong because it's patched on afterwards. Really our outline paths should depend on local weld states / connectivity.
+* Physics bug: if I place a magnet pointing right, and a metal block to the right of it, but nothing underneath them, them both of them hover in the air. Probably because we made magnetic forces take priority over gravity. But if both are unsupported, they should still fall. We need to resolve this in some way that isn't just a special case check for this one situation - it's a general problem that would otherwise surface again later when we add conveyor belts, pistons, etc. Idea: maybe a sideways-pointing magnet applies both the attractive force, and an upward force, if the magnet is supported (plus the corresponding downward force on the block below it)? And conversely it applies an upward force to itself if the metal block is supported.
+* Rework the overall UI. Currently the grid is a small region of the screen, and there's no way to zoom in or pan. Instead, make the grid the background layer. Add the sidebars (palette, run/step/reset/clear, etc.) as panels floating on top of this. Start with the grid centered and zoomed in a way that allows seeing the whole grid with none of it hidden behind panels. Allow zooming the grid with mousewheel, and panning with arrow keys or RMB-drag on an empty region of the screen. Draw space outside the tile grid as black. Allow panning as long as the center of the screen is still over the tile grid (or any similar rule that ensures players don't accidentally get lost when panning and end up unable to find the grid again).
+* Animate movement. Currently we draw each simulation step until the next simulation step, so blocks snap sharply to new positions. We should instead animate them moving between previous and next states.
+
 ## Development guidelines
 
 Keep the simulation deterministic and independent of rendering.
+
+Handle unexpected undefineds loudly. When a lookup is logically guaranteed to succeed (e.g. checked indexed access under `noUncheckedIndexedAccess`), narrow it with `expectDefined` from `src/util/assert.ts` rather than a silent fallback (`?? default`, guarded `break`/`continue`). We want violated expectations to crash with a descriptive message during development, never to continue silently with wrong state. Reserve explicit fallbacks for cases where absence is genuinely valid.
 
 Prefer a new focused file for a new concern.
 
