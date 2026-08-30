@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { Simulation } from "../src/simulation/simulation";
-import { TileKind } from "../src/simulation/tile";
+import { Direction, TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
 
 describe("gravity simulation", () => {
@@ -235,5 +235,64 @@ describe("world editing", () => {
 
     world.place(1, 0, TileKind.Empty);
     expect(world.isWelded(0, 0, 1, 0)).toBe(false);
+  });
+});
+
+describe("directional magnets", () => {
+  it("stores orientation through snapshots and movement", () => {
+    const world = new World(2, 3);
+    const magnetId = world.place(0, 0, TileKind.Magnet, Direction.Right);
+    const snapshot = world.clone();
+    const simulation = new Simulation(world);
+
+    expect(simulation.step()).toBe(1);
+    expect(world.idAt(0, 1)).toBe(magnetId);
+    expect(world.orientationAt(0, 1)).toBe(Direction.Right);
+    expect(snapshot.orientationAt(0, 0)).toBe(Direction.Right);
+  });
+
+  it("rejects the magnet's facing weld and removes a weld exposed by rotation", () => {
+    const world = new World(3, 3);
+    const magnetId = world.place(1, 1, TileKind.Magnet, Direction.Right);
+    world.place(0, 1, TileKind.Metal);
+    world.place(2, 1, TileKind.Metal);
+    world.place(1, 2, TileKind.Metal);
+
+    expect(world.canWeld(1, 1, 2, 1)).toBe(false);
+    expect(world.setWeld(1, 1, 2, 1, true)).toBe(false);
+    expect(world.setWeld(1, 1, 0, 1, true)).toBe(true);
+    expect(world.setWeld(1, 1, 1, 2, true)).toBe(true);
+
+    expect(world.place(1, 1, TileKind.Magnet, Direction.Down)).toBe(magnetId);
+    expect(world.orientationAt(1, 1)).toBe(Direction.Down);
+    expect(world.isWelded(1, 1, 0, 1)).toBe(true);
+    expect(world.isWelded(1, 1, 1, 2)).toBe(false);
+  });
+
+  it("holds a falling magnetic block when it reaches the pointed side", () => {
+    const world = new World(3, 4);
+    world.place(1, 2, TileKind.Magnet, Direction.Right);
+    world.place(1, 3, TileKind.Platform);
+    const metalId = world.place(2, 0, TileKind.Metal);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+    simulation.step();
+    expect(world.idAt(2, 2)).toBe(metalId);
+    expect(simulation.step()).toBe(0);
+    expect(world.idAt(2, 2)).toBe(metalId);
+  });
+
+  it("does not attract non-magnetic blocks", () => {
+    const world = new World(3, 4);
+    world.place(1, 2, TileKind.Magnet, Direction.Right);
+    world.place(1, 3, TileKind.Platform);
+    const stoneId = world.place(2, 0, TileKind.Stone);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+    simulation.step();
+    simulation.step();
+    expect(world.idAt(2, 3)).toBe(stoneId);
   });
 });

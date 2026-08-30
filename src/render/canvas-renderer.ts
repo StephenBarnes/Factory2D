@@ -1,5 +1,6 @@
-import { TILE_DEFINITIONS, TileDecorationStyle, TileKind } from "../simulation/tile";
+import { Direction, TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
+import { drawTile as drawTileAppearance, InnerCorner } from "./tile-renderer";
 
 export interface GridCell {
   readonly x: number;
@@ -28,6 +29,8 @@ export class CanvasRenderer {
   private hoverX = -1;
   private hoverY = -1;
   private hoverEdge: GridEdge | null = null;
+  private hoverKind = TileKind.Empty;
+  private hoverOrientation = Direction.Up;
 
   constructor(canvas: HTMLCanvasElement, world: World) {
     const context = canvas.getContext("2d");
@@ -100,9 +103,15 @@ export class CanvasRenderer {
     return null;
   }
 
-  setHover(cell: GridCell | null): void {
+  setHover(
+    cell: GridCell | null,
+    kind: TileKind = TileKind.Empty,
+    orientation: Direction = Direction.Up,
+  ): void {
     this.hoverX = cell?.x ?? -1;
     this.hoverY = cell?.y ?? -1;
+    this.hoverKind = kind;
+    this.hoverOrientation = orientation;
     this.hoverEdge = null;
   }
 
@@ -176,64 +185,78 @@ export class CanvasRenderer {
   }
 
   private drawTile(x: number, y: number, kind: TileKind): void {
-    const definition = TILE_DEFINITIONS[kind];
     const index = y * this.world.width + x;
-    const weldedLeft = x > 0 && this.world.hasRightWeldAtIndex(index - 1);
-    const weldedRight = this.world.hasRightWeldAtIndex(index);
-    const weldedUp = y > 0 && this.world.hasDownWeldAtIndex(index - this.world.width);
-    const weldedDown = this.world.hasDownWeldAtIndex(index);
-    const cellLeft = this.originX + x * this.cellSize;
-    const cellTop = this.originY + y * this.cellSize;
-    const left = cellLeft + (weldedLeft ? 0 : 2);
-    const top = cellTop + (weldedUp ? 0 : 2);
-    const right = cellLeft + this.cellSize - (weldedRight ? 0 : 2);
-    const bottom = cellTop + this.cellSize - (weldedDown ? 0 : 2);
-    const width = right - left;
-    const height = bottom - top;
-    const edge = Math.max(2, Math.floor(this.cellSize / 8));
-    const { context } = this;
+    const joinedLeft = x > 0 && this.world.hasRightWeldAtIndex(index - 1);
+    const joinedRight = this.world.hasRightWeldAtIndex(index);
+    const joinedUp = y > 0 && this.world.hasDownWeldAtIndex(index - this.world.width);
+    const joinedDown = this.world.hasDownWeldAtIndex(index);
+    let joinedSides = 0;
+    let innerCorners = InnerCorner.None;
 
-    context.fillStyle = definition.shadow;
-    context.fillRect(left, top, width, height);
-    context.fillStyle = definition.fill;
-    context.fillRect(
-      left,
-      top,
-      width - (weldedRight ? 0 : edge),
-      height - (weldedDown ? 0 : edge),
-    );
-
-    if (!weldedUp) {
-      const highlightLeft = left + (weldedLeft ? 0 : edge);
-      const highlightRight = right - (weldedRight ? 0 : edge);
-      context.fillStyle = definition.highlight;
-      context.fillRect(
-        highlightLeft,
-        top + edge,
-        highlightRight - highlightLeft,
-        Math.max(2, edge / 2),
-      );
+    if (joinedUp) {
+      joinedSides |= 1 << Direction.Up;
+    }
+    if (joinedRight) {
+      joinedSides |= 1 << Direction.Right;
+    }
+    if (joinedDown) {
+      joinedSides |= 1 << Direction.Down;
+    }
+    if (joinedLeft) {
+      joinedSides |= 1 << Direction.Left;
+    }
+    if (joinedUp && joinedLeft && !this.hasContinuousCorner(x, y, Direction.Left, Direction.Up)) {
+      innerCorners |= InnerCorner.UpLeft;
+    }
+    if (joinedUp && joinedRight && !this.hasContinuousCorner(x, y, Direction.Right, Direction.Up)) {
+      innerCorners |= InnerCorner.UpRight;
+    }
+    if (joinedDown && joinedRight && !this.hasContinuousCorner(x, y, Direction.Right, Direction.Down)) {
+      innerCorners |= InnerCorner.DownRight;
+    }
+    if (joinedDown && joinedLeft && !this.hasContinuousCorner(x, y, Direction.Left, Direction.Down)) {
+      innerCorners |= InnerCorner.DownLeft;
     }
 
-    context.fillStyle = definition.decorationColor;
-    context.strokeStyle = definition.decorationColor;
-    switch (definition.decorationStyle) {
-      case TileDecorationStyle.Crack:
-        context.beginPath();
-        context.moveTo(left + width * 0.35, top + edge);
-        context.lineTo(left + width * 0.48, top + height * 0.45);
-        context.moveTo(left + width * 0.42, top + height * 0.55);
-        context.lineTo(left + width * 0.37, top + height - edge);
-        context.stroke();
-        break;
-      case TileDecorationStyle.Grains: {
-        const grainSize = Math.max(1, Math.floor(this.cellSize / 16));
-        context.fillRect(left + width * 0.25, top + height * 0.42, grainSize, grainSize);
-        context.fillRect(left + width * 0.68, top + height * 0.7, grainSize, grainSize);
-        break;
-      }
-      case TileDecorationStyle.None:
-        break;
+    drawTileAppearance(
+      this.context,
+      this.originX + x * this.cellSize,
+      this.originY + y * this.cellSize,
+      this.cellSize,
+      kind,
+      this.world.orientationAt(x, y),
+      joinedSides,
+      innerCorners,
+    );
+  }
+
+  private hasContinuousCorner(
+    x: number,
+    y: number,
+    horizontalDirection: Direction.Left | Direction.Right,
+    verticalDirection: Direction.Up | Direction.Down,
+  ): boolean {
+    const horizontalX = x + (horizontalDirection === Direction.Right ? 1 : -1);
+    const verticalY = y + (verticalDirection === Direction.Down ? 1 : -1);
+    return this.hasJoinedSide(horizontalX, y, verticalDirection) ||
+      this.hasJoinedSide(x, verticalY, horizontalDirection);
+  }
+
+  private hasJoinedSide(x: number, y: number, direction: Direction): boolean {
+    if (x < 0 || x >= this.world.width || y < 0 || y >= this.world.height) {
+      return false;
+    }
+
+    const index = y * this.world.width + x;
+    switch (direction) {
+      case Direction.Up:
+        return y > 0 && this.world.hasDownWeldAtIndex(index - this.world.width);
+      case Direction.Right:
+        return this.world.hasRightWeldAtIndex(index);
+      case Direction.Down:
+        return this.world.hasDownWeldAtIndex(index);
+      case Direction.Left:
+        return x > 0 && this.world.hasRightWeldAtIndex(index - 1);
     }
   }
 
@@ -259,6 +282,23 @@ export class CanvasRenderer {
 
     if (this.hoverX < 0 || this.hoverY < 0) {
       return;
+    }
+
+    if (
+      this.hoverKind !== TileKind.Empty &&
+      this.world.kindAt(this.hoverX, this.hoverY) === TileKind.Empty
+    ) {
+      this.context.save();
+      this.context.globalAlpha = 0.55;
+      drawTileAppearance(
+        this.context,
+        this.originX + this.hoverX * this.cellSize,
+        this.originY + this.hoverY * this.cellSize,
+        this.cellSize,
+        this.hoverKind,
+        this.hoverOrientation,
+      );
+      this.context.restore();
     }
 
     this.context.strokeStyle = "#78dcca";

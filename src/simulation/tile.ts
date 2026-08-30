@@ -3,19 +3,42 @@ export const enum TileKind {
   Stone = 1,
   Sand = 2,
   Platform = 3,
+  Magnet = 4,
+  Metal = 5,
+}
+
+export const enum Direction {
+  Up = 0,
+  Right = 1,
+  Down = 2,
+  Left = 3,
+}
+
+export const enum WeldSide {
+  None = 0,
+  Up = 1 << Direction.Up,
+  Right = 1 << Direction.Right,
+  Down = 1 << Direction.Down,
+  Left = 1 << Direction.Left,
+  All = Up | Right | Down | Left,
 }
 
 export const enum TileDecorationStyle {
   None = 0,
   Crack = 1,
   Grains = 2,
+  Magnet = 3,
+  Metal = 4,
 }
 
 export interface TileDefinition {
   readonly name: string;
   readonly affectedByGravity: boolean;
-  readonly weldable: boolean;
+  readonly weldableSides: WeldSide;
+  readonly excludesFacingWeld: boolean;
   readonly slidesDiagonally: boolean;
+  readonly magnetic: boolean;
+  readonly attractionRange: number;
   readonly fill: string;
   readonly highlight: string;
   readonly shadow: string;
@@ -23,12 +46,27 @@ export interface TileDefinition {
   readonly decorationColor: string;
 }
 
+export function directionX(direction: Direction): -1 | 0 | 1 {
+  return direction === Direction.Right ? 1 : direction === Direction.Left ? -1 : 0;
+}
+
+export function directionY(direction: Direction): -1 | 0 | 1 {
+  return direction === Direction.Down ? 1 : direction === Direction.Up ? -1 : 0;
+}
+
+export function oppositeDirection(direction: Direction): Direction {
+  return ((direction + 2) & 3) as Direction;
+}
+
 export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Empty]: {
     name: "Empty",
     affectedByGravity: false,
     slidesDiagonally: false,
-    weldable: false,
+    weldableSides: WeldSide.None,
+    excludesFacingWeld: false,
+    magnetic: false,
+    attractionRange: 0,
     fill: "transparent",
     highlight: "transparent",
     shadow: "transparent",
@@ -39,7 +77,10 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Stone",
     affectedByGravity: true,
     slidesDiagonally: false,
-    weldable: true,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    magnetic: false,
+    attractionRange: 0,
     fill: "#66717d",
     highlight: "#95a0ab",
     shadow: "#3c454f",
@@ -50,7 +91,10 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Sand",
     affectedByGravity: true,
     slidesDiagonally: true,
-    weldable: false,
+    weldableSides: WeldSide.None,
+    excludesFacingWeld: false,
+    magnetic: false,
+    attractionRange: 0,
     fill: "#e7ad4f",
     highlight: "#ffd37a",
     shadow: "#a86d2b",
@@ -61,11 +105,42 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Platform",
     affectedByGravity: false,
     slidesDiagonally: false,
-    weldable: true,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    magnetic: false,
+    attractionRange: 0,
     fill: "#56736b",
     highlight: "#85a49a",
     shadow: "#30473f",
     decorationStyle: TileDecorationStyle.Crack,
     decorationColor: "#405b52",
+  },
+  [TileKind.Magnet]: {
+    name: "Magnet",
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: true,
+    magnetic: false,
+    attractionRange: 1,
+    fill: "#b94b52",
+    highlight: "#ee8990",
+    shadow: "#6e2930",
+    decorationStyle: TileDecorationStyle.Magnet,
+    decorationColor: "#f3e5c8",
+  },
+  [TileKind.Metal]: {
+    name: "Metal",
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    magnetic: true,
+    attractionRange: 0,
+    fill: "#718a9b",
+    highlight: "#abc0cd",
+    shadow: "#405767",
+    decorationStyle: TileDecorationStyle.Metal,
+    decorationColor: "#d5e1e7",
   },
 };

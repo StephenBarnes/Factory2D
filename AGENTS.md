@@ -90,13 +90,13 @@ Keep this section up-to-date.
 
 The first playable scaffold is implemented:
 
-* A 20x14 editable Canvas 2D grid with procedural sand, falling stone, and fixed platform tiles.
-* Build controls for click-and-drag placement, right-click removal, stepping, running, pausing, resetting, clearing, and speed selection.
-* A separate weld tool for joining eligible occupied neighbors into rigid bodies and unwelding them, with an immediate held-Control temporary override and red invalid-edge feedback. Sand is not weldable.
-* Procedurally decorated tiles on both the Canvas board and component palette, with welded neighbors rendered continuously without an internal tile gutter.
-* A typed-array world with stable tile IDs, edge weld storage, and allocation-free per-tick movement buffers.
-* Deterministic straight-down gravity for stone and sand, complete downward body-dependency resolution, parity-selected diagonal gravity for sand, direct-fall priority, and equal-priority destination jamming.
-* Deterministic tests for gravity chains, sand overhangs, welded bodies, conflicts, welding eligibility, tick snapshots, boundaries, stable IDs, and reset behavior.
+* A 20x14 editable Canvas 2D grid with procedural sand, falling stone, magnetic metal, directional magnets, and fixed platform tiles.
+* Build controls for click-and-drag placement, right-click removal, magnet rotation and aiming, stepping, running, pausing, resetting, clearing, and speed selection.
+* A separate weld tool for joining eligible occupied neighbors into rigid bodies and unwelding them, with an immediate held-Control temporary override and red invalid-edge feedback. Sand is not weldable, and magnets reject welds on their pointed side.
+* One shared procedural tile renderer for the Canvas board, placement preview, and component palette. Welded neighbors render continuously without an internal gutter, including inner fillets on L-shaped bodies.
+* A typed-array world with stable tile IDs, per-tile orientation, edge weld storage, and allocation-free per-tick movement buffers.
+* Deterministic straight-down gravity for stone, metal, magnets, and sand; complete downward body-dependency resolution; parity-selected diagonal gravity for sand; direct-fall priority; equal-priority destination jamming; and gravity-priority magnetic holding.
+* Deterministic tests for gravity chains, sand overhangs, welded bodies, conflicts, directional welding, magnetic attraction, orientation snapshots, boundaries, stable IDs, and reset behavior.
 
 ## Code map
 
@@ -104,26 +104,20 @@ The first playable scaffold is implemented:
 * `src/main.ts` — Browser entry point, example world setup, input handling, build tools, and animation loop.
 * `src/styles.css` — Responsive application, palette, board, and control styling.
 * `src/vite-env.d.ts` — Vite client type declarations.
-* `src/render/canvas-renderer.ts` — Responsive Canvas 2D grid, definition-driven procedural tiles, continuous welded-body rendering, hit testing, and hover feedback.
-* `src/simulation/tile.ts` — Tile kind enum and immutable tile behavior/render definitions.
-* `src/simulation/world.ts` — Typed-array tile and weld storage, stable IDs, snapshots, editing, and body movement commits.
-* `src/simulation/simulation.ts` — Allocation-free welded-body collection, gravity dependency resolution, intent selection, conflict resolution, and tick advancement.
-* `tests/simulation.test.ts` — Deterministic world, gravity dependency, diagonal movement, conflict, weld, identity, and reset tests.
+* `src/render/canvas-renderer.ts` — Responsive Canvas 2D grid, continuous welded-body rendering, hit testing, placement previews, and hover feedback.
+* `src/render/tile-renderer.ts` — Shared definition-driven procedural tile drawing for the board and component palette.
+* `src/simulation/tile.ts` — Tile kinds, directions, and immutable tile behavior/render definitions.
+* `src/simulation/world.ts` — Typed-array tile, orientation, and weld storage; stable IDs; snapshots; editing; and body movement commits.
+* `src/simulation/simulation.ts` — Allocation-free welded-body collection, gravity and magnetic intent selection, conflict resolution, and tick advancement.
+* `tests/simulation.test.ts` — Deterministic world, gravity, diagonal movement, conflict, weld, magnet, identity, and reset tests.
 * `vite.config.ts` — Vite configuration with Vitest's Node test environment.
 * `tsconfig.json` — Strict browser TypeScript and project build configuration.
 
 ## Current TODOs
 
-Small:
-* Currently the tiles shown in the components palette left sidebar, and the tiles shown in the game, look slightly different. Can we refactor them to use the same draw function? Seems they diverge because grid appearance is defined in `canvas-renderer.ts` `drawTile()` while the palette appearance is defined in CSS. Can we unify these?
-* When 3 blocks in an "L" shape are welded together, the middle block has no border and is completely filled at the inner fillet, which looks wrong. Can we improve this?
-
 Adding features:
-* Implement a magnet block, which can be rotated in 90 degree increments. Render it in a way that makes it clear which direction it's pointing. Allow using Q/E to rotate the block that will be placed, and WASD to set its direction.
-* Ban welding the magnet on the side that it's pointing. Allow welding on other sides. Requires reworking/extending our current `weldable` flag in tile definitions.
-* Make the magnet attract its neighbor block in the direction it's pointing. This attraction should outweigh gravity - a block falling past the magnet should be stopped there.
-* Add a magnetic flag to tile definitions. Add a new metal block that is magnetic. Set other tile types to non-magnetic. Make the magnet only affect magnetic blocks.
-* (Later: We'll have powerful magnets that can attract at a range of 2 blocks. We'll add electromagnets that are only active when connected to charged wires.)
+* Add powerful magnets with a range of two cells. This requires driven movement toward the magnet when a magnetic body is not yet adjacent.
+* Add electromagnets that are active only while connected to charged wires.
 
 ## Development guidelines
 

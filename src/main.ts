@@ -2,8 +2,9 @@ import "./styles.css";
 
 import { CanvasRenderer } from "./render/canvas-renderer";
 import type { GridCell, GridEdge } from "./render/canvas-renderer";
+import { drawTile } from "./render/tile-renderer";
 import { Simulation } from "./simulation/simulation";
-import { TileKind } from "./simulation/tile";
+import { Direction, TileKind } from "./simulation/tile";
 import { World } from "./simulation/world";
 
 function requiredElement<T extends HTMLElement>(id: string): T {
@@ -45,6 +46,7 @@ const tickCounter = requiredElement<HTMLSpanElement>("tick-counter");
 const coordinates = requiredElement<HTMLDivElement>("coordinates");
 
 let selectedKind = TileKind.Sand;
+let selectedOrientation = Direction.Up;
 let selectedTool: "tile" | "weld" = "tile";
 let temporaryWeldActive = false;
 let activePointerId: number | null = null;
@@ -76,7 +78,11 @@ function refreshPointerHover(): void {
   if (selectedTool === "weld") {
     renderer.setHoverEdge(hoveredEdge);
   } else {
-    renderer.setHover(hoveredCell);
+    renderer.setHover(
+      hoveredCell,
+      selectedKind,
+      selectedKind === TileKind.Magnet ? selectedOrientation : Direction.Up,
+    );
   }
   coordinates.textContent = hoveredCell === null
     ? "X --   Y --"
@@ -91,13 +97,34 @@ function selectTile(kind: TileKind): void {
   }
 
   selectedTool = "tile";
-  const selectedName =
-    kind === TileKind.Sand ? "sand" :
-    kind === TileKind.Stone ? "stone" :
-    "platform";
   for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
-    item.classList.toggle("selected", item.dataset.tile === selectedName);
+    item.classList.toggle("selected", item.dataset.tile === String(kind));
   }
+  refreshPointerHover();
+}
+
+function renderPalettePreviews(): void {
+  for (const preview of sidebarControls.querySelectorAll<HTMLCanvasElement>(".tile-preview")) {
+    const kind = Number(preview.dataset.tilePreview) as TileKind;
+    const context = preview.getContext("2d");
+    if (context === null) {
+      throw new Error("Canvas 2D is not supported by this browser");
+    }
+    context.clearRect(0, 0, preview.width, preview.height);
+    drawTile(
+      context,
+      0,
+      0,
+      preview.width,
+      kind,
+      kind === TileKind.Magnet ? selectedOrientation : Direction.Up,
+    );
+  }
+}
+
+function setSelectedOrientation(orientation: Direction): void {
+  selectedOrientation = orientation;
+  renderPalettePreviews();
   refreshPointerHover();
 }
 
@@ -128,10 +155,17 @@ function editCellLine(from: GridCell, to: GridCell, erase: boolean): void {
   const stepY = from.y < to.y ? 1 : -1;
   let error = deltaX - deltaY;
   let changed = false;
+  const orientation = selectedKind === TileKind.Magnet ? selectedOrientation : Direction.Up;
 
   while (true) {
-    if (world.kindAt(x, y) !== kind) {
-      world.place(x, y, kind);
+    if (
+      world.kindAt(x, y) !== kind ||
+      (
+        kind !== TileKind.Empty &&
+        world.orientationAt(x, y) !== orientation
+      )
+    ) {
+      world.place(x, y, kind, orientation);
       changed = true;
     }
     if (x === to.x && y === to.y) {
@@ -169,14 +203,13 @@ function edgesMatch(first: GridEdge | null, second: GridEdge): boolean {
 
 sidebarControls.addEventListener("click", (event) => {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".palette-item");
-  const tileName = button?.dataset.tile;
-  // TODO refactor so we don't need to add 2 lines here every time we add a tile type.
-  if (tileName === "sand") {
-    selectTile(TileKind.Sand);
-  } else if (tileName === "stone") {
-    selectTile(TileKind.Stone);
-  } else if (tileName === "platform") {
-    selectTile(TileKind.Platform);
+  const tileKind = Number(button?.dataset.tile);
+  if (
+    Number.isInteger(tileKind) &&
+    tileKind >= TileKind.Stone &&
+    tileKind <= TileKind.Metal
+  ) {
+    selectTile(tileKind as TileKind);
   } else if (button?.dataset.tool === "weld") {
     selectWeldTool();
   }
@@ -290,6 +323,28 @@ document.addEventListener("keydown", (event) => {
   ) {
     return;
   }
+  if (selectedTool === "tile" && selectedKind === TileKind.Magnet && !running) {
+    let orientation: Direction | null = null;
+    if (event.code === "KeyQ") {
+      orientation = ((selectedOrientation + 3) & 3) as Direction;
+    } else if (event.code === "KeyE") {
+      orientation = ((selectedOrientation + 1) & 3) as Direction;
+    } else if (event.code === "KeyW") {
+      orientation = Direction.Up;
+    } else if (event.code === "KeyD") {
+      orientation = Direction.Right;
+    } else if (event.code === "KeyS") {
+      orientation = Direction.Down;
+    } else if (event.code === "KeyA") {
+      orientation = Direction.Left;
+    }
+    if (orientation !== null) {
+      event.preventDefault();
+      setSelectedOrientation(orientation);
+      return;
+    }
+  }
+
 
   if (event.code === "Space") {
     event.preventDefault();
@@ -305,6 +360,10 @@ document.addEventListener("keydown", (event) => {
     selectTile(TileKind.Stone);
   } else if (event.code === "Digit3") {
     selectTile(TileKind.Platform);
+  } else if (event.code === "Digit4") {
+    selectTile(TileKind.Magnet);
+  } else if (event.code === "Digit5") {
+    selectTile(TileKind.Metal);
   }
 });
 
@@ -345,4 +404,5 @@ function frame(currentTime: number): void {
 }
 
 updateTransportState();
+renderPalettePreviews();
 requestAnimationFrame(frame);

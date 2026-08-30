@@ -1,4 +1,4 @@
-import { TILE_DEFINITIONS, TileKind } from "./tile";
+import { directionX, directionY, TILE_DEFINITIONS, TileKind } from "./tile";
 import { World } from "./world";
 
 /**
@@ -14,6 +14,7 @@ export class Simulation {
   private readonly nextBodyMember: Int32Array;
   private readonly bodyFalls: Uint8Array;
   private readonly bodySlidesDiagonally: Uint8Array;
+  private readonly bodyAttracted: Uint8Array;
   private readonly horizontalMoves: Int8Array;
   private readonly jammedBodies: Uint8Array;
   private readonly destinationOwners: Int32Array;
@@ -29,6 +30,7 @@ export class Simulation {
     this.nextBodyMember = new Int32Array(world.cellCount);
     this.bodyFalls = new Uint8Array(world.cellCount);
     this.bodySlidesDiagonally = new Uint8Array(world.cellCount);
+    this.bodyAttracted = new Uint8Array(world.cellCount);
     this.horizontalMoves = new Int8Array(world.cellCount);
     this.jammedBodies = new Uint8Array(world.cellCount);
     this.destinationOwners = new Int32Array(world.cellCount);
@@ -40,6 +42,7 @@ export class Simulation {
 
   step(): number {
     this.collectBodies();
+    this.collectMagneticAttraction();
     this.chooseMovements();
     this.resolveDestinationConflicts();
 
@@ -95,6 +98,47 @@ export class Simulation {
     }
   }
 
+  private collectMagneticAttraction(): void {
+    this.bodyAttracted.fill(0);
+    for (let magnet = 0; magnet < this.world.cellCount; magnet += 1) {
+      const magnetDefinition = TILE_DEFINITIONS[this.world.kindAtIndex(magnet)];
+      if (magnetDefinition.attractionRange === 0) {
+        continue;
+      }
+
+      const orientation = this.world.orientationAtIndex(magnet);
+      const stepX = directionX(orientation);
+      const stepY = directionY(orientation);
+      const magnetX = magnet % this.world.width;
+      const magnetY = Math.floor(magnet / this.world.width);
+      for (let distance = 1; distance <= magnetDefinition.attractionRange; distance += 1) {
+        const targetX = magnetX + stepX * distance;
+        const targetY = magnetY + stepY * distance;
+        if (
+          targetX < 0 ||
+          targetX >= this.world.width ||
+          targetY < 0 ||
+          targetY >= this.world.height
+        ) {
+          break;
+        }
+
+        const target = targetY * this.world.width + targetX;
+        const targetKind = this.world.kindAtIndex(target);
+        if (targetKind === TileKind.Empty) {
+          continue;
+        }
+        if (
+          TILE_DEFINITIONS[targetKind].magnetic &&
+          this.bodyRoots[target] !== this.bodyRoots[magnet]
+        ) {
+          this.bodyAttracted[this.bodyRoots[target] ?? -1] = 1;
+        }
+        break;
+      }
+    }
+  }
+
   private chooseMovements(): void {
     this.horizontalMoves.fill(2);
     this.jammedBodies.fill(0);
@@ -105,7 +149,7 @@ export class Simulation {
       if ((this.bodyHeads[root] ?? -1) < 0) {
         continue;
       }
-      if (this.bodyFalls[root] === 0) {
+      if (this.bodyFalls[root] === 0 || this.bodyAttracted[root] === 1) {
         this.jammedBodies[root] = 1;
         continue;
       }

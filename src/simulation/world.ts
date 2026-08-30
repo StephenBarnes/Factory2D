@@ -1,4 +1,4 @@
-import { TILE_DEFINITIONS, TileKind } from "./tile";
+import { Direction, oppositeDirection, TILE_DEFINITIONS, TileKind } from "./tile";
 
 export interface Tile {
   readonly kind: TileKind;
@@ -12,6 +12,7 @@ export class World {
 
   private readonly kinds: Uint8Array;
   private readonly ids: Uint32Array;
+  private readonly orientations: Uint8Array;
   private nextTileId = 1;
   private readonly rightWelds: Uint8Array;
   private readonly downWelds: Uint8Array;
@@ -26,6 +27,7 @@ export class World {
     this.cellCount = width * height;
     this.kinds = new Uint8Array(this.cellCount);
     this.ids = new Uint32Array(this.cellCount);
+    this.orientations = new Uint8Array(this.cellCount);
     this.rightWelds = new Uint8Array(this.cellCount);
     this.downWelds = new Uint8Array(this.cellCount);
   }
@@ -37,6 +39,10 @@ export class World {
   idAt(x: number, y: number): number {
     return this.ids[this.indexOf(x, y)] ?? 0;
   }
+  orientationAt(x: number, y: number): Direction {
+    return this.orientations[this.indexOf(x, y)] as Direction;
+  }
+
 
   tileAt(x: number, y: number): Tile {
     const index = this.indexOf(x, y);
@@ -56,10 +62,7 @@ export class World {
     const first = this.indexOf(x1, y1);
     const second = this.indexOf(x2, y2);
     this.weldStorage(first, second);
-    return (
-      TILE_DEFINITIONS[this.kinds[first] as TileKind].weldable &&
-      TILE_DEFINITIONS[this.kinds[second] as TileKind].weldable
-    );
+    return this.canWeldIndices(first, second);
   }
 
   setWeld(x1: number, y1: number, x2: number, y2: number, welded: boolean): boolean {
@@ -67,13 +70,7 @@ export class World {
     const second = this.indexOf(x2, y2);
     const storage = this.weldStorage(first, second);
 
-    if (
-      welded &&
-      (
-        !TILE_DEFINITIONS[this.kinds[first] as TileKind].weldable ||
-        !TILE_DEFINITIONS[this.kinds[second] as TileKind].weldable
-      )
-    ) {
+    if (welded && !this.canWeldIndices(first, second)) {
       return false;
     }
 
@@ -86,14 +83,26 @@ export class World {
   }
 
 
-  place(x: number, y: number, kind: TileKind): number {
+  place(
+    x: number,
+    y: number,
+    kind: TileKind,
+    orientation: Direction = Direction.Up,
+  ): number {
     const index = this.indexOf(x, y);
+    if (!Number.isInteger(orientation) || orientation < Direction.Up || orientation > Direction.Left) {
+      throw new RangeError(`Invalid tile orientation ${orientation}`);
+    }
     if (kind === TileKind.Empty) {
       this.clearIndex(index);
       return 0;
     }
 
     if (this.kinds[index] === kind) {
+      if (this.orientations[index] !== orientation) {
+        this.orientations[index] = orientation;
+        this.clearDisallowedWeldsAtIndex(index);
+      }
       return this.ids[index] ?? 0;
     }
     this.clearWeldsAtIndex(index);
@@ -102,12 +111,14 @@ export class World {
     this.nextTileId += 1;
     this.kinds[index] = kind;
     this.ids[index] = id;
+    this.orientations[index] = orientation;
     return id;
   }
 
   clear(): void {
     this.kinds.fill(TileKind.Empty);
     this.ids.fill(0);
+    this.orientations.fill(Direction.Up);
     this.rightWelds.fill(0);
     this.downWelds.fill(0);
   }
@@ -125,6 +136,7 @@ export class World {
 
     this.kinds.set(source.kinds);
     this.ids.set(source.ids);
+    this.orientations.set(source.orientations);
     this.rightWelds.set(source.rightWelds);
     this.downWelds.set(source.downWelds);
     this.nextTileId = source.nextTileId;
@@ -134,6 +146,11 @@ export class World {
     this.assertIndex(index);
     return this.kinds[index] as TileKind;
   }
+  orientationAtIndex(index: number): Direction {
+    this.assertIndex(index);
+    return this.orientations[index] as Direction;
+  }
+
   hasRightWeldAtIndex(index: number): boolean {
     this.assertIndex(index);
     return index % this.width < this.width - 1 && this.rightWelds[index] === 1;
@@ -164,10 +181,12 @@ export class World {
       const destination = source + this.width + horizontalMove;
       this.kinds[destination] = this.kinds[source] ?? TileKind.Empty;
       this.ids[destination] = this.ids[source] ?? 0;
+      this.orientations[destination] = this.orientations[source] ?? Direction.Up;
       this.rightWelds[destination] = this.rightWelds[source] ?? 0;
       this.downWelds[destination] = this.downWelds[source] ?? 0;
       this.kinds[source] = TileKind.Empty;
       this.ids[source] = 0;
+      this.orientations[source] = Direction.Up;
       this.rightWelds[source] = 0;
       this.downWelds[source] = 0;
       movementCount += 1;
@@ -207,6 +226,63 @@ export class World {
     throw new RangeError("A weld requires two orthogonally adjacent cells");
   }
 
+  private canWeldIndices(first: number, second: number): boolean {
+    const difference = second - first;
+    let firstSide: Direction;
+    if (difference === 1 && first % this.width < this.width - 1) {
+      firstSide = Direction.Right;
+    } else if (difference === -1 && second % this.width < this.width - 1) {
+      firstSide = Direction.Left;
+    } else if (difference === this.width) {
+      firstSide = Direction.Down;
+    } else if (difference === -this.width) {
+      firstSide = Direction.Up;
+    } else {
+      throw new RangeError("A weld requires two orthogonally adjacent cells");
+    }
+
+    const firstDefinition = TILE_DEFINITIONS[this.kinds[first] as TileKind];
+    const secondDefinition = TILE_DEFINITIONS[this.kinds[second] as TileKind];
+    const secondSide = oppositeDirection(firstSide);
+    return (
+      (firstDefinition.weldableSides & (1 << firstSide)) !== 0 &&
+      (secondDefinition.weldableSides & (1 << secondSide)) !== 0 &&
+      (!firstDefinition.excludesFacingWeld || this.orientations[first] !== firstSide) &&
+      (!secondDefinition.excludesFacingWeld || this.orientations[second] !== secondSide)
+    );
+  }
+
+  private clearDisallowedWeldsAtIndex(index: number): void {
+    if (
+      index % this.width < this.width - 1 &&
+      this.rightWelds[index] === 1 &&
+      !this.canWeldIndices(index, index + 1)
+    ) {
+      this.rightWelds[index] = 0;
+    }
+    if (
+      index % this.width > 0 &&
+      this.rightWelds[index - 1] === 1 &&
+      !this.canWeldIndices(index - 1, index)
+    ) {
+      this.rightWelds[index - 1] = 0;
+    }
+    if (
+      index < this.cellCount - this.width &&
+      this.downWelds[index] === 1 &&
+      !this.canWeldIndices(index, index + this.width)
+    ) {
+      this.downWelds[index] = 0;
+    }
+    if (
+      index >= this.width &&
+      this.downWelds[index - this.width] === 1 &&
+      !this.canWeldIndices(index - this.width, index)
+    ) {
+      this.downWelds[index - this.width] = 0;
+    }
+  }
+
   private clearWeldsAtIndex(index: number): void {
     this.rightWelds[index] = 0;
     this.downWelds[index] = 0;
@@ -220,6 +296,7 @@ export class World {
 
   private clearIndex(index: number): void {
     this.kinds[index] = TileKind.Empty;
+    this.orientations[index] = Direction.Up;
     this.ids[index] = 0;
     this.clearWeldsAtIndex(index);
   }
