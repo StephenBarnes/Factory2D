@@ -4,64 +4,54 @@
 
 This is planned to be a game similar to a 2D Infinifactory. The game is a series of one-screen puzzles, where the player places square 2D tiles/blocks on a grid to accomplish some goal.
 
-At each line between two non-empty blocks, they can be either welded together, or separate. Welded groups of blocks always move as one group. The simulation runs in discrete time steps, and blocks move in discrete one-block increments. Blocks can only rotate in 90-degree increments. Some blocks have internal state. Blocks have different types, like stone or sand or pistons or conveyor belts or wires. This is a side view, so most unsupported blocks will fall down one space every one time step. No continuous-time or continuous-space physics.
+At each line between two non-empty blocks, they can be either welded together, or separate. Welded groups of blocks always move as one group. The simulation runs in discrete time steps, and blocks move in discrete one-block increments. Blocks can only rotate in 90-degree increments. Some blocks have internal state. Blocks have different types, like stone or sand or pistons or conveyor belts or wires. This is a side view, so unsupported blocks fall down one space every one time step. No continuous-time or continuous-space physics.
 
-Game flow: We show a main menu. The player selects a puzzle, which defines the initial screen and constraints, e.g. inputs and outputs and fixed terrain. They can select components to place from a list, or use keys and mousewheel. Left click places, right click removes tiles. We'll have several tools: tile changes, select/move, and weld tool. With the weld tool selected, left click welds, right click unwelds. When placing, they can rotate the component in 90-degree increments. Later additional conveniences like placing lines/rectangles, bulk weld/unweld, selection and moving. Each puzzle defines the fixed terrain, and which components are available, and prices for those components which are used to score solutions. The player presses a button to run/play the simulation and check behavior, with options to pause, step once, control speed, or reset to state before running.
+Planned game flow: We show a main menu. The player selects a puzzle, which defines the initial screen and constraints, e.g. inputs and outputs, fixed terrain, player-modifiable region. Player can select components; left click places, right click removes. They can also select a weld tool or a selection tool. With the weld tool, left click welds, right click unwelds. When placing, they can rotate the component in 90-degree increments. Later additional conveniences like placing lines/rectangles, bulk weld/unweld, selection and moving. Each puzzle defines fixed terrain, and which components are available, and prices for those components which are used to score solutions. The player presses a button to run/play the simulation and check behavior, with options to pause, step once, control speed, or reset to the state before running.
 
-Examples of components:
-* Solid blocks.
-* Wire blocks which transmit voltage to other wire blocks welded to them. Not a boolean value, but an integer or float, so signals can be sent and processed.
-* Furnace blocks that transform one neighbor cell into a different one (e.g. ore -> iron, sand -> glass) after a delay.
-* Conveyor belts, which apply a clockwise or counterclockwise force to their 4 neighbor blocks. For example a conveyor belt placed on a floor will try to roll in one direction, and try to push the platform in the other direction, unless it's welded onto the platform.
+Implemented components:
+* Solid blocks - can have downward gravity, diagonal gravity (sand), can be weldable on some sides, can be magnetic.
+* Magnets - attract a block in the direction they're facing.
+
+Planned components:
+* Wire blocks which transmit voltage to other wire blocks welded to them. Voltage is a float, so signals can be transmitted.
+* Furnace blocks that transform one neighbor cell into a different one after a delay: sand to glass, ore to metal.
+* Conveyor belts apply a clockwise or counterclockwise force to their 4 neighbor blocks. A conveyor placed on a floor will try to roll in one direction, and try to push the platform in the other direction, unless it's welded onto the platform.
 * Welders and splitters - weld or unweld the 3 blocks above them.
 * Pistons - 1 block which expands to 2 blocks when given a signal, pushing things around.
-* Sensors that emit a signal if they have a neighboring block in a certain direction. Or sensors that detect pushing force from a direction.
-* Electrical components like logic gates, delays, diodes, brushes.
-* Magnets that pull blocks closer.
-* Assemblers that convert a group of blocks welded in a specific way into one block. For example iron and copper blocks welded in a specific way are converted to a battery block.
-* A flipper: attaches to one block, then flips the entire connected/welded group of blocks around that line horizontally or vertically, if it would not collide.
-* Laser splitter: splits everything in a line. Welder variants, e.g. welding together 2 blocks in a straight line on one side.
-* Configurable components where the player can enter a number in a text box. For example a configurable-delay repeater.
-* Maybe programmable components with a simple programming language.
-* Component that rotates a neighboring block, or group of connected blocks.
+* Sensors that emit a signal if they have a neighboring block in a certain direction. Sensors that detect pushing force from a direction.
+* Electrical components like logic gates, delays, diodes, brush connectors.
+* Assemblers that convert a group of blocks welded in a specific way into one block. For example iron and copper blocks welded in a specific way are converted to a piston block.
+* Flipper: attaches to one block, then flips the entire connected/welded group of blocks around that line horizontally or vertically, if it would not collide/overlap other blocks.
+* Laser splitter: splits everything in a line.
+* Configurable components where the player can enter a number in a text box, e.g. a configurable-delay repeater.
+* Component that rotates a neighboring block or body around itself.
+* Circuit-board components with internal grids where mini-components can be placed to program their behavior.
 
 More concepts:
-* Some blocks like sand have a tendency to move diagonally down when downward falling is blocked.
-* Furnaces could have special behavior if said neighbor is surrounded by certain other neighbors. Or they could trigger a block to weld to neighbors after cooking it. Or there could be stages, e.g. ore -> iron -> steel, and to make iron you'd have to build a machine that deactivates the furnace (or pushes the iron aside) before it turns the iron into steel.
-* Each puzzle could have several test cases, e.g. with different timing of inputs.
-* Puzzles could include terrain that makes it harder to fit a solution, or components like teleporters, etc. For example the solution might require welding blocks together, but there's only one welder present on the map, so it must be reused in different ways.
-* Puzzles could include a wire input that switches on/off, and the solution must e.g. sort blocks into left vs right outputs dependent on the wire's charge.
-* Probably we introduce components gradually, as puzzles are completed. Each puzzle has a limited set of components available.
-* Puzzle inputs and outputs could be physically present on the map. For example a dispenser block dispenses ore, which must be smelted to iron, which is then delivered to a delivery block; level is won when delivery block has received 10 iron blocks. We could wire up the dispenser to a timer circuit shown in the level, or to a button that the player can press.
+* Furnaces could have special behavior if said neighbor is surrounded by certain other neighbors. Or they could trigger a block to weld to neighbors after cooking it. There could be stages, e.g. cookie dough -> cookie -> burnt cookie, creating timing challenges.
+* Each puzzle could have several test cases, with different timing of inputs.
+* Puzzles could include terrain that makes it harder to fit a solution, or pre-placed components like teleporters. The solution might require welding blocks together, but there's only one welder present on the map, so it must be reused in different ways.
+* Puzzles could include a wire input that switches on/off, and the solution must sort blocks into left vs right outputs dependent on the wire's charge.
+* We'll introduce components gradually, as puzzles are completed. Each puzzle has a limited set of components available.
+* Puzzle inputs and outputs will be physically present on the map. A dispenser block dispenses ore, which must be smelted to iron, which is then delivered to a delivery block; level is beaten when the delivery block has received enough iron blocks. We wire up the dispenser to a timer circuit physically present in the level, or to a button that the player can press.
 * We'll show a sidebar with all interactions relevant for a given puzzle.
-* Potentially later: Shareable puzzles and solutions. Sandbox and puzzle editor. Exporting solutions as GIFs.
+* Shareable puzzles and solutions. Sandbox and puzzle editor. Exporting solutions as GIFs.
 
 Example puzzles:
 * Given inputs, weld them together and use an assembler to make intermediates; then weld together those intermediates and use an assembler to make a final product.
 * Sort blocks into bins based on physical properties.
 * Build a 4-bit adder using wires and logic gates.
-* Build a 4-bit adder but no wires or logic gates are available - so you have to instead simulate it by pushing around blocks mechanically.
-* Mob farms - mobs are dispensed by a hive and move around according to rules, must be killed and processed.
+* Build a 4-bit adder without wires and logic gates, by pushing around blocks mechanically.
+* Mob farms - mobs are dispensed by a hive and move around according to rules, must be herded to a destination.
 * Depalletizing - dispenser gives a 5x5 group of welded iron blocks, which must be split up and transported to the delivery block.
 * Build a vehicle that picks up a block in one location and moves it to the target.
+* Tree farms - trees grow in irregular patterns; once grown high enough, their leaves must be burned off and their wood blocks unwelded and packaged for delivery.
 
-While the simulation has movement in sharp one-tile increments, we want to animate them moving. So the simulation loop is something like:
-* Every n frames, compute what happens in the next frame - a motion direction for each connected group of tiles.
-* Then for the next n frames, animate them moving or rotating.
-* Then repeat, computing new motion directions.
-We could do the simulation computation while the last update is still being animated.
-We'll have time settings to disable this for faster verification.
-
-We want simulation rules to be deterministic, consistent, and understandable/predictable.
-We'll write many small tests that simulate scenarios and check behavior.
-As a general rule, we should enforce that a component can only observe the state at the beginning of a cycle, and react to it by making a change that becomes visible at the end of the cycle. So nothing reacts instantly to something that happened in the same tick.
-
-For tiles with internal state, we likely want to keep stable tile IDs, so that a tile that moves can still keep the same data in-place. So probably the tile grid contains, in each cell, a tile type (empty, stone, etc.) plus optional ID indexing into an array of tile states.
-Each tile type could have bits for various properties: subject to gravity, can move diagonal-down, is magnetic, is conductive, is insulating (for later heat mechanics), is transparent (for laser mechanics or sensors), etc. So e.g. a magnet block would check whether a tile is magnetic to decide how to modify it.
-
-There may be some cases where desired behavior is not clear. For example, a group of welded blocks being pushed upward by one piston, and rightward by another. Or a 2x2 group of 4 pistons trying to push each other in a spiral. Or an object falling, but a piston tries to push it right. We need to decide how these cases should behave.
-Probably each component submits a force or attempt to push, and then we resolve conflicts by either jamming (preventing all movement), or by priority (pistons are higher priority than gravity).
-We need to allow a piston to push say 4 separate blocks in a row. If a driven body wants to move in a direction, but is blocked by some other body, it should try to push that body as well, causing many bodies in a row to be pushed in the same direction.
+While the simulation has movement in sharp one-tile increments, we want to animate them moving. So the loop is:
+* Every n frames, compute what happens in the next simulation step - a motion direction for each connected group of tiles.
+* For n frames, animate them moving or rotating from previous to new state.
+We could compute the simulation step while the last update is still being animated.
+We'll have time settings to disable animation for faster verification.
 
 ## Stack
 
@@ -72,9 +62,13 @@ We need to allow a piston to push say 4 separate blocks in a row. If a driven bo
 * Vitest with the Node environment for simulation tests.
 * Browser APIs for later audio and persistence: Web Audio API and localStorage/IndexedDB.
 
-We have no sprite assets. Tiles are drawn procedurally using Canvas 2D functions and colors defined on `TILE_DEFINITIONS`.
+Tiles are drawn procedurally using Canvas 2D functions and colors defined on `TILE_DEFINITIONS`.
 
 ### Simulation conventions
+
+We want simulation rules to be deterministic, consistent, and understandable/predictable.
+We'll write many small tests that simulate scenarios and check behavior.
+As a general rule, a component can only observe the state at the beginning of a cycle, and react to it by making a change that becomes visible at the end of the cycle. Nothing reacts instantly to something that happened in the same tick.
 
 * A world stores compact tile kinds separately from stable, nonzero tile IDs. Empty cells have ID 0.
 * Each tick has observation, intent resolution, and commit phases. Components only observe the start-of-tick state.
@@ -119,15 +113,15 @@ The first playable scaffold is implemented:
 
 ## Current TODOs
 
-* Minor: The component palette's tile images look pixelated; the actual game board's tiles look fine. Could we render the palette images as SVG? Or just render with a larger resolution.
+* The component palette's tile images look pixelated; the actual game board's tiles look fine. Could we render the palette images as SVG? Or render them with a larger resolution.
 * Bug with rendering connected bodies: Place 8 stone blocks a ring, with 1 empty space in the center. Weld them all together. Unweld one edge A. Then unweld a different edge B on the other side. Unwelding B causes the appearance of edge A to change. The problem is basically that we're drawing one path for the entire connected body's outline, and then adding a seam line for one unwelded edge, but it looks wrong because it's patched on afterwards. Really our outline paths should depend on local weld states / connectivity.
-* Rework the overall UI. Currently the grid is a small region of the screen, and there's no way to zoom in or pan. Instead, make the grid the background layer. Add the sidebars (palette, run/step/reset/clear, etc.) as panels floating on top of this. Start with the grid centered and zoomed in a way that allows seeing the whole grid with none of it hidden behind panels. Allow zooming the grid with mousewheel, and panning with arrow keys or RMB-drag on an empty region of the screen. Draw space outside the tile grid as black. Allow panning as long as the center of the screen is still over the tile grid (or any similar rule that ensures players don't accidentally get lost when panning and end up unable to find the grid again).
+* Rework the overall UI. Currently the grid is a small region of the screen, and there's no way to zoom in or pan; this will be a problem for larger puzzle maps later. Instead, make the grid the background layer. Add the sidebars (palette, run/step/reset/clear, etc.) as panels floating on top of this. Start with the grid centered and zoomed in a way that allows seeing the whole grid with none of it hidden behind panels. Allow zooming the grid with mousewheel, and panning with arrow keys or RMB-drag on an empty region of the screen. Draw space outside the tile grid as black. Allow panning as long as the center of the screen is still over the tile grid (or any similar rule that ensures players don't accidentally get lost when panning and end up unable to find the grid again).
 * Animate movement. Currently we draw each simulation step until the next simulation step, so blocks snap sharply to new positions. We should instead animate them moving between previous and next states. We could compute the next simulation step async over multiple frames of animation, or leave that as follow-up optimization.
 * Rendering optimization: currently outline `Path2D`s are rebuilt every frame. We should instead cache per-body paths keyed on world edits/ticks.
 
 ## Development guidelines
 
-Keep the simulation deterministic and independent of rendering.
+Keep the simulation deterministic and independent of rendering. Some information (e.g. list of connected bodies) can be shared.
 
 Handle unexpected undefineds loudly. When a lookup is logically guaranteed to succeed (e.g. checked indexed access under `noUncheckedIndexedAccess`), narrow it with `expectDefined` from `src/util/assert.ts` rather than a silent fallback (`?? default`, guarded `break`/`continue`). We want violated expectations to crash with a descriptive message during development, never to continue silently with wrong state. Reserve explicit fallbacks for cases where absence is genuinely valid.
 
