@@ -15,7 +15,12 @@ import {
 import type { PointerGesture } from "./render/pointer-gesture";
 import { deserializeBoard, serializeBoard } from "./simulation/board-export";
 import { Simulation } from "./simulation/simulation";
-import { Direction, TILE_DEFINITIONS, TileKind } from "./simulation/tile";
+import {
+  Direction,
+  orientationForKind,
+  TILE_DEFINITIONS,
+  TileKind,
+} from "./simulation/tile";
 import { World } from "./simulation/world";
 import { TileInspector } from "./ui/tile-inspector";
 
@@ -173,7 +178,7 @@ function refreshPointerHover(): void {
     renderer.setHover(
       hoveredCell,
       selectedKind,
-      selectedKind === TileKind.Magnet ? selectedOrientation : Direction.Up,
+      orientationForKind(selectedKind, selectedOrientation),
     );
   }
   coordinates.textContent = hoveredCell === null
@@ -236,7 +241,7 @@ function renderPalettePreviews(): void {
       (logicalHeight - tileSize) / 2,
       tileSize,
       kind,
-      TILE_DEFINITIONS[kind].usesOrientation ? selectedOrientation : Direction.Up,
+      orientationForKind(kind, selectedOrientation),
     );
   }
 }
@@ -280,9 +285,7 @@ function editCellLine(
   const stepY = from.y < to.y ? 1 : -1;
   let error = deltaX - deltaY;
   let changed = false;
-  const orientation = TILE_DEFINITIONS[selectedKind].usesOrientation
-    ? selectedOrientation
-    : Direction.Up;
+  const orientation = orientationForKind(selectedKind, selectedOrientation);
 
   while (true) {
     if (

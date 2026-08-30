@@ -85,7 +85,7 @@ The first playable scaffold is implemented:
 
 * A 20x14 editable Canvas 2D grid with procedural sand, falling stone, magnetic metal, directional magnets and sensor runes, circuit conduits, and fixed platform tiles.
 * A full-viewport black board layer behind responsive floating left and bottom control panels. The initial view fits the entire grid into the unobscured region; mouse-wheel zoom stays anchored beneath the pointer; and arrow keys, middle-button drags, or Alt-right-button drags pan within bounds that keep the screen center over the grid.
-* Build controls for gap-free click-and-drag placement and removal, including Shift-left placement welded to every eligible occupied neighbor, drags that leave the grid, middle-click picking that preserves directional component orientation while middle-button drags pan, rotation and aiming, stepping, running, pausing, resetting, clearing, speed selection, and an animation toggle.
+* Build controls for gap-free click-and-drag placement and removal, including Shift-left placement welded to every eligible occupied neighbor, drags that leave the grid, middle-click picking that preserves directional component orientation while middle-button drags pan, metadata-driven rotation and aiming shared by palette previews, placement ghosts, and placed tiles, stepping, running, pausing, resetting, clearing, speed selection, and an animation toggle.
 * A separate weld tool for joining eligible occupied neighbors into rigid bodies and unwelding them, with gap-free fast-drag traversal, an immediate held-Control temporary override, and red invalid-edge feedback. Sand is not weldable, and magnets reject welds on their pointed side.
 * One shared procedural tile renderer for the Canvas board, placement preview, and component palette. Palette previews use density-aware, supersampled backing stores and redraw when browser zoom or display density changes. Each welded body renders from traced, inset rounded-slab outlines whose occupied neighbors merge only across locally welded edges, so unwelded cuts stay visually stable when another cut splits the body and closed seam ends receive rounded caps. Rendering includes a drop shadow, per-cell fills that remain locally stable when different tile kinds are joined, decorations clipped to the outline, and top-left highlight and bottom-right shade bevels. Diagonally touching cells render as a rounded pinch. Per-body cells and `Path2D` outlines are cached across animation frames and rebuilt only after world changes or board geometry changes.
 * Circuit-capable tiles render charge-colored traces only across welded circuit connections. Conduits have a dark center socket; sensor runes show their sensing direction and resolved charge.
@@ -94,7 +94,7 @@ The first playable scaffold is implemented:
 * Deterministic circuit resolution rebuilds welded networks from the start-of-tick state, sums their drivers, takes the sign, and commits the result before movement. Directional sensor runes contribute +1 when their pointed neighboring cell is occupied.
 * Simulation commits remain discrete and deterministic while stable tile IDs drive optional smooth eased rendering between the previous and current positions. Manual steps animate for 200 ms; automatic steps animate for up to 250 ms without delaying simulation ticks. A 60-ticks-per-second mode forces discrete rendering.
 * A responsive top-right cell inspector shows the hovered tile's stable ID, movement behavior, effective weldable sides, current welds, circuit connections and charge, magnetic state, orientation, and attraction direction/range. It refreshes after simulation commits even when the pointer remains stationary.
-* Deterministic tests for gravity chains, sand overhangs, welded and magnetically constrained bodies, circuit propagation and sensor directionality, conflicts, directional welding, orientation snapshots, boundaries, stable IDs, reset behavior, and pointer gesture classification.
+* Deterministic tests for gravity chains, sand overhangs, welded and magnetically constrained bodies, circuit propagation and sensor directionality, conflicts, directional welding, orientation snapshots and preview resolution, boundaries, stable IDs, reset behavior, and pointer gesture classification.
 * Board export and import controls round-trip deterministic, versioned JSON containing dimensions, simulation tick, non-empty tile kinds, non-up orientations, nonzero circuit charges, and each weld edge once. Imports validate the complete file before replacing the live board, support board sizes up to 400x300, and reconstruct fresh runtime tile IDs because IDs are intentionally excluded from the file.
 
 ## Code map
@@ -120,13 +120,11 @@ The first playable scaffold is implemented:
 * `tests/grid-drag.test.ts` — Continuous tile and weld drag traversal tests, including board-boundary clipping.
 * `tests/pointer-gesture.test.ts` — Pointer button, modifier, and drag-threshold regression tests.
 * `tests/tile-renderer.test.ts` — Rounded body-outline and mixed-kind fill stability regression tests.
+* `tests/tile.test.ts` — Directional and non-directional tile orientation resolution regression tests.
 * `vite.config.ts` — Vite configuration with Vitest's Node test environment.
 * `tsconfig.json` — Strict browser TypeScript and project build configuration.
 
 ## Current TODOs
-
-Bugs:
-* Minor UI bug: Using WASD to rotate correctly rotates the placed block, and the block sprite in the palette, but for the ghosts (under cursor), it rotates the magnet block but not the sensor rune. Fix it, and modify code so that we don't need to do per-block code additions when we add a new block that can rotate, so this bug doesn't recur.
 
 New components:
 * Add signed-ternary circuit components beyond the current +1 sensor source: distinct directional ports, inverter and other logic gates, delays, diodes, and non-welded charge-sensor runes. Gates should keep input and output networks separate and drive tick t+1 from values observed at tick t, so feedback remains deterministic. Add small tests.

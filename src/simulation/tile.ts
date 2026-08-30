@@ -185,3 +185,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationColor: "#d9c8ff",
   },
 };
+
+export function orientationForKind(kind: TileKind, orientation: Direction): Direction {
+  return TILE_DEFINITIONS[kind].usesOrientation ? orientation : Direction.Up;
+}
