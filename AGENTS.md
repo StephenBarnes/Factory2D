@@ -6,7 +6,7 @@ This is planned to be a game similar to a 2D Infinifactory. The game is a series
 
 At each line between two non-empty blocks, they can be either welded together, or separate. Welded groups of blocks always move as one group. The simulation runs in discrete time steps, and blocks move in discrete one-block increments. Blocks can only rotate in 90-degree increments. Some blocks have internal state. Blocks have different types, like stone or sand or pistons or conveyor belts or wires. This is a side view, so most unsupported blocks will fall down one space every one time step. No continuous-time or continuous-space physics.
 
-Game flow: We show a main menu. The player selects a puzzle, which defines the initial screen and constraints, e.g. inputs and outputs and fixed terrain. They can select components to place from a list, or use keys and mousewheel. Left click places, right click removes tiles. With no tile selected, left click welds, right click unwelds. When placing, they can rotate the component in 90-degree increments. Later additional conveniences like placing lines/rectangles, bulk weld/unweld, selection and moving. Each puzzle defines the fixed terrain, and which components are available, and prices for those components which are used to score solutions. The player presses a button to run/play the simulation and check behavior, with options to pause, step once, control speed, or reset to state before running.
+Game flow: We show a main menu. The player selects a puzzle, which defines the initial screen and constraints, e.g. inputs and outputs and fixed terrain. They can select components to place from a list, or use keys and mousewheel. Left click places, right click removes tiles. We'll have several tools: tile changes, select/move, and weld tool. With the weld tool selected, left click welds, right click unwelds. When placing, they can rotate the component in 90-degree increments. Later additional conveniences like placing lines/rectangles, bulk weld/unweld, selection and moving. Each puzzle defines the fixed terrain, and which components are available, and prices for those components which are used to score solutions. The player presses a button to run/play the simulation and check behavior, with options to pause, step once, control speed, or reset to state before running.
 
 Examples of components:
 * Solid blocks.
@@ -59,33 +59,52 @@ As a general rule, we should enforce that a component can only observe the state
 For tiles with internal state, we likely want to keep stable tile IDs, so that a tile that moves can still keep the same data in-place. So probably the tile grid contains, in each cell, a tile type (empty, stone, etc.) plus optional ID indexing into an array of tile states.
 Each tile type could have bits for various properties: subject to gravity, can move diagonal-down, is magnetic, is conductive, is insulating (for later heat mechanics), is transparent (for laser mechanics or sensors), etc. So e.g. a magnet block would check whether a tile is magnetic to decide how to modify it.
 
-There may be some difficult cases where it's hard to decide what behavior should be. For example, a group of welded blocks being pushed upward by one piston, and rightward by another. Or a group of 4 pistons trying to push each other. Or an object falling, but a piston tries to push it right. We need to decide how these cases should behave.
+There may be some cases where desired behavior is not clear. For example, a group of welded blocks being pushed upward by one piston, and rightward by another. Or a 2x2 group of 4 pistons trying to push each other in a spiral. Or an object falling, but a piston tries to push it right. We need to decide how these cases should behave.
 Probably each component submits a force or attempt to push, and then we resolve conflicts by either jamming (preventing all movement), or by priority (pistons are higher priority than gravity).
 We need to allow a piston to push say 4 separate blocks in a row. If a driven body wants to move in a direction, but is blocked by some other body, it should try to push that body as well, causing many bodies in a row to be pushed in the same direction.
 
 ## Stack
 
-Likely stack:
+* Strict TypeScript targeting modern browsers.
+* Framework-free HTML and CSS.
+* Canvas 2D rendered directly.
+* Vite for development server and production bundling.
+* Vitest with the Node environment for simulation tests.
+* Browser APIs for later audio and persistence: Web Audio API and localStorage/IndexedDB.
 
-* TypeScript
-* HTML/CSS
-* Canvas 2D
-* Web audio API
-* localStorage
-* A test runner. Jest? Vitest?
-* Maybe Vite? Unclear if we need this.
-* Maybe Phaser?
-* Maybe replace Canvas with PixiJS?
+We have no sprite assets. Tiles are drawn procedurally using Canvas 2D functions and colors defined on `TILE_DEFINITIONS`.
 
-We'll release this as a free online game.
+### Simulation conventions
 
-## Development State
+* A world stores compact tile kinds separately from stable, nonzero tile IDs. Empty cells have ID 0.
+* Each tick has observation, intent resolution, and commit phases. Components only observe the start-of-tick state.
+* Gravity moves an eligible body at most one cell per tick. World boundaries are solid.
+* Competing intents at the same priority jam rather than depending on iteration order. Driven movement will outrank passive gravity. Pushing will resolve the complete dependency chain before any body moves.
+* Rendering may interpolate committed steps, but interpolation never feeds back into simulation state.
 
-We have not started development yet.
+The current engine implements the observation and commit phases for straight-down gravity. Conflict resolution, welded bodies, pushing, and rotation remain future simulation work.
 
-When implementing anything, add brief notes here.
+## Development state
 
-## Development Guidelines
+The first playable scaffold is implemented:
+
+* A 20x14 editable Canvas 2D grid with procedural sand and stone tiles.
+* Build controls for placement, erasing, stepping, running, pausing, resetting, clearing, and speed selection.
+* A typed-array world with stable tile IDs and allocation-free per-tick gravity intent storage.
+* Deterministic tests for gravity, tick snapshots, boundaries, stable IDs, and reset behavior.
+
+Add notes here on anything implemented.
+
+## TODOs currently actionable
+
+* Add a list, in this file, of all code files with a brief description.
+* Allow placing/removing a row of tiles using click-and-drag.
+* Implement diagonal gravity for sand blocks. When a sand block has a block beneath it, check the 2 lower diagonals and attempt move. Prefer one side determined by parity of coordinate and time-step.
+* Implement a weld/unweld system.
+
+## Development guidelines
+
+Keep the simulation deterministic and independent of rendering.
 
 Prefer a new focused file for a new concern.
 
@@ -95,8 +114,10 @@ No legacy compatibility is required. We are in early development. Make clean cut
 
 After completing changes, commit them to `master` or the current worktree. Self-contained commits are preferred.
 
-If we need image assets to implement a feature, create a placeholder. We have a script at `~/bin/make-placeholder-sprite.py`. Probably use 32x32 px sprites for tiles. We could also make them SVGs. Should decide this.
+## Build and verification
 
-## Build and Verification
-
-Nothing yet. Put instructions here.
+* `npm install` installs dependencies.
+* `npm run dev` starts the Vite development server.
+* `npm run build` type-checks TypeScript and creates the production bundle in `dist/`.
+* `npm test` runs the deterministic simulation tests once.
+* `npm run test:watch` runs tests in watch mode.
