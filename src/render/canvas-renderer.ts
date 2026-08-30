@@ -1,4 +1,4 @@
-import { Direction, TileKind } from "../simulation/tile";
+import { Direction, TileKind, WeldSide } from "../simulation/tile";
 import type { World } from "../simulation/world";
 import { expectDefined } from "../util/assert";
 import type { GridCell, GridEdge, GridPoint } from "./grid-drag";
@@ -392,6 +392,8 @@ export class CanvasRenderer {
           y: 0,
           kind: TileKind.Empty,
           orientation: Direction.Up,
+          charge: 0,
+          circuitConnections: WeldSide.None,
           seamRight: false,
           seamDown: false,
         };
@@ -403,6 +405,14 @@ export class CanvasRenderer {
       cell.y = (index - x) / width;
       cell.kind = world.kindAtIndex(index);
       cell.orientation = world.orientationAtIndex(index);
+      cell.charge = world.chargeAtIndex(index);
+      cell.circuitConnections = WeldSide.None;
+      for (let value = Direction.Up; value <= Direction.Left; value += 1) {
+        const direction = value as Direction;
+        if (world.hasCircuitConnectionAtIndex(index, direction)) {
+          cell.circuitConnections |= 1 << direction;
+        }
+      }
 
       if (world.hasRightWeldAtIndex(index) && bodyStamps[index + 1] !== stamp) {
         bodyStamps[index + 1] = stamp;

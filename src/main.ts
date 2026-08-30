@@ -15,7 +15,7 @@ import {
 import type { PointerGesture } from "./render/pointer-gesture";
 import { deserializeBoard, serializeBoard } from "./simulation/board-export";
 import { Simulation } from "./simulation/simulation";
-import { Direction, TileKind } from "./simulation/tile";
+import { Direction, TILE_DEFINITIONS, TileKind } from "./simulation/tile";
 import { World } from "./simulation/world";
 import { TileInspector } from "./ui/tile-inspector";
 
@@ -236,7 +236,7 @@ function renderPalettePreviews(): void {
       (logicalHeight - tileSize) / 2,
       tileSize,
       kind,
-      kind === TileKind.Magnet ? selectedOrientation : Direction.Up,
+      TILE_DEFINITIONS[kind].usesOrientation ? selectedOrientation : Direction.Up,
     );
   }
 }
@@ -280,7 +280,9 @@ function editCellLine(
   const stepY = from.y < to.y ? 1 : -1;
   let error = deltaX - deltaY;
   let changed = false;
-  const orientation = selectedKind === TileKind.Magnet ? selectedOrientation : Direction.Up;
+  const orientation = TILE_DEFINITIONS[selectedKind].usesOrientation
+    ? selectedOrientation
+    : Direction.Up;
 
   while (true) {
     if (
@@ -355,7 +357,7 @@ sidebarControls.addEventListener("click", (event) => {
   if (
     Number.isInteger(tileKind) &&
     tileKind >= TileKind.Stone &&
-    tileKind <= TileKind.Metal
+    tileKind <= TileKind.Sensor
   ) {
     selectTile(tileKind as TileKind);
   } else if (button?.dataset.tool === "weld") {
@@ -560,7 +562,7 @@ function finishPointerGesture(event: PointerEvent): void {
     const kind = world.kindAt(pendingPickCell.x, pendingPickCell.y);
     if (kind !== TileKind.Empty) {
       selectTile(kind);
-      if (kind === TileKind.Magnet) {
+      if (TILE_DEFINITIONS[kind].usesOrientation) {
         setSelectedOrientation(
           world.orientationAt(pendingPickCell.x, pendingPickCell.y),
         );
@@ -635,7 +637,7 @@ document.addEventListener("keydown", (event) => {
     refreshPointerHover();
     return;
   }
-  if (selectedTool === "tile" && selectedKind === TileKind.Magnet && !running) {
+  if (selectedTool === "tile" && TILE_DEFINITIONS[selectedKind].usesOrientation && !running) {
     let orientation: Direction | null = null;
     if (event.code === "KeyQ") {
       orientation = ((selectedOrientation + 3) & 3) as Direction;
@@ -677,6 +679,10 @@ document.addEventListener("keydown", (event) => {
     selectTile(TileKind.Magnet);
   } else if (event.code === "Digit5") {
     selectTile(TileKind.Metal);
+  } else if (event.code === "Digit6") {
+    selectTile(TileKind.Conduit);
+  } else if (event.code === "Digit7") {
+    selectTile(TileKind.Sensor);
   }
 });
 

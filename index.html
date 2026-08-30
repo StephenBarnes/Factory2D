@@ -57,6 +57,16 @@
             <span><strong>Metal</strong><small>Magnetic structural block</small></span>
             <kbd>5</kbd>
           </button>
+          <button class="palette-item" data-tile="6" type="button">
+            <canvas class="tile-preview" data-tile-preview="6" width="32" height="32"></canvas>
+            <span><strong>Conduit</strong><small>Shares charge across welded circuit blocks</small></span>
+            <kbd>6</kbd>
+          </button>
+          <button class="palette-item" data-tile="7" type="button">
+            <canvas class="tile-preview" data-tile-preview="7" width="32" height="32"></canvas>
+            <span><strong>Sensor Rune</strong><small>Emits +1 when its pointed side is occupied</small></span>
+            <kbd>7</kbd>
+          </button>
         </div>
         <div class="instructions">
           <p><span>PLACE / WELD</span> Left click or drag</p>
@@ -64,7 +74,7 @@
           <p><span>REMOVE / UNWELD</span> Right click or drag</p>
           <p><span>PAN</span> Arrows, middle-drag, or Alt + right-drag</p>
           <p><span>ZOOM</span> Mouse wheel</p>
-          <p><span>ROTATE / AIM MAGNET</span> Q / E or WASD</p>
+          <p><span>ROTATE / AIM</span> Q / E or WASD</p>
           <p><span>RUN / PAUSE</span> Space</p>
           <p><span>STEP</span> N</p>
         </div>
@@ -97,6 +107,14 @@
           <div>
             <dt>WELDS</dt>
             <dd data-inspector-welds></dd>
+          </div>
+          <div data-inspector-circuit-row>
+            <dt>CIRCUIT</dt>
+            <dd data-inspector-circuit></dd>
+          </div>
+          <div data-inspector-charge-row>
+            <dt>CHARGE</dt>
+            <dd data-inspector-charge></dd>
           </div>
           <div>
             <dt>MAGNETIC</dt>

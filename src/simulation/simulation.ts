@@ -1,5 +1,7 @@
-import { directionX, directionY, TILE_DEFINITIONS, TileKind } from "./tile";
+import { chargeFromSum } from "./circuit";
+import { Direction, directionX, directionY, TILE_DEFINITIONS, TileKind } from "./tile";
 import { World } from "./world";
+import { expectDefined } from "../util/assert";
 
 /**
  * Advances a world in discrete ticks. Every movement decision is collected from
@@ -21,6 +23,9 @@ export class Simulation {
   private readonly dependencyDependents: Int32Array;
   private readonly nextDependency: Int32Array;
   private readonly blockedBodyQueue: Int32Array;
+  private readonly circuitRoots: Int32Array;
+  private readonly circuitDriveSums: Int32Array;
+  private readonly nextCircuitCharges: Int8Array;
 
   constructor(world: World) {
     this.world = world;
@@ -36,9 +41,13 @@ export class Simulation {
     this.dependencyDependents = new Int32Array(world.cellCount);
     this.nextDependency = new Int32Array(world.cellCount);
     this.blockedBodyQueue = new Int32Array(world.cellCount);
+    this.circuitRoots = new Int32Array(world.cellCount);
+    this.circuitDriveSums = new Int32Array(world.cellCount);
+    this.nextCircuitCharges = new Int8Array(world.cellCount);
   }
 
   step(): number {
+    this.resolveCircuits();
     this.collectWeldedBodies();
     this.connectMagneticallyAttractedBodies();
     this.collectBodyMembers();
@@ -53,6 +62,92 @@ export class Simulation {
   resetTo(snapshot: World): void {
     this.world.copyFrom(snapshot);
     this.tick = 0;
+  }
+
+  private resolveCircuits(): void {
+    this.circuitRoots.fill(-1);
+    this.circuitDriveSums.fill(0);
+    this.nextCircuitCharges.fill(0);
+
+    for (let index = 0; index < this.world.cellCount; index += 1) {
+      if (TILE_DEFINITIONS[this.world.kindAtIndex(index)].circuitPorts !== 0) {
+        this.circuitRoots[index] = index;
+      }
+    }
+
+    for (let index = 0; index < this.world.cellCount; index += 1) {
+      if (expectDefined(this.circuitRoots[index], "circuit root marker") < 0) {
+        continue;
+      }
+      if (this.world.hasCircuitConnectionAtIndex(index, Direction.Right)) {
+        this.unionCircuitTiles(index, index + 1);
+      }
+      if (this.world.hasCircuitConnectionAtIndex(index, Direction.Down)) {
+        this.unionCircuitTiles(index, index + this.world.width);
+      }
+    }
+
+    for (let index = 0; index < this.world.cellCount; index += 1) {
+      if (this.world.kindAtIndex(index) !== TileKind.Sensor) {
+        continue;
+      }
+
+      const orientation = this.world.orientationAtIndex(index);
+      const x = index % this.world.width;
+      const y = (index - x) / this.world.width;
+      const sensedX = x + directionX(orientation);
+      const sensedY = y + directionY(orientation);
+      if (
+        sensedX >= 0 &&
+        sensedX < this.world.width &&
+        sensedY >= 0 &&
+        sensedY < this.world.height &&
+        this.world.kindAtIndex(sensedY * this.world.width + sensedX) !== TileKind.Empty
+      ) {
+        const root = this.findCircuitRoot(index);
+        this.circuitDriveSums[root] =
+          expectDefined(this.circuitDriveSums[root], "circuit drive sum") + 1;
+      }
+    }
+
+    for (let index = 0; index < this.world.cellCount; index += 1) {
+      if (expectDefined(this.circuitRoots[index], "circuit root marker") < 0) {
+        continue;
+      }
+      const root = this.findCircuitRoot(index);
+      this.nextCircuitCharges[index] = chargeFromSum(
+        expectDefined(this.circuitDriveSums[root], "circuit drive sum"),
+      );
+    }
+    this.world.applyCircuitCharges(this.nextCircuitCharges);
+  }
+
+  private unionCircuitTiles(first: number, second: number): void {
+    const firstRoot = this.findCircuitRoot(first);
+    const secondRoot = this.findCircuitRoot(second);
+    if (firstRoot === secondRoot) {
+      return;
+    }
+    if (firstRoot < secondRoot) {
+      this.circuitRoots[secondRoot] = firstRoot;
+    } else {
+      this.circuitRoots[firstRoot] = secondRoot;
+    }
+  }
+
+  private findCircuitRoot(index: number): number {
+    let root = index;
+    let parent = expectDefined(this.circuitRoots[root], "circuit parent");
+    while (parent !== root) {
+      root = parent;
+      parent = expectDefined(this.circuitRoots[root], "circuit parent");
+    }
+    while (index !== root) {
+      const nextIndex = expectDefined(this.circuitRoots[index], "circuit parent");
+      this.circuitRoots[index] = root;
+      index = nextIndex;
+    }
+    return root;
   }
 
   private collectWeldedBodies(): void {

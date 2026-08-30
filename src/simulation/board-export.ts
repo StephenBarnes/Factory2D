@@ -1,8 +1,9 @@
+import type { Charge } from "./circuit";
 import { Direction, TileKind } from "./tile";
 import { World } from "./world";
 
 const FORMAT_NAME = "factory2d-board";
-const FORMAT_VERSION = 1;
+const FORMAT_VERSION = 2;
 const MAX_BOARD_WIDTH = 400;
 const MAX_BOARD_HEIGHT = 300;
 
@@ -13,6 +14,8 @@ const TILE_KIND_NAMES: Readonly<Record<TileKind, string>> = {
   [TileKind.Platform]: "platform",
   [TileKind.Magnet]: "magnet",
   [TileKind.Metal]: "metal",
+  [TileKind.Conduit]: "conduit",
+  [TileKind.Sensor]: "sensor",
 };
 
 const TILE_KINDS_BY_NAME: Readonly<Record<string, TileKind | undefined>> = {
@@ -21,6 +24,8 @@ const TILE_KINDS_BY_NAME: Readonly<Record<string, TileKind | undefined>> = {
   platform: TileKind.Platform,
   magnet: TileKind.Magnet,
   metal: TileKind.Metal,
+  conduit: TileKind.Conduit,
+  sensor: TileKind.Sensor,
 };
 
 const DIRECTION_NAMES: Readonly<Record<Direction, string>> = {
@@ -42,6 +47,7 @@ interface ExportedTile {
   readonly y: number;
   readonly kind: string;
   readonly orientation?: string;
+  readonly charge?: Charge;
 }
 
 interface ExportedWeld {
@@ -81,6 +87,7 @@ export function serializeBoard(world: World, tick: number): string {
       }
 
       const orientation = world.orientationAt(x, y);
+      const charge = world.chargeAt(x, y);
       tiles.push({
         x,
         y,
@@ -88,6 +95,7 @@ export function serializeBoard(world: World, tick: number): string {
         ...(orientation === Direction.Up
           ? {}
           : { orientation: DIRECTION_NAMES[orientation] }),
+        ...(charge === 0 ? {} : { charge }),
       });
 
       if (x + 1 < world.width && world.isWelded(x, y, x + 1, y)) {
@@ -161,6 +169,10 @@ export function deserializeBoard(source: string): ImportedBoard {
     }
 
     world.place(x, y, kind, orientation);
+    if (tile.charge !== undefined) {
+      const charge = requireInteger(tile.charge, `Tile ${index} charge`, -1, 1) as Charge;
+      world.setCharge(x, y, charge);
+    }
     occupied[cellIndex] = 1;
   }
 

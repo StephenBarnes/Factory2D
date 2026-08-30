@@ -1,4 +1,6 @@
+import { isCharge, type Charge } from "./circuit";
 import { Direction, oppositeDirection, TILE_DEFINITIONS, TileKind } from "./tile";
+import { expectDefined } from "../util/assert";
 
 export interface Tile {
   readonly kind: TileKind;
@@ -13,6 +15,7 @@ export class World {
   private readonly kinds: Uint8Array;
   private readonly ids: Uint32Array;
   private readonly orientations: Uint8Array;
+  private readonly charges: Int8Array;
   private nextTileId = 1;
   private readonly rightWelds: Uint8Array;
   private readonly downWelds: Uint8Array;
@@ -29,6 +32,7 @@ export class World {
     this.kinds = new Uint8Array(this.cellCount);
     this.ids = new Uint32Array(this.cellCount);
     this.orientations = new Uint8Array(this.cellCount);
+    this.charges = new Int8Array(this.cellCount);
     this.rightWelds = new Uint8Array(this.cellCount);
     this.downWelds = new Uint8Array(this.cellCount);
   }
@@ -49,6 +53,10 @@ export class World {
     return this.orientations[this.indexOf(x, y)] as Direction;
   }
 
+  chargeAt(x: number, y: number): Charge {
+    return this.charges[this.indexOf(x, y)] as Charge;
+  }
+
 
   tileAt(x: number, y: number): Tile {
     const index = this.indexOf(x, y);
@@ -56,6 +64,44 @@ export class World {
       kind: this.kinds[index] as TileKind,
       id: this.ids[index] ?? 0,
     };
+  }
+
+  setCharge(x: number, y: number, charge: Charge): void {
+    const index = this.indexOf(x, y);
+    if (!isCharge(charge)) {
+      throw new RangeError(`Invalid circuit charge ${charge as number}`);
+    }
+    if (charge !== 0 && TILE_DEFINITIONS[this.kinds[index] as TileKind].circuitPorts === 0) {
+      throw new Error("Only circuit-connected tiles can hold a nonzero charge");
+    }
+    if (this.charges[index] !== charge) {
+      this.charges[index] = charge;
+      this.revisionValue += 1;
+    }
+  }
+
+  applyCircuitCharges(charges: Int8Array): void {
+    if (charges.length !== this.cellCount) {
+      throw new RangeError("Circuit charge buffer must match the world cell count");
+    }
+
+    let changed = false;
+    for (let index = 0; index < this.cellCount; index += 1) {
+      const charge = expectDefined(charges[index], "circuit charge");
+      if (!isCharge(charge)) {
+        throw new RangeError(`Invalid circuit charge ${charge}`);
+      }
+      if (charge !== 0 && TILE_DEFINITIONS[this.kinds[index] as TileKind].circuitPorts === 0) {
+        throw new Error(`Non-circuit tile at index ${index} cannot hold charge`);
+      }
+      if (this.charges[index] !== charge) {
+        this.charges[index] = charge;
+        changed = true;
+      }
+    }
+    if (changed) {
+      this.revisionValue += 1;
+    }
   }
   isWelded(x1: number, y1: number, x2: number, y2: number): boolean {
     const first = this.indexOf(x1, y1);
@@ -132,6 +178,55 @@ export class World {
   }
 
 
+  hasCircuitConnectionAtIndex(index: number, direction: Direction): boolean {
+    this.assertIndex(index);
+    const x = index % this.width;
+    let neighbor: number;
+    let welded: boolean;
+    switch (direction) {
+      case Direction.Up:
+        if (index < this.width) {
+          return false;
+        }
+        neighbor = index - this.width;
+        welded = this.downWelds[neighbor] === 1;
+        break;
+      case Direction.Right:
+        if (x >= this.width - 1) {
+          return false;
+        }
+        neighbor = index + 1;
+        welded = this.rightWelds[index] === 1;
+        break;
+      case Direction.Down:
+        if (index >= this.cellCount - this.width) {
+          return false;
+        }
+        neighbor = index + this.width;
+        welded = this.downWelds[index] === 1;
+        break;
+      case Direction.Left:
+        if (x === 0) {
+          return false;
+        }
+        neighbor = index - 1;
+        welded = this.rightWelds[neighbor] === 1;
+        break;
+      default:
+        throw new RangeError(`Invalid circuit direction ${direction as number}`);
+    }
+    if (!welded) {
+      return false;
+    }
+
+    const ownPorts = TILE_DEFINITIONS[this.kinds[index] as TileKind].circuitPorts;
+    const neighborPorts = TILE_DEFINITIONS[this.kinds[neighbor] as TileKind].circuitPorts;
+    return (
+      (ownPorts & (1 << direction)) !== 0 &&
+      (neighborPorts & (1 << oppositeDirection(direction))) !== 0
+    );
+  }
+
 
   place(
     x: number,
@@ -155,6 +250,7 @@ export class World {
     if (this.kinds[index] === kind) {
       if (this.orientations[index] !== orientation) {
         this.orientations[index] = orientation;
+        this.charges[index] = 0;
         this.clearDisallowedWeldsAtIndex(index);
         this.revisionValue += 1;
       }
@@ -166,6 +262,7 @@ export class World {
     this.nextTileId += 1;
     this.kinds[index] = kind;
     this.ids[index] = id;
+    this.charges[index] = 0;
     this.orientations[index] = orientation;
     this.revisionValue += 1;
     return id;
@@ -175,6 +272,7 @@ export class World {
     this.kinds.fill(TileKind.Empty);
     this.ids.fill(0);
     this.orientations.fill(Direction.Up);
+    this.charges.fill(0);
     this.rightWelds.fill(0);
     this.downWelds.fill(0);
     this.revisionValue += 1;
@@ -194,6 +292,7 @@ export class World {
     this.kinds.set(source.kinds);
     this.ids.set(source.ids);
     this.orientations.set(source.orientations);
+    this.charges.set(source.charges);
     this.rightWelds.set(source.rightWelds);
     this.downWelds.set(source.downWelds);
     this.nextTileId = source.nextTileId;
@@ -207,6 +306,11 @@ export class World {
   orientationAtIndex(index: number): Direction {
     this.assertIndex(index);
     return this.orientations[index] as Direction;
+  }
+
+  chargeAtIndex(index: number): Charge {
+    this.assertIndex(index);
+    return this.charges[index] as Charge;
   }
 
   hasRightWeldAtIndex(index: number): boolean {
@@ -240,11 +344,13 @@ export class World {
       this.kinds[destination] = this.kinds[source] ?? TileKind.Empty;
       this.ids[destination] = this.ids[source] ?? 0;
       this.orientations[destination] = this.orientations[source] ?? Direction.Up;
+      this.charges[destination] = expectDefined(this.charges[source], "moving tile charge");
       this.rightWelds[destination] = this.rightWelds[source] ?? 0;
       this.downWelds[destination] = this.downWelds[source] ?? 0;
       this.kinds[source] = TileKind.Empty;
       this.ids[source] = 0;
       this.orientations[source] = Direction.Up;
+      this.charges[source] = 0;
       this.rightWelds[source] = 0;
       this.downWelds[source] = 0;
       movementCount += 1;
@@ -358,6 +464,7 @@ export class World {
   private clearIndex(index: number): void {
     this.kinds[index] = TileKind.Empty;
     this.orientations[index] = Direction.Up;
+    this.charges[index] = 0;
     this.ids[index] = 0;
     this.clearWeldsAtIndex(index);
   }

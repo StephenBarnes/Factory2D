@@ -5,6 +5,8 @@ export const enum TileKind {
   Platform = 3,
   Magnet = 4,
   Metal = 5,
+  Conduit = 6,
+  Sensor = 7,
 }
 
 export const enum Direction {
@@ -29,6 +31,8 @@ export const enum TileDecorationStyle {
   Grains = 2,
   Magnet = 3,
   Metal = 4,
+  Conduit = 5,
+  Sensor = 6,
 }
 
 export interface TileDefinition {
@@ -36,6 +40,8 @@ export interface TileDefinition {
   readonly affectedByGravity: boolean;
   readonly weldableSides: WeldSide;
   readonly excludesFacingWeld: boolean;
+  readonly usesOrientation: boolean;
+  readonly circuitPorts: WeldSide;
   readonly slidesDiagonally: boolean;
   readonly magnetic: boolean;
   readonly attractionRange: number;
@@ -64,6 +70,8 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     slidesDiagonally: false,
     weldableSides: WeldSide.None,
     excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
     fill: "transparent",
@@ -77,6 +85,8 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
     fill: "#66717d",
@@ -90,6 +100,8 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     slidesDiagonally: true,
     weldableSides: WeldSide.None,
     excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
     fill: "#e7ad4f",
@@ -103,6 +115,8 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
     fill: "#56736b",
@@ -116,6 +130,8 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: true,
+    usesOrientation: true,
+    circuitPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 1,
     fill: "#b94b52",
@@ -129,11 +145,43 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.None,
     magnetic: true,
     attractionRange: 0,
     fill: "#718a9b",
     shadow: "#405767",
     decorationStyle: TileDecorationStyle.Metal,
     decorationColor: "#d5e1e7",
+  },
+  [TileKind.Conduit]: {
+    name: "Conduit",
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.All,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#69727b",
+    shadow: "#3b4249",
+    decorationStyle: TileDecorationStyle.Conduit,
+    decorationColor: "#162f4b",
+  },
+  [TileKind.Sensor]: {
+    name: "Sensor Rune",
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.All,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#675d77",
+    shadow: "#393345",
+    decorationStyle: TileDecorationStyle.Sensor,
+    decorationColor: "#d9c8ff",
   },
 };

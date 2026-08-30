@@ -62,6 +62,10 @@ export class TileInspector {
   private readonly movement: HTMLElement;
   private readonly weldable: HTMLElement;
   private readonly welds: HTMLElement;
+  private readonly circuitRow: HTMLElement;
+  private readonly circuit: HTMLElement;
+  private readonly chargeRow: HTMLElement;
+  private readonly charge: HTMLElement;
   private readonly magnetic: HTMLElement;
   private readonly attractionRow: HTMLElement;
   private readonly attraction: HTMLElement;
@@ -83,6 +87,10 @@ export class TileInspector {
     this.movement = requiredDescendant(root, "[data-inspector-movement]");
     this.weldable = requiredDescendant(root, "[data-inspector-weldable]");
     this.welds = requiredDescendant(root, "[data-inspector-welds]");
+    this.circuitRow = requiredDescendant(root, "[data-inspector-circuit-row]");
+    this.circuit = requiredDescendant(root, "[data-inspector-circuit]");
+    this.chargeRow = requiredDescendant(root, "[data-inspector-charge-row]");
+    this.charge = requiredDescendant(root, "[data-inspector-charge]");
     this.magnetic = requiredDescendant(root, "[data-inspector-magnetic]");
     this.attractionRow = requiredDescendant(root, "[data-inspector-attraction-row]");
     this.attraction = requiredDescendant(root, "[data-inspector-attraction]");
@@ -121,16 +129,26 @@ export class TileInspector {
       ? definition.slidesDiagonally ? "GRAVITY + DIAGONAL" : "GRAVITY"
       : "FIXED";
     this.magnetic.textContent = definition.magnetic ? "YES" : "NO";
-    this.orientationRow.hidden = definition.attractionRange === 0 && !definition.excludesFacingWeld;
+    this.orientationRow.hidden = !definition.usesOrientation;
     this.orientation.textContent = DIRECTION_NAMES[orientation];
     this.attractionRow.hidden = definition.attractionRange === 0;
     if (definition.attractionRange > 0) {
       this.attraction.textContent = `${DIRECTION_NAMES[orientation]} · ${definition.attractionRange} CELL`;
     }
+    const hasCircuit = definition.circuitPorts !== 0;
+    this.circuitRow.hidden = !hasCircuit;
+    this.chargeRow.hidden = !hasCircuit;
+    if (hasCircuit) {
+      const charge = this.world.chargeAt(position.x, position.y);
+      this.charge.textContent = charge < 0
+        ? "-1 · NEGATIVE"
+        : charge > 0 ? "+1 · POSITIVE" : "0 · NEUTRAL";
+    }
 
     let weldableDirections = "";
     let weldableSideCount = 0;
     let weldedDirections = "";
+    let circuitDirections = "";
     for (const direction of DIRECTIONS) {
       const sideIsWeldable = (definition.weldableSides & (1 << direction)) !== 0 &&
         (!definition.excludesFacingWeld || direction !== orientation);
@@ -148,11 +166,16 @@ export class TileInspector {
       ) {
         weldedDirections = appendDirection(weldedDirections, direction);
       }
+      const cellIndex = position.y * this.world.width + position.x;
+      if (this.world.hasCircuitConnectionAtIndex(cellIndex, direction)) {
+        circuitDirections = appendDirection(circuitDirections, direction);
+      }
     }
     this.weldable.textContent = weldableSideCount === DIRECTIONS.length
       ? "ALL"
       : weldableDirections || "NONE";
     this.welds.textContent = weldedDirections || "NONE";
+    this.circuit.textContent = circuitDirections || "ISOLATED";
   }
 
   private showMessage(name: string, position: string, message: string): void {

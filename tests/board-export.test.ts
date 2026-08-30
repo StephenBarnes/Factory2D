@@ -10,11 +10,13 @@ describe("board export", () => {
     world.place(2, 0, TileKind.Magnet, Direction.Left);
     world.place(0, 1, TileKind.Platform);
     world.place(1, 1, TileKind.Stone);
+    world.place(2, 1, TileKind.Conduit);
+    world.setCharge(2, 1, -1);
     world.setWeld(0, 1, 1, 1, true);
 
     expect(serializeBoard(world, 17)).toBe(`${JSON.stringify({
       format: "factory2d-board",
-      version: 1,
+      version: 2,
       width: 3,
       height: 2,
       tick: 17,
@@ -22,6 +24,7 @@ describe("board export", () => {
         { x: 2, y: 0, kind: "magnet", orientation: "left" },
         { x: 0, y: 1, kind: "platform" },
         { x: 1, y: 1, kind: "stone" },
+        { x: 2, y: 1, kind: "conduit", charge: -1 },
       ],
       welds: [
         { x: 0, y: 1, direction: "right" },
@@ -36,7 +39,7 @@ describe("board export", () => {
 
     expect(JSON.parse(serializeBoard(world, 0))).toEqual({
       format: "factory2d-board",
-      version: 1,
+      version: 2,
       width: 2,
       height: 1,
       tick: 0,
@@ -59,13 +62,14 @@ describe("board export", () => {
   it("imports exported dimensions, state, orientation, and welds", () => {
     const source = JSON.stringify({
       format: "factory2d-board",
-      version: 1,
+      version: 2,
       width: 2,
       height: 3,
       tick: 42,
       tiles: [
         { x: 0, y: 0, kind: "magnet", orientation: "left" },
         { x: 1, y: 0, kind: "metal" },
+        { x: 0, y: 1, kind: "sensor", orientation: "down", charge: 1 },
         { x: 1, y: 2, kind: "sand" },
       ],
       welds: [
@@ -81,6 +85,9 @@ describe("board export", () => {
     expect(imported.world.kindAt(0, 0)).toBe(TileKind.Magnet);
     expect(imported.world.orientationAt(0, 0)).toBe(Direction.Left);
     expect(imported.world.kindAt(1, 0)).toBe(TileKind.Metal);
+    expect(imported.world.kindAt(0, 1)).toBe(TileKind.Sensor);
+    expect(imported.world.orientationAt(0, 1)).toBe(Direction.Down);
+    expect(imported.world.chargeAt(0, 1)).toBe(1);
     expect(imported.world.orientationAt(1, 0)).toBe(Direction.Up);
     expect(imported.world.kindAt(1, 2)).toBe(TileKind.Sand);
     expect(imported.world.isWelded(0, 0, 1, 0)).toBe(true);
@@ -89,7 +96,7 @@ describe("board export", () => {
   it("rejects duplicate tiles without returning a partial world", () => {
     const source = JSON.stringify({
       format: "factory2d-board",
-      version: 1,
+      version: 2,
       width: 1,
       height: 1,
       tick: 0,
@@ -108,7 +115,7 @@ describe("board export", () => {
   it("rejects welds that point outside the board or join incompatible tiles", () => {
     const outside = JSON.stringify({
       format: "factory2d-board",
-      version: 1,
+      version: 2,
       width: 1,
       height: 1,
       tick: 0,
@@ -117,7 +124,7 @@ describe("board export", () => {
     });
     const incompatible = JSON.stringify({
       format: "factory2d-board",
-      version: 1,
+      version: 2,
       width: 2,
       height: 1,
       tick: 0,
@@ -135,4 +142,33 @@ describe("board export", () => {
       "Weld 0 cannot join its two cells",
     );
   });
+
+  it("rejects invalid charge values and charged non-circuit tiles", () => {
+    const invalidValue = JSON.stringify({
+      format: "factory2d-board",
+      version: 2,
+      width: 1,
+      height: 1,
+      tick: 0,
+      tiles: [{ x: 0, y: 0, kind: "conduit", charge: 2 }],
+      welds: [],
+    });
+    const invalidTile = JSON.stringify({
+      format: "factory2d-board",
+      version: 2,
+      width: 1,
+      height: 1,
+      tick: 0,
+      tiles: [{ x: 0, y: 0, kind: "stone", charge: 1 }],
+      welds: [],
+    });
+
+    expect(() => deserializeBoard(invalidValue)).toThrowError(
+      "Tile 0 charge must be an integer from -1 through 1",
+    );
+    expect(() => deserializeBoard(invalidTile)).toThrowError(
+      "Only circuit-connected tiles can hold a nonzero charge",
+    );
+  });
+
 });

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createBodyPath, drawBody, type BodyCell } from "../src/render/tile-renderer";
-import { Direction, TileKind } from "../src/simulation/tile";
+import { Direction, TileKind, WeldSide } from "../src/simulation/tile";
 
 interface ArcCommand {
   readonly type: "arcTo";
@@ -78,6 +78,8 @@ function stone(x: number, y: number, seamRight = false, seamDown = false): BodyC
     y,
     kind: TileKind.Stone,
     orientation: Direction.Up,
+    charge: 0,
+    circuitConnections: WeldSide.None,
     seamRight,
     seamDown,
   };
@@ -121,6 +123,8 @@ describe("body drawing", () => {
       y: 0,
       kind: TileKind.Platform,
       orientation: Direction.Up,
+      charge: 0,
+      circuitConnections: WeldSide.None,
       seamRight: false,
       seamDown: false,
     };

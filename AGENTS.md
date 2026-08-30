@@ -11,15 +11,16 @@ Planned game flow: We show a main menu. The player selects a puzzle, which defin
 Implemented components:
 * Solid blocks - can have downward gravity, diagonal gravity (sand), can be weldable on some sides, can be magnetic.
 * Magnets - attract a block in the direction they're facing.
+* Conduits instantly share signed-ternary charge across welded circuit connections.
+* Directional sensor runes emit +1 when the neighboring cell on their pointed side is occupied.
 
 Planned components:
-* Wire blocks which transmit voltage to other wire blocks welded to them.
 * Furnace blocks that transform one neighbor cell into a different one after a delay: sand to glass, ore to metal.
 * Conveyor belts apply a clockwise or counterclockwise force to their 4 neighbor blocks. A conveyor placed on a floor will try to roll in one direction, and try to push the platform in the other direction, unless it's welded onto the platform.
 * Welders and splitters - weld or unweld the 3 blocks above them.
 * Pistons - 1 block which expands to 2 blocks when given a signal, pushing things around.
-* Sensors that emit a signal if they have a neighboring block in a certain direction. Sensors that detect pushing force from a direction.
-* Electrical components like logic gates, delays, diodes, brush connectors.
+* Sensors that detect pushing force from a direction.
+* Electrical components like logic gates, delays, diodes, and brush connectors.
 * Assemblers that convert a group of blocks welded in a specific way into one block. For example iron and copper blocks welded in a specific way are converted to a piston block.
 * Flipper: attaches to one block, then flips the entire connected/welded group of blocks around that line horizontally or vertically, if it would not collide/overlap other blocks.
 * Laser splitter: splits everything in a line.
@@ -82,17 +83,19 @@ Keep this section up-to-date.
 
 The first playable scaffold is implemented:
 
-* A 20x14 editable Canvas 2D grid with procedural sand, falling stone, magnetic metal, directional magnets, and fixed platform tiles.
+* A 20x14 editable Canvas 2D grid with procedural sand, falling stone, magnetic metal, directional magnets and sensor runes, circuit conduits, and fixed platform tiles.
 * A full-viewport black board layer behind responsive floating left and bottom control panels. The initial view fits the entire grid into the unobscured region; mouse-wheel zoom stays anchored beneath the pointer; and arrow keys, middle-button drags, or Alt-right-button drags pan within bounds that keep the screen center over the grid.
-* Build controls for gap-free click-and-drag placement and removal, including Shift-left placement welded to every eligible occupied neighbor, drags that leave the grid, middle-click picking that preserves magnet orientation while middle-button drags pan, magnet rotation and aiming, stepping, running, pausing, resetting, clearing, speed selection, and an animation toggle.
+* Build controls for gap-free click-and-drag placement and removal, including Shift-left placement welded to every eligible occupied neighbor, drags that leave the grid, middle-click picking that preserves directional component orientation while middle-button drags pan, rotation and aiming, stepping, running, pausing, resetting, clearing, speed selection, and an animation toggle.
 * A separate weld tool for joining eligible occupied neighbors into rigid bodies and unwelding them, with gap-free fast-drag traversal, an immediate held-Control temporary override, and red invalid-edge feedback. Sand is not weldable, and magnets reject welds on their pointed side.
 * One shared procedural tile renderer for the Canvas board, placement preview, and component palette. Palette previews use density-aware, supersampled backing stores and redraw when browser zoom or display density changes. Each welded body renders from traced, inset rounded-slab outlines whose occupied neighbors merge only across locally welded edges, so unwelded cuts stay visually stable when another cut splits the body and closed seam ends receive rounded caps. Rendering includes a drop shadow, per-cell fills that remain locally stable when different tile kinds are joined, decorations clipped to the outline, and top-left highlight and bottom-right shade bevels. Diagonally touching cells render as a rounded pinch. Per-body cells and `Path2D` outlines are cached across animation frames and rebuilt only after world changes or board geometry changes.
-* A typed-array world with stable tile IDs, per-tile orientation, edge weld storage, and allocation-free per-tick movement buffers.
+* Circuit-capable tiles render charge-colored traces only across welded circuit connections. Conduits have a dark center socket; sensor runes show their sensing direction and resolved charge.
+* A typed-array world with stable tile IDs, per-tile orientation and signed-ternary charge, edge weld storage, and allocation-free per-tick movement and circuit-network buffers.
 * Deterministic straight-down gravity for stone, metal, magnets, and sand; complete downward body-dependency resolution; parity-selected diagonal gravity for sand; direct-fall priority; equal-priority destination jamming; and reciprocal magnetic constraints that hold bodies when supported while allowing unsupported attracting groups to fall.
+* Deterministic circuit resolution rebuilds welded networks from the start-of-tick state, sums their drivers, takes the sign, and commits the result before movement. Directional sensor runes contribute +1 when their pointed neighboring cell is occupied.
 * Simulation commits remain discrete and deterministic while stable tile IDs drive optional smooth eased rendering between the previous and current positions. Manual steps animate for 200 ms; automatic steps animate for up to 250 ms without delaying simulation ticks. A 60-ticks-per-second mode forces discrete rendering.
-* A responsive top-right cell inspector shows the hovered tile's stable ID, movement behavior, effective weldable sides, current welds, magnetic state, orientation, and attraction direction/range. It refreshes after simulation commits even when the pointer remains stationary.
-* Deterministic tests for gravity chains, sand overhangs, welded and magnetically constrained bodies, conflicts, directional welding, orientation snapshots, boundaries, stable IDs, reset behavior, and pointer gesture classification.
-* Board export and import controls round-trip deterministic, versioned JSON containing dimensions, simulation tick, non-empty tile kinds, non-up orientations, and each weld edge once. Imports validate the complete file before replacing the live board, support board sizes up to 400x300, and reconstruct fresh runtime tile IDs because IDs are intentionally excluded from the file.
+* A responsive top-right cell inspector shows the hovered tile's stable ID, movement behavior, effective weldable sides, current welds, circuit connections and charge, magnetic state, orientation, and attraction direction/range. It refreshes after simulation commits even when the pointer remains stationary.
+* Deterministic tests for gravity chains, sand overhangs, welded and magnetically constrained bodies, circuit propagation and sensor directionality, conflicts, directional welding, orientation snapshots, boundaries, stable IDs, reset behavior, and pointer gesture classification.
+* Board export and import controls round-trip deterministic, versioned JSON containing dimensions, simulation tick, non-empty tile kinds, non-up orientations, nonzero circuit charges, and each weld edge once. Imports validate the complete file before replacing the live board, support board sizes up to 400x300, and reconstruct fresh runtime tile IDs because IDs are intentionally excluded from the file.
 
 ## Code map
 
@@ -104,13 +107,15 @@ The first playable scaffold is implemented:
 * `src/render/grid-drag.ts` — Board-clipped tile-drag endpoints and continuous weld-edge traversal between pointer events.
 * `src/render/pointer-gesture.ts` — Button/modifier gesture classification and middle-click drag-threshold policy.
 * `src/render/tile-renderer.ts` — Body outline tracing and rounded-slab drawing (fill, bevel lighting, decorations) for the board and component palette.
+* `src/simulation/circuit.ts` — Signed-ternary charge type, validation, sum resolution, and render colors.
 * `src/simulation/tile.ts` — Tile kinds, directions, and immutable tile behavior/render definitions.
 * `src/simulation/board-export.ts` — Deterministic, versioned JSON serialization and strict validation/deserialization for sharing board state.
-* `src/simulation/world.ts` — Typed-array tile, orientation, and weld storage; stable IDs; render revisions; snapshots; editing; and body movement commits.
-* `src/simulation/simulation.ts` — Allocation-free welded and magnetically constrained body collection, gravity intent selection, conflict resolution, and tick advancement.
+* `src/simulation/world.ts` — Typed-array tile, orientation, charge, and weld storage; stable IDs; render revisions; snapshots; editing; and body movement commits.
+* `src/simulation/simulation.ts` — Allocation-free circuit-network resolution, welded and magnetically constrained body collection, gravity intent selection, conflict resolution, and tick advancement.
 * `src/ui/tile-inspector.ts` — Revision-aware hovered-cell property presentation, including effective directional weldability and current welds.
 * `src/util/assert.ts` — `expectDefined` assertion that crashes loudly on violated lookups instead of falling back silently.
 * `tests/board-export.test.ts` — Board export ordering, contents, and tick validation tests.
+* `tests/circuit.test.ts` — Instant welded-network propagation, sensor directionality, disconnection, and moving-charge tests.
 * `tests/simulation.test.ts` — Deterministic world, gravity, diagonal movement, conflict, weld, magnet, identity, and reset tests.
 * `tests/grid-drag.test.ts` — Continuous tile and weld drag traversal tests, including board-boundary clipping.
 * `tests/pointer-gesture.test.ts` — Pointer button, modifier, and drag-threshold regression tests.
@@ -120,12 +125,13 @@ The first playable scaffold is implemented:
 
 ## Current TODOs
 
+Bugs:
+* Minor UI bug: Using WASD to rotate correctly rotates the placed block, and the block sprite in the palette, but for the ghosts (under cursor), it rotates the magnet block but not the sensor rune. Fix it, and modify code so that we don't need to do per-block code additions when we add a new block that can rotate, so this bug doesn't recur.
+
 New components:
-* Design circuit mechanics. Blocks can electrically connect to neighboring blocks on welded edges, and some blocks have distinct ports on different sides. We'll allow 3 different charges (signed ternary): +1, 0, and -1. Visually we color the lines by charge as blue, dark purple, or red; blocks that can connect will have lines rendered on them with these colors. We likely want to allow signals to propagate quickly, not 1 block per tick, so maybe we should find connected circuit regions and identify them by network IDs. For example an inverter gate connects one network ID to a different network ID. Each network has one value. Components submit attempts to drive a network to a specific voltage value, and we resolve conflicts in some way (probably adding and taking the sign). Voltage usually only propagates within one welded group of blocks; we'll later add sensor runes / brushes which read circuit values from neighbors, without needing welding, but those will be different networks, with 1-tick delay on reading. Components like logic gates do not union the networks they connect to, but rather drive the value of on output on tick t+1 using the value on tick t-1; so for example a negate gate with input wired to output will cause its network to flip between +1 and -1 every tick, or stay 0 every tick.
-* Add a conduit/wire block. It should look like a grey block with a dark blue circle in the center; when welded to adjacent blocks with a flag that makes them connect to circuits, also draw a line from the circle to those welded neighbors. Color the lines according to current charge. Propagate charges instantly through connected conduits. A conduit connects all welded neighbor edges' networks together.
-* Add a directional sensor block, which should connect to circuits. When a neighboring block in a direction is non-empty, it should try to drive the circuit with a value.
-* Add a directional furnace block, and some simple solid blocks (glass, iron ore, and iron replacing generic "metal" currently). Make the furnace block transform the block in its specified direction, according to a table of recipes and bake times. The furnace would need to store how long it's baked and count up to the bake time; baking should be cut short if the tile it's baking moves away. Once we have circuits, allow circuit connections: back side charge deactivates the furnace, furnace outputs current bake state on the other 2 sides.
-* Add a conveyor-belt block: applies forces to its 4 neighbors, if they're not welded to it, either clockwise or counterclockwise; applies the reaction force to itself. Rotation controls (Q/E or WASD) should instead set clockwise/counterclockwise. For rendering, draw a block with a dashed line, animated to move along each side. Later, control with charge (positive, negative, or zero).
+* Add signed-ternary circuit components beyond the current +1 sensor source: distinct directional ports, inverter and other logic gates, delays, diodes, and non-welded charge-sensor runes. Gates should keep input and output networks separate and drive tick t+1 from values observed at tick t, so feedback remains deterministic. Add small tests.
+* Add a directional furnace block, and some simple solid blocks to process (glass, iron ore, and iron replacing generic "metal" currently). Make the furnace block transform the block in its specified direction, according to a table of recipes and bake times - sand to glass, ore to iron. The furnace would need to store how long it's baked and count up to the bake time; baking should be cut short if the tile it's baking moves away. Allow circuit connections: back side charge deactivates the furnace, furnace outputs current bake state on the other 2 sides.
+* Add a conveyor-belt block: applies forces to its 4 neighbors, if they're not welded to it, either clockwise or counterclockwise; applies the reaction force to itself. For rendering, draw a block with a dashed line, animated to move along each side. Allow connecting all sides (like a conduit, single network) and drive with charges - +1 clockwise, -1 counterclockwise, 0 stops.
 * Add a piston block. It should be one block showing the arm and base of the piston overlapping. When it receives a charge, it should extend the arm, making it two separate blocks (considered welded together). When no charge is received, it should try to retract. This is a special case because we have effectively 2 blocks that can overlap, which is not usually allowed; but we could model it without overlaps, as 3 separate block types (arm, base, and combined arm+base), though we would still need to modify animation to show the arm extending.
 * Implement a target component that absorbs adjacent blocks of a specified type, and marks the puzzle as completed once some number have been absorbed. Requires a UI for setting which block to absorb, and how many. This will be used in the sandbox for designing puzzles.
 * Add a dispenser component that dispenses a selected block when it receives charge. Used for creating puzzle inputs.

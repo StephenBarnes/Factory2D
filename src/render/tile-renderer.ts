@@ -1,3 +1,4 @@
+import { CIRCUIT_CHARGE_COLORS, type Charge } from "../simulation/circuit";
 import {
   Direction,
   directionX,
@@ -5,6 +6,7 @@ import {
   TILE_DEFINITIONS,
   TileDecorationStyle,
   type TileDefinition,
+  WeldSide,
   type TileKind,
 } from "../simulation/tile";
 import { expectDefined } from "../util/assert";
@@ -15,6 +17,8 @@ export interface BodyCell {
   y: number;
   kind: TileKind;
   orientation: Direction;
+  charge: Charge;
+  circuitConnections: WeldSide;
   /** The right neighbor belongs to the same body but this edge is not welded. */
   seamRight: boolean;
   /** The down neighbor belongs to the same body but this edge is not welded. */
@@ -106,6 +110,8 @@ export function drawBody(
       cellSize,
       TILE_DEFINITIONS[cell.kind],
       cell.orientation,
+      cell.charge,
+      cell.circuitConnections,
     );
   }
 
@@ -123,7 +129,16 @@ export function drawBody(
 }
 
 const SINGLE_CELL: [BodyCell] = [
-  { x: 0, y: 0, kind: 0 as TileKind, orientation: Direction.Up, seamRight: false, seamDown: false },
+  {
+    x: 0,
+    y: 0,
+    kind: 0 as TileKind,
+    orientation: Direction.Up,
+    charge: 0,
+    circuitConnections: WeldSide.None,
+    seamRight: false,
+    seamDown: false,
+  },
 ];
 
 /** Draws a lone tile (palette previews and placement hover). */
@@ -346,7 +361,12 @@ function drawDecoration(
   size: number,
   definition: TileDefinition,
   orientation: Direction,
+  charge: Charge,
+  circuitConnections: WeldSide,
 ): void {
+  if (circuitConnections !== WeldSide.None) {
+    drawCircuitConnections(context, left, top, size, charge, circuitConnections);
+  }
   context.fillStyle = definition.decorationColor;
   context.strokeStyle = definition.decorationColor;
 
@@ -399,9 +419,66 @@ function drawDecoration(
       context.fill();
       break;
     }
+    case TileDecorationStyle.Conduit:
+      context.beginPath();
+      drawDot(context, left + size / 2, top + size / 2, Math.max(2, size * 0.19));
+      context.fill();
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[charge];
+      context.lineWidth = Math.max(1, size * 0.045);
+      context.stroke();
+      break;
+    case TileDecorationStyle.Sensor:
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.fillStyle = CIRCUIT_CHARGE_COLORS[charge];
+      context.beginPath();
+      context.moveTo(0, -size * 0.34);
+      context.lineTo(size * 0.14, -size * 0.12);
+      context.lineTo(-size * 0.14, -size * 0.12);
+      context.closePath();
+      context.fill();
+      context.fillStyle = definition.decorationColor;
+      context.beginPath();
+      context.moveTo(0, -size * 0.14);
+      context.lineTo(size * 0.17, 0);
+      context.lineTo(0, size * 0.17);
+      context.lineTo(-size * 0.17, 0);
+      context.closePath();
+      context.fill();
+      context.restore();
+      break;
     case TileDecorationStyle.None:
       break;
   }
+}
+
+function drawCircuitConnections(
+  context: CanvasRenderingContext2D,
+  left: number,
+  top: number,
+  size: number,
+  charge: Charge,
+  connections: WeldSide,
+): void {
+  const centerX = left + size / 2;
+  const centerY = top + size / 2;
+  context.strokeStyle = CIRCUIT_CHARGE_COLORS[charge];
+  context.lineWidth = Math.max(2, size * 0.12);
+  context.lineCap = "round";
+  context.beginPath();
+  for (let value = Direction.Up; value <= Direction.Left; value += 1) {
+    const direction = value as Direction;
+    if ((connections & (1 << direction)) === 0) {
+      continue;
+    }
+    context.moveTo(centerX, centerY);
+    context.lineTo(
+      centerX + directionX(direction) * size / 2,
+      centerY + directionY(direction) * size / 2,
+    );
+  }
+  context.stroke();
 }
 
 /** Adds one filled circle to the current path without a connecting chord from the previous subpath. */
