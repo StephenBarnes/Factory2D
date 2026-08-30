@@ -22,13 +22,13 @@ export interface BodyCell {
 }
 
 /** Corner rounding radius for convex corners and concave weld fillets. */
-const CORNER_RADIUS_RATIO = 0.2;
+const CORNER_RADIUS_RATIO = 0.15;
 /** Gap between a body outline and its cell boundary, so unwelded neighbors stay visually separate. */
 const INSET_RATIO = 0.05;
 /** Thickness of the top-left highlight and bottom-right shade bands. */
-const BEVEL_RATIO = 0.12;
+const BEVEL_RATIO = 0.05;
 /** Thickness of the dark rim around a body. */
-const OUTLINE_RATIO = 0.055;
+const OUTLINE_RATIO = 0.025;
 const DROP_SHADOW_X_RATIO = 0.05;
 const DROP_SHADOW_Y_RATIO = 0.1;
 /** Thickness of the groove marking an unwelded edge interior to a body. */
