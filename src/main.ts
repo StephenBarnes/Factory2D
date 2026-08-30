@@ -15,6 +15,7 @@ import type { PointerGesture } from "./render/pointer-gesture";
 import { Simulation } from "./simulation/simulation";
 import { Direction, TileKind } from "./simulation/tile";
 import { World } from "./simulation/world";
+import { TileInspector } from "./ui/tile-inspector";
 
 const MAX_AUTOMATIC_ANIMATION_MS = 250;
 const MANUAL_STEP_ANIMATION_MS = 200;
@@ -52,6 +53,8 @@ const canvas = requiredElement<HTMLCanvasElement>("game-canvas");
 const renderer = new CanvasRenderer(canvas, world);
 const sidebarControls = requiredElement<HTMLElement>("sidebar-controls");
 const bottomControls = requiredElement<HTMLElement>("bottom-controls");
+const inspectorPanel = requiredElement<HTMLElement>("tile-inspector");
+const tileInspector = new TileInspector(inspectorPanel, world);
 const playButton = requiredElement<HTMLButtonElement>("play-button");
 const stepButton = requiredElement<HTMLButtonElement>("step-button");
 const resetButton = requiredElement<HTMLButtonElement>("reset-button");
@@ -89,9 +92,10 @@ function updateViewportInsets(): void {
   const canvasBounds = canvas.getBoundingClientRect();
   const sidebarBounds = sidebarControls.getBoundingClientRect();
   const controlsBounds = bottomControls.getBoundingClientRect();
+  const inspectorBounds = inspectorPanel.getBoundingClientRect();
   renderer.setViewportInsets({
     top: 16,
-    right: 16,
+    right: Math.max(16, canvasBounds.right - inspectorBounds.left + 16),
     bottom: Math.max(16, canvasBounds.bottom - controlsBounds.top + 16),
     left: Math.max(16, sidebarBounds.right - canvasBounds.left + 16),
   });
@@ -100,6 +104,7 @@ function updateViewportInsets(): void {
 const overlayResizeObserver = new ResizeObserver(updateViewportInsets);
 overlayResizeObserver.observe(sidebarControls);
 overlayResizeObserver.observe(bottomControls);
+overlayResizeObserver.observe(inspectorPanel);
 updateViewportInsets();
 
 function updateTransportState(): void {
@@ -168,6 +173,7 @@ function refreshPointerHover(): void {
   coordinates.textContent = hoveredCell === null
     ? "X --   Y --"
     : `X ${hoveredCell.x.toString().padStart(2, "0")}   Y ${hoveredCell.y.toString().padStart(2, "0")}`;
+  tileInspector.update(hoveredCell);
 }
 
 function selectTile(kind: TileKind): void {
@@ -644,6 +650,7 @@ function frame(currentTime: number): void {
     tickCounter.textContent = `TICK ${simulation.tick.toString().padStart(4, "0")}`;
     renderedTick = simulation.tick;
   }
+  tileInspector.update(hoveredCell);
   const animationProgress = easedAnimationProgress(currentTime);
   renderer.render(animationDuration === 0 ? null : previousWorld, animationProgress);
   requestAnimationFrame(frame);

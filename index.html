@@ -70,6 +70,48 @@
         <div class="coordinates" id="coordinates">X -- &nbsp; Y --</div>
       </aside>
 
+      <aside class="tile-inspector floating-panel" id="tile-inspector" aria-label="Hovered cell details">
+        <div class="panel-heading">
+          <span>INSPECTOR</span>
+          <span class="panel-number">03</span>
+        </div>
+        <div class="inspector-title-row">
+          <strong data-inspector-name>NO CELL SELECTED</strong>
+          <span data-inspector-position>X -- &nbsp; Y --</span>
+        </div>
+        <p class="inspector-hint" data-inspector-hint>Move the pointer over the grid.</p>
+        <dl class="inspector-properties" data-inspector-properties hidden>
+          <div>
+            <dt>TILE ID</dt>
+            <dd data-inspector-id></dd>
+          </div>
+          <div data-inspector-orientation-row>
+            <dt>ORIENTATION</dt>
+            <dd data-inspector-orientation></dd>
+          </div>
+          <div>
+            <dt>MOVEMENT</dt>
+            <dd data-inspector-movement></dd>
+          </div>
+          <div>
+            <dt>WELDABLE</dt>
+            <dd data-inspector-weldable></dd>
+          </div>
+          <div>
+            <dt>WELDS</dt>
+            <dd data-inspector-welds></dd>
+          </div>
+          <div>
+            <dt>MAGNETIC</dt>
+            <dd data-inspector-magnetic></dd>
+          </div>
+          <div>
+            <dt>ATTRACTION</dt>
+            <dd data-inspector-attraction></dd>
+          </div>
+        </dl>
+      </aside>
+
       <footer class="controls floating-panel" id="bottom-controls">
         <div class="transport">
           <button class="primary-control" id="play-button" type="button">▶ RUN</button>

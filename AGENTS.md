@@ -90,13 +90,14 @@ The first playable scaffold is implemented:
 * A typed-array world with stable tile IDs, per-tile orientation, edge weld storage, and allocation-free per-tick movement buffers.
 * Deterministic straight-down gravity for stone, metal, magnets, and sand; complete downward body-dependency resolution; parity-selected diagonal gravity for sand; direct-fall priority; equal-priority destination jamming; and reciprocal magnetic constraints that hold bodies when supported while allowing unsupported attracting groups to fall.
 * Simulation commits remain discrete and deterministic while stable tile IDs drive optional smooth eased rendering between the previous and current positions. Manual steps animate for 200 ms; automatic steps animate for up to 250 ms without delaying simulation ticks. A 60-ticks-per-second mode forces discrete rendering.
+* A responsive top-right cell inspector shows the hovered tile's stable ID, movement behavior, effective weldable sides, current welds, magnetic state, orientation, and attraction direction/range. It refreshes after simulation commits even when the pointer remains stationary.
 * Deterministic tests for gravity chains, sand overhangs, welded and magnetically constrained bodies, conflicts, directional welding, orientation snapshots, boundaries, stable IDs, reset behavior, and pointer gesture classification.
 
 ## Code map
 
-* `index.html` — Application shell, tile and weld palette, canvas, and simulation controls.
-* `src/main.ts` — Browser entry point, example world setup, input handling, build tools, bounded pan/zoom controls, overlay-aware viewport insets, and animation loop.
-* `src/styles.css` — Responsive application, palette, board, and control styling.
+* `index.html` — Application shell, tile and weld palette, canvas, hovered-cell inspector, and simulation controls.
+* `src/main.ts` — Browser entry point, example world setup, input handling, build tools, bounded pan/zoom controls, overlay-aware viewport insets, inspector coordination, and animation loop.
+* `src/styles.css` — Responsive application, palette, inspector, board, and control styling.
 * `src/vite-env.d.ts` — Vite client type declarations.
 * `src/render/canvas-renderer.ts` — Responsive Canvas 2D grid, overlay-aware camera fitting, bounded pan and pointer-anchored zoom, revision-and-scale-keyed welded-body geometry cache, stable-ID movement interpolation, hit testing, placement previews, and hover feedback.
 * `src/render/grid-drag.ts` — Board-clipped tile-drag endpoints and continuous weld-edge traversal between pointer events.
@@ -105,6 +106,7 @@ The first playable scaffold is implemented:
 * `src/simulation/tile.ts` — Tile kinds, directions, and immutable tile behavior/render definitions.
 * `src/simulation/world.ts` — Typed-array tile, orientation, and weld storage; stable IDs; render revisions; snapshots; editing; and body movement commits.
 * `src/simulation/simulation.ts` — Allocation-free welded and magnetically constrained body collection, gravity intent selection, conflict resolution, and tick advancement.
+* `src/ui/tile-inspector.ts` — Revision-aware hovered-cell property presentation, including effective directional weldability and current welds.
 * `src/util/assert.ts` — `expectDefined` assertion that crashes loudly on violated lookups instead of falling back silently.
 * `tests/simulation.test.ts` — Deterministic world, gravity, diagonal movement, conflict, weld, magnet, identity, and reset tests.
 * `tests/grid-drag.test.ts` — Continuous tile and weld drag traversal tests, including board-boundary clipping.
@@ -123,8 +125,6 @@ New components:
 * Add a conveyor-belt block: applies forces to its 4 neighbors, if they're not welded to it, either clockwise or counterclockwise; applies the reaction force to itself. Rotation controls (Q/E or WASD) should instead set clockwise/counterclockwise. For rendering, draw a block with a dashed line, animated to move along each side. Later, control with charge (positive, negative, or zero).
 * Add a piston block. It should be one block showing the arm and base of the piston overlapping. When it receives a charge, it should extend the arm, making it two separate blocks (considered welded together). When no charge is received, it should try to retract. This is a special case because we have effectively 2 blocks that can overlap, which is not usually allowed; but we could model it without overlaps, as 3 separate block types (arm, base, and combined arm+base), though we would still need to modify animation to show the arm extending.
 
-UI:
-* Show information about the hovered block: property flags (magnetic, weldable, etc.), circuit state, any other internal state. When hovering over conduits, show electrical network's drivers and consumers and current value. Maybe show this in a new small panel in the top-right.
 
 Game flow:
 * Implement a main menu. For now, continue booting straight to the sandbox for faster testing during development, but add a button to go to main menu. Main menu should have buttons for sandbox and puzzles.

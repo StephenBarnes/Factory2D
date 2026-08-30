@@ -96,6 +96,81 @@ canvas {
   scrollbar-width: thin;
 }
 
+.tile-inspector {
+  width: 236px;
+  top: 18px;
+  right: 18px;
+  padding: 15px;
+}
+
+.inspector-title-row {
+  padding-bottom: 11px;
+  border-bottom: 1px solid #27313b;
+}
+
+.inspector-title-row strong,
+.inspector-title-row span {
+  display: block;
+}
+
+.inspector-title-row strong {
+  overflow: hidden;
+  color: #e5ebee;
+  font-size: 0.8rem;
+  letter-spacing: 0.07em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inspector-title-row span {
+  margin-top: 5px;
+  color: #53616d;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+}
+
+.inspector-hint {
+  margin: 13px 0 2px;
+  color: #71808c;
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.inspector-properties {
+  margin: 10px 0 0;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.6rem;
+}
+
+.inspector-properties div {
+  min-height: 24px;
+  padding: 6px 0;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px;
+  border-bottom: 1px solid #202a33;
+}
+
+.inspector-properties div[hidden] {
+  display: none;
+}
+
+.inspector-properties div:last-child {
+  border-bottom: 0;
+}
+
+.inspector-properties dt {
+  color: #60707c;
+}
+
+.inspector-properties dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #aab5bd;
+  text-align: right;
+}
+
 .panel-heading {
   display: flex;
   justify-content: space-between;
@@ -369,6 +444,13 @@ kbd {
     padding: 12px;
   }
 
+  .tile-inspector {
+    width: 204px;
+    top: 12px;
+    right: 12px;
+    padding: 12px;
+  }
+
   .palette-item {
     min-height: 52px;
     grid-template-columns: 34px 1fr auto;
@@ -405,6 +487,14 @@ kbd {
 @media (max-width: 720px) {
   .sidebar {
     width: 188px;
+  }
+
+  .tile-inspector {
+    width: 180px;
+  }
+
+  .inspector-properties div {
+    grid-template-columns: 64px minmax(0, 1fr);
   }
 
   .panel-heading {
@@ -456,6 +546,30 @@ kbd {
     width: 154px;
     bottom: 124px;
     padding: 9px;
+  }
+
+  .tile-inspector {
+    width: 142px;
+    top: 10px;
+    right: 10px;
+    padding: 9px;
+  }
+
+  .tile-inspector .panel-heading {
+    margin-bottom: 9px;
+  }
+
+  .inspector-properties {
+    font-size: 0.55rem;
+  }
+
+  .inspector-properties div {
+    display: block;
+  }
+
+  .inspector-properties dd {
+    margin-top: 3px;
+    text-align: left;
   }
 
   .palette-item {
