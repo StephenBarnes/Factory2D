@@ -13,7 +13,7 @@ Implemented components:
 * Magnets - attract a block in the direction they're facing.
 
 Planned components:
-* Wire blocks which transmit voltage to other wire blocks welded to them. Voltage is a float, so signals can be transmitted.
+* Wire blocks which transmit voltage to other wire blocks welded to them.
 * Furnace blocks that transform one neighbor cell into a different one after a delay: sand to glass, ore to metal.
 * Conveyor belts apply a clockwise or counterclockwise force to their 4 neighbor blocks. A conveyor placed on a floor will try to roll in one direction, and try to push the platform in the other direction, unless it's welded onto the platform.
 * Welders and splitters - weld or unweld the 3 blocks above them.
@@ -113,11 +113,29 @@ The first playable scaffold is implemented:
 
 ## Current TODOs
 
-* Currently we allow panning with RMB-drag off the grid. Replace that with MMB-drag to pan, and add alt key plus RMB drag to pan, even on the grid. (MMB click on a tile currently picks that tile; but MMB on empty cells does nothing. I think cleanest is to do pick on MMB press, and also allow MMB-drag anywhere to pan.)
-* Compute the next simulation step async, while the last update is still being animated. Would improve performance if simulation step time grows to exceed frame time.
+* Currently we allow panning with RMB-drag off the grid. Replace that with MMB-drag to pan, and add alt key plus RMB drag to pan, even on the grid. (MMB click on a tile currently picks that tile; but MMB on empty cells does nothing. I think cleanest is to do pick on MMB press if it's followed by release immediately afterwards without moving the mouse, and for other MMB cases we pan.)
+
+New components:
+
+* Design circuit mechanics. Blocks can electrically connect to neighboring blocks on welded edges, and some blocks have distinct ports on different sides. We'll allow 3 different charges (signed ternary): +1, 0, and -1. Visually we color the lines by charge as blue, dark purple, or red; blocks that can connect will have lines rendered on them with these colors. We likely want to allow signals to propagate quickly, not 1 block per tick, so maybe we should find connected circuit regions and identify them by network IDs. For example an inverter gate connects one network ID to a different network ID. Each network has one value. Components submit attempts to drive a network to a specific voltage value, and we resolve conflicts in some way (probably adding and taking the sign). Voltage usually only propagates within one welded group of blocks; we'll later add sensor runes / brushes which read circuit values from neighbors, without needing welding, but those will be different networks, with 1-tick delay on reading. Components like logic gates do not union the networks they connect to, but rather drive the value of on output on tick t+1 using the value on tick t-1; so for example a negate gate with input wired to output will cause its network to flip between +1 and -1 every tick, or stay 0 every tick.
+* Add a conduit/wire block. It should look like a grey block with a dark blue circle in the center; when welded to adjacent blocks with a flag that makes them connect to circuits, also draw a line from the circle to those welded neighbors. Color the lines according to current charge. Propagate charges instantly through connected conduits. A conduit connects all welded neighbor edges' networks together.
+* Add a directional sensor block, which should connect to circuits. When a neighboring block in a direction is non-empty, it should try to drive the circuit with a value.
+* Add a directional furnace block, and some simple solid blocks (glass, iron ore, and iron replacing generic "metal" currently). Make the furnace block transform the block in its specified direction, according to a table of recipes and bake times. The furnace would need to store how long it's baked and count up to the bake time; baking should be cut short if the tile it's baking moves away. Once we have circuits, allow circuit connections: back side charge deactivates the furnace, furnace outputs current bake state on the other 2 sides.
 * Add a conveyor-belt block: applies forces to its 4 neighbors, if they're not welded to it, either clockwise or counterclockwise; applies the reaction force to itself. Rotation controls (Q/E or WASD) should instead set clockwise/counterclockwise. For rendering, draw a block with a dashed line, animated to move along each side. Later, control with charge (positive, negative, or zero).
-* Add a conduit/wire block. It should look like a grey stone block with a dull blue circle in the center; when welded to adjacent blocks with a flag set, also draw a line from the circle to those welded neighbors. Store a charge; if the charge is nonzero, change the dull blue color to bright blue.
 * Add a piston block. It should be one block showing the arm and base of the piston overlapping. When it receives a charge, it should extend the arm, making it two separate blocks (considered welded together). When no charge is received, it should try to retract. This is a special case because we have effectively 2 blocks that can overlap, which is not usually allowed; but we could model it without overlaps, as 3 separate block types (arm, base, and combined arm+base), though we would still need to modify animation to show the arm extending.
+
+UI:
+* Show information about the hovered block: property flags (magnetic, weldable, etc.), circuit state, any other internal state. When hovering over conduits, show electrical network's drivers and consumers and current value. Maybe show this in a new small panel in the top-right.
+
+Game flow:
+* Implement a main menu. For now, continue booting straight to the sandbox for faster testing during development, but add a button to go to main menu. Main menu should have buttons for sandbox and puzzles.
+* Implement a system for defining puzzles. Each puzzle should define the grid size, blocks to pre-place, menu of enabled components with prices in talents, region where player placement is allowed. Puzzles should be defined in a shareable text format, maybe with the map specified as a 2D grid of ASCII characters (one for each tile), plus additional text data like state for any pre-placed components.
+* Implement target component that absorbs adjacent blocks of a specified type, and marks the puzzle as completed once some number have been absorbed. Requires a UI for setting which block to absorb, and how many. This will be used in the sandbox for designing puzzles.
+* Add a dispenser component that dispenses a selected block when it receives charge. Used for creating puzzle inputs.
+* Add a button for exporting the current board state. Useful for creating test cases and puzzles, or sharing solutions.
+* Change the editing model when solving puzzles: the player edits the initial board state, but as soon as they've played/run the simulation, they can no longer edit, they have to reset. Because puzzles won't allow modifying the board halfway through running a solution. We can still allow mid-run edits in the sandbox.
+
+Some more items in `deferred-todos.md`.
 
 ## Development guidelines
 
