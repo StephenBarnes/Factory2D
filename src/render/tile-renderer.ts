@@ -104,7 +104,8 @@ export function drawTile(
       break;
   }
 
-  context.fillStyle = definition.shadow;
+  context.strokeStyle = definition.shadow;
+  context.lineWidth = Math.max(1, Math.floor(edge / 2));
   if ((innerCorners & InnerCorner.UpLeft) !== 0) {
     drawInnerFillet(context, tileLeft, tileTop, edge, -1, -1);
   }
@@ -127,15 +128,18 @@ function drawInnerFillet(
   horizontalSign: -1 | 1,
   verticalSign: -1 | 1,
 ): void {
+  const inset = 1;
+  const depth = edge + inset;
   context.beginPath();
-  context.moveTo(cornerX - horizontalSign * edge, cornerY);
-  context.lineTo(cornerX, cornerY);
-  context.lineTo(cornerX, cornerY - verticalSign * edge);
-  context.quadraticCurveTo(
-    cornerX - horizontalSign * edge,
-    cornerY - verticalSign * edge,
-    cornerX - horizontalSign * edge,
-    cornerY,
+  context.moveTo(
+    cornerX - horizontalSign * depth,
+    cornerY - verticalSign * inset,
   );
-  context.fill();
+  context.quadraticCurveTo(
+    cornerX - horizontalSign * depth,
+    cornerY - verticalSign * depth,
+    cornerX - horizontalSign * inset,
+    cornerY - verticalSign * depth,
+  );
+  context.stroke();
 }

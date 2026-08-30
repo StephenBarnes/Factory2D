@@ -283,6 +283,21 @@ describe("directional magnets", () => {
     expect(world.idAt(2, 2)).toBe(metalId);
   });
 
+  it("holds a falling magnet when it reaches fixed metal", () => {
+    const world = new World(3, 5);
+    const magnetId = world.place(1, 0, TileKind.Magnet, Direction.Right);
+    world.place(2, 2, TileKind.Metal);
+    world.place(2, 3, TileKind.Platform);
+    world.setWeld(2, 2, 2, 3, true);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+    simulation.step();
+    expect(world.idAt(1, 2)).toBe(magnetId);
+    expect(simulation.step()).toBe(0);
+    expect(world.idAt(1, 2)).toBe(magnetId);
+  });
+
   it("does not attract non-magnetic blocks", () => {
     const world = new World(3, 4);
     world.place(1, 2, TileKind.Magnet, Direction.Right);

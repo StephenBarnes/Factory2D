@@ -128,11 +128,14 @@ export class Simulation {
         if (targetKind === TileKind.Empty) {
           continue;
         }
+        const targetRoot = this.bodyRoots[target] ?? -1;
+        const magnetRoot = this.bodyRoots[magnet] ?? -1;
         if (
           TILE_DEFINITIONS[targetKind].magnetic &&
-          this.bodyRoots[target] !== this.bodyRoots[magnet]
+          targetRoot !== magnetRoot
         ) {
-          this.bodyAttracted[this.bodyRoots[target] ?? -1] = 1;
+          this.bodyAttracted[targetRoot] = 1;
+          this.bodyAttracted[magnetRoot] = 1;
         }
         break;
       }

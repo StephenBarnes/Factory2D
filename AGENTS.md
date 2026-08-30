@@ -93,10 +93,10 @@ The first playable scaffold is implemented:
 * A 20x14 editable Canvas 2D grid with procedural sand, falling stone, magnetic metal, directional magnets, and fixed platform tiles.
 * Build controls for click-and-drag placement, right-click removal, magnet rotation and aiming, stepping, running, pausing, resetting, clearing, and speed selection.
 * A separate weld tool for joining eligible occupied neighbors into rigid bodies and unwelding them, with an immediate held-Control temporary override and red invalid-edge feedback. Sand is not weldable, and magnets reject welds on their pointed side.
-* One shared procedural tile renderer for the Canvas board, placement preview, and component palette. Welded neighbors render continuously without an internal gutter, including inner fillets on L-shaped bodies.
+* One shared procedural tile renderer for the Canvas board, placement preview, and component palette. Welded neighbors render continuously without an internal gutter, including inset curved inner borders on L-shaped bodies.
 * A typed-array world with stable tile IDs, per-tile orientation, edge weld storage, and allocation-free per-tick movement buffers.
-* Deterministic straight-down gravity for stone, metal, magnets, and sand; complete downward body-dependency resolution; parity-selected diagonal gravity for sand; direct-fall priority; equal-priority destination jamming; and gravity-priority magnetic holding.
-* Deterministic tests for gravity chains, sand overhangs, welded bodies, conflicts, directional welding, magnetic attraction, orientation snapshots, boundaries, stable IDs, and reset behavior.
+* Deterministic straight-down gravity for stone, metal, magnets, and sand; complete downward body-dependency resolution; parity-selected diagonal gravity for sand; direct-fall priority; equal-priority destination jamming; and reciprocal magnetic attraction that takes priority over gravity for both bodies.
+* Deterministic tests for gravity chains, sand overhangs, welded bodies, conflicts, directional welding, reciprocal magnetic attraction, orientation snapshots, boundaries, stable IDs, and reset behavior.
 
 ## Code map
 
