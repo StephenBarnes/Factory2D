@@ -51,6 +51,8 @@ let activePointerId: number | null = null;
 let activeErase = false;
 let lastEditedCell: GridCell | null = null;
 let lastEditedEdge: GridEdge | null = null;
+let hoveredCell: GridCell | null = null;
+let hoveredEdge: GridEdge | null = null;
 let running = false;
 let accumulatedTime = 0;
 let previousFrameTime = performance.now();
@@ -70,6 +72,17 @@ function setRunning(nextRunning: boolean): void {
   updateTransportState();
 }
 
+function refreshPointerHover(): void {
+  if (selectedTool === "weld") {
+    renderer.setHoverEdge(hoveredEdge);
+  } else {
+    renderer.setHover(hoveredCell);
+  }
+  coordinates.textContent = hoveredCell === null
+    ? "X --   Y --"
+    : `X ${hoveredCell.x.toString().padStart(2, "0")}   Y ${hoveredCell.y.toString().padStart(2, "0")}`;
+}
+
 function selectTile(kind: TileKind): void {
   selectedKind = kind;
   if (temporaryWeldActive) {
@@ -85,7 +98,7 @@ function selectTile(kind: TileKind): void {
   for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
     item.classList.toggle("selected", item.dataset.tile === selectedName);
   }
-  renderer.setHover(null);
+  refreshPointerHover();
 }
 
 function selectWeldTool(): void {
@@ -93,7 +106,7 @@ function selectWeldTool(): void {
   for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
     item.classList.toggle("selected", item.dataset.tool === "weld");
   }
-  renderer.setHoverEdge(null);
+  refreshPointerHover();
 }
 
 function saveEditedBaseline(): void {
@@ -157,6 +170,7 @@ function edgesMatch(first: GridEdge | null, second: GridEdge): boolean {
 sidebarControls.addEventListener("click", (event) => {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".palette-item");
   const tileName = button?.dataset.tile;
+  // TODO refactor so we don't need to add 2 lines here every time we add a tile type.
   if (tileName === "sand") {
     selectTile(TileKind.Sand);
   } else if (tileName === "stone") {
@@ -216,28 +230,23 @@ canvas.addEventListener("pointerdown", (event) => {
 });
 
 canvas.addEventListener("pointermove", (event) => {
-  const cell = renderer.cellFromClientPoint(event.clientX, event.clientY);
-  const edge = selectedTool === "weld"
-    ? renderer.edgeFromClientPoint(event.clientX, event.clientY)
-    : null;
-  if (selectedTool === "weld") {
-    renderer.setHoverEdge(edge);
-  } else {
-    renderer.setHover(cell);
-  }
-  coordinates.textContent = cell === null
-    ? "X --   Y --"
-    : `X ${cell.x.toString().padStart(2, "0")}   Y ${cell.y.toString().padStart(2, "0")}`;
+  hoveredCell = renderer.cellFromClientPoint(event.clientX, event.clientY);
+  hoveredEdge = renderer.edgeFromClientPoint(event.clientX, event.clientY);
+  refreshPointerHover();
 
   if (event.pointerId !== activePointerId) {
     return;
   }
-  if (selectedTool === "tile" && cell !== null) {
-    editCellLine(lastEditedCell ?? cell, cell, activeErase);
-    lastEditedCell = cell;
-  } else if (selectedTool === "weld" && edge !== null && !edgesMatch(lastEditedEdge, edge)) {
-    editWeld(edge, activeErase);
-    lastEditedEdge = edge;
+  if (selectedTool === "tile" && hoveredCell !== null) {
+    editCellLine(lastEditedCell ?? hoveredCell, hoveredCell, activeErase);
+    lastEditedCell = hoveredCell;
+  } else if (
+    selectedTool === "weld" &&
+    hoveredEdge !== null &&
+    !edgesMatch(lastEditedEdge, hoveredEdge)
+  ) {
+    editWeld(hoveredEdge, activeErase);
+    lastEditedEdge = hoveredEdge;
   }
 });
 
@@ -254,12 +263,9 @@ canvas.addEventListener("pointerup", finishPointerEdit);
 canvas.addEventListener("pointercancel", finishPointerEdit);
 
 canvas.addEventListener("pointerleave", () => {
-  if (selectedTool === "weld") {
-    renderer.setHoverEdge(null);
-  } else {
-    renderer.setHover(null);
-  }
-  coordinates.textContent = "X --   Y --";
+  hoveredCell = null;
+  hoveredEdge = null;
+  refreshPointerHover();
 });
 
 canvas.addEventListener("contextmenu", (event) => {

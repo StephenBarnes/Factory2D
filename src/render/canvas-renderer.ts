@@ -222,6 +222,7 @@ export class CanvasRenderer {
         context.beginPath();
         context.moveTo(left + width * 0.35, top + edge);
         context.lineTo(left + width * 0.48, top + height * 0.45);
+        context.moveTo(left + width * 0.42, top + height * 0.55);
         context.lineTo(left + width * 0.37, top + height - edge);
         context.stroke();
         break;
@@ -240,7 +241,7 @@ export class CanvasRenderer {
   private drawHover(): void {
     if (this.hoverEdge !== null) {
       const { x1, y1, x2, y2 } = this.hoverEdge;
-      this.context.strokeStyle = "#78dcca";
+      this.context.strokeStyle = this.world.canWeld(x1, y1, x2, y2) ? "#78dcca" : "#e15a4f";
       this.context.lineWidth = 3;
       this.context.beginPath();
       if (y1 === y2) {

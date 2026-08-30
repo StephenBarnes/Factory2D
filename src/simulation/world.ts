@@ -1,4 +1,4 @@
-import { TileKind } from "./tile";
+import { TILE_DEFINITIONS, TileKind } from "./tile";
 
 export interface Tile {
   readonly kind: TileKind;
@@ -52,12 +52,28 @@ export class World {
     return storage.welds[storage.index] === 1;
   }
 
+  canWeld(x1: number, y1: number, x2: number, y2: number): boolean {
+    const first = this.indexOf(x1, y1);
+    const second = this.indexOf(x2, y2);
+    this.weldStorage(first, second);
+    return (
+      TILE_DEFINITIONS[this.kinds[first] as TileKind].weldable &&
+      TILE_DEFINITIONS[this.kinds[second] as TileKind].weldable
+    );
+  }
+
   setWeld(x1: number, y1: number, x2: number, y2: number, welded: boolean): boolean {
     const first = this.indexOf(x1, y1);
     const second = this.indexOf(x2, y2);
     const storage = this.weldStorage(first, second);
 
-    if (welded && (this.kinds[first] === TileKind.Empty || this.kinds[second] === TileKind.Empty)) {
+    if (
+      welded &&
+      (
+        !TILE_DEFINITIONS[this.kinds[first] as TileKind].weldable ||
+        !TILE_DEFINITIONS[this.kinds[second] as TileKind].weldable
+      )
+    ) {
       return false;
     }
 

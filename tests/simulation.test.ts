@@ -16,16 +16,28 @@ describe("gravity simulation", () => {
     expect(simulation.tick).toBe(1);
   });
 
-  it("makes all decisions from the start-of-tick state", () => {
+  it("moves an unsupported column together from the start-of-tick state", () => {
     const world = new World(1, 4);
-    const upperId = world.place(0, 0, TileKind.Sand);
-    const lowerId = world.place(0, 1, TileKind.Sand);
+    const upperId = world.place(0, 0, TileKind.Stone);
+    const lowerId = world.place(0, 1, TileKind.Stone);
     const simulation = new Simulation(world);
 
-    expect(simulation.step()).toBe(1);
-    expect(world.idAt(0, 0)).toBe(upperId);
-    expect(world.kindAt(0, 1)).toBe(TileKind.Empty);
+    expect(simulation.step()).toBe(2);
+    expect(world.kindAt(0, 0)).toBe(TileKind.Empty);
+    expect(world.idAt(0, 1)).toBe(upperId);
     expect(world.idAt(0, 2)).toBe(lowerId);
+  });
+
+  it("keeps a gravity dependency chain still when its base is fixed", () => {
+    const world = new World(1, 4);
+    const upperId = world.place(0, 0, TileKind.Stone);
+    const lowerId = world.place(0, 1, TileKind.Stone);
+    world.place(0, 2, TileKind.Platform);
+    const simulation = new Simulation(world);
+
+    expect(simulation.step()).toBe(0);
+    expect(world.idAt(0, 0)).toBe(upperId);
+    expect(world.idAt(0, 1)).toBe(lowerId);
   });
 
   it("does not move sand through fixed blocks or the world boundary", () => {
@@ -140,10 +152,10 @@ describe("diagonal sand gravity", () => {
 });
 
 describe("welded bodies", () => {
-  it("moves welded sand as one body while preserving IDs and the weld", () => {
+  it("moves welded stone as one body while preserving IDs and the weld", () => {
     const world = new World(3, 3);
-    const leftId = world.place(0, 0, TileKind.Sand);
-    const rightId = world.place(1, 0, TileKind.Sand);
+    const leftId = world.place(0, 0, TileKind.Stone);
+    const rightId = world.place(1, 0, TileKind.Stone);
     expect(world.setWeld(0, 0, 1, 0, true)).toBe(true);
     const simulation = new Simulation(world);
 
@@ -155,8 +167,8 @@ describe("welded bodies", () => {
 
   it("moves overlapping destinations in a vertical welded body", () => {
     const world = new World(1, 4);
-    const upperId = world.place(0, 0, TileKind.Sand);
-    const lowerId = world.place(0, 1, TileKind.Sand);
+    const upperId = world.place(0, 0, TileKind.Stone);
+    const lowerId = world.place(0, 1, TileKind.Stone);
     world.setWeld(0, 0, 0, 1, true);
     const simulation = new Simulation(world);
 
@@ -168,16 +180,33 @@ describe("welded bodies", () => {
 
   it("does not move a body containing a fixed block", () => {
     const world = new World(2, 3);
-    world.place(0, 0, TileKind.Sand);
+    world.place(0, 0, TileKind.Stone);
     world.place(1, 0, TileKind.Platform);
     world.setWeld(0, 0, 1, 0, true);
     const simulation = new Simulation(world);
 
     expect(simulation.step()).toBe(0);
-    expect(world.kindAt(0, 0)).toBe(TileKind.Sand);
+    expect(world.kindAt(0, 0)).toBe(TileKind.Stone);
     expect(world.kindAt(1, 0)).toBe(TileKind.Platform);
   });
+
+  it("moves a welded body and every unsupported body beneath it together", () => {
+    const world = new World(2, 4);
+    const upperLeftId = world.place(0, 0, TileKind.Stone);
+    const upperRightId = world.place(1, 0, TileKind.Stone);
+    const lowerLeftId = world.place(0, 1, TileKind.Stone);
+    const lowerRightId = world.place(1, 1, TileKind.Stone);
+    world.setWeld(0, 0, 1, 0, true);
+    const simulation = new Simulation(world);
+
+    expect(simulation.step()).toBe(4);
+    expect(world.idAt(0, 1)).toBe(upperLeftId);
+    expect(world.idAt(1, 1)).toBe(upperRightId);
+    expect(world.idAt(0, 2)).toBe(lowerLeftId);
+    expect(world.idAt(1, 2)).toBe(lowerRightId);
+  });
 });
+
 
 describe("world editing", () => {
   it("assigns stable nonzero IDs and does not replace an unchanged tile", () => {
@@ -189,12 +218,17 @@ describe("world editing", () => {
     expect(world.place(0, 0, TileKind.Sand)).not.toBe(firstId);
   });
 
-  it("creates welds only between occupied neighbors and clears incident welds with a tile", () => {
+  it("creates welds only between weldable neighbors and clears incident welds with a tile", () => {
     const world = new World(2, 2);
     world.place(0, 0, TileKind.Stone);
 
+    expect(world.canWeld(0, 0, 1, 0)).toBe(false);
+    expect(world.setWeld(0, 0, 1, 0, true)).toBe(false);
+    world.place(1, 0, TileKind.Sand);
+    expect(world.canWeld(0, 0, 1, 0)).toBe(false);
     expect(world.setWeld(0, 0, 1, 0, true)).toBe(false);
     world.place(1, 0, TileKind.Stone);
+    expect(world.canWeld(0, 0, 1, 0)).toBe(true);
     expect(world.setWeld(0, 0, 1, 0, true)).toBe(true);
     expect(world.isWelded(0, 0, 1, 0)).toBe(true);
     expect(world.clone().isWelded(0, 0, 1, 0)).toBe(true);

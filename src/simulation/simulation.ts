@@ -17,6 +17,10 @@ export class Simulation {
   private readonly horizontalMoves: Int8Array;
   private readonly jammedBodies: Uint8Array;
   private readonly destinationOwners: Int32Array;
+  private readonly dependencyHeads: Int32Array;
+  private readonly dependencyDependents: Int32Array;
+  private readonly nextDependency: Int32Array;
+  private readonly blockedBodyQueue: Int32Array;
 
   constructor(world: World) {
     this.world = world;
@@ -28,6 +32,10 @@ export class Simulation {
     this.horizontalMoves = new Int8Array(world.cellCount);
     this.jammedBodies = new Uint8Array(world.cellCount);
     this.destinationOwners = new Int32Array(world.cellCount);
+    this.dependencyHeads = new Int32Array(world.cellCount);
+    this.dependencyDependents = new Int32Array(world.cellCount);
+    this.nextDependency = new Int32Array(world.cellCount);
+    this.blockedBodyQueue = new Int32Array(world.cellCount);
   }
 
   step(): number {
@@ -89,16 +97,74 @@ export class Simulation {
 
   private chooseMovements(): void {
     this.horizontalMoves.fill(2);
+    this.jammedBodies.fill(0);
+    this.dependencyHeads.fill(-1);
+    let dependencyCount = 0;
+
     for (let root = 0; root < this.world.cellCount; root += 1) {
-      if ((this.bodyHeads[root] ?? -1) < 0 || this.bodyFalls[root] === 0) {
+      if ((this.bodyHeads[root] ?? -1) < 0) {
+        continue;
+      }
+      if (this.bodyFalls[root] === 0) {
+        this.jammedBodies[root] = 1;
         continue;
       }
 
-      if (this.canBodyMove(root, 0)) {
-        this.horizontalMoves[root] = 0;
-        continue;
+      this.horizontalMoves[root] = 0;
+      for (let member = this.bodyHeads[root] ?? -1; member >= 0; member = this.nextBodyMember[member] ?? -1) {
+        if (member >= this.world.cellCount - this.world.width) {
+          this.jammedBodies[root] = 1;
+          continue;
+        }
+
+        const blocker = this.bodyRoots[member + this.world.width] ?? -1;
+        if (blocker < 0 || blocker === root) {
+          continue;
+        }
+
+        this.dependencyDependents[dependencyCount] = root;
+        this.nextDependency[dependencyCount] = this.dependencyHeads[blocker] ?? -1;
+        this.dependencyHeads[blocker] = dependencyCount;
+        dependencyCount += 1;
       }
-      if (this.bodySlidesDiagonally[root] === 0) {
+    }
+
+    let queueHead = 0;
+    let queueLength = 0;
+    for (let root = 0; root < this.world.cellCount; root += 1) {
+      if (this.jammedBodies[root] === 1) {
+        this.horizontalMoves[root] = 2;
+        this.blockedBodyQueue[queueLength] = root;
+        queueLength += 1;
+      }
+    }
+
+    while (queueHead < queueLength) {
+      const blocker = this.blockedBodyQueue[queueHead] ?? -1;
+      queueHead += 1;
+      for (
+        let dependency = this.dependencyHeads[blocker] ?? -1;
+        dependency >= 0;
+        dependency = this.nextDependency[dependency] ?? -1
+      ) {
+        const dependent = this.dependencyDependents[dependency] ?? -1;
+        if (this.jammedBodies[dependent] === 1) {
+          continue;
+        }
+        this.jammedBodies[dependent] = 1;
+        this.horizontalMoves[dependent] = 2;
+        this.blockedBodyQueue[queueLength] = dependent;
+        queueLength += 1;
+      }
+    }
+
+    for (let root = 0; root < this.world.cellCount; root += 1) {
+      if (
+        (this.bodyHeads[root] ?? -1) < 0 ||
+        this.bodyFalls[root] === 0 ||
+        this.horizontalMoves[root] === 0 ||
+        this.bodySlidesDiagonally[root] === 0
+      ) {
         continue;
       }
 
@@ -169,7 +235,7 @@ export class Simulation {
     }
   }
 
-  private canBodyMove(root: number, horizontalMove: -1 | 0 | 1): boolean {
+  private canBodyMove(root: number, horizontalMove: -1 | 1): boolean {
     for (let member = this.bodyHeads[root] ?? -1; member >= 0; member = this.nextBodyMember[member] ?? -1) {
       const x = member % this.world.width;
       const y = Math.floor(member / this.world.width);

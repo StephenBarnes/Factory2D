@@ -14,6 +14,7 @@ export const enum TileDecorationStyle {
 export interface TileDefinition {
   readonly name: string;
   readonly affectedByGravity: boolean;
+  readonly weldable: boolean;
   readonly slidesDiagonally: boolean;
   readonly fill: string;
   readonly highlight: string;
@@ -27,6 +28,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Empty",
     affectedByGravity: false,
     slidesDiagonally: false,
+    weldable: false,
     fill: "transparent",
     highlight: "transparent",
     shadow: "transparent",
@@ -37,6 +39,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Stone",
     affectedByGravity: true,
     slidesDiagonally: false,
+    weldable: true,
     fill: "#66717d",
     highlight: "#95a0ab",
     shadow: "#3c454f",
@@ -47,6 +50,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Sand",
     affectedByGravity: true,
     slidesDiagonally: true,
+    weldable: false,
     fill: "#e7ad4f",
     highlight: "#ffd37a",
     shadow: "#a86d2b",
@@ -57,6 +61,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Platform",
     affectedByGravity: false,
     slidesDiagonally: false,
+    weldable: true,
     fill: "#56736b",
     highlight: "#85a49a",
     shadow: "#30473f",

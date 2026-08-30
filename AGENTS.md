@@ -82,7 +82,7 @@ We have no sprite assets. Tiles are drawn procedurally using Canvas 2D functions
 * Competing intents at the same priority jam rather than depending on iteration order. Driven movement will outrank passive gravity. Pushing will resolve the complete dependency chain before any body moves.
 * Rendering may interpolate committed steps, but interpolation never feeds back into simulation state.
 
-The current engine implements observation, intent conflict resolution, and commit phases for straight-down and diagonal gravity. Welded bodies move as rigid groups. Driven movement, pushing, and rotation remain future simulation work.
+The current engine implements observation, intent conflict resolution, and commit phases for straight-down and diagonal gravity. Welded bodies move as rigid groups, and unsupported touching bodies resolve complete downward movement dependency chains before committing together. Driven movement, general-purpose pushing, and rotation remain future simulation work.
 
 ## Development state
 
@@ -92,11 +92,11 @@ The first playable scaffold is implemented:
 
 * A 20x14 editable Canvas 2D grid with procedural sand, falling stone, and fixed platform tiles.
 * Build controls for click-and-drag placement, right-click removal, stepping, running, pausing, resetting, clearing, and speed selection.
-* A separate weld tool for joining occupied neighbors into rigid bodies and unwelding them, with a held-Control temporary override.
-* Welded neighbors render as continuous bodies without an internal tile gutter.
+* A separate weld tool for joining eligible occupied neighbors into rigid bodies and unwelding them, with an immediate held-Control temporary override and red invalid-edge feedback. Sand is not weldable.
+* Procedurally decorated tiles on both the Canvas board and component palette, with welded neighbors rendered continuously without an internal tile gutter.
 * A typed-array world with stable tile IDs, edge weld storage, and allocation-free per-tick movement buffers.
-* Deterministic straight-down gravity for stone and sand, parity-selected diagonal gravity for sand, direct-fall priority, and equal-priority destination jamming.
-* Deterministic tests for gravity, sand overhangs, welded bodies, conflicts, tick snapshots, boundaries, stable IDs, and reset behavior.
+* Deterministic straight-down gravity for stone and sand, complete downward body-dependency resolution, parity-selected diagonal gravity for sand, direct-fall priority, and equal-priority destination jamming.
+* Deterministic tests for gravity chains, sand overhangs, welded bodies, conflicts, welding eligibility, tick snapshots, boundaries, stable IDs, and reset behavior.
 
 ## Code map
 
@@ -107,21 +107,23 @@ The first playable scaffold is implemented:
 * `src/render/canvas-renderer.ts` — Responsive Canvas 2D grid, definition-driven procedural tiles, continuous welded-body rendering, hit testing, and hover feedback.
 * `src/simulation/tile.ts` — Tile kind enum and immutable tile behavior/render definitions.
 * `src/simulation/world.ts` — Typed-array tile and weld storage, stable IDs, snapshots, editing, and body movement commits.
-* `src/simulation/simulation.ts` — Allocation-free welded-body collection, gravity intent selection, conflict resolution, and tick advancement.
-* `tests/simulation.test.ts` — Deterministic world, gravity, diagonal movement, conflict, weld, identity, and reset tests.
+* `src/simulation/simulation.ts` — Allocation-free welded-body collection, gravity dependency resolution, intent selection, conflict resolution, and tick advancement.
+* `tests/simulation.test.ts` — Deterministic world, gravity dependency, diagonal movement, conflict, weld, identity, and reset tests.
 * `vite.config.ts` — Vite configuration with Vitest's Node test environment.
 * `tsconfig.json` — Strict browser TypeScript and project build configuration.
 
 ## Current TODOs
 
 Small:
-* Add a tile definition flag to allow/ban welding a block. Sand blocks should not be weldable.
-* Draw decorations for tiles in the components menu.
-* Color the weld visualization (a small bar) red if welding is not allowed - e.g. welding to an empty block, or welding sand.
-* Bug: When ctrl is pressed, we currently don't draw the weld visualization until the mouse moves slightly.
+* Currently the tiles shown in the components palette left sidebar, and the tiles shown in the game, look slightly different. Can we refactor them to use the same draw function? Seems they diverge because grid appearance is defined in `canvas-renderer.ts` `drawTile()` while the palette appearance is defined in CSS. Can we unify these?
+* When 3 blocks in an "L" shape are welded together, the middle block has no border and is completely filled at the inner fillet, which looks wrong. Can we improve this?
 
-Larger:
-* If we make a column of non-welded stone blocks, they currently fall one at a time, because only the bottom one has empty space below it. We need to implement a force/push-resolution simulation system that lets them all fall together. This is necessary for later features, e.g. a piston should be able to push a row of unwelded blocks as one unit.
+Adding features:
+* Implement a magnet block, which can be rotated in 90 degree increments. Render it in a way that makes it clear which direction it's pointing. Allow using Q/E to rotate the block that will be placed, and WASD to set its direction.
+* Ban welding the magnet on the side that it's pointing. Allow welding on other sides. Requires reworking/extending our current `weldable` flag in tile definitions.
+* Make the magnet attract its neighbor block in the direction it's pointing. This attraction should outweigh gravity - a block falling past the magnet should be stopped there.
+* Add a magnetic flag to tile definitions. Add a new metal block that is magnetic. Set other tile types to non-magnetic. Make the magnet only affect magnetic blocks.
+* (Later: We'll have powerful magnets that can attract at a range of 2 blocks. We'll add electromagnets that are only active when connected to charged wires.)
 
 ## Development guidelines
 

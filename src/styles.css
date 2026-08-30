@@ -205,6 +205,8 @@ h1 span {
 }
 
 .swatch {
+  position: relative;
+  overflow: hidden;
   width: 32px;
   height: 32px;
   border: 2px solid;
@@ -226,8 +228,54 @@ h1 span {
   background: #56736b;
 }
 
+.sand-swatch::before {
+  content: "";
+  position: absolute;
+  top: 9px;
+  left: 8px;
+  width: 3px;
+  height: 3px;
+  background: #8d5b26;
+  box-shadow: 12px 10px #8d5b26, 16px -2px #8d5b26;
+}
+
+.stone-swatch::before,
+.platform-swatch::before,
+.stone-swatch::after,
+.platform-swatch::after {
+  content: "";
+  position: absolute;
+  width: 2px;
+  background: var(--decoration-color);
+  transform-origin: top;
+}
+
+.stone-swatch,
+.platform-swatch {
+  --decoration-color: #525d68;
+}
+
+.platform-swatch {
+  --decoration-color: #405b52;
+}
+
+.stone-swatch::before,
+.platform-swatch::before {
+  top: 6px;
+  left: 14px;
+  height: 10px;
+  transform: rotate(-18deg);
+}
+
+.stone-swatch::after,
+.platform-swatch::after {
+  top: 14px;
+  left: 11px;
+  height: 12px;
+  transform: rotate(22deg);
+}
+
 .weld-swatch {
-  position: relative;
   border-color: #5f512c;
   background: #20252a;
 }
