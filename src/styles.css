@@ -311,9 +311,14 @@ kbd {
 }
 
 canvas {
+  display: block;
+}
+
+#game-canvas {
   width: 100%;
   height: 100%;
-  display: block;
+  position: absolute;
+  inset: 0;
   touch-action: none;
 }
 
