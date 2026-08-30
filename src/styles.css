@@ -36,6 +36,7 @@ button {
 
 button:focus-visible,
 select:focus-visible,
+.animation-control input:focus-visible,
 canvas:focus-visible {
   outline: 2px solid #78dcca;
   outline-offset: 3px;
@@ -386,8 +387,8 @@ canvas {
   background: #78dcca;
 }
 
+.animation-control,
 .speed-control {
-  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -396,6 +397,23 @@ canvas {
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.08em;
+}
+
+.animation-control {
+  margin-left: auto;
+  cursor: pointer;
+}
+
+.animation-control input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #78dcca;
+}
+
+.animation-control:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .speed-control select {
@@ -445,6 +463,7 @@ canvas {
     flex-wrap: wrap;
   }
 
+  .animation-control,
   .speed-control {
     margin-left: 0;
   }

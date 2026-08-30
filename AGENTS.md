@@ -82,12 +82,12 @@ The first playable scaffold is implemented:
 
 * A 20x14 editable Canvas 2D grid with procedural sand, falling stone, magnetic metal, directional magnets, and fixed platform tiles.
 * A responsive board canvas whose backing-store resolution follows browser zoom without contributing its intrinsic pixel dimensions to page layout.
-* Build controls for gap-free click-and-drag placement and removal, including drags that leave the grid, plus magnet rotation and aiming, stepping, running, pausing, resetting, clearing, and speed selection.
+* Build controls for gap-free click-and-drag placement and removal, including drags that leave the grid, plus magnet rotation and aiming, stepping, running, pausing, resetting, clearing, speed selection, and an animation toggle.
 * A separate weld tool for joining eligible occupied neighbors into rigid bodies and unwelding them, with gap-free fast-drag traversal, an immediate held-Control temporary override, and red invalid-edge feedback. Sand is not weldable, and magnets reject welds on their pointed side.
 * One shared procedural tile renderer for the Canvas board, placement preview, and component palette. Palette previews use density-aware, supersampled backing stores and redraw when browser zoom or display density changes. Each welded body renders as a single rounded polyomino slab: a traced, inset outline path with convex corner rounding and concave weld fillets, a drop shadow, per-cell fills and decorations clipped to the outline, top-left highlight and bottom-right shade bevels, and a dark rim. Diagonally touching cells render as a rounded pinch, and unwelded edges interior to a body render as dark seam grooves. Per-body cells and `Path2D` outlines are cached across animation frames and rebuilt only after world changes or board geometry changes.
 * A typed-array world with stable tile IDs, per-tile orientation, edge weld storage, and allocation-free per-tick movement buffers.
 * Deterministic straight-down gravity for stone, metal, magnets, and sand; complete downward body-dependency resolution; parity-selected diagonal gravity for sand; direct-fall priority; equal-priority destination jamming; and reciprocal magnetic constraints that hold bodies when supported while allowing unsupported attracting groups to fall.
-* Simulation commits remain discrete and deterministic while stable tile IDs drive smooth eased rendering between the previous and current positions. Manual steps animate for 200 ms; automatic steps animate for up to 250 ms without delaying simulation ticks.
+* Simulation commits remain discrete and deterministic while stable tile IDs drive optional smooth eased rendering between the previous and current positions. Manual steps animate for 200 ms; automatic steps animate for up to 250 ms without delaying simulation ticks. A 60-ticks-per-second mode forces discrete rendering.
 * Deterministic tests for gravity chains, sand overhangs, welded and magnetically constrained bodies, conflicts, directional welding, orientation snapshots, boundaries, stable IDs, and reset behavior.
 
 ## Code map
@@ -115,8 +115,6 @@ The first playable scaffold is implemented:
 
 Related to animation system recently implemented:
 * Compute the next simulation step async, while the last update is still being animated. Would improve performance if simulation step time grows over frame time.
-* Add an option to disable animation and instead step discretely.
-* Add a 60 ticks per second option (or "max" option) for simulation speed. Disable animations in this case.
 
 ## Development guidelines
 

@@ -13,6 +13,7 @@ import { World } from "./simulation/world";
 
 const MAX_AUTOMATIC_ANIMATION_MS = 250;
 const MANUAL_STEP_ANIMATION_MS = 200;
+const HIGH_SPEED_TICKS_PER_SECOND = 60;
 const PALETTE_PREVIEW_SUPERSAMPLING = 2;
 
 function requiredElement<T extends HTMLElement>(id: string): T {
@@ -48,6 +49,7 @@ const playButton = requiredElement<HTMLButtonElement>("play-button");
 const stepButton = requiredElement<HTMLButtonElement>("step-button");
 const resetButton = requiredElement<HTMLButtonElement>("reset-button");
 const clearButton = requiredElement<HTMLButtonElement>("clear-button");
+const animationToggle = requiredElement<HTMLInputElement>("animation-toggle");
 const speedSelect = requiredElement<HTMLSelectElement>("speed-select");
 const stateLight = requiredElement<HTMLSpanElement>("state-light");
 const stateLabel = requiredElement<HTMLSpanElement>("state-label");
@@ -90,6 +92,22 @@ function finishAnimation(): void {
   previousWorld.copyFrom(world);
   animationDuration = 0;
 }
+function animationsEnabled(): boolean {
+  return animationToggle.checked &&
+    Number(speedSelect.value) < HIGH_SPEED_TICKS_PER_SECOND;
+}
+
+function updateAnimationControlState(): void {
+  const highSpeed = Number(speedSelect.value) >= HIGH_SPEED_TICKS_PER_SECOND;
+  if (highSpeed) {
+    animationToggle.checked = false;
+  }
+  animationToggle.disabled = highSpeed;
+  if (!animationsEnabled()) {
+    finishAnimation();
+  }
+}
+
 
 function advanceSimulation(duration: number, startedAt = performance.now()): void {
   previousWorld.copyFrom(world);
@@ -302,8 +320,19 @@ playButton.addEventListener("click", () => {
 });
 
 stepButton.addEventListener("click", () => {
-  advanceSimulation(MANUAL_STEP_ANIMATION_MS);
+  advanceSimulation(animationsEnabled() ? MANUAL_STEP_ANIMATION_MS : 0);
 });
+animationToggle.addEventListener("change", () => {
+  if (!animationToggle.checked) {
+    finishAnimation();
+  }
+});
+
+speedSelect.addEventListener("change", () => {
+  accumulatedTime = 0;
+  updateAnimationControlState();
+});
+
 
 resetButton.addEventListener("click", () => {
   setRunning(false);
@@ -444,7 +473,7 @@ document.addEventListener("keydown", (event) => {
     event.preventDefault();
     setRunning(!running);
   } else if (event.code === "KeyN" && !running) {
-    advanceSimulation(MANUAL_STEP_ANIMATION_MS);
+    advanceSimulation(animationsEnabled() ? MANUAL_STEP_ANIMATION_MS : 0);
   } else if (event.code === "KeyR") {
     setRunning(false);
     simulation.resetTo(baseline);
@@ -488,7 +517,7 @@ function frame(currentTime: number): void {
     while (accumulatedTime >= tickDuration) {
       accumulatedTime -= tickDuration;
       advanceSimulation(
-        Math.min(tickDuration, MAX_AUTOMATIC_ANIMATION_MS),
+        animationsEnabled() ? Math.min(tickDuration, MAX_AUTOMATIC_ANIMATION_MS) : 0,
         currentTime - accumulatedTime,
       );
     }
@@ -508,5 +537,6 @@ function frame(currentTime: number): void {
 }
 
 updateTransportState();
+updateAnimationControlState();
 renderPalettePreviews();
 requestAnimationFrame(frame);
