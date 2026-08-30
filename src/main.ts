@@ -12,7 +12,7 @@ import {
   pointerGesture,
 } from "./render/pointer-gesture";
 import type { PointerGesture } from "./render/pointer-gesture";
-import { serializeBoard } from "./simulation/board-export";
+import { deserializeBoard, serializeBoard } from "./simulation/board-export";
 import { Simulation } from "./simulation/simulation";
 import { Direction, TileKind } from "./simulation/tile";
 import { World } from "./simulation/world";
@@ -32,7 +32,7 @@ function requiredElement<T extends HTMLElement>(id: string): T {
   return element as T;
 }
 
-const world = new World(20, 14);
+let world = new World(20, 14);
 for (let x = 0; x < world.width; x += 1) {
   world.place(x, world.height - 1, TileKind.Platform);
 }
@@ -47,20 +47,22 @@ world.place(5, 4, TileKind.Sand);
 world.place(11, 2, TileKind.Sand);
 world.place(15, 5, TileKind.Sand);
 
-const simulation = new Simulation(world);
-const baseline = world.clone();
-const previousWorld = world.clone();
+let simulation = new Simulation(world);
+let baseline = world.clone();
+let previousWorld = world.clone();
 const canvas = requiredElement<HTMLCanvasElement>("game-canvas");
-const renderer = new CanvasRenderer(canvas, world);
+let renderer = new CanvasRenderer(canvas, world);
 const sidebarControls = requiredElement<HTMLElement>("sidebar-controls");
 const bottomControls = requiredElement<HTMLElement>("bottom-controls");
 const inspectorPanel = requiredElement<HTMLElement>("tile-inspector");
-const tileInspector = new TileInspector(inspectorPanel, world);
+let tileInspector = new TileInspector(inspectorPanel, world);
 const playButton = requiredElement<HTMLButtonElement>("play-button");
 const stepButton = requiredElement<HTMLButtonElement>("step-button");
 const resetButton = requiredElement<HTMLButtonElement>("reset-button");
 const clearButton = requiredElement<HTMLButtonElement>("clear-button");
 const exportButton = requiredElement<HTMLButtonElement>("export-button");
+const importButton = requiredElement<HTMLButtonElement>("import-button");
+const importFile = requiredElement<HTMLInputElement>("import-file");
 const animationToggle = requiredElement<HTMLInputElement>("animation-toggle");
 const speedSelect = requiredElement<HTMLSelectElement>("speed-select");
 const stateLight = requiredElement<HTMLSpanElement>("state-light");
@@ -398,6 +400,44 @@ exportButton.addEventListener("click", () => {
   download.click();
   download.remove();
   URL.revokeObjectURL(objectUrl);
+});
+
+importButton.addEventListener("click", () => {
+  importFile.click();
+});
+
+importFile.addEventListener("change", async () => {
+  const file = importFile.files?.[0];
+  importFile.value = "";
+  if (file === undefined) {
+    return;
+  }
+
+  importButton.disabled = true;
+  try {
+    const imported = deserializeBoard(await file.text());
+    setRunning(false);
+    world = imported.world;
+    simulation = new Simulation(world);
+    simulation.tick = imported.tick;
+    baseline = world.clone();
+    previousWorld = world.clone();
+    renderer = new CanvasRenderer(canvas, world);
+    tileInspector = new TileInspector(inspectorPanel, world);
+    hoveredCell = null;
+    hoveredEdge = null;
+    lastEditedCell = null;
+    lastPointerGridPoint = null;
+    renderedTick = -1;
+    animationDuration = 0;
+    updateViewportInsets();
+    refreshPointerHover();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    window.alert(`Could not import board: ${message}`);
+  } finally {
+    importButton.disabled = false;
+  }
 });
 
 canvas.addEventListener("pointerdown", (event) => {

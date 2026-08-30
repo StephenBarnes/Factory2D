@@ -92,7 +92,7 @@ The first playable scaffold is implemented:
 * Simulation commits remain discrete and deterministic while stable tile IDs drive optional smooth eased rendering between the previous and current positions. Manual steps animate for 200 ms; automatic steps animate for up to 250 ms without delaying simulation ticks. A 60-ticks-per-second mode forces discrete rendering.
 * A responsive top-right cell inspector shows the hovered tile's stable ID, movement behavior, effective weldable sides, current welds, magnetic state, orientation, and attraction direction/range. It refreshes after simulation commits even when the pointer remains stationary.
 * Deterministic tests for gravity chains, sand overhangs, welded and magnetically constrained bodies, conflicts, directional welding, orientation snapshots, boundaries, stable IDs, reset behavior, and pointer gesture classification.
-* A board export control downloads deterministic, versioned JSON containing dimensions, simulation tick, non-empty tile kinds and orientations, and each weld edge once. Runtime tile IDs are intentionally excluded.
+* Board export and import controls round-trip deterministic, versioned JSON containing dimensions, simulation tick, non-empty tile kinds, non-up orientations, and each weld edge once. Imports validate the complete file before replacing the live board, support board sizes up to 400x300, and reconstruct fresh runtime tile IDs because IDs are intentionally excluded from the file.
 
 ## Code map
 
@@ -105,7 +105,7 @@ The first playable scaffold is implemented:
 * `src/render/pointer-gesture.ts` — Button/modifier gesture classification and middle-click drag-threshold policy.
 * `src/render/tile-renderer.ts` — Body outline tracing and rounded-slab drawing (fill, bevel lighting, decorations) for the board and component palette.
 * `src/simulation/tile.ts` — Tile kinds, directions, and immutable tile behavior/render definitions.
-* `src/simulation/board-export.ts` — Deterministic, versioned JSON serialization for sharing the current board state.
+* `src/simulation/board-export.ts` — Deterministic, versioned JSON serialization and strict validation/deserialization for sharing board state.
 * `src/simulation/world.ts` — Typed-array tile, orientation, and weld storage; stable IDs; render revisions; snapshots; editing; and body movement commits.
 * `src/simulation/simulation.ts` — Allocation-free welded and magnetically constrained body collection, gravity intent selection, conflict resolution, and tick advancement.
 * `src/ui/tile-inspector.ts` — Revision-aware hovered-cell property presentation, including effective directional weldability and current welds.
@@ -137,8 +137,6 @@ Game flow:
 * Implement target component that absorbs adjacent blocks of a specified type, and marks the puzzle as completed once some number have been absorbed. Requires a UI for setting which block to absorb, and how many. This will be used in the sandbox for designing puzzles.
 * Add a dispenser component that dispenses a selected block when it receives charge. Used for creating puzzle inputs.
 * Change the editing model when solving puzzles: the player edits the initial board state, but as soon as they've played/run the simulation, they can no longer edit, they have to reset. Because puzzles won't allow modifying the board halfway through running a solution. We can still allow mid-run edits in the sandbox.
-* Modify save-file format to assume "up" orientation as the default in the `tiles` list. Most blocks are not orientable, they default to up.
-* Add a way to import files that were previously exported.
 
 Some more items in `deferred-todos.md`.
 
