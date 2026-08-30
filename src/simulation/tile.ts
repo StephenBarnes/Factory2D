@@ -47,6 +47,17 @@ export const enum TileDecorationStyle {
 
 export interface TileDefinition {
   readonly name: string;
+  /** Single UTF-16 code unit used by the compact board format. */
+  readonly boardCode: string;
+  /** Sandbox component-palette presentation. Empty tiles are not palette entries. */
+  readonly palette: {
+    readonly order: number;
+    readonly description: string;
+    readonly shortcut: {
+      readonly code: string;
+      readonly label: string;
+    } | null;
+  } | null;
   readonly affectedByGravity: boolean;
   readonly weldableSides: WeldSide;
   readonly excludesFacingWeld: boolean;
@@ -78,6 +89,8 @@ export function oppositeDirection(direction: Direction): Direction {
 export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Empty]: {
     name: "Empty",
+    boardCode: ".",
+    palette: null,
     affectedByGravity: false,
     slidesDiagonally: false,
     weldableSides: WeldSide.None,
@@ -94,6 +107,12 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   },
   [TileKind.Stone]: {
     name: "Stone",
+    boardCode: "#",
+    palette: {
+      order: 1,
+      description: "Solid block affected by gravity",
+      shortcut: { code: "Digit2", label: "2" },
+    },
     affectedByGravity: true,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
@@ -110,6 +129,12 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   },
   [TileKind.Sand]: {
     name: "Sand",
+    boardCode: ":",
+    palette: {
+      order: 0,
+      description: "Falls and slides around obstacles",
+      shortcut: { code: "Digit1", label: "1" },
+    },
     affectedByGravity: true,
     slidesDiagonally: true,
     weldableSides: WeldSide.None,
@@ -126,6 +151,12 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   },
   [TileKind.Platform]: {
     name: "Platform",
+    boardCode: "=",
+    palette: {
+      order: 2,
+      description: "Fixed structural block",
+      shortcut: { code: "Digit3", label: "3" },
+    },
     affectedByGravity: false,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
@@ -142,6 +173,12 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   },
   [TileKind.Magnet]: {
     name: "Magnet",
+    boardCode: "L",
+    palette: {
+      order: 3,
+      description: "Holds magnetic blocks on its pointed side",
+      shortcut: { code: "Digit4", label: "4" },
+    },
     affectedByGravity: true,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
@@ -158,6 +195,12 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   },
   [TileKind.Metal]: {
     name: "Metal",
+    boardCode: "M",
+    palette: {
+      order: 4,
+      description: "Magnetic structural block",
+      shortcut: { code: "Digit5", label: "5" },
+    },
     affectedByGravity: true,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
@@ -174,6 +217,12 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   },
   [TileKind.Conduit]: {
     name: "Conduit",
+    boardCode: "C",
+    palette: {
+      order: 5,
+      description: "Shares charge across welded circuit blocks",
+      shortcut: { code: "Digit6", label: "6" },
+    },
     affectedByGravity: true,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
@@ -190,6 +239,12 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   },
   [TileKind.Sensor]: {
     name: "Sensor Rune",
+    boardCode: "S",
+    palette: {
+      order: 6,
+      description: "Emits +1 when its pointed side is occupied",
+      shortcut: { code: "Digit7", label: "7" },
+    },
     affectedByGravity: true,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
@@ -206,6 +261,12 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   },
   [TileKind.Inverter]: {
     name: "Inverter Rune",
+    boardCode: "I",
+    palette: {
+      order: 7,
+      description: "Negates charge from its back to its pointed output",
+      shortcut: { code: "Digit8", label: "8" },
+    },
     affectedByGravity: true,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
@@ -222,6 +283,12 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   },
   [TileKind.Combiner]: {
     name: "Combiner Rune",
+    boardCode: "+",
+    palette: {
+      order: 8,
+      description: "Sums up to three isolated inputs toward its output",
+      shortcut: { code: "Digit9", label: "9" },
+    },
     affectedByGravity: true,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
@@ -238,6 +305,12 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   },
   [TileKind.Rectifier]: {
     name: "Rectifier Rune",
+    boardCode: "R",
+    palette: {
+      order: 9,
+      description: "Blocks negative charge from back to pointed output",
+      shortcut: { code: "Digit0", label: "0" },
+    },
     affectedByGravity: true,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
@@ -254,6 +327,12 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   },
   [TileKind.Multiplier]: {
     name: "Multiplier Rune",
+    boardCode: "*",
+    palette: {
+      order: 10,
+      description: "Multiplies isolated left and right inputs",
+      shortcut: { code: "KeyX", label: "X" },
+    },
     affectedByGravity: true,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
@@ -270,6 +349,12 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   },
   [TileKind.Subtractor]: {
     name: "Subtractor Rune",
+    boardCode: "-",
+    palette: {
+      order: 11,
+      description: "Outputs the sign of left input minus right",
+      shortcut: { code: "Minus", label: "−" },
+    },
     affectedByGravity: true,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
@@ -285,6 +370,14 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationColor: "#f0d7ca",
   },
 };
+
+export const TILE_KINDS: readonly TileKind[] = Object.freeze(
+  Object.keys(TILE_DEFINITIONS).map((value) => Number(value) as TileKind),
+);
+
+export function isTileKind(value: number): value is TileKind {
+  return Number.isInteger(value) && Object.hasOwn(TILE_DEFINITIONS, value);
+}
 
 export function orientationForKind(kind: TileKind, orientation: Direction): Direction {
   return TILE_DEFINITIONS[kind].usesOrientation ? orientation : Direction.Up;

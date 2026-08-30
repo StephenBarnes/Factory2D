@@ -19,10 +19,12 @@ import {
   Direction,
   orientationForKind,
   TILE_DEFINITIONS,
+  isTileKind,
   TileKind,
 } from "./simulation/tile";
 import { World } from "./simulation/world";
 import { TileInspector } from "./ui/tile-inspector";
+import { populateComponentPalette } from "./ui/component-palette";
 
 const MAX_AUTOMATIC_ANIMATION_MS = 250;
 const MANUAL_STEP_ANIMATION_MS = 200;
@@ -60,6 +62,7 @@ let previousWorld = world.clone();
 const canvas = requiredElement<HTMLCanvasElement>("game-canvas");
 let renderer = new CanvasRenderer(canvas, world);
 const sidebarControls = requiredElement<HTMLElement>("sidebar-controls");
+const componentPalette = requiredElement<HTMLElement>("component-palette");
 const bottomControls = requiredElement<HTMLElement>("bottom-controls");
 const inspectorPanel = requiredElement<HTMLElement>("tile-inspector");
 let tileInspector = new TileInspector(inspectorPanel, world);
@@ -99,6 +102,7 @@ let animationStartedAt = 0;
 let animationDuration = 0;
 let renderedTick = -1;
 let renderedPaletteDevicePixelRatio = 0;
+const tileKindsByShortcut = populateComponentPalette(componentPalette, selectedKind);
 
 function updateViewportInsets(): void {
   const canvasBounds = canvas.getBoundingClientRect();
@@ -358,14 +362,8 @@ function editWeldSegment(
 sidebarControls.addEventListener("click", (event) => {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".palette-item");
   const tileKind = Number(button?.dataset.tile);
-  if (
-    Number.isInteger(tileKind) &&
-    tileKind >= TileKind.Stone &&
-    tileKind <= TileKind.Subtractor
-    // TODO refactor - put bounds or isValidTileKind() or something in tile.ts,
-    // so we don't have to edit here every time we add a tile.
-  ) {
-    selectTile(tileKind as TileKind);
+  if (isTileKind(tileKind) && TILE_DEFINITIONS[tileKind].palette !== null) {
+    selectTile(tileKind);
   } else if (button?.dataset.tool === "weld") {
     selectWeldTool();
   }
@@ -682,30 +680,11 @@ document.addEventListener("keydown", (event) => {
     setRunning(false);
     simulation.resetTo(baseline);
     finishAnimation();
-  } else if (event.code === "Digit1") {
-    selectTile(TileKind.Sand);
-  } else if (event.code === "Digit2") {
-    selectTile(TileKind.Stone);
-  } else if (event.code === "Digit3") {
-    selectTile(TileKind.Platform);
-  } else if (event.code === "Digit4") {
-    selectTile(TileKind.Magnet);
-  } else if (event.code === "Digit5") {
-    selectTile(TileKind.Metal);
-  } else if (event.code === "Digit6") {
-    selectTile(TileKind.Conduit);
-  } else if (event.code === "Digit7") {
-    selectTile(TileKind.Sensor);
-  } else if (event.code === "Digit8") {
-    selectTile(TileKind.Inverter);
-  } else if (event.code === "Digit9") {
-    selectTile(TileKind.Combiner);
-  } else if (event.code === "Digit0") {
-    selectTile(TileKind.Rectifier);
-  } else if (event.code === "KeyX") {
-    selectTile(TileKind.Multiplier);
-  } else if (event.code === "Minus") {
-    selectTile(TileKind.Subtractor);
+  } else {
+    const shortcutKind = tileKindsByShortcut[event.code];
+    if (shortcutKind !== undefined) {
+      selectTile(shortcutKind);
+    }
   }
 });
 

@@ -87,7 +87,7 @@ The game is in early development. Currently implemented:
 
 * A 20x14 editable Canvas 2D grid with procedural sand, falling stone, magnetic metal, directional magnets, circuit conduits, and sensor, inverter, combiner, rectifier, multiplier, and subtractor runes.
 * A full-viewport black board layer behind responsive floating left and bottom control panels. The initial view fits the entire grid into the unobscured region; mouse-wheel zoom stays anchored beneath the pointer; and arrow keys, middle-button drags, or Alt-right-button drags pan within bounds that keep the screen center over the grid.
-* Build controls for gap-free click-and-drag placement and removal, including Shift-left placement welded to every eligible occupied neighbor, drags that leave the grid, middle-click picking that preserves directional component orientation while middle-button drags pan, metadata-driven rotation and aiming shared by palette previews, placement ghosts, and placed tiles, stepping, running, pausing, resetting, clearing, speed selection, and an animation toggle.
+* Build controls for gap-free click-and-drag placement and removal, including Shift-left placement welded to every eligible occupied neighbor, drags that leave the grid, middle-click picking that preserves directional component orientation while middle-button drags pan, metadata-driven rotation and aiming shared by palette previews, placement ghosts, and placed tiles, stepping, running, pausing, resetting, clearing, speed selection, and an animation toggle. The sandbox component palette, compact board codes, descriptions, ordering, and keyboard shortcuts are generated from the single tile definition registry.
 * A separate weld tool for joining eligible occupied neighbors into rigid bodies and unwelding them, with gap-free fast-drag traversal, an immediate held-Control temporary override, and red invalid-edge feedback. Sand is not weldable, and magnets reject welds on their pointed side.
 * One shared procedural tile renderer for the Canvas board, placement preview, and component palette. Palette previews use density-aware, supersampled backing stores and redraw when browser zoom or display density changes. Each welded body renders from traced, inset rounded-slab outlines whose occupied neighbors merge only across locally welded edges, so unwelded cuts stay visually stable when another cut splits the body and closed seam ends receive rounded caps. Rendering includes a drop shadow, per-cell fills that remain locally stable when different tile kinds are joined, decorations clipped to the outline, and top-left highlight and bottom-right shade bevels. Diagonally touching cells render as a rounded pinch. Per-body cells and `Path2D` outlines are cached across animation frames and rebuilt only after world changes or board geometry changes.
 * Circuit-capable tiles render charge-colored traces only across welded circuit connections. Conduits have a dark center socket; sensor runes isolate their pointed side from circuit links and color their arrow by sensed output independently from the connected network's charge; directional gates render isolated input and output segments in each port's own charge color, with distinct inverter, combiner, rectifier, multiplier, and subtractor rune symbols.
@@ -110,11 +110,12 @@ The game is in early development. Currently implemented:
 * `src/render/pointer-gesture.ts` — Button/modifier gesture classification and middle-click drag-threshold policy.
 * `src/render/tile-renderer.ts` — Body outline tracing and rounded-slab drawing (fill, bevel lighting, decorations) for the board and component palette.
 * `src/simulation/circuit.ts` — Signed-ternary charge type, validation, sum resolution, and render colors.
-* `src/simulation/tile.ts` — Tile kinds, directions, and immutable tile behavior/render definitions.
+* `src/simulation/tile.ts` — Tile kinds, directions, and immutable tile behavior, render, board-code, and sandbox-palette definitions.
 * `src/simulation/board-export.ts` — Deterministic compact ASCII tile-and-weld-grid JSON serialization and strict validation/deserialization for sharing board state.
 * `src/simulation/world.ts` — Typed-array tile, orientation, charge, and weld storage; stable IDs; render revisions; snapshots; editing; and body movement commits.
 * `src/simulation/simulation.ts` — Allocation-free circuit-network and delayed directional-gate resolution, welded and magnetically constrained body collection, gravity intent selection, conflict resolution, and tick advancement.
 * `src/ui/tile-inspector.ts` — Revision-aware hovered-cell property presentation, including effective directional weldability and current welds.
+* `src/ui/component-palette.ts` — Definition-driven sandbox component palette construction and keyboard-shortcut lookup.
 * `src/util/assert.ts` — `expectDefined` assertion that crashes loudly on violated lookups instead of falling back silently.
 * `tests/board-export.test.ts` — Compact board format ordering, round-trip, state, and malformed-input validation tests.
 * `tests/circuit.test.ts` — Instant welded-network propagation, sensor directionality, isolated gate networks and delay, combiner, multiplier, and subtractor truth tables, disconnection, and moving-charge tests.
@@ -128,33 +129,38 @@ The game is in early development. Currently implemented:
 
 ## Current TODOs
 
-Refactoring:
-* Refactor any code that currently needs to be modified every time we add a new tile type, except in the single `TILE_DEFINITIONS`. This includes the TODO at `board-export.ts:11`, and `src/main.ts:365`, and the palette at `index.html:34` (construct palette programatically - all tiles for the current sandbox, later a set of allowed tiles for each puzzle).
-* Survey files and add items here for any other refactoring we should do.
-
 New components:
-* Add more signed-ternary circuit components beyond the current sensor, inverter, combiner, rectifier, multiplier, and subtractor runes: charge-sensor (reads charge from neighbor), wire-crossings, and selector/transistor (`out = input0 ? input1 : input2`). Gates should keep input and output networks separate and drive tick t+1 from values observed at tick t. Add small tests. Don't add AND/OR/NAND/NOR, edge detectors, latches, or delays, because they can be built from 1-3 existing components and fixed inputs.
-* Add a directional furnace block, and some simple solid blocks to process (glass, iron ore, and iron replacing generic "metal" currently). Make the furnace block transform the block in its specified direction, according to a table of recipes and bake times - sand to glass, ore to iron. The furnace would need to store how long it's baked and count up to the bake time; baking should be cut short if the tile it's baking moves away. Allow circuit connections: back side charge deactivates the furnace, furnace outputs current bake state on the other 2 sides.
+* Add a directional furnace block. Add some simple solid blocks to process: glass, iron ore, and iron replacing our generic "metal". Make the furnace block transform the block in its specified direction, according to a table of recipes and bake times - sand to glass, ore to iron. The furnace would need to store how long it's baked and count up to the bake time; baking should be cut short if the tile it's baking moves away. Allow circuit connections: back side charge deactivates the furnace, furnace outputs current bake state on the other 2 sides.
 * Add a conveyor-belt block: applies forces to its 4 neighbors, if they're not welded to it, either clockwise or counterclockwise; applies the reaction force to itself. For rendering, draw a block with a dashed line, animated to move along each side. Allow connecting all sides to circuits (like a conduit, single network) and drive with charges - +1 clockwise, -1 counterclockwise, 0 stops.
-* Add a piston block. It should be one block showing the arm and base of the piston overlapping. When it receives a charge, it should extend the arm, making it two separate blocks (considered welded together). When no charge is received, it should try to retract. This is a special case because we have effectively 2 blocks that can overlap, which is not usually allowed; but we could model it without overlaps, as 3 separate block types (arm, base, and combined arm+base), though we would still need to modify animation to show the arm extending.
-* Implement a target component that absorbs adjacent blocks of a specified type, and marks the puzzle as completed once some number have been absorbed. Requires a UI for setting which block to absorb, and how many. This will be used in the sandbox for designing puzzles.
-* Add a dispenser component that dispenses a selected block when it receives charge. Used for creating puzzle inputs.
+
+New circuit components - Add more signed-ternary circuit components beyond the current sensor, inverter, combiner, rectifier, multiplier, and subtractor runes. Gates should keep input and output networks separate and drive tick t+1 from values observed at tick t. Add small tests for these.
+* Charge-sensor - reads charge from the neighbor in front, and writes to 3 outputs.
+* Wire-crossings - connects left to right network and top to bottom.
+* Selector/transistor: `out = backInput ? leftInput : rightInput`.
+Don't add AND/OR/NAND/NOR, edge detectors, or latches, because they can be built from 1-3 existing components and fixed inputs.
+
+Modifying circuit components:
+* Modify the inverter to allow up to 3 inputs, and one output. It should be identical to the combiner, except it negates before writing to output. This allows for more compact circuits.
+* Similarly modify the rectifier - should be `out = max(0, sign(in1 + in2 + in3))`.
+* Similarly modify the multiplier - multiply 3 inputs.
+* Modify the subtractor to take 3 inputs: `out = sign(backInput + invert(leftInput) + invert(rightInput))`.
+* For the conduit, make the central circle smaller, and color it like the wires it connects to, not a fixed dark-blue color.
 
 Game flow:
-* Implement a main menu. For now, continue booting straight to the sandbox for faster testing during development, but add a button to go to main menu. Main menu should have buttons for sandbox and puzzles.
-* Implement a system for defining puzzles - probably similar to the current import/export format, with some extra fields. Each puzzle should define the grid size, blocks to pre-place, and menu of enabled components with prices in talents.
-* Change the editing model when solving puzzles: the player edits the initial board state, but as soon as they've played/run the simulation, they can no longer edit, they have to reset. Because puzzles won't allow modifying the board halfway through running a solution. We can still allow mid-run edits in the sandbox.
-* Further compact orientations and charges in the export/import format, possibly storing charges per network instead of per tile. More complex per-tile state added later (e.g. furnace stored ticks or target/delivery-block configuration) can remain verbose.
-* Implement puzzle selection and unlocking: puzzles are arranged in a digraph / map, with each puzzle having a set of prerequisites, arranged into groups like "runelore" and "vehicles" and "dealing with elves". Add zoom/pan for the map.
-* Implement a way to show text boxes on the game screen, for tutorial puzzles. Specify their position and text as part of the puzzle definition.
-* Implement restrictions on where the player can place blocks, defined as a region of the game grid. Specify in the puzzle definition.
-* When selecting a puzzle, add a menu that shows saved solutions and their scores, and allows creating a new solution, duplicating an existing solution, editing selected solution, and deleting.
+* Implement a main menu. For now, continue booting straight to the sandbox for faster testing during development, but add a button to go to a main menu screen, with buttons for sandbox and a placeholder puzzle.
+* Implement a system for defining puzzles - similar to the current export format with some extra fields, such as a list of components that are placeable with prices in talents.
+
+Refactoring:
+* After editing code files, if any refactoring seems necessary, add items here.
 
 UI:
-* Add a selection tool, for selecting a rectangular region of tiles and copying, pasting, moving, and rotating.
-* Add a way to copy selection to a clipboard, for transferring machines between puzzles.
+* Shift-right click should not open the right-click menu; instead make it act like normal right-click.
+* Add a button to save an image of the current grid. (Currently possible with shift right click and selecting "save image".)
+* Avoid bugs caused by listening only to mouse-up and mouse-down events, and assuming the mouse button is held down until a mouse-up is received. (Can cause accidental deletion or placing of tiles if the mouse-up event is hidden by other window events.)
+* Hide the tile detail/inspector panel when the mouse is over an empty tile.
+* Implement undo and redo when editing.
 
-Some more items in `deferred-todos.md`.
+More items in `deferred-todos.md`.
 
 ## Development guidelines
 

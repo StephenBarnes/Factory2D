@@ -31,68 +31,7 @@
           <span>COMPONENTS</span>
           <span class="panel-number">02</span>
         </div>
-        <div class="palette">
-          <button class="palette-item selected" data-tile="2" type="button">
-            <canvas class="tile-preview" data-tile-preview="2" width="32" height="32"></canvas>
-            <span><strong>Sand</strong><small>Falls and slides around obstacles</small></span>
-            <kbd>1</kbd>
-          </button>
-          <button class="palette-item" data-tile="1" type="button">
-            <canvas class="tile-preview" data-tile-preview="1" width="32" height="32"></canvas>
-            <span><strong>Stone</strong><small>Solid block affected by gravity</small></span>
-            <kbd>2</kbd>
-          </button>
-          <button class="palette-item" data-tile="3" type="button">
-            <canvas class="tile-preview" data-tile-preview="3" width="32" height="32"></canvas>
-            <span><strong>Platform</strong><small>Fixed structural block</small></span>
-            <kbd>3</kbd>
-          </button>
-          <button class="palette-item" data-tile="4" type="button">
-            <canvas class="tile-preview" data-tile-preview="4" width="32" height="32"></canvas>
-            <span><strong>Magnet</strong><small>Holds magnetic blocks on its pointed side</small></span>
-            <kbd>4</kbd>
-          </button>
-          <button class="palette-item" data-tile="5" type="button">
-            <canvas class="tile-preview" data-tile-preview="5" width="32" height="32"></canvas>
-            <span><strong>Metal</strong><small>Magnetic structural block</small></span>
-            <kbd>5</kbd>
-          </button>
-          <button class="palette-item" data-tile="6" type="button">
-            <canvas class="tile-preview" data-tile-preview="6" width="32" height="32"></canvas>
-            <span><strong>Conduit</strong><small>Shares charge across welded circuit blocks</small></span>
-            <kbd>6</kbd>
-          </button>
-          <button class="palette-item" data-tile="7" type="button">
-            <canvas class="tile-preview" data-tile-preview="7" width="32" height="32"></canvas>
-            <span><strong>Sensor Rune</strong><small>Emits +1 when its pointed side is occupied</small></span>
-            <kbd>7</kbd>
-          </button>
-          <button class="palette-item" data-tile="8" type="button">
-            <canvas class="tile-preview" data-tile-preview="8" width="32" height="32"></canvas>
-            <span><strong>Inverter Rune</strong><small>Negates charge from its back to its pointed output</small></span>
-            <kbd>8</kbd>
-          </button>
-          <button class="palette-item" data-tile="9" type="button">
-            <canvas class="tile-preview" data-tile-preview="9" width="32" height="32"></canvas>
-            <span><strong>Combiner Rune</strong><small>Sums up to three isolated inputs toward its output</small></span>
-            <kbd>9</kbd>
-          </button>
-          <button class="palette-item" data-tile="10" type="button">
-            <canvas class="tile-preview" data-tile-preview="10" width="32" height="32"></canvas>
-            <span><strong>Rectifier Rune</strong><small>Blocks negative charge from back to pointed output</small></span>
-            <kbd>0</kbd>
-          </button>
-          <button class="palette-item" data-tile="11" type="button">
-            <canvas class="tile-preview" data-tile-preview="11" width="32" height="32"></canvas>
-            <span><strong>Multiplier Rune</strong><small>Multiplies isolated left and right inputs</small></span>
-            <kbd>X</kbd>
-          </button>
-          <button class="palette-item" data-tile="12" type="button">
-            <canvas class="tile-preview" data-tile-preview="12" width="32" height="32"></canvas>
-            <span><strong>Subtractor Rune</strong><small>Outputs the sign of left input minus right</small></span>
-            <kbd>−</kbd>
-          </button>
-        </div>
+        <div class="palette" id="component-palette"></div>
         <div class="instructions">
           <p><span>PLACE / WELD</span> Left click or drag</p>
           <p><span>PLACE WELDED</span> Shift + left click or drag</p>

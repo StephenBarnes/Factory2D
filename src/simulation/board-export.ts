@@ -1,5 +1,5 @@
 import type { Charge } from "./circuit";
-import { Direction, TILE_DEFINITIONS, TileKind } from "./tile";
+import { Direction, TILE_DEFINITIONS, TILE_KINDS, TileKind } from "./tile";
 import { World } from "./world";
 import { expectDefined } from "../util/assert";
 
@@ -8,43 +8,22 @@ const FORMAT_VERSION = 4;
 const MAX_BOARD_WIDTH = 400;
 const MAX_BOARD_HEIGHT = 300;
 
-// TODO refactor this to move these tile codes to the single TILE_DEFINITIONS in
-// tile.ts. We want to avoid having to edit multiple different files every time
-// we add a new tile type. Build the TILE_KINDS_BY_CODE programatically.
-// Maybe move TILE_DEFINITIONS out of `simulation/` since they're also used by
-// rendering and board export, e.g. to a `registry.ts`.
+function buildTileKindsByCode(): Readonly<Record<string, TileKind | undefined>> {
+  const kindsByCode = Object.create(null) as Record<string, TileKind | undefined>;
+  for (const kind of TILE_KINDS) {
+    const definition = TILE_DEFINITIONS[kind];
+    if (definition.boardCode.length !== 1) {
+      throw new Error(`Board code for ${definition.name} must be one character`);
+    }
+    if (Object.hasOwn(kindsByCode, definition.boardCode)) {
+      throw new Error(`Duplicate board tile code "${definition.boardCode}"`);
+    }
+    kindsByCode[definition.boardCode] = kind;
+  }
+  return kindsByCode;
+}
 
-const TILE_CODES: Readonly<Record<TileKind, string>> = {
-  [TileKind.Empty]: ".",
-  [TileKind.Stone]: "#",
-  [TileKind.Sand]: ":",
-  [TileKind.Platform]: "=",
-  [TileKind.Magnet]: "L",
-  [TileKind.Metal]: "M",
-  [TileKind.Conduit]: "C",
-  [TileKind.Sensor]: "S",
-  [TileKind.Inverter]: "I",
-  [TileKind.Combiner]: "+",
-  [TileKind.Rectifier]: "R",
-  [TileKind.Multiplier]: "*",
-  [TileKind.Subtractor]: "-",
-};
-
-const TILE_KINDS_BY_CODE: Readonly<Record<string, TileKind | undefined>> = {
-  ".": TileKind.Empty,
-  "#": TileKind.Stone,
-  ":": TileKind.Sand,
-  "=": TileKind.Platform,
-  L: TileKind.Magnet,
-  M: TileKind.Metal,
-  C: TileKind.Conduit,
-  S: TileKind.Sensor,
-  I: TileKind.Inverter,
-  "+": TileKind.Combiner,
-  R: TileKind.Rectifier,
-  "*": TileKind.Multiplier,
-  "-": TileKind.Subtractor,
-};
+const TILE_KINDS_BY_CODE = buildTileKindsByCode();
 
 const DIRECTION_NAMES: Readonly<Record<Direction, string>> = {
   [Direction.Up]: "up",
@@ -103,7 +82,7 @@ export function serializeBoard(world: World, tick: number): string {
     let weldRow = "";
     for (let x = 0; x < world.width; x += 1) {
       const kind = world.kindAt(x, y);
-      row += TILE_CODES[kind];
+      row += TILE_DEFINITIONS[kind].boardCode;
       const hasRightWeld = x + 1 < world.width && world.isWelded(x, y, x + 1, y);
       const hasDownWeld = y + 1 < world.height && world.isWelded(x, y, x, y + 1);
       weldRow += hasDownWeld ? (hasRightWeld ? "+" : "|") : hasRightWeld ? "-" : ".";
