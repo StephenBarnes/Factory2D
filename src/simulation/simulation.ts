@@ -14,7 +14,6 @@ export class Simulation {
   private readonly nextBodyMember: Int32Array;
   private readonly bodyFalls: Uint8Array;
   private readonly bodySlidesDiagonally: Uint8Array;
-  private readonly bodyAttracted: Uint8Array;
   private readonly horizontalMoves: Int8Array;
   private readonly jammedBodies: Uint8Array;
   private readonly destinationOwners: Int32Array;
@@ -30,7 +29,6 @@ export class Simulation {
     this.nextBodyMember = new Int32Array(world.cellCount);
     this.bodyFalls = new Uint8Array(world.cellCount);
     this.bodySlidesDiagonally = new Uint8Array(world.cellCount);
-    this.bodyAttracted = new Uint8Array(world.cellCount);
     this.horizontalMoves = new Int8Array(world.cellCount);
     this.jammedBodies = new Uint8Array(world.cellCount);
     this.destinationOwners = new Int32Array(world.cellCount);
@@ -41,8 +39,9 @@ export class Simulation {
   }
 
   step(): number {
-    this.collectBodies();
-    this.collectMagneticAttraction();
+    this.collectWeldedBodies();
+    this.connectMagneticallyAttractedBodies();
+    this.collectBodyMembers();
     this.chooseMovements();
     this.resolveDestinationConflicts();
 
@@ -56,7 +55,7 @@ export class Simulation {
     this.tick = 0;
   }
 
-  private collectBodies(): void {
+  private collectWeldedBodies(): void {
     this.bodyRoots.fill(-1);
     for (let index = 0; index < this.world.cellCount; index += 1) {
       if (this.world.kindAtIndex(index) !== TileKind.Empty) {
@@ -75,31 +74,14 @@ export class Simulation {
         this.unionBodies(index, index + this.world.width);
       }
     }
-
-    this.bodyHeads.fill(-1);
-    this.bodyFalls.fill(1);
-    this.bodySlidesDiagonally.fill(1);
-    for (let index = this.world.cellCount - 1; index >= 0; index -= 1) {
-      if ((this.bodyRoots[index] ?? -1) < 0) {
-        continue;
-      }
-
-      const root = this.findBodyRoot(index);
-      this.bodyRoots[index] = root;
-      this.nextBodyMember[index] = this.bodyHeads[root] ?? -1;
-      this.bodyHeads[root] = index;
-      const definition = TILE_DEFINITIONS[this.world.kindAtIndex(index)];
-      if (!definition.affectedByGravity) {
-        this.bodyFalls[root] = 0;
-      }
-      if (!definition.slidesDiagonally) {
-        this.bodySlidesDiagonally[root] = 0;
-      }
-    }
   }
 
-  private collectMagneticAttraction(): void {
-    this.bodyAttracted.fill(0);
+  /**
+   * Magnetic contact constrains two bodies against separating; it does not
+   * override gravity. Treating each connected set as one movement group lets
+   * an unsupported set fall while support under any member holds the set.
+   */
+  private connectMagneticallyAttractedBodies(): void {
     for (let magnet = 0; magnet < this.world.cellCount; magnet += 1) {
       const magnetDefinition = TILE_DEFINITIONS[this.world.kindAtIndex(magnet)];
       if (magnetDefinition.attractionRange === 0) {
@@ -128,16 +110,33 @@ export class Simulation {
         if (targetKind === TileKind.Empty) {
           continue;
         }
-        const targetRoot = this.bodyRoots[target] ?? -1;
-        const magnetRoot = this.bodyRoots[magnet] ?? -1;
-        if (
-          TILE_DEFINITIONS[targetKind].magnetic &&
-          targetRoot !== magnetRoot
-        ) {
-          this.bodyAttracted[targetRoot] = 1;
-          this.bodyAttracted[magnetRoot] = 1;
+        if (TILE_DEFINITIONS[targetKind].magnetic) {
+          this.unionBodies(magnet, target);
         }
         break;
+      }
+    }
+  }
+
+  private collectBodyMembers(): void {
+    this.bodyHeads.fill(-1);
+    this.bodyFalls.fill(1);
+    this.bodySlidesDiagonally.fill(1);
+    for (let index = this.world.cellCount - 1; index >= 0; index -= 1) {
+      if ((this.bodyRoots[index] ?? -1) < 0) {
+        continue;
+      }
+
+      const root = this.findBodyRoot(index);
+      this.bodyRoots[index] = root;
+      this.nextBodyMember[index] = this.bodyHeads[root] ?? -1;
+      this.bodyHeads[root] = index;
+      const definition = TILE_DEFINITIONS[this.world.kindAtIndex(index)];
+      if (!definition.affectedByGravity) {
+        this.bodyFalls[root] = 0;
+      }
+      if (!definition.slidesDiagonally) {
+        this.bodySlidesDiagonally[root] = 0;
       }
     }
   }
@@ -152,7 +151,7 @@ export class Simulation {
       if ((this.bodyHeads[root] ?? -1) < 0) {
         continue;
       }
-      if (this.bodyFalls[root] === 0 || this.bodyAttracted[root] === 1) {
+      if (this.bodyFalls[root] === 0) {
         this.jammedBodies[root] = 1;
         continue;
       }

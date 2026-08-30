@@ -82,7 +82,7 @@ We have no sprite assets. Tiles are drawn procedurally using Canvas 2D functions
 * Competing intents at the same priority jam rather than depending on iteration order. Driven movement will outrank passive gravity. Pushing will resolve the complete dependency chain before any body moves.
 * Rendering may interpolate committed steps, but interpolation never feeds back into simulation state.
 
-The current engine implements observation, intent conflict resolution, and commit phases for straight-down and diagonal gravity. Welded bodies move as rigid groups, and unsupported touching bodies resolve complete downward movement dependency chains before committing together. Driven movement, general-purpose pushing, and rotation remain future simulation work.
+The current engine implements observation, intent conflict resolution, and commit phases for straight-down and diagonal gravity. Welded and magnetically constrained bodies move as groups, and unsupported touching bodies resolve complete downward movement dependency chains before committing together. Driven movement, general-purpose pushing, and rotation remain future simulation work.
 
 ## Development state
 
@@ -96,8 +96,8 @@ The first playable scaffold is implemented:
 * A separate weld tool for joining eligible occupied neighbors into rigid bodies and unwelding them, with gap-free fast-drag traversal, an immediate held-Control temporary override, and red invalid-edge feedback. Sand is not weldable, and magnets reject welds on their pointed side.
 * One shared procedural tile renderer for the Canvas board, placement preview, and component palette. Each welded body renders as a single rounded polyomino slab: a traced, inset outline path with convex corner rounding and concave weld fillets, a drop shadow, per-cell fills and decorations clipped to the outline, top-left highlight and bottom-right shade bevels, and a dark rim. Diagonally touching cells render as a rounded pinch, and unwelded edges interior to a body render as dark seam grooves.
 * A typed-array world with stable tile IDs, per-tile orientation, edge weld storage, and allocation-free per-tick movement buffers.
-* Deterministic straight-down gravity for stone, metal, magnets, and sand; complete downward body-dependency resolution; parity-selected diagonal gravity for sand; direct-fall priority; equal-priority destination jamming; and reciprocal magnetic attraction that takes priority over gravity for both bodies.
-* Deterministic tests for gravity chains, sand overhangs, welded bodies, conflicts, directional welding, reciprocal magnetic attraction, orientation snapshots, boundaries, stable IDs, and reset behavior.
+* Deterministic straight-down gravity for stone, metal, magnets, and sand; complete downward body-dependency resolution; parity-selected diagonal gravity for sand; direct-fall priority; equal-priority destination jamming; and reciprocal magnetic constraints that hold bodies when supported while allowing unsupported attracting groups to fall.
+* Deterministic tests for gravity chains, sand overhangs, welded and magnetically constrained bodies, conflicts, directional welding, orientation snapshots, boundaries, stable IDs, and reset behavior.
 
 ## Code map
 
@@ -110,7 +110,7 @@ The first playable scaffold is implemented:
 * `src/render/tile-renderer.ts` — Body outline tracing and rounded-slab drawing (fill, bevel lighting, decorations) for the board and component palette.
 * `src/simulation/tile.ts` — Tile kinds, directions, and immutable tile behavior/render definitions.
 * `src/simulation/world.ts` — Typed-array tile, orientation, and weld storage; stable IDs; snapshots; editing; and body movement commits.
-* `src/simulation/simulation.ts` — Allocation-free welded-body collection, gravity and magnetic intent selection, conflict resolution, and tick advancement.
+* `src/simulation/simulation.ts` — Allocation-free welded and magnetically constrained body collection, gravity intent selection, conflict resolution, and tick advancement.
 * `src/util/assert.ts` — `expectDefined` assertion that crashes loudly on violated lookups instead of falling back silently.
 * `tests/simulation.test.ts` — Deterministic world, gravity, diagonal movement, conflict, weld, magnet, identity, and reset tests.
 * `tests/grid-drag.test.ts` — Continuous tile and weld drag traversal tests, including board-boundary clipping.
@@ -121,7 +121,6 @@ The first playable scaffold is implemented:
 
 * Minor: The component palette's tile images look pixelated; the actual game board's tiles look fine. Could we render the palette images as SVG? Or just render with a larger resolution.
 * Bug with rendering connected bodies: Place 8 stone blocks a ring, with 1 empty space in the center. Weld them all together. Unweld one edge A. Then unweld a different edge B on the other side. Unwelding B causes the appearance of edge A to change. The problem is basically that we're drawing one path for the entire connected body's outline, and then adding a seam line for one unwelded edge, but it looks wrong because it's patched on afterwards. Really our outline paths should depend on local weld states / connectivity.
-* Physics bug: if I place a magnet pointing right, and a metal block to the right of it, but nothing underneath them, them both of them hover in the air. Probably because we made magnetic forces take priority over gravity. But if both are unsupported, they should still fall. We need to resolve this in some way that isn't just a special case check for this one situation - it's a general problem that would otherwise surface again later when we add conveyor belts, pistons, etc. Idea: maybe a sideways-pointing magnet applies both the attractive force, and an upward force, if the magnet is supported (plus the corresponding downward force on the block below it)? And conversely it applies an upward force to itself if the metal block is supported.
 * Rework the overall UI. Currently the grid is a small region of the screen, and there's no way to zoom in or pan. Instead, make the grid the background layer. Add the sidebars (palette, run/step/reset/clear, etc.) as panels floating on top of this. Start with the grid centered and zoomed in a way that allows seeing the whole grid with none of it hidden behind panels. Allow zooming the grid with mousewheel, and panning with arrow keys or RMB-drag on an empty region of the screen. Draw space outside the tile grid as black. Allow panning as long as the center of the screen is still over the tile grid (or any similar rule that ensures players don't accidentally get lost when panning and end up unable to find the grid again).
 * Animate movement. Currently we draw each simulation step until the next simulation step, so blocks snap sharply to new positions. We should instead animate them moving between previous and next states. We could compute the next simulation step async over multiple frames of animation, or leave that as follow-up optimization.
 * Rendering optimization: currently outline `Path2D`s are rebuilt every frame. We should instead cache per-body paths keyed on world edits/ticks.

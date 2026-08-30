@@ -283,6 +283,30 @@ describe("directional magnets", () => {
     expect(world.idAt(2, 2)).toBe(metalId);
   });
 
+  it("lets an unsupported attracting pair fall together", () => {
+    const world = new World(3, 4);
+    const magnetId = world.place(1, 0, TileKind.Magnet, Direction.Right);
+    const metalId = world.place(2, 0, TileKind.Metal);
+    const simulation = new Simulation(world);
+
+    expect(simulation.step()).toBe(2);
+    expect(world.idAt(1, 1)).toBe(magnetId);
+    expect(world.idAt(2, 1)).toBe(metalId);
+  });
+
+  it("falls with an unsupported body beneath an attracting pair", () => {
+    const world = new World(3, 5);
+    const magnetId = world.place(1, 0, TileKind.Magnet, Direction.Down);
+    const metalId = world.place(1, 1, TileKind.Metal);
+    const stoneId = world.place(1, 2, TileKind.Stone);
+    const simulation = new Simulation(world);
+
+    expect(simulation.step()).toBe(3);
+    expect(world.idAt(1, 1)).toBe(magnetId);
+    expect(world.idAt(1, 2)).toBe(metalId);
+    expect(world.idAt(1, 3)).toBe(stoneId);
+  });
+
   it("holds a falling magnet when it reaches fixed metal", () => {
     const world = new World(3, 5);
     const magnetId = world.place(1, 0, TileKind.Magnet, Direction.Right);
