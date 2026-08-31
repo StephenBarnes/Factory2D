@@ -31,6 +31,15 @@ export class World {
   private nextTileId = 1;
   private readonly rightWelds: Uint8Array;
   private readonly downWelds: Uint8Array;
+  private readonly movedKinds: Uint8Array;
+  private readonly movedIds: Uint32Array;
+  private readonly movedOrientations: Uint8Array;
+  private readonly movedCharges: Int8Array;
+  private readonly movedCrossingVerticalCharges: Int8Array;
+  private readonly movedFurnaceProgress: Uint16Array;
+  private readonly movedFurnaceTargetIds: Uint32Array;
+  private readonly movedRightWelds: Uint8Array;
+  private readonly movedDownWelds: Uint8Array;
   private revisionValue = 0;
 
   constructor(width: number, height: number) {
@@ -50,6 +59,15 @@ export class World {
     this.furnaceTargetIds = new Uint32Array(this.cellCount);
     this.rightWelds = new Uint8Array(this.cellCount);
     this.downWelds = new Uint8Array(this.cellCount);
+    this.movedKinds = new Uint8Array(this.cellCount);
+    this.movedIds = new Uint32Array(this.cellCount);
+    this.movedOrientations = new Uint8Array(this.cellCount);
+    this.movedCharges = new Int8Array(this.cellCount);
+    this.movedCrossingVerticalCharges = new Int8Array(this.cellCount);
+    this.movedFurnaceProgress = new Uint16Array(this.cellCount);
+    this.movedFurnaceTargetIds = new Uint32Array(this.cellCount);
+    this.movedRightWelds = new Uint8Array(this.cellCount);
+    this.movedDownWelds = new Uint8Array(this.cellCount);
   }
 
   /** Monotonically increases whenever this world's renderable state may have changed. */
@@ -557,50 +575,132 @@ export class World {
     return index < this.cellCount - this.width && this.downWelds[index] === 1;
   }
 
-  moveBodiesDown(bodyRoots: Int32Array, horizontalMoves: Int8Array): number {
-    if (bodyRoots.length !== this.cellCount || horizontalMoves.length !== this.cellCount) {
+  moveBodies(
+    bodyRoots: Int32Array,
+    horizontalMoves: Int8Array,
+    verticalMoves: Int8Array,
+  ): number {
+    if (
+      bodyRoots.length !== this.cellCount ||
+      horizontalMoves.length !== this.cellCount ||
+      verticalMoves.length !== this.cellCount
+    ) {
       throw new RangeError("Movement buffers must match the world cell count");
     }
 
     let movementCount = 0;
-    for (let source = this.cellCount - 1; source >= 0; source -= 1) {
+    for (let source = 0; source < this.cellCount; source += 1) {
       if (this.kinds[source] === TileKind.Empty) {
         continue;
       }
-
-      const root = bodyRoots[source] ?? -1;
-      const horizontalMove = horizontalMoves[root] ?? 2;
-      if (horizontalMove < -1 || horizontalMove > 1) {
+      const root = expectDefined(bodyRoots[source], "moving body root");
+      const moveX = expectDefined(horizontalMoves[root], "horizontal body movement");
+      const moveY = expectDefined(verticalMoves[root], "vertical body movement");
+      if (moveX < -1 || moveX > 1 || moveY < -1 || moveY > 1) {
+        throw new RangeError(`Invalid body movement (${moveX}, ${moveY})`);
+      }
+      if (moveX === 0 && moveY === 0) {
         continue;
       }
+      const sourceX = source % this.width;
+      const sourceY = (source - sourceX) / this.width;
+      const destinationX = sourceX + moveX;
+      const destinationY = sourceY + moveY;
+      if (
+        destinationX < 0 ||
+        destinationX >= this.width ||
+        destinationY < 0 ||
+        destinationY >= this.height
+      ) {
+        throw new Error(`Body movement from index ${source} leaves the world`);
+      }
+      movementCount += 1;
+    }
+    if (movementCount === 0) {
+      return 0;
+    }
 
-      const destination = source + this.width + horizontalMove;
-      this.kinds[destination] = this.kinds[source] ?? TileKind.Empty;
-      this.ids[destination] = this.ids[source] ?? 0;
-      this.orientations[destination] = this.orientations[source] ?? Direction.Up;
-      this.charges[destination] = expectDefined(this.charges[source], "moving tile charge");
-      this.crossingVerticalCharges[destination] = expectDefined(
+    this.movedKinds.set(this.kinds);
+    this.movedIds.set(this.ids);
+    this.movedOrientations.set(this.orientations);
+    this.movedCharges.set(this.charges);
+    this.movedCrossingVerticalCharges.set(this.crossingVerticalCharges);
+    this.movedFurnaceProgress.set(this.furnaceProgress);
+    this.movedFurnaceTargetIds.set(this.furnaceTargetIds);
+    this.movedRightWelds.set(this.rightWelds);
+    this.movedDownWelds.set(this.downWelds);
+
+    for (let source = 0; source < this.cellCount; source += 1) {
+      if (this.kinds[source] === TileKind.Empty) {
+        continue;
+      }
+      const root = expectDefined(bodyRoots[source], "moving body root");
+      const moveX = expectDefined(horizontalMoves[root], "horizontal body movement");
+      const moveY = expectDefined(verticalMoves[root], "vertical body movement");
+      if (moveX === 0 && moveY === 0) {
+        continue;
+      }
+      this.movedKinds[source] = TileKind.Empty;
+      this.movedIds[source] = 0;
+      this.movedOrientations[source] = Direction.Up;
+      this.movedCharges[source] = 0;
+      this.movedCrossingVerticalCharges[source] = 0;
+      this.movedFurnaceProgress[source] = 0;
+      this.movedFurnaceTargetIds[source] = 0;
+      this.movedRightWelds[source] = 0;
+      this.movedDownWelds[source] = 0;
+    }
+
+    for (let source = 0; source < this.cellCount; source += 1) {
+      if (this.kinds[source] === TileKind.Empty) {
+        continue;
+      }
+      const root = expectDefined(bodyRoots[source], "moving body root");
+      const moveX = expectDefined(horizontalMoves[root], "horizontal body movement");
+      const moveY = expectDefined(verticalMoves[root], "vertical body movement");
+      if (moveX === 0 && moveY === 0) {
+        continue;
+      }
+      const destination = source + moveX + moveY * this.width;
+      this.movedKinds[destination] = expectDefined(this.kinds[source], "moving tile kind");
+      this.movedIds[destination] = expectDefined(this.ids[source], "moving tile ID");
+      this.movedOrientations[destination] = expectDefined(
+        this.orientations[source],
+        "moving tile orientation",
+      );
+      this.movedCharges[destination] = expectDefined(this.charges[source], "moving tile charge");
+      this.movedCrossingVerticalCharges[destination] = expectDefined(
         this.crossingVerticalCharges[source],
         "moving crossing vertical charge",
       );
-      this.furnaceProgress[destination] = this.furnaceProgress[source] ?? 0;
-      this.furnaceTargetIds[destination] = this.furnaceTargetIds[source] ?? 0;
-      this.rightWelds[destination] = this.rightWelds[source] ?? 0;
-      this.downWelds[destination] = this.downWelds[source] ?? 0;
-      this.kinds[source] = TileKind.Empty;
-      this.ids[source] = 0;
-      this.orientations[source] = Direction.Up;
-      this.charges[source] = 0;
-      this.crossingVerticalCharges[source] = 0;
-      this.furnaceProgress[source] = 0;
-      this.furnaceTargetIds[source] = 0;
-      this.rightWelds[source] = 0;
-      this.downWelds[source] = 0;
-      movementCount += 1;
+      this.movedFurnaceProgress[destination] = expectDefined(
+        this.furnaceProgress[source],
+        "moving furnace progress",
+      );
+      this.movedFurnaceTargetIds[destination] = expectDefined(
+        this.furnaceTargetIds[source],
+        "moving furnace target ID",
+      );
+      this.movedRightWelds[destination] = expectDefined(
+        this.rightWelds[source],
+        "moving right weld",
+      );
+      this.movedDownWelds[destination] = expectDefined(
+        this.downWelds[source],
+        "moving down weld",
+      );
     }
-    if (movementCount > 0) {
-      this.revisionValue += 1;
-    }
+
+    this.kinds.set(this.movedKinds);
+    this.ids.set(this.movedIds);
+    this.orientations.set(this.movedOrientations);
+    this.charges.set(this.movedCharges);
+    this.crossingVerticalCharges.set(this.movedCrossingVerticalCharges);
+    this.furnaceProgress.set(this.movedFurnaceProgress);
+    this.furnaceTargetIds.set(this.movedFurnaceTargetIds);
+    this.rightWelds.set(this.movedRightWelds);
+    this.downWelds.set(this.movedDownWelds);
+    this.revisionValue += 1;
     return movementCount;
   }
 

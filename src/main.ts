@@ -744,7 +744,11 @@ function frame(currentTime: number): void {
   }
   tileInspector.update(hoveredCell);
   const animationProgress = easedAnimationProgress(currentTime);
-  renderer.render(animationDuration === 0 ? null : previousWorld, animationProgress);
+  renderer.render(
+    animationDuration === 0 ? null : previousWorld,
+    animationProgress,
+    currentTime,
+  );
   requestAnimationFrame(frame);
 }
 

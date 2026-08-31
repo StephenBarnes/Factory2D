@@ -100,7 +100,8 @@ export function drawBody(
   cellSize: number,
   cells: readonly BodyCell[],
   cellCount: number = cells.length,
-  path?: Path2D,
+  path: Path2D | undefined = undefined,
+  animationTime = 0,
 ): void {
   if (cellCount === 0) {
     return;
@@ -138,6 +139,7 @@ export function drawBody(
       cell.outputCharge,
       cell.circuitConnections,
       cell.circuitPortCharges,
+      animationTime,
     );
   }
 
@@ -176,10 +178,11 @@ export function drawTile(
   size: number,
   kind: TileKind,
   orientation: Direction = Direction.Up,
+  animationTime = 0,
 ): void {
   SINGLE_CELL[0].kind = kind;
   SINGLE_CELL[0].orientation = orientation;
-  drawBody(context, left, top, size, SINGLE_CELL, 1);
+  drawBody(context, left, top, size, SINGLE_CELL, 1, undefined, animationTime);
 }
 
 /**
@@ -391,6 +394,7 @@ function drawDecoration(
   outputCharge: Charge,
   circuitConnections: WeldSide,
   circuitPortCharges: number,
+  animationTime: number,
 ): void {
   if (circuitConnections !== WeldSide.None) {
     drawCircuitConnections(
@@ -490,6 +494,32 @@ function drawDecoration(
         0,
         -size * 0.22,
       );
+      context.fill();
+      context.restore();
+      break;
+    }
+    case TileDecorationStyle.Conveyor: {
+      const inset = size * 0.2;
+      context.save();
+      context.strokeStyle = definition.decorationColor;
+      context.lineWidth = Math.max(1.5, size * 0.065);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.setLineDash([size * 0.11, size * 0.09]);
+      context.lineDashOffset = outputCharge === 0
+        ? 0
+        : -outputCharge * animationTime * size / 1000;
+      context.beginPath();
+      context.moveTo(left + inset, top + inset);
+      context.lineTo(left + size - inset, top + inset);
+      context.lineTo(left + size - inset, top + size - inset);
+      context.lineTo(left + inset, top + size - inset);
+      context.closePath();
+      context.stroke();
+      context.setLineDash([]);
+      context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
+      context.beginPath();
+      drawDot(context, left + size / 2, top + size / 2, Math.max(2, size * 0.12));
       context.fill();
       context.restore();
       break;

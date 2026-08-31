@@ -27,6 +27,13 @@ export class Simulation {
   private readonly bodyFalls: Uint8Array;
   private readonly bodySlidesDiagonally: Uint8Array;
   private readonly horizontalMoves: Int8Array;
+  private readonly verticalMoves: Int8Array;
+  private readonly bodyForceX: Int32Array;
+  private readonly bodyForceY: Int32Array;
+  private readonly drivenBodies: Uint8Array;
+  private readonly movementGroupRoots: Int32Array;
+  private readonly blockedMovementGroups: Uint8Array;
+  private readonly movementQueue: Int32Array;
   private readonly jammedBodies: Uint8Array;
   private readonly destinationOwners: Int32Array;
   private readonly dependencyHeads: Int32Array;
@@ -51,6 +58,13 @@ export class Simulation {
     this.bodyFalls = new Uint8Array(world.cellCount);
     this.bodySlidesDiagonally = new Uint8Array(world.cellCount);
     this.horizontalMoves = new Int8Array(world.cellCount);
+    this.verticalMoves = new Int8Array(world.cellCount);
+    this.bodyForceX = new Int32Array(world.cellCount);
+    this.bodyForceY = new Int32Array(world.cellCount);
+    this.drivenBodies = new Uint8Array(world.cellCount);
+    this.movementGroupRoots = new Int32Array(world.cellCount);
+    this.blockedMovementGroups = new Uint8Array(world.cellCount);
+    this.movementQueue = new Int32Array(world.cellCount);
     this.jammedBodies = new Uint8Array(world.cellCount);
     this.destinationOwners = new Int32Array(world.cellCount);
     this.dependencyHeads = new Int32Array(world.cellCount);
@@ -77,7 +91,11 @@ export class Simulation {
     this.chooseMovements();
     this.resolveDestinationConflicts();
 
-    const movementCount = this.world.moveBodiesDown(this.bodyRoots, this.horizontalMoves);
+    const movementCount = this.world.moveBodies(
+      this.bodyRoots,
+      this.horizontalMoves,
+      this.verticalMoves,
+    );
     this.tick += 1;
     return movementCount;
   }
@@ -478,13 +496,204 @@ export class Simulation {
   }
 
   private chooseMovements(): void {
-    this.horizontalMoves.fill(2);
+    this.horizontalMoves.fill(0);
+    this.verticalMoves.fill(0);
+    this.collectConveyorForces();
+    this.resolveDrivenMovements();
+    this.chooseGravityMovements();
+  }
+
+  private collectConveyorForces(): void {
+    this.bodyForceX.fill(0);
+    this.bodyForceY.fill(0);
+    for (let index = 0; index < this.world.cellCount; index += 1) {
+      if (this.world.kindAtIndex(index) !== TileKind.Conveyor) {
+        continue;
+      }
+      const charge = this.world.chargeAtPortIndex(index, Direction.Up);
+      if (charge === 0) {
+        continue;
+      }
+
+      const conveyorRoot = expectDefined(this.bodyRoots[index], "conveyor body root");
+      for (let value = Direction.Up; value <= Direction.Left; value += 1) {
+        const side = value as Direction;
+        const neighbor = this.neighborIndex(index, side);
+        if (neighbor < 0 || this.world.kindAtIndex(neighbor) === TileKind.Empty) {
+          continue;
+        }
+        const neighborRoot = expectDefined(this.bodyRoots[neighbor], "conveyor neighbor body root");
+        if (neighborRoot === conveyorRoot) {
+          continue;
+        }
+
+        const forceDirection = ((side + charge + 4) & 3) as Direction;
+        this.addBodyForce(neighborRoot, forceDirection);
+        this.addBodyForce(conveyorRoot, oppositeDirection(forceDirection));
+      }
+    }
+  }
+
+  private addBodyForce(root: number, direction: Direction): void {
+    this.bodyForceX[root] =
+      expectDefined(this.bodyForceX[root], "horizontal body force") + directionX(direction);
+    this.bodyForceY[root] =
+      expectDefined(this.bodyForceY[root], "vertical body force") + directionY(direction);
+  }
+
+  private resolveDrivenMovements(): void {
+    this.drivenBodies.fill(0);
+    this.movementGroupRoots.fill(-1);
+    this.blockedMovementGroups.fill(0);
+    let queueLength = 0;
+
+    for (let root = 0; root < this.world.cellCount; root += 1) {
+      if (expectDefined(this.bodyHeads[root], "body head") < 0) {
+        continue;
+      }
+      this.movementGroupRoots[root] = root;
+    }
+
+    for (let root = 0; root < this.world.cellCount; root += 1) {
+      if (expectDefined(this.bodyHeads[root], "body head") < 0) {
+        continue;
+      }
+      const forceX = expectDefined(this.bodyForceX[root], "horizontal body force");
+      const forceY = expectDefined(this.bodyForceY[root], "vertical body force");
+      if (forceX === 0 && forceY === 0) {
+        continue;
+      }
+      this.horizontalMoves[root] = forceX < 0 ? -1 : forceX > 0 ? 1 : 0;
+      this.verticalMoves[root] = forceY < 0 ? -1 : forceY > 0 ? 1 : 0;
+      this.drivenBodies[root] = 1;
+      this.movementQueue[queueLength] = root;
+      queueLength += 1;
+      if (this.bodyFalls[root] === 0) {
+        this.blockMovementGroup(root);
+      }
+    }
+
+    let queueHead = 0;
+    while (queueHead < queueLength) {
+      const root = expectDefined(this.movementQueue[queueHead], "driven movement queue entry");
+      queueHead += 1;
+      const moveX = expectDefined(this.horizontalMoves[root], "horizontal driven movement");
+      const moveY = expectDefined(this.verticalMoves[root], "vertical driven movement");
+      for (
+        let member = expectDefined(this.bodyHeads[root], "body head");
+        member >= 0;
+        member = expectDefined(this.nextBodyMember[member], "next body member")
+      ) {
+        const x = member % this.world.width;
+        const y = (member - x) / this.world.width;
+        const destinationX = x + moveX;
+        const destinationY = y + moveY;
+        if (
+          destinationX < 0 ||
+          destinationX >= this.world.width ||
+          destinationY < 0 ||
+          destinationY >= this.world.height
+        ) {
+          this.blockMovementGroup(root);
+          continue;
+        }
+
+        const destination = destinationY * this.world.width + destinationX;
+        const blocker = expectDefined(this.bodyRoots[destination], "destination body root");
+        if (blocker < 0 || blocker === root) {
+          continue;
+        }
+        if (this.bodyFalls[blocker] === 0) {
+          this.blockMovementGroup(root);
+          continue;
+        }
+        if (this.drivenBodies[blocker] === 0) {
+          this.drivenBodies[blocker] = 1;
+          this.horizontalMoves[blocker] = moveX;
+          this.verticalMoves[blocker] = moveY;
+          this.movementQueue[queueLength] = blocker;
+          queueLength += 1;
+          this.unionMovementGroups(root, blocker);
+          continue;
+        }
+        if (
+          this.horizontalMoves[blocker] !== moveX ||
+          this.verticalMoves[blocker] !== moveY
+        ) {
+          this.blockMovementGroup(root);
+          this.blockMovementGroup(blocker);
+          continue;
+        }
+        this.unionMovementGroups(root, blocker);
+      }
+    }
+
+    this.destinationOwners.fill(-1);
+    for (let root = 0; root < this.world.cellCount; root += 1) {
+      if (
+        this.drivenBodies[root] === 0 ||
+        this.isMovementGroupBlocked(root)
+      ) {
+        continue;
+      }
+      const moveX = expectDefined(this.horizontalMoves[root], "horizontal driven movement");
+      const moveY = expectDefined(this.verticalMoves[root], "vertical driven movement");
+      for (
+        let member = expectDefined(this.bodyHeads[root], "body head");
+        member >= 0;
+        member = expectDefined(this.nextBodyMember[member], "next body member")
+      ) {
+        const destination = member + moveX + moveY * this.world.width;
+        const owner = expectDefined(this.destinationOwners[destination], "destination owner");
+        if (
+          owner >= 0 &&
+          this.findMovementGroup(owner) !== this.findMovementGroup(root)
+        ) {
+          this.blockMovementGroup(root);
+          this.blockMovementGroup(owner);
+        } else {
+          this.destinationOwners[destination] = root;
+        }
+      }
+    }
+
+    for (let root = 0; root < this.world.cellCount; root += 1) {
+      if (this.drivenBodies[root] === 1 && this.isMovementGroupBlocked(root)) {
+        this.horizontalMoves[root] = 0;
+        this.verticalMoves[root] = 0;
+      }
+    }
+  }
+
+  private chooseGravityMovements(): void {
+    this.destinationOwners.fill(-1);
     this.jammedBodies.fill(0);
     this.dependencyHeads.fill(-1);
     let dependencyCount = 0;
 
     for (let root = 0; root < this.world.cellCount; root += 1) {
-      if ((this.bodyHeads[root] ?? -1) < 0) {
+      if (
+        this.drivenBodies[root] === 0 ||
+        this.horizontalMoves[root] === 0 && this.verticalMoves[root] === 0
+      ) {
+        continue;
+      }
+      const moveX = expectDefined(this.horizontalMoves[root], "horizontal driven movement");
+      const moveY = expectDefined(this.verticalMoves[root], "vertical driven movement");
+      for (
+        let member = expectDefined(this.bodyHeads[root], "body head");
+        member >= 0;
+        member = expectDefined(this.nextBodyMember[member], "next body member")
+      ) {
+        this.destinationOwners[member + moveX + moveY * this.world.width] = root;
+      }
+    }
+
+    for (let root = 0; root < this.world.cellCount; root += 1) {
+      if (
+        expectDefined(this.bodyHeads[root], "body head") < 0 ||
+        this.drivenBodies[root] === 1
+      ) {
         continue;
       }
       if (this.bodyFalls[root] === 0) {
@@ -492,20 +701,35 @@ export class Simulation {
         continue;
       }
 
-      this.horizontalMoves[root] = 0;
-      for (let member = this.bodyHeads[root] ?? -1; member >= 0; member = this.nextBodyMember[member] ?? -1) {
+      this.verticalMoves[root] = 1;
+      for (
+        let member = expectDefined(this.bodyHeads[root], "body head");
+        member >= 0;
+        member = expectDefined(this.nextBodyMember[member], "next body member")
+      ) {
         if (member >= this.world.cellCount - this.world.width) {
           this.jammedBodies[root] = 1;
           continue;
         }
-
-        const blocker = this.bodyRoots[member + this.world.width] ?? -1;
+        const destination = member + this.world.width;
+        if (expectDefined(this.destinationOwners[destination], "destination owner") >= 0) {
+          this.jammedBodies[root] = 1;
+          continue;
+        }
+        const blocker = expectDefined(this.bodyRoots[destination], "gravity blocker root");
         if (blocker < 0 || blocker === root) {
+          continue;
+        }
+        if (this.drivenBodies[blocker] === 1) {
+          this.jammedBodies[root] = 1;
           continue;
         }
 
         this.dependencyDependents[dependencyCount] = root;
-        this.nextDependency[dependencyCount] = this.dependencyHeads[blocker] ?? -1;
+        this.nextDependency[dependencyCount] = expectDefined(
+          this.dependencyHeads[blocker],
+          "gravity dependency head",
+        );
         this.dependencyHeads[blocker] = dependencyCount;
         dependencyCount += 1;
       }
@@ -515,74 +739,110 @@ export class Simulation {
     let queueLength = 0;
     for (let root = 0; root < this.world.cellCount; root += 1) {
       if (this.jammedBodies[root] === 1) {
-        this.horizontalMoves[root] = 2;
         this.blockedBodyQueue[queueLength] = root;
         queueLength += 1;
       }
     }
-
     while (queueHead < queueLength) {
-      const blocker = this.blockedBodyQueue[queueHead] ?? -1;
+      const blocker = expectDefined(this.blockedBodyQueue[queueHead], "blocked body queue entry");
       queueHead += 1;
       for (
-        let dependency = this.dependencyHeads[blocker] ?? -1;
+        let dependency = expectDefined(
+          this.dependencyHeads[blocker],
+          "gravity dependency head",
+        );
         dependency >= 0;
-        dependency = this.nextDependency[dependency] ?? -1
+        dependency = expectDefined(this.nextDependency[dependency], "next gravity dependency")
       ) {
-        const dependent = this.dependencyDependents[dependency] ?? -1;
+        const dependent = expectDefined(
+          this.dependencyDependents[dependency],
+          "gravity dependent",
+        );
         if (this.jammedBodies[dependent] === 1) {
           continue;
         }
         this.jammedBodies[dependent] = 1;
-        this.horizontalMoves[dependent] = 2;
         this.blockedBodyQueue[queueLength] = dependent;
         queueLength += 1;
       }
     }
 
     for (let root = 0; root < this.world.cellCount; root += 1) {
+      if (this.jammedBodies[root] === 1 && this.drivenBodies[root] === 0) {
+        this.horizontalMoves[root] = 0;
+        this.verticalMoves[root] = 0;
+      }
+    }
+
+    for (let root = 0; root < this.world.cellCount; root += 1) {
       if (
-        (this.bodyHeads[root] ?? -1) < 0 ||
+        expectDefined(this.bodyHeads[root], "body head") < 0 ||
+        this.drivenBodies[root] === 1 ||
         this.bodyFalls[root] === 0 ||
-        this.horizontalMoves[root] === 0 ||
+        this.jammedBodies[root] === 0 ||
         this.bodySlidesDiagonally[root] === 0
       ) {
         continue;
       }
-
       const rootX = root % this.world.width;
-      const rootY = Math.floor(root / this.world.width);
+      const rootY = (root - rootX) / this.world.width;
       const preferredDirection: -1 | 1 = (rootX + rootY + this.tick) % 2 === 0 ? -1 : 1;
       const alternateDirection: -1 | 1 = preferredDirection === -1 ? 1 : -1;
-      if (this.canBodyMove(root, preferredDirection)) {
+      if (this.canGravityBodyMove(root, preferredDirection)) {
         this.horizontalMoves[root] = preferredDirection;
-      } else if (this.canBodyMove(root, alternateDirection)) {
+        this.verticalMoves[root] = 1;
+        this.jammedBodies[root] = 0;
+      } else if (this.canGravityBodyMove(root, alternateDirection)) {
         this.horizontalMoves[root] = alternateDirection;
+        this.verticalMoves[root] = 1;
+        this.jammedBodies[root] = 0;
       }
     }
   }
 
   private resolveDestinationConflicts(): void {
-    this.destinationOwners.fill(-1);
-    this.jammedBodies.fill(0);
-
     for (let root = 0; root < this.world.cellCount; root += 1) {
-      if (this.horizontalMoves[root] !== 0) {
+      if (
+        this.drivenBodies[root] === 1 ||
+        this.horizontalMoves[root] !== 0 ||
+        this.verticalMoves[root] !== 1
+      ) {
         continue;
       }
-      for (let member = this.bodyHeads[root] ?? -1; member >= 0; member = this.nextBodyMember[member] ?? -1) {
-        this.destinationOwners[member + this.world.width] = root;
+      for (
+        let member = expectDefined(this.bodyHeads[root], "body head");
+        member >= 0;
+        member = expectDefined(this.nextBodyMember[member], "next body member")
+      ) {
+        const destination = member + this.world.width;
+        const owner = expectDefined(this.destinationOwners[destination], "destination owner");
+        if (owner >= 0 && owner !== root) {
+          this.jammedBodies[root] = 1;
+          break;
+        }
+        this.destinationOwners[destination] = root;
       }
     }
 
     for (let root = 0; root < this.world.cellCount; root += 1) {
-      const horizontalMove = this.horizontalMoves[root] ?? 2;
-      if (horizontalMove !== -1 && horizontalMove !== 1) {
+      const horizontalMove = expectDefined(
+        this.horizontalMoves[root],
+        "horizontal gravity movement",
+      );
+      if (
+        this.drivenBodies[root] === 1 ||
+        (horizontalMove !== -1 && horizontalMove !== 1) ||
+        this.verticalMoves[root] !== 1
+      ) {
         continue;
       }
-      for (let member = this.bodyHeads[root] ?? -1; member >= 0; member = this.nextBodyMember[member] ?? -1) {
+      for (
+        let member = expectDefined(this.bodyHeads[root], "body head");
+        member >= 0;
+        member = expectDefined(this.nextBodyMember[member], "next body member")
+      ) {
         const destination = member + this.world.width + horizontalMove;
-        if ((this.destinationOwners[destination] ?? -1) >= 0) {
+        if (expectDefined(this.destinationOwners[destination], "destination owner") >= 0) {
           this.jammedBodies[root] = 1;
           break;
         }
@@ -590,17 +850,25 @@ export class Simulation {
     }
 
     for (let root = 0; root < this.world.cellCount; root += 1) {
-      const horizontalMove = this.horizontalMoves[root] ?? 2;
+      const horizontalMove = expectDefined(
+        this.horizontalMoves[root],
+        "horizontal gravity movement",
+      );
       if (
+        this.drivenBodies[root] === 1 ||
         this.jammedBodies[root] === 1 ||
-        (horizontalMove !== -1 && horizontalMove !== 1)
+        (horizontalMove !== -1 && horizontalMove !== 1) ||
+        this.verticalMoves[root] !== 1
       ) {
         continue;
       }
-
-      for (let member = this.bodyHeads[root] ?? -1; member >= 0; member = this.nextBodyMember[member] ?? -1) {
+      for (
+        let member = expectDefined(this.bodyHeads[root], "body head");
+        member >= 0;
+        member = expectDefined(this.nextBodyMember[member], "next body member")
+      ) {
         const destination = member + this.world.width + horizontalMove;
-        const owner = this.destinationOwners[destination] ?? -1;
+        const owner = expectDefined(this.destinationOwners[destination], "destination owner");
         if (owner >= 0 && owner !== root) {
           this.jammedBodies[root] = 1;
           this.jammedBodies[owner] = 1;
@@ -611,30 +879,75 @@ export class Simulation {
     }
 
     for (let root = 0; root < this.world.cellCount; root += 1) {
-      if (this.jammedBodies[root] === 1) {
-        this.horizontalMoves[root] = 2;
+      if (this.drivenBodies[root] === 0 && this.jammedBodies[root] === 1) {
+        this.horizontalMoves[root] = 0;
+        this.verticalMoves[root] = 0;
       }
     }
   }
 
-  private canBodyMove(root: number, horizontalMove: -1 | 1): boolean {
-    for (let member = this.bodyHeads[root] ?? -1; member >= 0; member = this.nextBodyMember[member] ?? -1) {
+  private canGravityBodyMove(root: number, horizontalMove: -1 | 1): boolean {
+    for (
+      let member = expectDefined(this.bodyHeads[root], "body head");
+      member >= 0;
+      member = expectDefined(this.nextBodyMember[member], "next body member")
+    ) {
       const x = member % this.world.width;
-      const y = Math.floor(member / this.world.width);
+      const y = (member - x) / this.world.width;
       const destinationX = x + horizontalMove;
       if (y >= this.world.height - 1 || destinationX < 0 || destinationX >= this.world.width) {
         return false;
       }
-
       const destination = member + this.world.width + horizontalMove;
       if (
+        expectDefined(this.destinationOwners[destination], "destination owner") >= 0 ||
         this.world.kindAtIndex(destination) !== TileKind.Empty &&
-        this.bodyRoots[destination] !== root
+          this.bodyRoots[destination] !== root
       ) {
         return false;
       }
     }
     return true;
+  }
+
+  private blockMovementGroup(root: number): void {
+    this.blockedMovementGroups[this.findMovementGroup(root)] = 1;
+  }
+
+  private isMovementGroupBlocked(root: number): boolean {
+    return this.blockedMovementGroups[this.findMovementGroup(root)] === 1;
+  }
+
+  private unionMovementGroups(first: number, second: number): void {
+    const firstRoot = this.findMovementGroup(first);
+    const secondRoot = this.findMovementGroup(second);
+    if (firstRoot === secondRoot) {
+      return;
+    }
+    const combinedRoot = Math.min(firstRoot, secondRoot);
+    const removedRoot = Math.max(firstRoot, secondRoot);
+    this.movementGroupRoots[removedRoot] = combinedRoot;
+    if (this.blockedMovementGroups[removedRoot] === 1) {
+      this.blockedMovementGroups[combinedRoot] = 1;
+    }
+  }
+
+  private findMovementGroup(root: number): number {
+    let group = root;
+    let parent = expectDefined(this.movementGroupRoots[group], "movement group parent");
+    if (parent < 0) {
+      throw new Error(`Body root ${root} has no movement group`);
+    }
+    while (parent !== group) {
+      group = parent;
+      parent = expectDefined(this.movementGroupRoots[group], "movement group parent");
+    }
+    while (root !== group) {
+      const next = expectDefined(this.movementGroupRoots[root], "movement group parent");
+      this.movementGroupRoots[root] = group;
+      root = next;
+    }
+    return group;
   }
 
   private unionBodies(first: number, second: number): void {

@@ -12,7 +12,7 @@ import { World } from "./world";
 import { expectDefined } from "../util/assert";
 
 const FORMAT_NAME = "factory2d-board";
-const FORMAT_VERSION = 6;
+const FORMAT_VERSION = 7;
 const MAX_BOARD_WIDTH = 400;
 const MAX_BOARD_HEIGHT = 300;
 

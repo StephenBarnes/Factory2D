@@ -18,6 +18,7 @@ export const enum TileKind {
   Glass = 16,
   IronOre = 17,
   Furnace = 18,
+  Conveyor = 19,
 }
 
 export const enum Direction {
@@ -53,6 +54,7 @@ export const enum TileDecorationStyle {
   Selector = 13,
   WireCrossing = 14,
   Furnace = 15,
+  Conveyor = 16,
 }
 
 export interface TileDefinition {
@@ -237,7 +239,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Conduit",
     boardCode: "C",
     palette: {
-      order: 8,
+      order: 9,
       description: "Shares charge across welded circuit blocks",
       shortcut: { code: "Digit6", label: "6" },
     },
@@ -260,7 +262,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Sensor Rune",
     boardCode: "S",
     palette: {
-      order: 9,
+      order: 10,
       description: "Emits +1 when its pointed side is occupied",
       shortcut: { code: "Digit7", label: "7" },
     },
@@ -283,7 +285,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Inverter Rune",
     boardCode: "I",
     palette: {
-      order: 10,
+      order: 11,
       description: "Negates the sum of up to three isolated inputs",
       shortcut: { code: "Digit8", label: "8" },
     },
@@ -306,7 +308,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Combiner Rune",
     boardCode: "+",
     palette: {
-      order: 11,
+      order: 12,
       description: "Sums up to three isolated inputs toward its output",
       shortcut: { code: "Digit9", label: "9" },
     },
@@ -329,7 +331,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Rectifier Rune",
     boardCode: "R",
     palette: {
-      order: 12,
+      order: 13,
       description: "Passes positive sums from up to three isolated inputs",
       shortcut: { code: "Digit0", label: "0" },
     },
@@ -352,7 +354,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Multiplier Rune",
     boardCode: "*",
     palette: {
-      order: 13,
+      order: 14,
       description: "Multiplies up to three connected isolated inputs",
       shortcut: { code: "KeyX", label: "X" },
     },
@@ -375,7 +377,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Subtractor Rune",
     boardCode: "-",
     palette: {
-      order: 14,
+      order: 15,
       description: "Subtracts left and right inputs from the rear input",
       shortcut: { code: "Minus", label: "−" },
     },
@@ -398,7 +400,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Charge Sensor Rune",
     boardCode: "Q",
     palette: {
-      order: 15,
+      order: 16,
       description: "Copies an adjacent tile's charge to three outputs without an input weld",
       shortcut: null,
     },
@@ -421,7 +423,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Selector Rune",
     boardCode: "T",
     palette: {
-      order: 16,
+      order: 17,
       description: "Selects the left or right input from the rear charge",
       shortcut: null,
     },
@@ -444,7 +446,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Wire Crossing",
     boardCode: "W",
     palette: {
-      order: 17,
+      order: 18,
       description: "Keeps horizontal and vertical circuit networks separate",
       shortcut: null,
     },
@@ -531,6 +533,29 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     shadow: "#3e2b23",
     decorationStyle: TileDecorationStyle.Furnace,
     decorationColor: "#f0b25c",
+  },
+  [TileKind.Conveyor]: {
+    name: "Conveyor Belt",
+    boardCode: "B",
+    palette: {
+      order: 8,
+      description: "Charged roller: +1 clockwise, -1 counterclockwise, 0 stopped",
+      shortcut: null,
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.All,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#59636b",
+    shadow: "#30383e",
+    decorationStyle: TileDecorationStyle.Conveyor,
+    decorationColor: "#d6c38b",
   },
 };
 

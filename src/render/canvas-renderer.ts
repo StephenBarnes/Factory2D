@@ -125,7 +125,7 @@ export class CanvasRenderer {
     this.updateOrigin();
   }
 
-  render(previousWorld: World | null = null, progress = 1): void {
+  render(previousWorld: World | null = null, progress = 1, animationTime = 0): void {
     this.resizeBackingStore();
 
     const { context } = this;
@@ -134,8 +134,8 @@ export class CanvasRenderer {
     context.fillRect(0, 0, this.viewportWidth, this.viewportHeight);
 
     this.drawGrid();
-    this.drawTiles(previousWorld, Math.max(0, Math.min(1, progress)));
-    this.drawHover();
+    this.drawTiles(previousWorld, Math.max(0, Math.min(1, progress)), animationTime);
+    this.drawHover(animationTime);
   }
 
   gridPointFromClientPoint(clientX: number, clientY: number): GridPoint {
@@ -307,7 +307,7 @@ export class CanvasRenderer {
     context.strokeRect(this.originX + 0.5, this.originY + 0.5, boardWidth, boardHeight);
   }
 
-  private drawTiles(previousWorld: World | null, progress: number): void {
+  private drawTiles(previousWorld: World | null, progress: number, animationTime: number): void {
     this.rebuildBodyCache();
 
     for (const body of this.cachedBodies) {
@@ -317,17 +317,26 @@ export class CanvasRenderer {
       if (previousWorld !== null && remainingProgress > 0) {
         const firstCell = expectDefined(body.cells[0], "first animated body cell");
         const tileId = this.world.idAt(firstCell.x, firstCell.y);
-        if (previousWorld.idAt(firstCell.x, firstCell.y) !== tileId && firstCell.y > 0) {
-          for (let horizontalMove = -1; horizontalMove <= 1; horizontalMove += 1) {
-            const previousX = firstCell.x - horizontalMove;
-            if (
-              previousX >= 0 &&
-              previousX < this.world.width &&
-              previousWorld.idAt(previousX, firstCell.y - 1) === tileId
-            ) {
-              offsetX = -horizontalMove * this.cellSize * remainingProgress;
-              offsetY = -this.cellSize * remainingProgress;
-              break;
+        if (previousWorld.idAt(firstCell.x, firstCell.y) !== tileId) {
+          searchPreviousPosition:
+          for (let verticalMove = -1; verticalMove <= 1; verticalMove += 1) {
+            for (let horizontalMove = -1; horizontalMove <= 1; horizontalMove += 1) {
+              if (horizontalMove === 0 && verticalMove === 0) {
+                continue;
+              }
+              const previousX = firstCell.x - horizontalMove;
+              const previousY = firstCell.y - verticalMove;
+              if (
+                previousX >= 0 &&
+                previousX < this.world.width &&
+                previousY >= 0 &&
+                previousY < this.world.height &&
+                previousWorld.idAt(previousX, previousY) === tileId
+              ) {
+                offsetX = -horizontalMove * this.cellSize * remainingProgress;
+                offsetY = -verticalMove * this.cellSize * remainingProgress;
+                break searchPreviousPosition;
+              }
             }
           }
         }
@@ -343,6 +352,7 @@ export class CanvasRenderer {
         body.cells,
         body.cells.length,
         body.path,
+        animationTime,
       );
       this.context.restore();
     }
@@ -487,7 +497,7 @@ export class CanvasRenderer {
   }
 
 
-  private drawHover(): void {
+  private drawHover(animationTime: number): void {
     if (this.hoverEdge !== null) {
       const { x1, y1, x2, y2 } = this.hoverEdge;
       this.context.strokeStyle = this.world.canWeld(x1, y1, x2, y2) ? "#78dcca" : "#e15a4f";
@@ -523,6 +533,7 @@ export class CanvasRenderer {
         this.cellSize,
         this.hoverKind,
         this.hoverOrientation,
+        animationTime,
       );
       this.context.restore();
     }

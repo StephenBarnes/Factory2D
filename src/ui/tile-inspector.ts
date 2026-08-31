@@ -142,9 +142,11 @@ export class TileInspector {
     this.hint.hidden = true;
     this.properties.hidden = false;
     this.id.textContent = `#${this.world.idAt(position.x, position.y).toString().padStart(4, "0")}`;
-    this.movement.textContent = definition.affectedByGravity
-      ? definition.slidesDiagonally ? "GRAVITY + DIAGONAL" : "GRAVITY"
-      : "FIXED";
+    this.movement.textContent = kind === TileKind.Conveyor
+      ? "GRAVITY + CONVEYOR FORCE"
+      : definition.affectedByGravity
+        ? definition.slidesDiagonally ? "GRAVITY + DIAGONAL" : "GRAVITY"
+        : "FIXED";
     this.magnetic.textContent = definition.magnetic ? "YES" : "NO";
     this.orientationRow.hidden = !definition.usesOrientation;
     this.orientation.textContent = DIRECTION_NAMES[orientation];

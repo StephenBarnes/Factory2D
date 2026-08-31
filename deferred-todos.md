@@ -5,13 +5,15 @@ Components:
 * Add a dispenser component that dispenses a selected block when it receives charge. Used for creating puzzle inputs.
 * Welder blocks.
 * Splitter blocks.
-* Comparer-sensors.
+* Comparers: compare front neighbor to back neighbor, and output +1 on sides if they're equal, else output 0.
 * Electrical components like logic gates, delays, latches, diodes, brush connectors (or voltage sensors, rather).
 * Assemblers that convert a group of blocks welded in a specific way into one block. For example iron and copper blocks welded in a specific way are converted to a piston block.
 * Flipper: attaches to one block, then flips the entire connected/welded group of blocks around that line horizontally or vertically, if it would not collide/overlap other blocks.
 * Laser splitter: splits everything in a line.
 * Configurable components where the player can enter a number in a text box, e.g. a configurable-delay repeater.
 * Component that rotates a neighboring block or body around itself.
+* Add a fragility flag to tile kinds, and set it to true for glass blocks. A fragile block that drops and then stops falling should be deleted, animated with a simple shatter effect.
+* Add a cushion flag and cushion block. Fragile blocks that fall onto a cushion block do not shatter.
 
 Performance:
 * Profile to determine if there's any need to optimize, and if so, what to optimize.
@@ -26,7 +28,18 @@ Circuit network:
 * Maybe extend the set of charges (0, +1, -1) to add orthogonal +i and -i charges, or add a 2-wire tile with components for reading the different wires.
 * Maybe add min() and max() gates.
 * Implement a "rune array" component for miniaturizing circuits. When placed, or when clicking on the array with array tile selected, or when pressing F key with mouse over it, open a modal box that allows configuring it by placing "miniature" components on a 5x5 grid "inside" the array. The 4 edge-center tiles of the array's grid are logically connected to the rune array's 4 sides.
-* Don't add AND/OR/NAND/NOR, edge detectors, or latches, because they can be built from 1-3 existing components and fixed inputs.
+* Add fixed red/blue charges. (Can be created with a sensor plus inverter, but sensors could be expensive, we should make fixed charges cheaper than that.)
+* Add spark rune that emits a +1 charge for one tick at the start, then zero forever. (Can be created from other components, but might be best to have a dedicated component? First check what the smallest way is we can create this from other components.)
+* Add a read-only memory component, with configurable fixed list of values. We need this to create test cases for puzzles. (For example, the puzzle drops blocks through two different routes in some order, and the player has to catch and route them in some way. We decide the order to drop tiles based on values in a ROM block.) Probably input on one side scrolls a cursor through the memory (+1 forward, -1 backwards) and the other 3 sides emit the stored value at the cursor.
+
+Don't add, for circuit network, because they can be built from a few existing components:
+* AND/OR, NAND/NOR. (Maybe add min/max, though.)
+* Edge detectors: can be done by using an inverter to get `-x[t-1]` and using a combiner to add `x[t] - x[t-1]`.
+* Latches: can be done by connecting a combiner's output to its input.
+* Block that writes alternating red/blue charges every tick. Because we can create this with a spark plus inverter feeding itself.
+
+Visuals:
+* Mark the wire crossing in a way that makes it apparent it's a wire-crossing block when exactly one side is connected to a wire. Currently that's not visually distinct. Maybe draw the central cross regardless of how many sides are wired.
 
 Game flow:
 * Change the editing model when solving puzzles: the player edits the initial board state, but as soon as they've played/run the simulation, they can no longer edit, they have to reset. Because puzzles won't allow modifying the board halfway through running a solution. We can still allow mid-run edits in the sandbox.
