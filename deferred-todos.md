@@ -1,8 +1,6 @@
 Components:
 * Add a piston block. It should be one block showing the arm and base of the piston overlapping. When it receives a charge, it should extend the arm, making it two separate blocks (considered welded together). When no charge is received, it should try to retract. This is a special case because we have effectively 2 blocks that can overlap, which is not usually allowed; but we could model it without overlaps, as 3 separate block types (arm, base, and combined arm+base), though we would still need to modify animation to show the arm extending.
-* Implement a target component that absorbs adjacent blocks of a specified type, and marks the puzzle as completed once some number have been absorbed. Requires a UI for setting which block to absorb, and how many. This will be used in the sandbox for designing puzzles.
 * A sensor that detects when the sensor's own tile moves, and outputs +1 on that side, -1 on the other side.
-* Add a dispenser component that dispenses a selected block when it receives charge. Used for creating puzzle inputs.
 * Welder blocks.
 * Splitter blocks.
 * Comparers: compare front neighbor to back neighbor, and output +1 on sides if they're equal, else output 0.
@@ -41,16 +39,9 @@ Don't add, for circuit network, because they can be built from a few existing co
 Visuals:
 * Mark the wire crossing in a way that makes it apparent it's a wire-crossing block when exactly one side is connected to a wire. Currently that's not visually distinct. Maybe draw the central cross regardless of how many sides are wired.
 
-Game flow:
-* Change the editing model when solving puzzles: the player edits the initial board state, but as soon as they've played/run the simulation, they can no longer edit, they have to reset. Because puzzles won't allow modifying the board halfway through running a solution. We can still allow mid-run edits in the sandbox.
-* Further compact orientations and charges in the export/import format, possibly storing charges per network instead of per tile. More complex per-tile state added later (e.g. furnace stored ticks or target/delivery-block configuration) can remain verbose.
-* Implement puzzle selection and unlocking: puzzles are arranged in a digraph / map, with each puzzle having a set of prerequisites, arranged into groups like "runelore" and "vehicles" and "dealing with elves". Add zoom/pan for the map.
-* Implement a way to show text boxes on the game screen, for tutorial puzzles. Specify their position and text as part of the puzzle definition.
-* Implement restrictions on where the player can place blocks, defined as a region of the game grid. Specify in the puzzle definition.
-* When selecting a puzzle, add a menu that shows saved solutions and their scores, and allows creating a new solution, duplicating an existing solution, editing selected solution, and deleting.
-
 UI:
 * Add a selection tool, for selecting a rectangular region of tiles and copying, pasting, moving, and rotating.
 * Add a way to save a selected region in a list of saved machines, and import from that. Make it usable for transferring partial machines from one puzzle solution to another.
 * Add a way to copy selection to a clipboard, for transferring machines between puzzles.
 * When saving an image using the image button, crop out parts of the screen that are over the background, outside the grid, if this can be implemented easily.
+* Further compact orientations and charges in the export/import format, possibly storing charges per network instead of per tile. More complex per-tile state (e.g. furnace stored ticks or target/delivery-block configuration) can remain verbose.

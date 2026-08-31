@@ -1,4 +1,11 @@
 import "./styles.css";
+import {
+  createSandboxWorld,
+  PUZZLES,
+  puzzleById,
+  type PuzzleId,
+} from "./game/puzzles";
+import { INITIAL_SCREEN, type AppScreen } from "./game/screen";
 
 import { CanvasRenderer } from "./render/canvas-renderer";
 import {
@@ -25,6 +32,7 @@ import {
 import { World } from "./simulation/world";
 import { TileInspector } from "./ui/tile-inspector";
 import { populateComponentPalette } from "./ui/component-palette";
+import { populatePuzzleMap } from "./ui/main-menu";
 
 const MAX_AUTOMATIC_ANIMATION_MS = 250;
 const MANUAL_STEP_ANIMATION_MS = 200;
@@ -41,26 +49,39 @@ function requiredElement<T extends HTMLElement>(id: string): T {
   return element as T;
 }
 
-let world = new World(20, 14);
-for (let x = 0; x < world.width; x += 1) {
-  world.place(x, world.height - 1, TileKind.Platform);
+interface GameSession {
+  world: World;
+  simulation: Simulation;
+  baseline: World;
+  previousWorld: World;
 }
-for (let x = 3; x <= 7; x += 1) {
-  world.place(x, 9, TileKind.Platform);
-}
-for (let x = 13; x <= 16; x += 1) {
-  world.place(x, 11, TileKind.Platform);
-}
-world.place(5, 3, TileKind.Sand);
-world.place(5, 4, TileKind.Sand);
-world.place(11, 2, TileKind.Sand);
-world.place(15, 5, TileKind.Sand);
 
-let simulation = new Simulation(world);
-let baseline = world.clone();
-let previousWorld = world.clone();
+function createGameSession(world: World): GameSession {
+  return {
+    world,
+    simulation: new Simulation(world),
+    baseline: world.clone(),
+    previousWorld: world.clone(),
+  };
+}
+
+const sandboxSession = createGameSession(createSandboxWorld());
+const puzzleSessions = new Map<PuzzleId, GameSession>();
+let activeSession = sandboxSession;
+let world = activeSession.world;
+
+let simulation = activeSession.simulation;
+let baseline = activeSession.baseline;
+let previousWorld = activeSession.previousWorld;
 const canvas = requiredElement<HTMLCanvasElement>("game-canvas");
 let renderer = new CanvasRenderer(canvas, world);
+const gameScreen = requiredElement<HTMLElement>("game-screen");
+const mainMenuScreen = requiredElement<HTMLElement>("main-menu-screen");
+const puzzleMap = requiredElement<HTMLElement>("puzzle-map");
+const sandboxButton = requiredElement<HTMLButtonElement>("sandbox-button");
+const menuButton = requiredElement<HTMLButtonElement>("menu-button");
+const screenTitle = requiredElement<HTMLElement>("screen-title");
+const screenDescription = requiredElement<HTMLElement>("screen-description");
 const sidebarControls = requiredElement<HTMLElement>("sidebar-controls");
 const componentPalette = requiredElement<HTMLElement>("component-palette");
 const bottomControls = requiredElement<HTMLElement>("bottom-controls");
@@ -104,6 +125,8 @@ let animationDuration = 0;
 let renderedTick = -1;
 let renderedPaletteDevicePixelRatio = 0;
 const tileKindsByShortcut = populateComponentPalette(componentPalette, selectedKind);
+const completedPuzzleIds = new Set<PuzzleId>();
+let activeScreen: AppScreen = INITIAL_SCREEN;
 
 function updateViewportInsets(): void {
   const canvasBounds = canvas.getBoundingClientRect();
@@ -136,6 +159,79 @@ function setRunning(nextRunning: boolean): void {
   running = nextRunning;
   accumulatedTime = 0;
   updateTransportState();
+}
+function persistActiveSession(): void {
+  activeSession.world = world;
+  activeSession.simulation = simulation;
+  activeSession.baseline = baseline;
+  activeSession.previousWorld = previousWorld;
+}
+
+function loadGameSession(session: GameSession): void {
+  activeSession = session;
+  world = session.world;
+  simulation = session.simulation;
+  baseline = session.baseline;
+  previousWorld = session.previousWorld;
+  renderer = new CanvasRenderer(canvas, world);
+  tileInspector = new TileInspector(inspectorPanel, world);
+  hoveredCell = null;
+  hoveredEdge = null;
+  lastEditedCell = null;
+  lastPointerGridPoint = null;
+  renderedTick = -1;
+  animationDuration = 0;
+}
+
+function activateGameSession(session: GameSession): void {
+  if (session === activeSession) {
+    return;
+  }
+  persistActiveSession();
+  loadGameSession(session);
+}
+
+function sessionForPuzzle(id: PuzzleId): GameSession {
+  const existing = puzzleSessions.get(id);
+  if (existing !== undefined) {
+    return existing;
+  }
+  const session = createGameSession(puzzleById(id).createInitialWorld());
+  puzzleSessions.set(id, session);
+  return session;
+}
+
+function showScreen(screen: AppScreen): void {
+  setRunning(false);
+  activeScreen = screen;
+  const showingMainMenu = screen.kind === "main-menu";
+  mainMenuScreen.hidden = !showingMainMenu;
+  gameScreen.hidden = showingMainMenu;
+
+  if (showingMainMenu) {
+    populatePuzzleMap(puzzleMap, {
+      puzzles: PUZZLES,
+      completedPuzzleIds,
+      onSelectPuzzle: (puzzleId) => showScreen({ kind: "puzzle", puzzleId }),
+    });
+    return;
+  }
+
+  if (screen.kind === "sandbox") {
+    activateGameSession(sandboxSession);
+    screenTitle.textContent = "SANDBOX";
+    screenDescription.textContent = "Free construction workshop";
+    gameScreen.setAttribute("aria-label", "Sandbox workshop");
+  } else {
+    const puzzle = puzzleById(screen.puzzleId);
+    activateGameSession(sessionForPuzzle(screen.puzzleId));
+    screenTitle.textContent = puzzle.name.toUpperCase();
+    screenDescription.textContent = `Goal: ${puzzle.goal}`;
+    gameScreen.setAttribute("aria-label", `${puzzle.name} puzzle workshop`);
+  }
+
+  updateViewportInsets();
+  refreshPointerHover();
 }
 
 function finishAnimation(): void {
@@ -360,6 +456,14 @@ function editWeldSegment(
   }
 }
 
+menuButton.addEventListener("click", () => {
+  showScreen({ kind: "main-menu" });
+});
+
+sandboxButton.addEventListener("click", () => {
+  showScreen({ kind: "sandbox" });
+});
+
 sidebarControls.addEventListener("click", (event) => {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".palette-item");
   const tileKind = Number(button?.dataset.tile);
@@ -451,19 +555,13 @@ importFile.addEventListener("change", async () => {
   try {
     const imported = deserializeBoard(await file.text());
     setRunning(false);
-    world = imported.world;
-    simulation = new Simulation(world);
-    simulation.tick = imported.tick;
-    baseline = world.clone();
-    previousWorld = world.clone();
-    renderer = new CanvasRenderer(canvas, world);
-    tileInspector = new TileInspector(inspectorPanel, world);
-    hoveredCell = null;
-    hoveredEdge = null;
-    lastEditedCell = null;
-    lastPointerGridPoint = null;
-    renderedTick = -1;
-    animationDuration = 0;
+    const importedSimulation = new Simulation(imported.world);
+    importedSimulation.tick = imported.tick;
+    activeSession.world = imported.world;
+    activeSession.simulation = importedSimulation;
+    activeSession.baseline = imported.world.clone();
+    activeSession.previousWorld = imported.world.clone();
+    loadGameSession(activeSession);
     updateViewportInsets();
     refreshPointerHover();
   } catch (error) {
@@ -623,6 +721,9 @@ canvas.addEventListener("wheel", (event) => {
 }, { passive: false });
 
 document.addEventListener("keydown", (event) => {
+  if (activeScreen.kind === "main-menu") {
+    return;
+  }
   if (event.key === "Control") {
     if (!event.repeat && selectedTool === "tile") {
       temporaryWeldActive = true;
@@ -720,6 +821,10 @@ window.addEventListener("resize", () => {
 function frame(currentTime: number): void {
   const elapsed = Math.min(currentTime - previousFrameTime, 250);
   previousFrameTime = currentTime;
+  if (activeScreen.kind === "main-menu") {
+    requestAnimationFrame(frame);
+    return;
+  }
 
   if (running) {
     accumulatedTime += elapsed;
@@ -755,4 +860,5 @@ function frame(currentTime: number): void {
 updateTransportState();
 updateAnimationControlState();
 renderPalettePreviews();
+showScreen(INITIAL_SCREEN);
 requestAnimationFrame(frame);

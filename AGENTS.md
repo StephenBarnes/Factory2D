@@ -99,13 +99,16 @@ The game is in early development. Currently implemented:
 * A responsive top-right cell inspector shows the hovered tile's stable ID, movement behavior, effective weldable sides, current welds, circuit connections and charge, magnetic state, orientation, attraction direction/range, and furnace recipe progress. It hides over empty cells and refreshes after simulation commits even when the pointer remains stationary.
 * Deterministic tests cover conveyor force direction, gravity priority, magnetic ceiling traversal and detachment, normal magnetic constraints, neutral stopping, reaction forces, weld isolation, complete push chains, board round-trips, gravity chains, sand overhangs, welded and magnetically constrained bodies, furnace recipes, circuit behavior, gate truth tables, conflicts, boundaries, stable IDs, reset behavior, rendering, and pointer gesture classification.
 * Board export and import controls round-trip deterministic, versioned JSON with compact fixed-code ASCII tile and weld grids plus sparse non-up orientations, nonzero circuit charges, independent wire-crossing axis charges, and in-progress furnace state. Weld cells use `.`, `-`, `|`, or `+` for no forward weld, right, down, or both. Exports up to one million characters are also copied to the clipboard. Imports derive dimensions from the tile grid, validate both grids and all sparse state before replacing the live board, support board sizes up to 400x300, and reconstruct fresh runtime tile IDs because IDs are intentionally excluded from the file.
+* Tagged screen routing supports the main menu, sandbox, and per-definition puzzle workshops. Development still boots directly into the sandbox through a single `INITIAL_SCREEN` setting. The responsive main menu presents the sandbox and a prerequisite-gated puzzle route; puzzle definitions own names, goals, unlock prerequisites, and fresh initial-world factories, while each visited workshop retains an independent session. Puzzle completion detection and persistence are not implemented yet.
 
 ## Code map
 
-* `index.html` — Application shell, tile and weld palette, canvas, hovered-cell inspector, and simulation controls.
-* `src/main.ts` — Browser entry point, example world setup, input handling, build tools, bounded pan/zoom controls, overlay-aware viewport insets, inspector coordination, and animation loop.
-* `src/styles.css` — Responsive application, palette, inspector, board, and control styling.
+* `index.html` — Application shell, responsive main menu, tile and weld palette, canvas, hovered-cell inspector, and simulation controls.
+* `src/main.ts` — Browser entry point, screen navigation and retained workshop sessions, input handling, build tools, bounded pan/zoom controls, overlay-aware viewport insets, inspector coordination, and animation loop.
+* `src/styles.css` — Responsive main menu, application, palette, inspector, board, and control styling.
 * `src/vite-env.d.ts` — Vite client type declarations.
+* `src/game/puzzles.ts` — Ordered puzzle definitions, prerequisite-based unlock checks, and fresh sandbox and puzzle world factories.
+* `src/game/screen.ts` — Tagged application-screen contract and the single development initial-screen setting.
 * `src/render/canvas-renderer.ts` — Responsive Canvas 2D grid, overlay-aware camera fitting, bounded pan and pointer-anchored zoom, revision-and-scale-keyed welded-body geometry cache, stable-ID movement interpolation in every adjacent direction, hit testing, placement previews, and hover feedback.
 * `src/render/grid-drag.ts` — Board-clipped tile-drag endpoints and continuous weld-edge traversal between pointer events.
 * `src/render/pointer-gesture.ts` — Button/modifier gesture classification and middle-click drag-threshold policy.
@@ -118,6 +121,7 @@ The game is in early development. Currently implemented:
 * `src/simulation/simulation.ts` — Allocation-free circuit-network, delayed gate, and furnace resolution; phase-specific welded and magnetic body collection; gravity support; tangential magnetic sliding; conveyor force/reaction and pushing-chain resolution; conflict resolution; and tick advancement.
 * `src/ui/tile-inspector.ts` — Revision-aware hovered-cell property presentation, including effective directional weldability, current welds, and furnace bake progress.
 * `src/ui/component-palette.ts` — Definition-driven sandbox component palette construction and keyboard-shortcut lookup.
+* `src/ui/main-menu.ts` — Definition-driven puzzle-map buttons with available, locked, and completed presentation.
 * `src/util/assert.ts` — `expectDefined` assertion that crashes loudly on violated lookups instead of falling back silently.
 * `tests/board-export.test.ts` — Compact board format ordering, round-trip, state, and malformed-input validation tests.
 * `tests/circuit.test.ts` — Instant welded-network propagation, wire-crossing axis isolation, occupancy and charge sensor directionality, isolated gate networks and delay, combiner, multiplier, subtractor, and selector truth tables, disconnection, and moving-charge tests.
@@ -128,14 +132,29 @@ The game is in early development. Currently implemented:
 * `tests/pointer-gesture.test.ts` — Pointer button, modifier, and drag-threshold regression tests.
 * `tests/tile-renderer.test.ts` — Rounded body-outline and mixed-kind fill stability regression tests.
 * `tests/tile.test.ts` — Directional and non-directional tile orientation resolution regression tests.
+* `tests/puzzles.test.ts` — Puzzle ordering, prerequisite unlocking, and independent initial-world factory tests.
 * `vite.config.ts` — Vite configuration with Vitest's Node test environment.
 * `tsconfig.json` — Strict browser TypeScript and project build configuration.
 
 ## Current TODOs
 
+Components needed so that we can design puzzles in-world:
+* Add a target/delivery-box component that absorbs blocks in front of it, if they're equal to the block behind it, and emits a charge on the tick it absorbs the block. The absorbed block should be deleted, maybe animated moving into the delivery box and shrinking as it does so.
+* Add a charge counter component - counts up from zero every tick it receives a charge on the back, and outputs a charge once it reaches a configured threshold. Requires some kind of UI for setting the threshold - maybe open a modal input box once the block is placed, and when pressing the F key with mouse over the block. (We'll need similar modals for some other configurable components, like ROMs.)
+* Add a victory block that marks the puzzle as won once it receives a +1 charge, or lost when it receives -1.
+* Add a dispenser component that dispenses a copy of the block behind it, creating the duplicate in front of it, when it receives a charge on the side.
+* Various other components for more compact in-world puzzle machinery: sparks / single-tick charge providers, fixed charge providers, ROMs (+1/-1 on one side moves cursor, other sides output the stored value, modal allows setting ROM size and value in each cell).
+
 Game flow:
-* Implement a main menu. For now, continue booting straight to the sandbox for faster testing during development, but add a button to go to a main menu screen, with a button for the sandbox mode and disabled button for puzzles.
-* Implement a system for defining puzzles - similar to the current export format with some extra fields, such as a list of components that are placeable with their prices in talents.
+* Implement puzzle completion detection and persistent progress, then feed completed puzzle IDs into the existing prerequisite-based menu unlocking.
+* Implement restrictions on where the player can place blocks, defined as a region of the game grid. Specify in the puzzle definition.
+* Extend puzzle definitions with editable regions, available components and their prices, physical inputs/outputs, and test cases, then enforce those constraints in puzzle workshops.
+* Change the editing model when solving puzzles: the player edits the initial board state, but as soon as they've played/run the simulation, they can no longer edit, they have to reset. Because puzzles won't allow modifying the board halfway through running a solution. We can still allow mid-run edits in the sandbox.
+* Implement a way to show text boxes on the game screen, for tutorial puzzles. Specify their position and text as part of the puzzle definition.
+* When selecting a puzzle, before jumping straight into the puzzle's game screen, add a puzzle info screen. It should show a description of the puzzle, a list of saved solutions and their scores, and have buttons to create a new solution, duplicate an existing solution, edit selected solution, and delete solutions.
+* Add a way to specify multiple test cases for each puzzle. These will likely take the form of slight modifications to the puzzle definition, e.g. changing the values stored in one ROM component. The player builds one solution inside their allowed modification region; this must work for all test cases, where each test case modifies the in-world puzzle machinery outside that region, e.g. changing the delays on inputs.
+* Add a button to test the current solution - runs all test cases in series, then checks if all resulted in victory, and if so, displays a report with the puzzle's score (price, cycles, footprint) with buttons to edit more or go back to the puzzle info screen.
+* Add a signal-monitor component, and ROM-grapher component. In the puzzle screen, add an additional panel on the right that shows a readout of the signal received by the signal monitor every tick, and also shows a graph of the values in any ROM adjacent to the ROM-monitor. This is for puzzles - we can show the signals that the player will receive, the signals we expect them to output, and the actual signal they emit, similar to a Zachtronics game.
 
 UI:
 * Check for any potential bugs caused by listening only to mouse-up and mouse-down events, and assuming the mouse button is held down until a mouse-up is received. Can cause accidental deletion or placing of tiles if the mouse-up event is hidden by other window events.

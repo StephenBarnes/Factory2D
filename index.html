@@ -8,6 +8,27 @@
   </head>
   <body>
     <main class="app-shell">
+      <section class="main-menu-screen" id="main-menu-screen" aria-labelledby="main-menu-title" hidden>
+        <div class="main-menu-content">
+          <header class="main-menu-header">
+            <p class="eyebrow">DWARVEN ENGINEERING WORKS</p>
+            <h1 id="main-menu-title">Factory 2D</h1>
+            <p>Choose a workshop. Puzzle completion will open the route to the next site.</p>
+          </header>
+          <button class="sandbox-node" id="sandbox-button" type="button">
+            <span class="puzzle-number">∞</span>
+            <span class="puzzle-details">
+              <strong>Sandbox</strong>
+              <small>Build freely with every available component.</small>
+            </span>
+            <span class="puzzle-status">ALWAYS AVAILABLE</span>
+          </button>
+          <nav class="puzzle-map" id="puzzle-map" aria-label="Puzzle map"></nav>
+          <p class="main-menu-note">Puzzle goals and completion detection are not active yet.</p>
+        </div>
+      </section>
+
+      <section class="game-screen" id="game-screen" aria-label="Workshop">
       <section class="board-panel" aria-label="Factory simulation">
         <canvas
           id="game-canvas"
@@ -16,6 +37,13 @@
       </section>
 
       <aside class="sidebar floating-panel" id="sidebar-controls" aria-label="Build tools and components">
+        <div class="screen-heading">
+          <button class="menu-button" id="menu-button" type="button">← MENU</button>
+          <div>
+            <strong id="screen-title">SANDBOX</strong>
+            <small id="screen-description">Free construction workshop</small>
+          </div>
+        </div>
         <div class="panel-heading">
           <span>TOOLS</span>
           <span class="panel-number">01</span>
@@ -126,6 +154,7 @@
           </select>
         </label>
       </footer>
+      </section>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>
