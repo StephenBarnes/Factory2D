@@ -184,26 +184,44 @@ describe("circuit networks", () => {
     },
   );
 
-  it.each([
-    { input: -1 as const, output: 0 as const },
-    { input: 0 as const, output: 0 as const },
-    { input: 1 as const, output: 1 as const },
-  ])("rectifies a start-of-tick $input charge to $output", ({ input, output }) => {
-    const world = new World(3, 1);
-    world.place(0, 0, TileKind.Conduit);
-    world.place(1, 0, TileKind.Rectifier, Direction.Right);
-    world.place(2, 0, TileKind.Conduit);
-    world.setWeld(0, 0, 1, 0, true);
-    world.setWeld(1, 0, 2, 0, true);
-    world.setCharge(0, 0, input);
-    const simulation = new Simulation(world);
+  it.each(
+    ([-1, 0, 1] as const).flatMap((left) =>
+      ([-1, 0, 1] as const).flatMap((rear) =>
+        ([-1, 0, 1] as const).map((right) => ({
+          left,
+          rear,
+          right,
+          output: left + rear + right > 0 ? 1 : 0,
+        })),
+      ),
+    ),
+  )(
+    "rectifies three isolated inputs max(0, sign($left + $rear + $right)) to $output",
+    ({ left, rear, right, output }) => {
+      const world = new World(3, 3);
+      world.place(1, 0, TileKind.Conduit);
+      world.place(0, 1, TileKind.Conduit);
+      world.place(1, 1, TileKind.Rectifier, Direction.Up);
+      world.place(2, 1, TileKind.Conduit);
+      world.place(1, 2, TileKind.Conduit);
+      world.setWeld(1, 0, 1, 1, true);
+      world.setWeld(0, 1, 1, 1, true);
+      world.setWeld(1, 1, 2, 1, true);
+      world.setWeld(1, 1, 1, 2, true);
+      world.setCharge(0, 1, left);
+      world.setCharge(1, 2, rear);
+      world.setCharge(2, 1, right);
+      const simulation = new Simulation(world);
 
-    simulation.step();
+      simulation.step();
 
-    expect(world.chargeAt(0, 0)).toBe(0);
-    expect(world.chargeAt(1, 0)).toBe(output);
-    expect(world.chargeAt(2, 0)).toBe(output);
-  });
+      expect(world.chargeAt(0, 1)).toBe(0);
+      expect(world.chargeAt(1, 2)).toBe(0);
+      expect(world.chargeAt(2, 1)).toBe(0);
+      expect(world.chargeAt(1, 1)).toBe(output);
+      expect(world.chargeAt(1, 0)).toBe(output);
+    },
+  );
 
   it("delays each inverter in a directly connected gate chain by one tick", () => {
     const world = new World(4, 1);

@@ -241,7 +241,9 @@ describe("circuit rendering", () => {
     { kind: TileKind.Inverter, inputDirection: Direction.Down },
     { kind: TileKind.Inverter, inputDirection: Direction.Left },
     { kind: TileKind.Combiner, inputDirection: Direction.Down },
+    { kind: TileKind.Rectifier, inputDirection: Direction.Right },
     { kind: TileKind.Rectifier, inputDirection: Direction.Down },
+    { kind: TileKind.Rectifier, inputDirection: Direction.Left },
     { kind: TileKind.Multiplier, inputDirection: Direction.Left },
     { kind: TileKind.Subtractor, inputDirection: Direction.Left },
   ])(
