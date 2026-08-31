@@ -37,3 +37,4 @@ Game flow:
 UI:
 * Add a selection tool, for selecting a rectangular region of tiles and copying, pasting, moving, and rotating.
 * Add a way to copy selection to a clipboard, for transferring machines between puzzles.
+* When saving an image using the image button, crop out parts of the screen that are over the background, outside the grid, if this can be implemented easily.

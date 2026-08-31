@@ -71,6 +71,7 @@ const stepButton = requiredElement<HTMLButtonElement>("step-button");
 const resetButton = requiredElement<HTMLButtonElement>("reset-button");
 const clearButton = requiredElement<HTMLButtonElement>("clear-button");
 const exportButton = requiredElement<HTMLButtonElement>("export-button");
+const imageButton = requiredElement<HTMLButtonElement>("image-button");
 const importButton = requiredElement<HTMLButtonElement>("import-button");
 const importFile = requiredElement<HTMLInputElement>("import-file");
 const animationToggle = requiredElement<HTMLInputElement>("animation-toggle");
@@ -404,6 +405,17 @@ clearButton.addEventListener("click", () => {
   finishAnimation();
 });
 
+function downloadBlob(blob: Blob, filename: string): void {
+  const objectUrl = URL.createObjectURL(blob);
+  const download = document.createElement("a");
+  download.href = objectUrl;
+  download.download = filename;
+  document.body.append(download);
+  download.click();
+  download.remove();
+  URL.revokeObjectURL(objectUrl);
+}
+
 exportButton.addEventListener("click", () => {
   const source = serializeBoard(world, simulation.tick);
   if (source.length <= MAX_CLIPBOARD_EXPORT_CHARACTERS) {
@@ -412,17 +424,16 @@ exportButton.addEventListener("click", () => {
     });
   }
 
-  const objectUrl = URL.createObjectURL(new Blob(
-    [source],
-    { type: "application/json" },
-  ));
-  const download = document.createElement("a");
-  download.href = objectUrl;
-  download.download = "factory2d-board.json";
-  document.body.append(download);
-  download.click();
-  download.remove();
-  URL.revokeObjectURL(objectUrl);
+  downloadBlob(new Blob([source], { type: "application/json" }), "factory2d-board.json");
+});
+
+imageButton.addEventListener("click", () => {
+  canvas.toBlob((blob) => {
+    if (blob === null) {
+      throw new Error("Could not encode the grid image as PNG");
+    }
+    downloadBlob(blob, "factory2d-grid.png");
+  }, "image/png");
 });
 
 importButton.addEventListener("click", () => {

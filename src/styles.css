@@ -103,6 +103,10 @@ canvas {
   padding: 15px;
 }
 
+.tile-inspector-hidden {
+  visibility: hidden;
+}
+
 .inspector-title-row {
   padding-bottom: 11px;
   border-bottom: 1px solid #27313b;

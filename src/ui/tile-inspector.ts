@@ -53,6 +53,7 @@ function appendDirection(current: string, direction: Direction): string {
 }
 
 export class TileInspector {
+  private readonly root: HTMLElement;
   private readonly name: HTMLElement;
   private readonly position: HTMLElement;
   private readonly hint: HTMLElement;
@@ -78,6 +79,7 @@ export class TileInspector {
     root: HTMLElement,
     private readonly world: World,
   ) {
+    this.root = root;
     this.name = requiredDescendant(root, "[data-inspector-name]");
     this.position = requiredDescendant(root, "[data-inspector-position]");
     this.hint = requiredDescendant(root, "[data-inspector-hint]");
@@ -100,6 +102,10 @@ export class TileInspector {
   update(position: GridPosition | null): void {
     const x = position?.x ?? -1;
     const y = position?.y ?? -1;
+    const kind = position === null ? TileKind.Empty : this.world.kindAt(x, y);
+    const hidden = kind === TileKind.Empty;
+    this.root.classList.toggle("tile-inspector-hidden", hidden);
+    this.root.setAttribute("aria-hidden", String(hidden));
     if (x === this.lastX && y === this.lastY && this.world.revision === this.lastRevision) {
       return;
     }
@@ -113,7 +119,6 @@ export class TileInspector {
     }
 
     const positionLabel = `X ${position.x.toString().padStart(2, "0")}   Y ${position.y.toString().padStart(2, "0")}`;
-    const kind = this.world.kindAt(position.x, position.y);
     if (kind === TileKind.Empty) {
       this.showMessage("EMPTY", positionLabel, "No component occupies this cell.");
       return;
