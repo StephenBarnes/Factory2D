@@ -69,6 +69,9 @@ export class Simulation {
   private readonly pistonCanPush: Uint8Array;
   private readonly pistonAnchoredBodies: Uint8Array;
   private readonly pistonVacatedOwners: Int32Array;
+  private readonly pistonRecoilExtensions: Uint8Array;
+  private readonly pistonTransitionActions: Int8Array;
+  private readonly pistonTransitionHeadWelds: Uint8Array;
 
   constructor(world: World) {
     this.world = world;
@@ -118,6 +121,9 @@ export class Simulation {
     this.pistonCanPush = new Uint8Array(world.cellCount);
     this.pistonAnchoredBodies = new Uint8Array(world.cellCount);
     this.pistonVacatedOwners = new Int32Array(world.cellCount);
+    this.pistonRecoilExtensions = new Uint8Array(world.cellCount);
+    this.pistonTransitionActions = new Int8Array(world.cellCount);
+    this.pistonTransitionHeadWelds = new Uint8Array(world.cellCount);
   }
 
   step(): number {
@@ -144,25 +150,15 @@ export class Simulation {
     this.collectPistonBodies();
     this.collectBodyMembers();
     this.collectPistonActions();
+    // Arm-forward extension has priority. Only intents blocked in that pass
+    // switch to base recoil before the complete piston intent set is resolved again.
     this.resolvePistonMovements();
-
-    for (let base = 0; base < this.world.cellCount; base += 1) {
-      const action = expectDefined(this.pistonActions[base], "piston action");
-      const targetRoot = expectDefined(this.pistonTargetRoots[base], "piston target root");
-      if (action === 0 || targetRoot < 0) {
-        continue;
-      }
-      const orientation = this.world.orientationAtIndex(base);
-      const expectedX = action === 1 ? directionX(orientation) : -directionX(orientation);
-      const expectedY = action === 1 ? directionY(orientation) : -directionY(orientation);
-      if (
-        expectDefined(this.horizontalMoves[targetRoot], "piston target horizontal movement") !==
-          expectedX ||
-        expectDefined(this.verticalMoves[targetRoot], "piston target vertical movement") !== expectedY
-      ) {
-        this.pistonActions[base] = 0;
-      }
+    if (this.choosePistonRecoilExtensions()) {
+      this.rebuildPistonForces();
+      this.resolvePistonMovements();
     }
+    this.validatePistonMovements();
+    this.preparePistonTransitions();
 
     const movementCount = this.world.moveBodies(
       this.bodyRoots,
@@ -170,8 +166,8 @@ export class Simulation {
       this.verticalMoves,
     );
     return movementCount + this.world.applyPistonTransitions(
-      this.pistonActions,
-      this.pistonHeadWelds,
+      this.pistonTransitionActions,
+      this.pistonTransitionHeadWelds,
       this.pistonArmIds,
     );
   }
@@ -261,6 +257,7 @@ export class Simulation {
     this.pistonCanPush.fill(0);
     this.pistonAnchoredBodies.fill(0);
     this.pistonVacatedOwners.fill(-1);
+    this.pistonRecoilExtensions.fill(0);
     this.bodyForceX.fill(0);
     this.bodyForceY.fill(0);
     this.destinationOwners.fill(-1);
@@ -347,21 +344,19 @@ export class Simulation {
         continue;
       }
       const targetRoot = expectDefined(this.pistonTargetRoots[base], "piston target root");
+      const baseRoot = expectDefined(this.pistonBaseRoots[base], "piston base root");
       if (targetRoot < 0) {
         continue;
       }
-      const baseRoot = expectDefined(this.pistonBaseRoots[base], "piston base root");
-      if (targetRoot === baseRoot || this.pistonAnchoredBodies[targetRoot] === 1) {
+      if (
+        targetRoot === baseRoot ||
+        action === -1 && this.pistonAnchoredBodies[targetRoot] === 1
+      ) {
         this.pistonActions[base] = 0;
         continue;
       }
-      const orientation = this.world.orientationAtIndex(base);
-      const moveDirection = action === 1 ? orientation : oppositeDirection(orientation);
-      this.addBodyForce(targetRoot, moveDirection);
-      if (action === 1) {
-        this.pistonCanPush[targetRoot] = 1;
-      } else {
-        const arm = this.neighborIndex(base, orientation);
+      if (action === -1) {
+        const arm = this.neighborIndex(base, this.world.orientationAtIndex(base));
         const existingOwner = expectDefined(
           this.pistonVacatedOwners[arm],
           "retracting piston vacancy owner",
@@ -372,6 +367,130 @@ export class Simulation {
         }
         this.pistonVacatedOwners[arm] = targetRoot;
       }
+    }
+    this.rebuildPistonForces();
+  }
+
+  private choosePistonRecoilExtensions(): boolean {
+    let foundRecoil = false;
+    for (let base = 0; base < this.world.cellCount; base += 1) {
+      if (expectDefined(this.pistonActions[base], "piston action") !== 1) {
+        continue;
+      }
+      const targetRoot = expectDefined(this.pistonTargetRoots[base], "piston target root");
+      if (targetRoot < 0) {
+        continue;
+      }
+      const orientation = this.world.orientationAtIndex(base);
+      if (
+        expectDefined(this.horizontalMoves[targetRoot], "piston target horizontal movement") ===
+          directionX(orientation) &&
+        expectDefined(this.verticalMoves[targetRoot], "piston target vertical movement") ===
+          directionY(orientation)
+      ) {
+        continue;
+      }
+      this.pistonRecoilExtensions[base] = 1;
+      foundRecoil = true;
+    }
+    return foundRecoil;
+  }
+
+  private rebuildPistonForces(): void {
+    this.bodyForceX.fill(0);
+    this.bodyForceY.fill(0);
+    this.pistonCanPush.fill(0);
+    this.pistonAnchoredBodies.fill(0);
+    this.pistonVacatedOwners.fill(-1);
+
+    for (let base = 0; base < this.world.cellCount; base += 1) {
+      const action = expectDefined(this.pistonActions[base], "piston action");
+      if (action === 0) {
+        continue;
+      }
+      const orientation = this.world.orientationAtIndex(base);
+      const baseRoot = expectDefined(this.pistonBaseRoots[base], "piston base root");
+      if (action === 1 && this.pistonRecoilExtensions[base] === 1) {
+        this.addBodyForce(baseRoot, oppositeDirection(orientation));
+        this.pistonCanPush[baseRoot] = 1;
+        continue;
+      }
+
+      this.pistonAnchoredBodies[baseRoot] = 1;
+      if (action === -1) {
+        const arm = this.neighborIndex(base, orientation);
+        const armRoot = expectDefined(this.bodyRoots[arm], "piston arm body");
+        this.pistonAnchoredBodies[armRoot] = 1;
+      }
+
+      const targetRoot = expectDefined(this.pistonTargetRoots[base], "piston target root");
+      if (targetRoot < 0) {
+        continue;
+      }
+      const moveDirection = action === 1 ? orientation : oppositeDirection(orientation);
+      this.addBodyForce(targetRoot, moveDirection);
+      if (action === 1) {
+        this.pistonCanPush[targetRoot] = 1;
+      } else {
+        const arm = this.neighborIndex(base, orientation);
+        this.pistonVacatedOwners[arm] = targetRoot;
+      }
+    }
+  }
+
+  private validatePistonMovements(): void {
+    for (let base = 0; base < this.world.cellCount; base += 1) {
+      const action = expectDefined(this.pistonActions[base], "piston action");
+      if (action === 0) {
+        continue;
+      }
+      const orientation = this.world.orientationAtIndex(base);
+      const recoils = action === 1 && this.pistonRecoilExtensions[base] === 1;
+      const movementRoot = recoils
+        ? expectDefined(this.pistonBaseRoots[base], "piston base root")
+        : expectDefined(this.pistonTargetRoots[base], "piston target root");
+      if (movementRoot < 0) {
+        continue;
+      }
+      const movementDirection = recoils || action === -1
+        ? oppositeDirection(orientation)
+        : orientation;
+      if (
+        expectDefined(this.horizontalMoves[movementRoot], "piston horizontal movement") !==
+          directionX(movementDirection) ||
+        expectDefined(this.verticalMoves[movementRoot], "piston vertical movement") !==
+          directionY(movementDirection)
+      ) {
+        this.pistonActions[base] = 0;
+      }
+    }
+  }
+
+  private preparePistonTransitions(): void {
+    this.pistonTransitionActions.fill(0);
+    this.pistonTransitionHeadWelds.fill(0);
+    for (let base = 0; base < this.world.cellCount; base += 1) {
+      const action = expectDefined(this.pistonActions[base], "piston action");
+      if (action === 0) {
+        continue;
+      }
+      const transitionBase = action === 1 && this.pistonRecoilExtensions[base] === 1
+        ? this.neighborIndex(
+            base,
+            oppositeDirection(this.world.orientationAtIndex(base)),
+          )
+        : base;
+      if (transitionBase < 0) {
+        throw new Error(`Piston recoil at index ${base} leaves the world`);
+      }
+      if (this.pistonTransitionActions[transitionBase] !== 0) {
+        throw new Error(`Piston transitions conflict at index ${transitionBase}`);
+      }
+      this.pistonTransitionActions[transitionBase] = action;
+      this.pistonTransitionHeadWelds[transitionBase] = expectDefined(
+        this.pistonHeadWelds[base],
+        "piston head weld",
+      );
     }
   }
 

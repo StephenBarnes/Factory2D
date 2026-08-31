@@ -67,6 +67,57 @@ describe("pistons", () => {
     expect(world.isWelded(2, 3, 2, 2)).toBe(true);
   });
 
+  it("recoils its base when the arm is blocked", () => {
+    const world = new World(5, 5);
+    const pistonId = world.place(2, 2, TileKind.Piston, Direction.Down);
+    const inputId = world.place(1, 2, TileKind.FixedCharge);
+    world.setWeld(2, 2, 1, 2, true);
+    world.place(2, 3, TileKind.Platform);
+
+    expect(new Simulation(world).step()).toBe(3);
+
+    expect(world.kindAt(2, 1)).toBe(TileKind.PistonBase);
+    expect(world.kindAt(2, 2)).toBe(TileKind.PistonArm);
+    expect(world.idAt(2, 2)).toBe(pistonId);
+    expect(world.idAt(1, 1)).toBe(inputId);
+    expect(world.kindAt(2, 3)).toBe(TileKind.Platform);
+    expect(world.isWelded(2, 1, 2, 2)).toBe(true);
+    expect(world.isWelded(2, 1, 1, 1)).toBe(true);
+  });
+
+  it("pushes a complete obstruction chain while recoiling", () => {
+    const world = new World(5, 6);
+    world.place(2, 3, TileKind.Piston, Direction.Down);
+    world.place(1, 3, TileKind.FixedCharge);
+    world.setWeld(2, 3, 1, 3, true);
+    const nearId = world.place(2, 2, TileKind.Stone);
+    const farId = world.place(2, 1, TileKind.Stone);
+    world.place(2, 4, TileKind.Platform);
+
+    expect(new Simulation(world).step()).toBe(5);
+
+    expect(world.kindAt(2, 2)).toBe(TileKind.PistonBase);
+    expect(world.kindAt(2, 3)).toBe(TileKind.PistonArm);
+    expect(world.idAt(2, 1)).toBe(nearId);
+    expect(world.idAt(2, 0)).toBe(farId);
+  });
+
+  it("prefers moving the arm when forward and recoil extensions are possible", () => {
+    const world = new World(5, 5);
+    const pistonId = world.place(2, 2, TileKind.Piston, Direction.Down);
+    const inputId = world.place(1, 2, TileKind.FixedCharge);
+    world.setWeld(2, 2, 1, 2, true);
+    world.place(1, 3, TileKind.Platform);
+
+    expect(new Simulation(world).step()).toBe(1);
+
+    expect(world.kindAt(2, 2)).toBe(TileKind.PistonBase);
+    expect(world.kindAt(2, 3)).toBe(TileKind.PistonArm);
+    expect(world.idAt(2, 3)).toBe(pistonId);
+    expect(world.idAt(1, 2)).toBe(inputId);
+    expect(world.kindAt(2, 1)).toBe(TileKind.Empty);
+  });
+
   it("stays retracted when its extension chain is blocked by fixed terrain", () => {
     const world = new World(5, 6);
     placePoweredFixedPiston(world, 2, 3);
