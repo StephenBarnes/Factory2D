@@ -67,6 +67,24 @@ describe("pistons", () => {
     expect(world.isWelded(2, 3, 2, 2)).toBe(true);
   });
 
+  it("lets a piston push a body after gravity moves it into the path that tick", () => {
+    const world = new World(6, 5);
+    const pistonId = world.place(1, 2, TileKind.Piston, Direction.Right);
+    world.place(0, 2, TileKind.FixedCharge);
+    world.place(1, 3, TileKind.Platform);
+    world.setWeld(1, 2, 0, 2, true);
+    world.setWeld(1, 2, 1, 3, true);
+    const targetId = world.place(2, 1, TileKind.Stone);
+
+    expect(new Simulation(world).step()).toBe(3);
+
+    expect(world.kindAt(1, 2)).toBe(TileKind.PistonBase);
+    expect(world.kindAt(2, 2)).toBe(TileKind.PistonArm);
+    expect(world.idAt(2, 2)).toBe(pistonId);
+    expect(world.idAt(3, 2)).toBe(targetId);
+    expect(world.kindAt(2, 1)).toBe(TileKind.Empty);
+  });
+
   it("recoils its base when the arm is blocked", () => {
     const world = new World(5, 5);
     const pistonId = world.place(2, 2, TileKind.Piston, Direction.Down);

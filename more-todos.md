@@ -42,7 +42,7 @@ Components:
 * Grinder blocks that process a block in front into a product block - exactly like the furnace, but with a distinct table of recipes and different appearance (and later animation and sound).
 * A drill/destroyer block that destroys the block in front of it.
 * Add an indestructible flag. Blocks like crushers and drills should not be able to destroy these. Needed to prevent some exploits when solving puzzles, e.g. by drilling into the ground and activating the victory block.
-* Replace the current magnet with an electromagnet. Positive and negative charges make it switch polarity. Both nonzero polarities stick to iron. Like magnets repel, opposite magnets attract.
+* Replace the current magnet with an electromagnet. Positive and negative charges make it switch polarity; opposite sides have opposite polarity. Both nonzero polarities stick to iron. Like magnet sides repel, opposite magnet sides attract.
 * Maybe add static non-controllable magnets, which are also non-directional.
 * Component that makes its entire welded body immune to gravity. Can still be pushed down by an independent body on top that falls under gravity.
 * Furnaces could have special behavior if said neighbor is surrounded by certain other neighbors.
