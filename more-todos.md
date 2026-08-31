@@ -97,10 +97,15 @@ UI:
 * Settings menu: Add color-blindness options for people who can't distinguish red and blue circuit wires. Maybe just let them specify colors (from a short menu) for charges +1 and -1.
 * Settings menu: Add option to clear all puzzle solutions and other saved state. Keep the user's UUID.
 * Settings menu: Add a button to download all player data (everything in localStorage), and a button to import that, so players could transfer data to another device.
-* Modify the inspector to show description for a tile instance on the board, on mouseover.
-* Display truth tables on inspector, for the tooltips.
-* Move the inspector panel to near top-left, just right of the palette.
 * On the puzzle results screen, add a button to go directly to the next puzzle's briefing screen - if the solution succeeded, and there's a defined next puzzle, and it's unlocked. Display the next puzzle's name. This is meant to help reduce menu navigation needed when we have several easy tutorial puzzles in rapid succession.
+
+UI: tile inspector panel:
+* Bug: the tile inspector/detail panel should show info on the palette entries while the mouse is over them, and info on the tile under the mouse when the mouse is over a placed tile instance. Currently after clicking on a palette entry, if the mouse then moves away and moves over placed tiles, it still shows the palette entry's info instead of the moused-over tile instance's info, unless the player clicks on empty space.
+* Modify the inspector to show description for a tile instance on the board, on mouseover.
+* Move the inspector panel to near top-left, just right of the palette.
+* Clean up the tile inspector panel's info shown for tile instances placed on the grid: Move tile ID to be small, next to the X and Y coordinates. Remove "movement", "weldable", "magnetic". Edit descriptions instead to note unusual values for those - sand's description should say it can fall diagonally, platform's description should say it's not affected by gravity, iron's description should say it's not magnetic. Remove "welds" section since it's visually obvious, or show a simple code with arrows in the X/Y/ID line.
+* Show the tile inspector panel when mouse is over a tool in the palette panel - currently only the weld tool. It should show a description of the tool and its controls (left-click welds, right-click unwelds).
+* Display a truth table tables on the inspector, for components where that's relevant.
 
 Visuals:
 * Re-theme the entire game's UI. The current palette (black, dark blue, cyan, yellow) doesn't really fit the theme. Prefer colors like earth brown, stone gray, bronze, gold. Maybe: 312312 (brown), 4B5052 (grey), F1CC38 (gold), 5C718C (blue).
@@ -112,4 +117,3 @@ Visuals:
 * Add animation for the delivery box - animate tiles moving into it, and shrinking, as they're absorbed.
 * Replace the current icon set with more intuitive or pretty symbols, matching the rune theme. Make stone/glass/platform have two parallel lines instead of the Z-lightning-bolt. Block sensor should have angular rune-like eye symbol (hollow diamond with center diamond for the pupil); charge sensor should be the same eye with lighting bolt replacing pupil. Fixed charge should have 3 lighting bolts, not plus symbol and circle. Inverter should be "hagalaz" N/H symbol. Subtractor should mark back with a small plus. Rectifier should be "thurisaz" `|>` instead of current `>|`. Victory block should have "jera" rune symbol. Magnet should be reworked, but defer until we change its mechanics. Also give them sensible background colors, e.g. shades of purple for all sensors, teal/blue for all 3-input mathematical transforms.
 * Improve piston extension/retraction animation.
-* Bug: the tile inspector/detail panel should show info on the palette entries while the mouse is over them, and info on the tile under the mouse when the mouse is over a placed tile instance. Currently after clicking on a palette entry, if the mouse then moves away and moves over placed tiles, it still shows the palette entry's info instead of the moused-over tile instance's info, unless the player clicks on empty space.

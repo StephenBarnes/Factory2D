@@ -78,7 +78,7 @@ Keep this section up-to-date.
 The game is in early development. Currently implemented:
 
 * A 20x14 editable Canvas 2D grid with procedural sand, falling stone, glass, iron ore, magnetic iron, directional magnets, pistons, furnaces, delivery boxes, and victory blocks, clockwise/counterclockwise conveyor belts, circuit conduits and wire crossings, and fixed charge, spark, occupancy sensor, charge sensor, inverter, combiner, rectifier, multiplier, subtractor, and selector runes.
-* A full-viewport black board layer behind responsive floating left and bottom control panels. The initial view fits the entire grid into the unobscured region; mouse-wheel zoom stays anchored beneath the pointer; and arrow keys, middle-button drags, or Alt-right-button drags pan within bounds that keep the screen center over the grid.
+* A responsive workshop frame anchors the component palette to the left screen edge and the simulation controls to the bottom edge, with the Canvas limited to the remaining rectangular board region. On narrow screens the controls span the full bottom edge below both the palette and board. The initial view fits the entire grid around the floating inspector; mouse-wheel zoom stays anchored beneath the pointer; and arrow keys, middle-button drags, or Alt-right-button drags pan within bounds that keep the screen center over the grid.
 * Build controls for gap-free click-and-drag placement and removal, including Shift-left placement welded to every eligible occupied neighbor, drags that leave the grid, middle-click or Q picking that preserves directional component orientation and reselects the previous tile when aimed at an empty cell, middle-button drag panning, metadata-driven WASD rotation and aiming shared by palette previews, placement ghosts, and placed tiles, stepping, running, pausing, resetting, clearing, PNG image downloads, speed selection, and an animation toggle. Component palette definitions, categories, compact board codes, descriptions, and ordering come from the single tile definition registry. The palette groups image-only component buttons into raw-material, mechanism, circuit, machine, and puzzle-tool grids, keeps the compact weld tool above them, and overlays 1-9 and 0 on each workshop's first ten visible components.
 * A separate weld tool for joining eligible occupied neighbors into rigid bodies and unwelding them, with gap-free fast-drag traversal, an immediate held-Control temporary override, and red invalid-edge feedback. Sand is not weldable, and magnets reject welds on their pointed side.
 * One shared procedural tile renderer for the Canvas board, placement preview, and component palette. Palette previews use density-aware, supersampled backing stores and redraw when browser zoom or display density changes. Each welded body renders from traced, inset rounded-slab outlines whose occupied neighbors merge only across locally welded edges, so unwelded cuts stay visually stable when another cut splits the body and closed seam ends receive rounded caps. Rendering includes a drop shadow, per-cell fills that remain locally stable when different tile kinds are joined, decorations clipped to the outline, and top-left highlight and bottom-right shade bevels. Diagonally touching cells render as a rounded pinch. Per-body cells and `Path2D` outlines are cached across animation frames and rebuilt only after world changes or board geometry changes.
@@ -98,7 +98,7 @@ The game is in early development. Currently implemented:
 ## Code map
 
 * `index.html` — Application shell, responsive main menu, puzzle briefing and saved-solution screen, tile and weld palette, canvas, hovered-cell inspector, and simulation controls.
-* `src/main.ts` — Browser entry point, DOM event wiring, build tools, bounded pan/zoom controls, overlay-aware viewport insets, inspector coordination, and animation loop.
+* `src/main.ts` — Browser entry point, DOM event wiring, build tools, bounded pan/zoom controls, inspector-aware viewport insets, inspector coordination, and animation loop.
 * `src/styles.css` — Responsive main menu, puzzle briefing and solution list, application, palette, inspector, board, and control styling.
 * `src/vite-env.d.ts` — Vite client type declarations.
 * `src/dev/diagnostic-snapshot.ts` — Development-only read-only browser diagnostic snapshot contract and installer.
@@ -164,7 +164,7 @@ The game is in early development. Currently implemented:
 * `tests/workshop-editing-state.test.ts` — Puzzle lock/reset and unrestricted sandbox editing-policy tests.
 * `tests/controllers.test.ts` — Workshop-session isolation/import and saved-solution selection, dirty persistence, duplication, and deletion tests.
 * `e2e/browser-fixtures.ts` — Deterministic empty, populated, unlocked, edited-board, and malformed-storage browser fixtures using production persistence serializers.
-* `e2e/app-lifecycle.spec.ts` — Playwright lifecycle coverage for routing, solution persistence/actions and successful scores, reloads, malformed storage, puzzle reports, export dropup availability and downloads, and narrow-screen overflow.
+* `e2e/app-lifecycle.spec.ts` — Playwright lifecycle coverage for routing, edge-panel and canvas geometry, solution persistence/actions and successful scores, reloads, malformed storage, puzzle reports, export dropup availability and downloads, and narrow-screen overflow.
 * `vite.config.ts` — Vite configuration with Vitest's Node test environment.
 * `playwright.config.ts` — Chromium browser-suite and Vite web-server configuration.
 * `tsconfig.json` — Strict browser TypeScript and project build configuration.
@@ -183,11 +183,8 @@ The game is in early development. Currently implemented:
 ## Current TODOs
 
 Game/puzzle flow:
-* Add a sandbox-only tool for specifying the player-modifiable regions. Put it next to the weld tool, as a new selectable tool. With the tool selected, left-click drag should add a rectangle, and right-click should remove all current rectangles that overlap the clicked point. These regions should not constrain tile placement in the sandbox. The "download puzzle file" button should include these rectangles in the exported puzzle definition file. This is for authoring puzzles.
+* Add a sandbox-only tool for specifying the player-modifiable regions. Put it next to the weld tool, as a new selectable tool. With the tool selected, left-click drag should add a rectangle, and right-click should remove all current rectangles that overlap the clicked point. These regions should not constrain tile placement in the sandbox. The "download puzzle file" button should include these rectangles in the exported puzzle definition file. This is for authoring puzzles. (Later we'll also have a selection tool for selecting groups of blocks and moving/copying/rotating/flipping and saving to clipboard, which will share some of this functionality.) We have some code for unions-of-rectangles currently used for player-modifiable regions, may be reusable.
 * Specify board size in the scene and puzzle JSON formats. Currently assumes every board is 20x14. Validate that size is at least 1x1 and at most 400x300. When entering the puzzle screen or importing a file, choose zoom and position so the entire board is visible.
-
-UI:
-* Rework overall UI structure. Anchor the floating palette panel (on the left) and floating control panel (bottom) to the screen borders, instead of floating on top of the visible grid. Limit the `#game-canvas` to the rectangular region not covered by those two panels, instead of occupying the entire background.
 
 More items in `more-todos.md`.
 

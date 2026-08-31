@@ -80,7 +80,6 @@ const screenTitle = requiredElement<HTMLElement>("screen-title");
 const screenDescription = requiredElement<HTMLElement>("screen-description");
 const sidebarControls = requiredElement<HTMLElement>("sidebar-controls");
 const componentPalette = requiredElement<HTMLElement>("component-palette");
-const bottomControls = requiredElement<HTMLElement>("bottom-controls");
 const inspectorPanel = requiredElement<HTMLElement>("tile-inspector");
 let tileInspector = new TileInspector(inspectorPanel, world);
 const playButton = requiredElement<HTMLButtonElement>("play-button");
@@ -137,20 +136,16 @@ let tileKindsByShortcut: Readonly<Record<string, TileKind | undefined>> =
 
 function updateViewportInsets(): void {
   const canvasBounds = canvas.getBoundingClientRect();
-  const sidebarBounds = sidebarControls.getBoundingClientRect();
-  const controlsBounds = bottomControls.getBoundingClientRect();
   const inspectorBounds = inspectorPanel.getBoundingClientRect();
   renderer.setViewportInsets({
     top: 16,
     right: Math.max(16, canvasBounds.right - inspectorBounds.left + 16),
-    bottom: Math.max(16, canvasBounds.bottom - controlsBounds.top + 16),
-    left: Math.max(16, sidebarBounds.right - canvasBounds.left + 16),
+    bottom: 16,
+    left: 16,
   });
 }
 
 const overlayResizeObserver = new ResizeObserver(updateViewportInsets);
-overlayResizeObserver.observe(sidebarControls);
-overlayResizeObserver.observe(bottomControls);
 overlayResizeObserver.observe(inspectorPanel);
 updateViewportInsets();
 

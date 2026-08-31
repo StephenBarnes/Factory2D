@@ -23,21 +23,17 @@ async function boardCellCenter(
 ): Promise<{ readonly x: number; readonly y: number }> {
   return page.evaluate(({ cellX, cellY }) => {
     const canvas = document.querySelector<HTMLCanvasElement>("#game-canvas");
-    const sidebar = document.querySelector<HTMLElement>("#sidebar-controls");
-    const controls = document.querySelector<HTMLElement>("#bottom-controls");
     const inspector = document.querySelector<HTMLElement>("#tile-inspector");
-    if (canvas === null || sidebar === null || controls === null || inspector === null) {
+    if (canvas === null || inspector === null) {
       throw new Error("Workshop layout is incomplete");
     }
 
     const canvasBounds = canvas.getBoundingClientRect();
-    const sidebarBounds = sidebar.getBoundingClientRect();
-    const controlsBounds = controls.getBoundingClientRect();
     const inspectorBounds = inspector.getBoundingClientRect();
-    const left = Math.max(16, sidebarBounds.right - canvasBounds.left + 16);
+    const left = 16;
     const right = Math.max(16, canvasBounds.right - inspectorBounds.left + 16);
     const top = 16;
-    const bottom = Math.max(16, canvasBounds.bottom - controlsBounds.top + 16);
+    const bottom = 16;
     const safeWidth = Math.max(1, canvas.clientWidth - left - right);
     const safeHeight = Math.max(1, canvas.clientHeight - top - bottom);
     const cellSize = Math.max(2, Math.min(safeWidth / 20, safeHeight / 14, 64));
@@ -77,6 +73,62 @@ test("routes only to accessible canonical screens", async ({ page }) => {
 
   await page.goto("/not-a-route");
   await expect(page).toHaveURL(/\/$/);
+});
+
+test("edge panels reserve a non-overlapping canvas region", async ({ page }) => {
+  await seedBrowserStorage(page, "empty");
+  await page.goto("/sandbox");
+
+  for (const viewport of [
+    { width: 1280, height: 800, compact: false },
+    { width: 390, height: 640, compact: true },
+  ]) {
+    await page.setViewportSize(viewport);
+    const layout = await page.evaluate(() => {
+      const canvas = document.querySelector<HTMLCanvasElement>("#game-canvas");
+      const sidebar = document.querySelector<HTMLElement>("#sidebar-controls");
+      const controls = document.querySelector<HTMLElement>("#bottom-controls");
+      if (canvas === null || sidebar === null || controls === null) {
+        throw new Error("Workshop layout is incomplete");
+      }
+
+      const canvasBounds = canvas.getBoundingClientRect();
+      const sidebarBounds = sidebar.getBoundingClientRect();
+      const controlsBounds = controls.getBoundingClientRect();
+      return {
+        canvasWidth: canvasBounds.width,
+        canvasHeight: canvasBounds.height,
+        canvasLeftGap: canvasBounds.left - sidebarBounds.right,
+        canvasBottomGap: controlsBounds.top - canvasBounds.bottom,
+        canvasTop: canvasBounds.top,
+        canvasRightGap: window.innerWidth - canvasBounds.right,
+        controlsBottomGap: window.innerHeight - controlsBounds.bottom,
+        controlsLeft: controlsBounds.left,
+        controlsLeftGap: controlsBounds.left - sidebarBounds.right,
+        sidebarLeft: sidebarBounds.left,
+        sidebarTop: sidebarBounds.top,
+        sidebarBottomGap: window.innerHeight - sidebarBounds.bottom,
+        compactSidebarBottomGap: controlsBounds.top - sidebarBounds.bottom,
+      };
+    });
+
+    expect(layout.canvasWidth).toBeGreaterThan(0);
+    expect(layout.canvasHeight).toBeGreaterThan(0);
+    expect(Math.abs(layout.canvasLeftGap)).toBeLessThanOrEqual(1);
+    expect(Math.abs(layout.canvasBottomGap)).toBeLessThanOrEqual(1);
+    expect(Math.abs(layout.canvasTop)).toBeLessThanOrEqual(1);
+    expect(Math.abs(layout.canvasRightGap)).toBeLessThanOrEqual(1);
+    expect(Math.abs(layout.controlsBottomGap)).toBeLessThanOrEqual(1);
+    expect(Math.abs(layout.sidebarLeft)).toBeLessThanOrEqual(1);
+    expect(Math.abs(layout.sidebarTop)).toBeLessThanOrEqual(1);
+    if (viewport.compact) {
+      expect(Math.abs(layout.controlsLeft)).toBeLessThanOrEqual(1);
+      expect(Math.abs(layout.compactSidebarBottomGap)).toBeLessThanOrEqual(1);
+    } else {
+      expect(Math.abs(layout.controlsLeftGap)).toBeLessThanOrEqual(1);
+      expect(Math.abs(layout.sidebarBottomGap)).toBeLessThanOrEqual(1);
+    }
+  }
 });
 
 test("unlocked fixture opens the dependent puzzle", async ({ page }) => {
