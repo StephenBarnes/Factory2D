@@ -611,6 +611,29 @@ function drawDecoration(
       context.restore();
       break;
     }
+    case TileDecorationStyle.Selector: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.lineWidth = Math.max(1.5, size * 0.055);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.beginPath();
+      context.moveTo(-size * 0.19, size * 0.1);
+      context.lineTo(0, -size * 0.04);
+      context.lineTo(0, -size * 0.2);
+      context.moveTo(size * 0.19, size * 0.1);
+      context.lineTo(size * 0.07, size * 0.01);
+      context.moveTo(0, size * 0.2);
+      context.lineTo(0, size * 0.08);
+      context.stroke();
+      context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
+      context.beginPath();
+      drawDot(context, 0, -size * 0.24, Math.max(1.5, size * 0.055));
+      context.fill();
+      context.restore();
+      break;
+    }
     case TileDecorationStyle.None:
       break;
   }

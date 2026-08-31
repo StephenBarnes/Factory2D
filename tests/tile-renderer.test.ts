@@ -335,6 +335,9 @@ describe("circuit rendering", () => {
     { kind: TileKind.Multiplier, inputDirection: Direction.Left },
     { kind: TileKind.Subtractor, inputDirection: Direction.Down },
     { kind: TileKind.Subtractor, inputDirection: Direction.Left },
+    { kind: TileKind.Selector, inputDirection: Direction.Right },
+    { kind: TileKind.Selector, inputDirection: Direction.Down },
+    { kind: TileKind.Selector, inputDirection: Direction.Left },
   ])(
     "keeps $kind input $inputDirection and output traces separate and individually colored",
     ({ kind, inputDirection }) => {

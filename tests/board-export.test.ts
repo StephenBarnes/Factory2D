@@ -115,6 +115,7 @@ describe("board export", () => {
     { kind: TileKind.Multiplier, code: "*" },
     { kind: TileKind.Subtractor, code: "-" },
     { kind: TileKind.ChargeSensor, code: "Q" },
+    { kind: TileKind.Selector, code: "T" },
   ])("round-trips directional gate $kind with code $code", ({ kind, code }) => {
     const world = new World(1, 1);
     world.place(0, 0, kind, Direction.Right);

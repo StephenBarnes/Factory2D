@@ -16,6 +16,7 @@ describe("tile orientation", () => {
     TileKind.Multiplier,
     TileKind.Subtractor,
     TileKind.ChargeSensor,
+    TileKind.Selector,
   ])(
     "preserves the selected orientation for directional kind %s",
     (kind) => {

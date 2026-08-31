@@ -144,6 +144,7 @@ export class Simulation {
       let inputProduct = 1;
       let leftInput: Charge = 0;
       let rightInput: Charge = 0;
+      let rearInput: Charge = 0;
       for (let value = Direction.Up; value <= Direction.Left; value += 1) {
         const direction = value as Direction;
         if (
@@ -166,6 +167,8 @@ export class Simulation {
           leftInput = inputCharge;
         } else if (relativeDirection === Direction.Right) {
           rightInput = inputCharge;
+        } else if (relativeDirection === Direction.Down) {
+          rearInput = inputCharge;
         }
       }
 
@@ -185,6 +188,9 @@ export class Simulation {
           break;
         case TileKind.Subtractor:
           outputCharge = chargeFromSum(inputSum - 2 * leftInput - 2 * rightInput);
+          break;
+        case TileKind.Selector:
+          outputCharge = rearInput === 1 ? leftInput : rearInput === -1 ? rightInput : 0;
           break;
         default:
           throw new Error(`Tile kind ${kind} defines circuit inputs without a gate behavior`);

@@ -455,4 +455,42 @@ describe("circuit networks", () => {
       expect(world.chargeAt(1, 0)).toBe(output);
     },
   );
+  it.each(
+    ([-1, 0, 1] as const).flatMap((left) =>
+      ([-1, 0, 1] as const).flatMap((rear) =>
+        ([-1, 0, 1] as const).map((right) => ({
+          left,
+          rear,
+          right,
+          output: rear === 1 ? left : rear === -1 ? right : 0,
+        })),
+      ),
+    ),
+  )(
+    "selects from isolated inputs with left $left, rear $rear, and right $right",
+    ({ left, rear, right, output }) => {
+      const world = new World(3, 3);
+      world.place(1, 0, TileKind.Conduit);
+      world.place(0, 1, TileKind.Conduit);
+      world.place(1, 1, TileKind.Selector, Direction.Up);
+      world.place(2, 1, TileKind.Conduit);
+      world.place(1, 2, TileKind.Conduit);
+      world.setWeld(1, 0, 1, 1, true);
+      world.setWeld(0, 1, 1, 1, true);
+      world.setWeld(1, 1, 2, 1, true);
+      world.setWeld(1, 1, 1, 2, true);
+      world.setCharge(0, 1, left);
+      world.setCharge(1, 2, rear);
+      world.setCharge(2, 1, right);
+      const simulation = new Simulation(world);
+
+      simulation.step();
+
+      expect(world.chargeAt(0, 1)).toBe(0);
+      expect(world.chargeAt(1, 2)).toBe(0);
+      expect(world.chargeAt(2, 1)).toBe(0);
+      expect(world.chargeAt(1, 1)).toBe(output);
+      expect(world.chargeAt(1, 0)).toBe(output);
+    },
+  );
 });

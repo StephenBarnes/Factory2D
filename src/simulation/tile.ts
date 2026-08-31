@@ -13,6 +13,7 @@ export const enum TileKind {
   Multiplier = 11,
   Subtractor = 12,
   ChargeSensor = 13,
+  Selector = 14,
 }
 
 export const enum Direction {
@@ -45,6 +46,7 @@ export const enum TileDecorationStyle {
   Multiplier = 10,
   Subtractor = 11,
   ChargeSensor = 12,
+  Selector = 13,
 }
 
 export interface TileDefinition {
@@ -408,6 +410,29 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     shadow: "#2b4047",
     decorationStyle: TileDecorationStyle.ChargeSensor,
     decorationColor: "#d3eff4",
+  },
+  [TileKind.Selector]: {
+    name: "Selector Rune",
+    boardCode: "T",
+    palette: {
+      order: 13,
+      description: "Selects the left or right input from the rear charge",
+      shortcut: null,
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.All,
+    circuitInputPorts: WeldSide.Right | WeldSide.Down | WeldSide.Left,
+    circuitOutputPorts: WeldSide.Up,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#5f587b",
+    shadow: "#363047",
+    decorationStyle: TileDecorationStyle.Selector,
+    decorationColor: "#e2dcfa",
   },
 };
 
