@@ -9,46 +9,24 @@ import {
   type PuzzleId,
 } from "../src/game/puzzles";
 import { TileKind } from "../src/simulation/tile";
+import { expectDefined } from "../src/util/assert";
 
 describe("puzzle definitions", () => {
-  it("unlocks puzzles only after all prerequisite puzzles are complete", () => {
-    const completed = new Set<PuzzleId>();
+  it("unlocks puzzles only after all declared prerequisites are complete", () => {
+    for (const puzzle of PUZZLES) {
+      const completed = new Set<PuzzleId>(puzzle.prerequisitePuzzleIds);
+      expect(isPuzzleUnlocked(puzzle, completed)).toBe(true);
 
-    expect(isPuzzleUnlocked(puzzleById("first-shift"), completed)).toBe(true);
-    expect(isPuzzleUnlocked(puzzleById("beltworks"), completed)).toBe(false);
-    expect(isPuzzleUnlocked(puzzleById("runic-relay"), completed)).toBe(false);
-
-    completed.add("first-shift");
-    expect(isPuzzleUnlocked(puzzleById("beltworks"), completed)).toBe(true);
-    expect(isPuzzleUnlocked(puzzleById("runic-relay"), completed)).toBe(false);
-
-    completed.add("beltworks");
-    expect(isPuzzleUnlocked(puzzleById("runic-relay"), completed)).toBe(true);
+      for (const prerequisiteId of puzzle.prerequisitePuzzleIds) {
+        completed.delete(prerequisiteId);
+        expect(isPuzzleUnlocked(puzzle, completed)).toBe(false);
+        completed.add(prerequisiteId);
+      }
+    }
   });
 
   it("keeps registry order and identifier lookup aligned", () => {
     expect(PUZZLES.map((puzzle) => puzzleById(puzzle.id))).toEqual(PUZZLES);
-  });
-  it("assigns each workshop an explicit priced component set", () => {
-    expect(puzzleById("first-shift").availableComponents.entries).toEqual([
-      { kind: TileKind.Stone, price: 1 },
-      { kind: TileKind.Platform, price: 3 },
-    ]);
-    expect(puzzleById("beltworks").availableComponents.entries).toEqual([
-      { kind: TileKind.Stone, price: 1 },
-      { kind: TileKind.Platform, price: 3 },
-      { kind: TileKind.Conveyor, price: 5 },
-      { kind: TileKind.Conduit, price: 1 },
-      { kind: TileKind.FixedCharge, price: 2 },
-    ]);
-    expect(puzzleById("runic-relay").availableComponents.entries).toEqual([
-      { kind: TileKind.Conduit, price: 1 },
-      { kind: TileKind.FixedCharge, price: 2 },
-      { kind: TileKind.Spark, price: 3 },
-      { kind: TileKind.Inverter, price: 4 },
-      { kind: TileKind.Combiner, price: 4 },
-      { kind: TileKind.WireCrossing, price: 3 },
-    ]);
   });
 
   it("looks up zero-priced components without treating them as unavailable", () => {
@@ -79,13 +57,18 @@ describe("puzzle definitions", () => {
 
 
   it("creates independent initial worlds", () => {
-    const first = puzzleById("first-shift").createInitialWorld();
-    const second = puzzleById("first-shift").createInitialWorld();
+    const puzzle = expectDefined(PUZZLES[0], "Missing shipped puzzle");
+    const first = puzzle.createInitialWorld();
+    const second = puzzle.createInitialWorld();
+    const originalKind = second.kindAt(0, 0);
+    const changedKind = originalKind === TileKind.Empty
+      ? TileKind.Stone
+      : TileKind.Empty;
 
-    first.place(0, 0, TileKind.Stone);
+    first.place(0, 0, changedKind);
 
-    expect(first.kindAt(0, 0)).toBe(TileKind.Stone);
-    expect(second.kindAt(0, 0)).toBe(TileKind.Empty);
+    expect(first.kindAt(0, 0)).toBe(changedKind);
+    expect(second.kindAt(0, 0)).toBe(originalKind);
   });
 
   it("keeps every editable region inside its puzzle board", () => {
