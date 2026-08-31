@@ -28,6 +28,25 @@ interface ClippedSegment {
   readonly toX: number;
   readonly toY: number;
 }
+export function clampedCellFromGridPoint(
+  point: GridPoint,
+  width: number,
+  height: number,
+): GridCell {
+  if (
+    !Number.isInteger(width) ||
+    !Number.isInteger(height) ||
+    width <= 0 ||
+    height <= 0
+  ) {
+    throw new RangeError("Grid dimensions must be positive integers");
+  }
+  return {
+    x: Math.max(0, Math.min(width - 1, Math.floor(point.x))),
+    y: Math.max(0, Math.min(height - 1, Math.floor(point.y))),
+  };
+}
+
 
 export function cellsOnGridSegment(
   from: GridPoint,

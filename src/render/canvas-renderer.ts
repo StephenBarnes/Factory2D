@@ -1,4 +1,4 @@
-import type { GridRegion } from "../game/grid-region";
+import type { GridRectangle, GridRegion } from "../game/grid-region";
 import {
   Direction,
   directionX,
@@ -43,6 +43,8 @@ export class CanvasRenderer {
   private readonly context: CanvasRenderingContext2D;
   private readonly world: World;
   private readonly editableRegion: GridRegion | null;
+  private authoredEditableRegion: GridRegion | null = null;
+  private authoredEditableRegionDraft: GridRectangle | null = null;
 
   private cellSize = MAX_TILE_SIZE;
   private originX = 0;
@@ -83,6 +85,14 @@ export class CanvasRenderer {
     this.editableRegion = editableRegion;
     this.viewCenterX = world.width / 2;
     this.viewCenterY = world.height / 2;
+  }
+
+  setEditableRegionAuthoring(
+    region: GridRegion | null,
+    draftRectangle: GridRectangle | null,
+  ): void {
+    this.authoredEditableRegion = region;
+    this.authoredEditableRegionDraft = draftRectangle;
   }
 
   setViewportInsets(insets: ViewportInsets): void {
@@ -144,6 +154,7 @@ export class CanvasRenderer {
     this.drawGrid();
     this.drawTiles(previousWorld, Math.max(0, Math.min(1, progress)), animationTime);
     this.drawEditableRegion();
+    this.drawEditableRegionAuthoring();
     this.drawHover(animationTime);
   }
 
@@ -317,18 +328,62 @@ export class CanvasRenderer {
   }
 
   private drawEditableRegion(): void {
-    if (this.editableRegion === null) {
+    if (this.editableRegion !== null) {
+      this.strokeGridRegion(this.editableRegion, EDITABLE_REGION_DASH_PATTERN);
+    }
+  }
+
+  private drawEditableRegionAuthoring(): void {
+    if (this.authoredEditableRegion === null) {
       return;
     }
 
     const { context } = this;
     context.save();
+    context.fillStyle = "rgb(214 173 97 / 10%)";
+    for (const rectangle of this.authoredEditableRegion.rectangles) {
+      context.fillRect(
+        this.originX + rectangle.x * this.cellSize,
+        this.originY + rectangle.y * this.cellSize,
+        rectangle.width * this.cellSize,
+        rectangle.height * this.cellSize,
+      );
+    }
+    context.restore();
+    this.strokeGridRegion(this.authoredEditableRegion, EDITABLE_REGION_DASH_PATTERN);
+
+    const draft = this.authoredEditableRegionDraft;
+    if (draft === null) {
+      return;
+    }
+    context.save();
+    context.fillStyle = "rgb(120 220 202 / 16%)";
+    context.strokeStyle = "#78dcca";
+    context.lineWidth = Math.max(1.5, Math.min(3, this.cellSize * 0.08));
+    context.fillRect(
+      this.originX + draft.x * this.cellSize,
+      this.originY + draft.y * this.cellSize,
+      draft.width * this.cellSize,
+      draft.height * this.cellSize,
+    );
+    context.strokeRect(
+      this.originX + draft.x * this.cellSize + 0.5,
+      this.originY + draft.y * this.cellSize + 0.5,
+      draft.width * this.cellSize,
+      draft.height * this.cellSize,
+    );
+    context.restore();
+  }
+
+  private strokeGridRegion(region: GridRegion, dashPattern: readonly number[]): void {
+    const { context } = this;
+    context.save();
     context.strokeStyle = "#d6ad61";
     context.lineWidth = Math.max(1.5, Math.min(3, this.cellSize * 0.08));
     context.lineCap = "round";
-    context.setLineDash(EDITABLE_REGION_DASH_PATTERN);
+    context.setLineDash(dashPattern);
     context.beginPath();
-    for (const edge of this.editableRegion.boundaryEdges) {
+    for (const edge of region.boundaryEdges) {
       context.moveTo(
         this.originX + edge.x1 * this.cellSize + 0.5,
         this.originY + edge.y1 * this.cellSize + 0.5,

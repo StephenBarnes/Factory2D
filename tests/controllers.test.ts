@@ -28,11 +28,13 @@ describe("workshop session controller", () => {
     } as const;
     const sessions = new WorkshopSessionController(createSandboxWorld());
     const sandbox = sessions.active;
+    expect(sandbox.editableRegionAuthoring).not.toBeNull();
 
     expect(sessions.activateSolution(solution, puzzle)).toBe(true);
     const puzzleSession = sessions.active;
     expect(puzzleSession.editableRegion).toBe(puzzle.editableRegion);
     expect(puzzleSession.availableComponents).toBe(puzzle.availableComponents);
+    expect(puzzleSession.editableRegionAuthoring).toBeNull();
 
     puzzleSession.world.place(8, 2, TileKind.Stone);
     sessions.saveEditedBaseline();
@@ -51,6 +53,12 @@ describe("workshop session controller", () => {
   it("replaces the active imported world and simulation tick together", () => {
     const sessions = new WorkshopSessionController(createSandboxWorld());
     const imported = createSandboxWorld();
+    const authoring = sessions.active.editableRegionAuthoring;
+    if (authoring === null) {
+      throw new Error("Sandbox authoring state is missing");
+    }
+    authoring.beginRectangle(1, 1);
+    authoring.commitRectangle();
     imported.place(2, 2, TileKind.Stone);
 
     sessions.replaceActiveWorld(imported, 17);
@@ -59,6 +67,7 @@ describe("workshop session controller", () => {
     expect(sessions.active.simulation.tick).toBe(17);
     expect(sessions.active.baseline).not.toBe(imported);
     expect(sessions.active.baseline.kindAt(2, 2)).toBe(TileKind.Stone);
+    expect(authoring.region.rectangles).toEqual([]);
   });
 });
 

@@ -4,6 +4,7 @@ export type DiagnosticDirection = "up" | "right" | "down" | "left";
 
 export type DiagnosticSelectedTool =
   | { readonly kind: "weld" }
+  | { readonly kind: "editable-region" }
   | {
       readonly kind: "tile";
       readonly tileKind: string;

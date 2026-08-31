@@ -15,6 +15,7 @@ Game flow:
 * Similarly, remove the "standard" test case with no overrides - treat that as a given and only list additional test cases in the file.
 * Further compact orientations and charges in the export/import format, possibly storing charges per network instead of per tile. More complex per-tile state (e.g. furnace stored ticks or target/delivery-block configuration) can remain verbose. Only include full ASCII grids for fields that aren't the default value.
 * Add collapsible sections (default collapsed) on the main menu: a "credits" section (art/music credits, links to similar video games like Roody:2D, Zachtronics, Infinifactory), and a "technical info" section that explains what stack we're using, architecture, etc.
+* After the last set of puzzles is unlocked, also unlock a "full toolbelt" equivalent of every puzzle - a variant where all components are available, with the same list of prices for each. This adds some content, lets players compete on more histograms.
 
 General:
 * Allow interacting with some components using a modal box. Modal is opened when placing the block (for some of them, depending on a flag) and by pressing E while mouse is over them. Show control prompt in the tile inspector panel.
@@ -98,6 +99,8 @@ UI:
 * Settings menu: Add option to clear all puzzle solutions and other saved state. Keep the user's UUID.
 * Settings menu: Add a button to download all player data (everything in localStorage), and a button to import that, so players could transfer data to another device.
 * On the puzzle results screen, add a button to go directly to the next puzzle's briefing screen - if the solution succeeded, and there's a defined next puzzle, and it's unlocked. Display the next puzzle's name. This is meant to help reduce menu navigation needed when we have several easy tutorial puzzles in rapid succession.
+* Show a small icon to the right of the cursor, for the currently-selected tile or tool - the weld icon, the "place player-modifiable regions" tool icon, and the icon for a tile. When ctrl is held down (to weld), it should switch to the weld icon.
+* Make the palette resizable. Modify the icon sizes, shrinking them as the palette becomes narrower.
 
 UI: tile inspector panel:
 * Bug: the tile inspector/detail panel should show info on the palette entries while the mouse is over them, and info on the tile under the mouse when the mouse is over a placed tile instance. Currently after clicking on a palette entry, if the mouse then moves away and moves over placed tiles, it still shows the palette entry's info instead of the moused-over tile instance's info, unless the player clicks on empty space.
@@ -105,7 +108,7 @@ UI: tile inspector panel:
 * Move the inspector panel to near top-left, just right of the palette.
 * Clean up the tile inspector panel's info shown for tile instances placed on the grid: Move tile ID to be small, next to the X and Y coordinates. Remove "movement", "weldable", "magnetic". Edit descriptions instead to note unusual values for those - sand's description should say it can fall diagonally, platform's description should say it's not affected by gravity, iron's description should say it's not magnetic. Remove "welds" section since it's visually obvious, or show a simple code with arrows in the X/Y/ID line.
 * Show the tile inspector panel when mouse is over a tool in the palette panel - currently only the weld tool. It should show a description of the tool and its controls (left-click welds, right-click unwelds).
-* Display a truth table tables on the inspector, for components where that's relevant.
+* Display a truth table on the inspector, for components where that's relevant.
 
 Visuals:
 * Re-theme the entire game's UI. The current palette (black, dark blue, cyan, yellow) doesn't really fit the theme. Prefer colors like earth brown, stone gray, bronze, gold. Maybe: 312312 (brown), 4B5052 (grey), F1CC38 (gold), 5C718C (blue).

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { GridRegion } from "../src/game/grid-region";
 import { serializePuzzleTemplate } from "../src/game/puzzle-export";
 import { parsePuzzleFile, PUZZLE_FORMAT, PUZZLE_VERSION } from "../src/game/puzzle-format";
 import { PuzzleResult } from "../src/simulation/puzzle-result";
@@ -12,7 +13,13 @@ describe("puzzle export", () => {
     world.place(3, 0, TileKind.Victory);
     world.markPuzzleResult(PuzzleResult.Won);
 
-    const source = serializePuzzleTemplate(world);
+    const source = serializePuzzleTemplate(
+      world,
+      new GridRegion([
+        { x: 0, y: 0, width: 2, height: 2 },
+        { x: 3, y: 2, width: 1, height: 1 },
+      ]),
+    );
     const exported = JSON.parse(source) as {
       readonly format: string;
       readonly version: number;
@@ -42,7 +49,10 @@ describe("puzzle export", () => {
       result: "in-progress",
       grid: ["...V", ".#..", "...."],
     });
-    expect(exported.editableRegions).toEqual([{ x: 0, y: 0, width: 4, height: 3 }]);
+    expect(exported.editableRegions).toEqual([
+      { x: 0, y: 0, width: 2, height: 2 },
+      { x: 3, y: 2, width: 1, height: 1 },
+    ]);
     expect(exported.testCases).toEqual([
       { id: "standard", name: "Standard case", overrides: {} },
     ]);
@@ -59,5 +69,16 @@ describe("puzzle export", () => {
     expect(parsed.editableRegion.contains(3, 2)).toBe(true);
     expect(parsed.testCases).toHaveLength(1);
     expect(world.puzzleResult).toBe(PuzzleResult.Won);
+  });
+
+  it("exports and parses an empty editable region", () => {
+    const world = new World(2, 2);
+    world.place(0, 0, TileKind.Victory);
+
+    const source = serializePuzzleTemplate(world, new GridRegion([]));
+    const exported = JSON.parse(source) as { readonly editableRegions: readonly unknown[] };
+
+    expect(exported.editableRegions).toEqual([]);
+    expect(parsePuzzleFile(exported, "empty-region.json").editableRegion.rectangles).toEqual([]);
   });
 });

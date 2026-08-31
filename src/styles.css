@@ -777,6 +777,10 @@ canvas {
   opacity: 0.38;
 }
 
+.palette-item[hidden] {
+  display: none;
+}
+
 .palette-item.selected {
   border-color: #78dcca;
   background: #17272a;
@@ -811,6 +815,19 @@ canvas {
   inset: 5px 16px;
   background: #f0c75e;
   box-shadow: 0 0 5px rgb(240 199 94 / 55%);
+}
+
+.editable-region-swatch {
+  border-color: #5f512c;
+  background: rgb(214 173 97 / 8%);
+}
+
+.editable-region-swatch::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 2px dashed #d6ad61;
+  background: rgb(214 173 97 / 12%);
 }
 
 kbd {

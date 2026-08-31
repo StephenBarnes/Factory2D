@@ -275,9 +275,6 @@ function parseComponents(value: unknown): PuzzleComponents {
 
 function parseEditableRegion(value: unknown): GridRegion {
   const entries = requireArray(value, "Puzzle editableRegions");
-  if (entries.length === 0) {
-    throw new Error("Puzzle editableRegions must contain at least one rectangle");
-  }
   const rectangles: GridRectangle[] = [];
   for (let index = 0; index < entries.length; index += 1) {
     const label = `Puzzle editableRegions[${index}]`;

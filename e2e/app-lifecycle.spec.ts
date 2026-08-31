@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import type { DevelopmentDiagnosticSnapshot } from "../src/dev/diagnostic-snapshot";
 import { PUZZLE_SOLUTIONS_STORAGE_KEY } from "../src/game/puzzle-solutions";
@@ -264,6 +265,33 @@ test("export dropup exposes scene actions and sandbox puzzle authoring", async (
   await seedBrowserStorage(page, "empty");
   await page.goto("/sandbox");
 
+  const editableRegionTool = page.getByRole("button", { name: "Editable region tool" });
+  await editableRegionTool.click();
+  expect((await diagnosticSnapshot(page)).selectedTool).toEqual({ kind: "editable-region" });
+
+  const firstStart = await boardCellCenter(page, 2, 3);
+  const firstEnd = await boardCellCenter(page, 5, 7);
+  await page.mouse.move(firstStart.x, firstStart.y);
+  await page.mouse.down();
+  await page.mouse.move(firstEnd.x, firstEnd.y);
+  await page.mouse.up();
+
+  const secondStart = await boardCellCenter(page, 10, 1);
+  const secondEnd = await boardCellCenter(page, 11, 2);
+  await page.mouse.move(secondStart.x, secondStart.y);
+  await page.mouse.down();
+  await page.mouse.move(secondEnd.x, secondEnd.y);
+  await page.mouse.up();
+
+  const removePoint = await boardCellCenter(page, 3, 4);
+  await page.mouse.click(removePoint.x, removePoint.y, { button: "right" });
+  await placeStone(page, 0, 0);
+  const sandboxBoard = JSON.parse((await diagnosticSnapshot(page)).serializedBoard) as {
+    readonly grid: readonly string[];
+  };
+  expect(sandboxBoard.grid[0]?.[0]).toBe("#");
+
+
   const exportButton = page.getByRole("button", { name: "EXPORT" });
   await exportButton.click();
   await expect(exportButton).toHaveAttribute("aria-expanded", "true");
@@ -273,6 +301,21 @@ test("export dropup exposes scene actions and sandbox puzzle authoring", async (
   await expect(page.getByRole("button", { name: "DOWNLOAD PUZZLE FILE" })).toBeVisible();
   await expect(page.getByRole("button", { name: "SHARE PUZZLE" })).toBeDisabled();
 
+  const puzzleDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "DOWNLOAD PUZZLE FILE" }).click();
+  const puzzleDownload = await puzzleDownloadPromise;
+  expect(puzzleDownload.suggestedFilename()).toBe("factory2d-puzzle.json");
+  const puzzleDownloadPath = await puzzleDownload.path();
+  if (puzzleDownloadPath === null) {
+    throw new Error("Puzzle download did not produce a local file");
+  }
+  const puzzleFile = JSON.parse(await readFile(puzzleDownloadPath, "utf8")) as {
+    readonly editableRegions: readonly unknown[];
+  };
+  expect(puzzleFile.editableRegions).toEqual([{ x: 10, y: 1, width: 2, height: 2 }]);
+
+  await exportButton.click();
+
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "DOWNLOAD SCENE FILE" }).click();
   expect((await downloadPromise).suggestedFilename()).toBe("factory2d-scene.json");
@@ -281,6 +324,7 @@ test("export dropup exposes scene actions and sandbox puzzle authoring", async (
   await page.goto("/puzzles/first-shift");
   await page.getByRole("button", { name: "+ NEW SOLUTION" }).click();
   await exportButton.click();
+  await expect(page.getByRole("button", { name: "Editable region tool" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "DOWNLOAD SCENE FILE" })).toBeVisible();
   await expect(page.getByRole("button", { name: "DOWNLOAD PUZZLE FILE" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "SHARE PUZZLE" })).toHaveCount(0);

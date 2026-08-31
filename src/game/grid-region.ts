@@ -62,6 +62,10 @@ export class GridRegion {
   }
 
   private buildBoundaryEdges(): GridBoundaryEdge[] {
+    if (this.rectangles.length === 0) {
+      return [];
+    }
+
     let left = Number.POSITIVE_INFINITY;
     let top = Number.POSITIVE_INFINITY;
     let right = 0;

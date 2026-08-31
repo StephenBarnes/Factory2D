@@ -15,6 +15,7 @@ import {
 
 import { CanvasRenderer } from "./render/canvas-renderer";
 import {
+  clampedCellFromGridPoint,
   cellsOnGridSegment,
   visitCrossedGridEdges,
 } from "./render/grid-drag";
@@ -105,14 +106,17 @@ const stateLabel = requiredElement<HTMLSpanElement>("state-label");
 const tickCounter = requiredElement<HTMLSpanElement>("tick-counter");
 const coordinates = requiredElement<HTMLDivElement>("coordinates");
 
+type BuildTool = "tile" | "weld" | "editable-region";
+
 let testingPuzzleSolution = false;
 let selectedKind = TileKind.Sand;
 let previousSelectedKind: TileKind = selectedKind;
 let selectedOrientation = Direction.Up;
-let selectedTool: "tile" | "weld" = "tile";
+let selectedTool: BuildTool = "tile";
 let temporaryWeldActive = false;
 let activePointerId: number | null = null;
 let activePointerMode: PointerGesture | null = null;
+let activeEditTool: BuildTool | null = null;
 let activeErase = false;
 let activeWeldPlacement = false;
 let lastPanClientX = 0;
@@ -188,6 +192,7 @@ function loadActiveWorkshopSession(): void {
   simulation = activeSession.simulation;
   previousWorld = activeSession.previousWorld;
   renderer = new CanvasRenderer(canvas, world, activeSession.editableRegion);
+  syncEditableRegionAuthoringOverlay();
   tileInspector = new TileInspector(inspectorPanel, world);
   hoveredCell = null;
   hoveredEdge = null;
@@ -267,6 +272,8 @@ function refreshPointerHover(): void {
     renderer.setHover(hoveredCell);
   } else if (selectedTool === "weld") {
     renderer.setHoverEdge(hoveredEdge);
+  } else if (selectedTool === "editable-region") {
+    renderer.setHover(hoveredCell);
   } else {
     renderer.setHover(
       hoveredCell,
@@ -280,9 +287,32 @@ function refreshPointerHover(): void {
   refreshTileInspector();
 }
 
+function syncEditableRegionAuthoringOverlay(): void {
+  const authoring = selectedTool === "editable-region"
+    ? activeSession.editableRegionAuthoring
+    : null;
+  renderer.setEditableRegionAuthoring(
+    authoring?.region ?? null,
+    authoring?.draftRectangle ?? null,
+  );
+}
+function sandboxEditableRegionAuthoring(): NonNullable<
+  WorkshopSession["editableRegionAuthoring"]
+> {
+  const authoring = activeSession.editableRegionAuthoring;
+  if (authoring === null) {
+    throw new Error("Editable-region authoring is only available in the sandbox");
+  }
+  return authoring;
+}
+
+
 function configureComponentPalette(): void {
   hoveredPaletteButton = null;
   focusedPaletteButton = null;
+  if (selectedTool === "editable-region" && activeSession.editableRegionAuthoring === null) {
+    selectedTool = "tile";
+  }
   const availableComponents = activeSession.availableComponents;
   if (availableComponents !== null && !availableComponents.has(selectedKind)) {
     selectedKind = expectDefined(
@@ -299,10 +329,16 @@ function configureComponentPalette(): void {
     availableComponents,
   );
   const weldButton = sidebarControls.querySelector<HTMLButtonElement>("[data-tool=\"weld\"]");
-  if (weldButton === null) {
-    throw new Error("Weld palette button is missing");
+  const editableRegionButton = sidebarControls.querySelector<HTMLButtonElement>(
+    "[data-tool=\"editable-region\"]",
+  );
+  if (weldButton === null || editableRegionButton === null) {
+    throw new Error("Tool palette buttons are missing");
   }
   weldButton.classList.toggle("selected", selectedTool === "weld");
+  editableRegionButton.hidden = activeSession.editableRegionAuthoring === null;
+  editableRegionButton.classList.toggle("selected", selectedTool === "editable-region");
+  syncEditableRegionAuthoringOverlay();
   renderPalettePreviews();
 }
 
@@ -323,6 +359,7 @@ function selectTile(kind: TileKind): void {
   for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
     item.classList.toggle("selected", item.dataset.tile === String(kind));
   }
+  syncEditableRegionAuthoringOverlay();
   refreshPointerHover();
 }
 
@@ -401,6 +438,19 @@ function selectWeldTool(): void {
   for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
     item.classList.toggle("selected", item.dataset.tool === "weld");
   }
+  syncEditableRegionAuthoringOverlay();
+  refreshPointerHover();
+}
+
+function selectEditableRegionTool(): void {
+  if (activeSession.editableRegionAuthoring === null) {
+    return;
+  }
+  selectedTool = "editable-region";
+  for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
+    item.classList.toggle("selected", item.dataset.tool === "editable-region");
+  }
+  syncEditableRegionAuthoringOverlay();
   refreshPointerHover();
 }
 
@@ -604,6 +654,8 @@ if (import.meta.env.DEV) {
       },
       selectedTool: selectedTool === "weld"
         ? { kind: "weld" }
+        : selectedTool === "editable-region"
+        ? { kind: "editable-region" }
         : {
           kind: "tile",
           tileKind: TILE_DEFINITIONS[selectedKind].name,
@@ -635,6 +687,8 @@ sidebarControls.addEventListener("click", (event) => {
     selectTile(tileKind);
   } else if (button?.dataset.tool === "weld") {
     selectWeldTool();
+  } else if (button?.dataset.tool === "editable-region") {
+    selectEditableRegionTool();
   }
 });
 
@@ -815,7 +869,11 @@ downloadPuzzleButton.addEventListener("click", () => {
     throw new Error("Puzzle files can only be exported from the sandbox");
   }
   closeExportOptions();
-  const source = serializePuzzleTemplate(world);
+  const authoring = activeSession.editableRegionAuthoring;
+  if (authoring === null) {
+    throw new Error("Sandbox editable-region authoring state is missing");
+  }
+  const source = serializePuzzleTemplate(world, authoring.region);
   downloadBlob(new Blob([source], { type: "application/json" }), "factory2d-puzzle.json");
 });
 
@@ -869,6 +927,7 @@ canvas.addEventListener("pointerdown", (event) => {
   event.preventDefault();
   activePointerId = event.pointerId;
   activePointerMode = gesture;
+  activeEditTool = gesture === "edit" ? selectedTool : null;
   lastPanClientX = event.clientX;
   lastPanClientY = event.clientY;
   pendingPickCell = gesture === "pick-or-pan" ? cell : null;
@@ -889,16 +948,24 @@ canvas.addEventListener("pointerdown", (event) => {
   activeErase = event.button === 2;
   activeWeldPlacement = shouldWeldPlacedTile(event.button, event.shiftKey);
   lastPointerGridPoint = point;
-  if (selectedTool === "tile") {
+  if (activeEditTool === "tile") {
     if (cell !== null) {
       editCellLine(cell, cell, activeErase, activeWeldPlacement);
       lastEditedCell = cell;
     }
-  } else {
+  } else if (activeEditTool === "weld") {
     const edge = renderer.edgeFromGridPoint(point);
     if (edge !== null) {
       editWeld(edge, activeErase);
     }
+  } else if (activeEditTool === "editable-region" && cell !== null) {
+    const authoring = sandboxEditableRegionAuthoring();
+    if (activeErase) {
+      authoring.removeRectanglesAt(cell.x, cell.y);
+    } else {
+      authoring.beginRectangle(cell.x, cell.y);
+    }
+    syncEditableRegionAuthoringOverlay();
   }
 });
 
@@ -933,7 +1000,7 @@ canvas.addEventListener("pointermove", (event) => {
     throw new Error("Active edit pointer is missing its edit state");
   }
 
-  if (selectedTool === "tile") {
+  if (activeEditTool === "tile") {
     const segment = cellsOnGridSegment(
       lastPointerGridPoint,
       point,
@@ -949,8 +1016,12 @@ canvas.addEventListener("pointermove", (event) => {
       );
       lastEditedCell = segment.to;
     }
-  } else {
+  } else if (activeEditTool === "weld") {
     editWeldSegment(lastPointerGridPoint, point, hoveredEdge, activeErase);
+  } else if (activeEditTool === "editable-region" && !activeErase) {
+    const cell = clampedCellFromGridPoint(point, world.width, world.height);
+    sandboxEditableRegionAuthoring().updateRectangle(cell.x, cell.y);
+    syncEditableRegionAuthoringOverlay();
   }
   lastPointerGridPoint = point;
 });
@@ -966,8 +1037,18 @@ function finishPointerGesture(event: PointerEvent): void {
   ) {
     pickTileAt(pendingPickCell);
   }
+  if (activeEditTool === "editable-region") {
+    const authoring = sandboxEditableRegionAuthoring();
+    if (event.type === "pointerup" && !activeErase) {
+      authoring.commitRectangle();
+    } else {
+      authoring.cancelRectangle();
+    }
+    syncEditableRegionAuthoringOverlay();
+  }
   activePointerId = null;
   activePointerMode = null;
+  activeEditTool = null;
   activeWeldPlacement = false;
   pendingPickCell = null;
   lastEditedCell = null;

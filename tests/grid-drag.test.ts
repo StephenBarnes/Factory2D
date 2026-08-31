@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  clampedCellFromGridPoint,
   cellsOnGridSegment,
   visitCrossedGridEdges,
 } from "../src/render/grid-drag";
@@ -46,6 +47,10 @@ describe("grid drag traversal", () => {
       5,
       4,
     )).toBeNull();
+  });
+
+  it("clamps a rectangle drag endpoint to the board", () => {
+    expect(clampedCellFromGridPoint({ x: 8, y: -2 }, 5, 4)).toEqual({ x: 4, y: 0 });
   });
 
   it("visits every vertical weld crossed by a rapid horizontal drag", () => {

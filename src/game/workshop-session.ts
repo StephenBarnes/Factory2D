@@ -1,6 +1,7 @@
 import type { PuzzleDefinition } from "./puzzles";
 import type { SavedPuzzleSolution } from "./puzzle-solutions";
 import type { GridRegion } from "./grid-region";
+import { EditableRegionAuthoringState } from "./editable-region-authoring";
 import type { PuzzleComponents } from "./puzzle-components";
 import { WorkshopEditingState } from "./workshop-editing-state";
 import { deserializeBoard } from "../simulation/board-export";
@@ -13,6 +14,7 @@ export interface WorkshopSession {
   baseline: World;
   previousWorld: World;
   readonly editableRegion: GridRegion | null;
+  readonly editableRegionAuthoring: EditableRegionAuthoringState | null;
   readonly availableComponents: PuzzleComponents | null;
   readonly editingState: WorkshopEditingState;
 }
@@ -27,6 +29,9 @@ function createWorkshopSession(
     baseline: world.clone(),
     previousWorld: world.clone(),
     editableRegion: puzzle?.editableRegion ?? null,
+    editableRegionAuthoring: puzzle === null
+      ? new EditableRegionAuthoringState(world.width, world.height)
+      : null,
     availableComponents: puzzle?.availableComponents ?? null,
     editingState: new WorkshopEditingState(puzzle !== null),
   };
@@ -78,6 +83,7 @@ export class WorkshopSessionController {
     this.currentSession.simulation = simulation;
     this.currentSession.baseline = world.clone();
     this.currentSession.previousWorld = world.clone();
+    this.currentSession.editableRegionAuthoring?.resetForBoard(world.width, world.height);
   }
 
   beginSimulation(): boolean {

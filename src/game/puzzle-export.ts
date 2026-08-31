@@ -1,3 +1,4 @@
+import type { GridRegion } from "./grid-region";
 import { PUZZLE_FORMAT, PUZZLE_VERSION } from "./puzzle-format";
 import { serializeBoard } from "../simulation/board-export";
 import { TILE_DEFINITIONS, TILE_KINDS } from "../simulation/tile";
@@ -27,7 +28,10 @@ function placeholderComponents(): readonly { readonly code: string; readonly pri
   return components.map(({ code, price }) => ({ code, price }));
 }
 
-export function serializePuzzleTemplate(world: World): string {
+export function serializePuzzleTemplate(world: World, editableRegion: GridRegion): string {
+  if (!editableRegion.fitsWithin(world.width, world.height)) {
+    throw new RangeError("Puzzle editable regions must fit within the exported board");
+  }
   const initialWorld = world.clone();
   initialWorld.resetPuzzleResult();
   const initialBoard = JSON.parse(serializeBoard(initialWorld, 0)) as unknown;
@@ -42,7 +46,7 @@ export function serializePuzzleTemplate(world: World): string {
     features: [],
     prerequisites: [],
     components: placeholderComponents(),
-    editableRegions: [{ x: 0, y: 0, width: world.width, height: world.height }],
+    editableRegions: editableRegion.rectangles,
     initialBoard,
     testCases: [
       {
