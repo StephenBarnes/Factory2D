@@ -139,6 +139,8 @@ let lastEditedCell: GridCell | null = null;
 let lastPointerGridPoint: GridPoint | null = null;
 let hoveredCell: GridCell | null = null;
 let hoveredEdge: GridEdge | null = null;
+let hoveredPaletteButton: HTMLButtonElement | null = null;
+let focusedPaletteButton: HTMLButtonElement | null = null;
 let running = false;
 let accumulatedTime = 0;
 let previousFrameTime = performance.now();
@@ -243,6 +245,8 @@ function loadGameSession(session: GameSession): void {
   hoveredCell = null;
   hoveredEdge = null;
   lastEditedCell = null;
+  hoveredPaletteButton = null;
+  focusedPaletteButton = null;
   lastPointerGridPoint = null;
   renderedTick = -1;
   animationDuration = 0;
@@ -346,6 +350,29 @@ function easedAnimationProgress(currentTime: number): number {
   return progress * progress * (3 - 2 * progress);
 }
 
+function refreshTileInspector(): void {
+  const button = hoveredPaletteButton ?? focusedPaletteButton;
+  if (button === null) {
+    tileInspector.update(hoveredCell);
+    return;
+  }
+
+  const kind = Number(button.dataset.tile);
+  if (!isTileKind(kind) || TILE_DEFINITIONS[kind].palette === null) {
+    throw new Error("Hovered component palette button has invalid tile metadata");
+  }
+  const priceLabel = button.dataset.price;
+  const shortcutLabel = button.dataset.shortcut;
+  if (priceLabel === undefined || shortcutLabel === undefined) {
+    throw new Error("Hovered component palette button is missing inspector metadata");
+  }
+  tileInspector.showPalette(
+    kind,
+    priceLabel === "" ? null : Number(priceLabel),
+    shortcutLabel === "" ? null : shortcutLabel,
+  );
+}
+
 function refreshPointerHover(): void {
   if (!activeSession.editingState.editable) {
     renderer.setHover(hoveredCell);
@@ -361,10 +388,12 @@ function refreshPointerHover(): void {
   coordinates.textContent = hoveredCell === null
     ? "X --   Y --"
     : `X ${hoveredCell.x.toString().padStart(2, "0")}   Y ${hoveredCell.y.toString().padStart(2, "0")}`;
-  tileInspector.update(hoveredCell);
+  refreshTileInspector();
 }
 
 function configureComponentPalette(): void {
+  hoveredPaletteButton = null;
+  focusedPaletteButton = null;
   const availableComponents = activeSession.availableComponents;
   if (availableComponents !== null && !availableComponents.has(selectedKind)) {
     selectedKind = expectDefined(
@@ -640,6 +669,34 @@ sidebarControls.addEventListener("click", (event) => {
   } else if (button?.dataset.tool === "weld") {
     selectWeldTool();
   }
+});
+
+componentPalette.addEventListener("pointerover", (event) => {
+  hoveredPaletteButton = (event.target as HTMLElement).closest<HTMLButtonElement>(".palette-tile");
+  refreshTileInspector();
+});
+
+componentPalette.addEventListener("pointerout", (event) => {
+  const nextButton = event.relatedTarget instanceof HTMLElement
+    ? event.relatedTarget.closest<HTMLButtonElement>(".palette-tile")
+    : null;
+  if (nextButton === hoveredPaletteButton) {
+    return;
+  }
+  hoveredPaletteButton = nextButton;
+  refreshTileInspector();
+});
+
+componentPalette.addEventListener("focusin", (event) => {
+  focusedPaletteButton = (event.target as HTMLElement).closest<HTMLButtonElement>(".palette-tile");
+  refreshTileInspector();
+});
+
+componentPalette.addEventListener("focusout", (event) => {
+  focusedPaletteButton = event.relatedTarget instanceof HTMLElement
+    ? event.relatedTarget.closest<HTMLButtonElement>(".palette-tile")
+    : null;
+  refreshTileInspector();
 });
 
 playButton.addEventListener("click", () => {
@@ -1030,7 +1087,7 @@ function frame(currentTime: number): void {
     tickCounter.textContent = `TICK ${simulation.tick.toString().padStart(4, "0")}`;
     renderedTick = simulation.tick;
   }
-  tileInspector.update(hoveredCell);
+  refreshTileInspector();
   const animationProgress = easedAnimationProgress(currentTime);
   renderer.render(
     animationDuration === 0 ? null : previousWorld,

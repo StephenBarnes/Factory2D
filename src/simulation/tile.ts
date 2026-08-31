@@ -65,6 +65,14 @@ export const enum TileDecorationStyle {
   Spark = 20,
 }
 
+export const enum PaletteCategory {
+  RawMaterials = 0,
+  Mechanisms = 1,
+  Circuits = 2,
+  Machines = 3,
+  PuzzleTools = 4,
+}
+
 export interface TileDefinition {
   readonly name: string;
   /** Single UTF-16 code unit used by the compact board format. */
@@ -72,6 +80,7 @@ export interface TileDefinition {
   /** Sandbox component-palette presentation. Empty tiles are not palette entries. */
   readonly palette: {
     readonly order: number;
+    readonly category: PaletteCategory;
     readonly description: string;
   } | null;
   readonly affectedByGravity: boolean;
@@ -129,6 +138,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "#",
     palette: {
       order: 1,
+      category: PaletteCategory.RawMaterials,
       description: "Solid block affected by gravity",
     },
     affectedByGravity: true,
@@ -151,6 +161,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: ":",
     palette: {
       order: 0,
+      category: PaletteCategory.RawMaterials,
       description: "Falls and slides around obstacles",
     },
     affectedByGravity: true,
@@ -173,6 +184,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "=",
     palette: {
       order: 2,
+      category: PaletteCategory.RawMaterials,
       description: "Fixed structural block",
     },
     affectedByGravity: false,
@@ -195,6 +207,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "L",
     palette: {
       order: 3,
+      category: PaletteCategory.Machines,
       description: "Holds magnetic blocks on its pointed side",
     },
     affectedByGravity: true,
@@ -217,6 +230,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "M",
     palette: {
       order: 4,
+      category: PaletteCategory.RawMaterials,
       description: "Magnetic structural block smelted from iron ore",
     },
     affectedByGravity: true,
@@ -239,6 +253,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "C",
     palette: {
       order: 9,
+      category: PaletteCategory.Circuits,
       description: "Shares charge across welded circuit blocks",
     },
     affectedByGravity: true,
@@ -261,6 +276,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "S",
     palette: {
       order: 10,
+      category: PaletteCategory.Circuits,
       description: "Emits +1 when its pointed side is occupied",
     },
     affectedByGravity: true,
@@ -283,6 +299,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "1",
     palette: {
       order: 11,
+      category: PaletteCategory.Circuits,
       description: "Emits +1 constantly into its welded circuit network",
     },
     affectedByGravity: true,
@@ -305,6 +322,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "K",
     palette: {
       order: 12,
+      category: PaletteCategory.Circuits,
       description: "Emits +1 for the first simulation tick, then goes dark",
     },
     affectedByGravity: true,
@@ -327,6 +345,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "I",
     palette: {
       order: 13,
+      category: PaletteCategory.Circuits,
       description: "Negates the sum of up to three isolated inputs",
     },
     affectedByGravity: true,
@@ -349,6 +368,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "+",
     palette: {
       order: 14,
+      category: PaletteCategory.Circuits,
       description: "Sums up to three isolated inputs toward its output",
     },
     affectedByGravity: true,
@@ -371,6 +391,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "R",
     palette: {
       order: 15,
+      category: PaletteCategory.Circuits,
       description: "Passes positive sums from up to three isolated inputs",
     },
     affectedByGravity: true,
@@ -393,6 +414,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "*",
     palette: {
       order: 16,
+      category: PaletteCategory.Circuits,
       description: "Multiplies up to three connected isolated inputs",
     },
     affectedByGravity: true,
@@ -415,6 +437,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "-",
     palette: {
       order: 17,
+      category: PaletteCategory.Circuits,
       description: "Subtracts left and right inputs from the rear input",
     },
     affectedByGravity: true,
@@ -437,6 +460,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "Q",
     palette: {
       order: 18,
+      category: PaletteCategory.Circuits,
       description: "Copies an adjacent tile's charge to three outputs without an input weld",
     },
     affectedByGravity: true,
@@ -459,6 +483,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "T",
     palette: {
       order: 19,
+      category: PaletteCategory.Circuits,
       description: "Selects the left or right input from the rear charge",
     },
     affectedByGravity: true,
@@ -481,6 +506,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "W",
     palette: {
       order: 20,
+      category: PaletteCategory.Circuits,
       description: "Keeps horizontal and vertical circuit networks separate",
     },
     affectedByGravity: true,
@@ -503,6 +529,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "G",
     palette: {
       order: 5,
+      category: PaletteCategory.RawMaterials,
       description: "Solid block baked from sand",
     },
     affectedByGravity: true,
@@ -525,6 +552,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "O",
     palette: {
       order: 6,
+      category: PaletteCategory.RawMaterials,
       description: "Solid ore that a furnace smelts into iron",
     },
     affectedByGravity: true,
@@ -547,6 +575,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "F",
     palette: {
       order: 7,
+      category: PaletteCategory.Machines,
       description: "Bakes the block on its pointed side; rear charge disables it",
     },
     affectedByGravity: true,
@@ -569,6 +598,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "B",
     palette: {
       order: 8,
+      category: PaletteCategory.Mechanisms,
       description: "Charged roller: +1 clockwise, -1 counterclockwise, 0 stopped",
     },
     affectedByGravity: true,
@@ -591,6 +621,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "D",
     palette: {
       order: 21,
+      category: PaletteCategory.PuzzleTools,
       description: "Absorbs a front block matching the block behind it and pulses +1 sideways",
     },
     affectedByGravity: true,
@@ -613,6 +644,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "V",
     palette: {
       order: 22,
+      category: PaletteCategory.PuzzleTools,
       description: "Wins on +1 input or loses on -1 input; opposing inputs jam",
     },
     affectedByGravity: true,

@@ -22,6 +22,8 @@ class FakeElement {
   readonly dataset: Record<string, string> = {};
   readonly children: FakeElement[] = [];
   textContent = "";
+  readonly attributes: Record<string, string> = {};
+  title = "";
   type = "";
   width = 0;
   height = 0;
@@ -33,17 +35,26 @@ class FakeElement {
   replaceChildren(...children: FakeElement[]): void {
     this.children.splice(0, this.children.length, ...children);
   }
+
+  setAttribute(name: string, value: string): void {
+    this.attributes[name] = value;
+  }
 }
 
 function createPalette(): FakeElement {
   return new FakeElement();
 }
 
+function paletteSections(palette: FakeElement): FakeElement[] {
+  return palette.children;
+}
+
+function paletteButtons(palette: FakeElement): FakeElement[] {
+  return paletteSections(palette).flatMap((section) => section.children[1]?.children ?? []);
+}
+
 function shortcutLabels(palette: FakeElement): (string | null)[] {
-  return palette.children.map((button) => {
-    const shortcut = button.children[2];
-    return shortcut?.textContent ?? null;
-  });
+  return paletteButtons(palette).map((button) => button.children[1]?.textContent ?? null);
 }
 
 describe("component palette shortcuts", () => {
@@ -64,27 +75,52 @@ describe("component palette shortcuts", () => {
       null,
     );
 
-    expect(palette.children.slice(0, 10).map((button) => Number(button.dataset.tile))).toEqual([
+    const buttons = paletteButtons(palette);
+    expect(buttons.slice(0, 10).map((button) => Number(button.dataset.tile))).toEqual([
       TileKind.Sand,
       TileKind.Stone,
       TileKind.Platform,
-      TileKind.Magnet,
       TileKind.Iron,
       TileKind.Glass,
       TileKind.IronOre,
-      TileKind.Furnace,
       TileKind.Conveyor,
       TileKind.Conduit,
+      TileKind.Sensor,
+      TileKind.FixedCharge,
     ]);
     expect(shortcutLabels(palette)).toEqual([
       "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
-      ...Array.from({ length: palette.children.length - 10 }, () => null),
+      ...Array.from({ length: buttons.length - 10 }, () => null),
     ]);
     expect(shortcuts).toMatchObject({
       Digit1: TileKind.Sand,
-      Digit6: TileKind.Glass,
-      Digit0: TileKind.Conduit,
+      Digit6: TileKind.IronOre,
+      Digit0: TileKind.FixedCharge,
     });
+  });
+
+  it("groups compact component buttons by palette category", () => {
+    const palette = createPalette();
+    populateComponentPalette(
+      palette as unknown as HTMLElement,
+      TileKind.Conveyor,
+    );
+
+    expect(paletteSections(palette).map((section) => section.children[0]?.textContent)).toEqual([
+      "Raw Materials",
+      "Mechanisms",
+      "Circuit Components",
+      "Machines",
+      "Puzzle Tools",
+    ]);
+    expect(paletteButtons(palette).every((button) => button.className.includes("palette-tile"))).toBe(true);
+    const conveyor = paletteButtons(palette).find(
+      (button) => Number(button.dataset.tile) === TileKind.Conveyor,
+    );
+    expect(conveyor?.children).toHaveLength(2);
+    expect(conveyor?.dataset).toMatchObject({ price: "", shortcut: "7" });
+    expect(conveyor?.attributes["aria-label"]).toBe("Conveyor Belt (7)");
+    expect(conveyor?.classList.values.has("selected")).toBe(true);
   });
 
   it("reassigns shortcuts from each puzzle palette's visible order", () => {
@@ -99,7 +135,7 @@ describe("component palette shortcuts", () => {
       ]),
     );
 
-    expect(palette.children.map((button) => Number(button.dataset.tile))).toEqual([
+    expect(paletteButtons(palette).map((button) => Number(button.dataset.tile))).toEqual([
       TileKind.Stone,
       TileKind.Conveyor,
       TileKind.FixedCharge,

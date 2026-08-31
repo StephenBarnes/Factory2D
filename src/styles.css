@@ -357,6 +357,13 @@ canvas {
   line-height: 1.45;
 }
 
+.inspector-palette > p {
+  margin: 12px 0 0;
+  color: #aab5bd;
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
 .inspector-properties {
   margin: 10px 0 0;
   font-family: "SFMono-Regular", Consolas, monospace;
@@ -408,32 +415,58 @@ canvas {
 
 .palette {
   display: grid;
-  gap: 7px;
+  gap: 10px;
 }
 
 .palette + .panel-heading {
   margin-top: 18px;
 }
 
-.palette-item {
-  width: 100%;
-  min-height: 62px;
-  padding: 9px;
+.palette-section {
+  min-width: 0;
+}
+
+.palette-category {
+  margin: 0 0 6px;
+  color: #60707c;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.palette-grid,
+.tool-palette {
   display: grid;
-  grid-template-columns: 36px 1fr auto;
-  align-items: center;
-  gap: 9px;
+  grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+  gap: 6px;
+}
+
+.tool-palette {
+  grid-template-columns: repeat(auto-fill, 48px);
+}
+
+.palette-item {
+  position: relative;
+  min-width: 0;
+  min-height: 46px;
+  aspect-ratio: 1;
+  padding: 4px;
+  display: grid;
+  place-items: center;
   border: 1px solid transparent;
   background: #151d26;
-  text-align: left;
+  text-align: center;
   transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
 }
 
 .palette-item:hover:not(:disabled) {
   border-color: #3e4d5a;
   background: #18222c;
-  transform: translateX(2px);
+  transform: translateY(-1px);
 }
+
 .palette-item:disabled {
   cursor: not-allowed;
   opacity: 0.38;
@@ -442,37 +475,23 @@ canvas {
 .palette-item.selected {
   border-color: #78dcca;
   background: #17272a;
-  box-shadow: inset 3px 0 #78dcca;
-}
-
-.palette-item strong,
-.palette-item small {
-  display: block;
-}
-
-.palette-item strong {
-  color: #e5ebee;
-  font-size: 0.78rem;
-  letter-spacing: 0.03em;
-}
-
-.palette-item small {
-  margin-top: 3px;
-  color: #71808c;
-  font-size: 0.61rem;
-  line-height: 1.25;
+  box-shadow: inset 0 -3px #78dcca;
 }
 
 .tile-preview {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 1;
 }
 
 .swatch {
   position: relative;
   overflow: hidden;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 1;
   border: 2px solid;
 }
 
@@ -484,7 +503,7 @@ canvas {
 .weld-swatch::after {
   content: "";
   position: absolute;
-  inset: 4px 13px;
+  inset: 5px 16px;
   background: #f0c75e;
   box-shadow: 0 0 5px rgb(240 199 94 / 55%);
 }
@@ -500,6 +519,18 @@ kbd {
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 0.62rem;
   text-align: center;
+}
+
+.palette-item kbd {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  min-width: 16px;
+  padding: 1px 3px;
+  border-bottom-width: 1px;
+  font-size: 0.52rem;
+  line-height: 1.2;
+  pointer-events: none;
 }
 
 .instructions {
@@ -671,13 +702,6 @@ kbd {
     padding: 12px;
   }
 
-  .palette-item {
-    min-height: 52px;
-    grid-template-columns: 34px 1fr auto;
-    padding: 7px;
-  }
-
-  .palette-item small,
   .instructions {
     display: none;
   }
@@ -729,14 +753,8 @@ kbd {
     margin-top: 12px;
   }
 
-  .palette-item {
-    min-height: 46px;
-    grid-template-columns: 32px 1fr;
-    gap: 7px;
-  }
-
-  .palette-item kbd {
-    display: none;
+  .palette-grid {
+    gap: 4px;
   }
 
   .coordinates {
@@ -791,12 +809,11 @@ kbd {
 
   .palette-item {
     min-height: 42px;
-    grid-template-columns: 32px 1fr;
-    padding: 5px;
+    padding: 3px;
   }
 
-  .palette-item strong {
-    font-size: 0.68rem;
+  .tool-palette {
+    grid-template-columns: repeat(auto-fill, 42px);
   }
 
   .controls {

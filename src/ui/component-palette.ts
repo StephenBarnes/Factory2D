@@ -1,5 +1,10 @@
 import type { PuzzleComponents } from "../game/puzzle-components";
-import { TILE_DEFINITIONS, TILE_KINDS, TileKind } from "../simulation/tile";
+import {
+  PaletteCategory,
+  TILE_DEFINITIONS,
+  TILE_KINDS,
+  TileKind,
+} from "../simulation/tile";
 
 const PALETTE_SHORTCUTS = [
   { code: "Digit1", label: "1" },
@@ -12,6 +17,14 @@ const PALETTE_SHORTCUTS = [
   { code: "Digit8", label: "8" },
   { code: "Digit9", label: "9" },
   { code: "Digit0", label: "0" },
+] as const;
+
+const PALETTE_CATEGORIES = [
+  { category: PaletteCategory.RawMaterials, label: "Raw Materials" },
+  { category: PaletteCategory.Mechanisms, label: "Mechanisms" },
+  { category: PaletteCategory.Circuits, label: "Circuit Components" },
+  { category: PaletteCategory.Machines, label: "Machines" },
+  { category: PaletteCategory.PuzzleTools, label: "Puzzle Tools" },
 ] as const;
 
 export function populateComponentPalette(
@@ -30,12 +43,37 @@ export function populateComponentPalette(
     if (leftPalette === null || rightPalette === null) {
       throw new Error("Palette kind is missing palette metadata");
     }
-    return leftPalette.order - rightPalette.order;
+    return leftPalette.category - rightPalette.category ||
+      leftPalette.order - rightPalette.order;
   });
-  const shortcutKinds = Object.create(null) as Record<string, TileKind | undefined>;
-  let previousOrder: number | null = null;
 
+  const shortcutKinds = Object.create(null) as Record<string, TileKind | undefined>;
+  const usedOrders = new Set<number>();
+  const grids = new Map<PaletteCategory, HTMLElement>();
   container.replaceChildren();
+
+  for (const categoryDefinition of PALETTE_CATEGORIES) {
+    const hasComponents = paletteComponents.some((component) => {
+      const palette = TILE_DEFINITIONS[component.kind].palette;
+      return palette !== null && palette.category === categoryDefinition.category;
+    });
+    if (!hasComponents) {
+      continue;
+    }
+
+    const section = document.createElement("section");
+    section.className = "palette-section";
+    section.dataset.paletteCategory = String(categoryDefinition.category);
+    const heading = document.createElement("h3");
+    heading.className = "palette-category";
+    heading.textContent = categoryDefinition.label;
+    const grid = document.createElement("div");
+    grid.className = "palette-grid";
+    section.append(heading, grid);
+    container.append(section);
+    grids.set(categoryDefinition.category, grid);
+  }
+
   for (const [index, component] of paletteComponents.entries()) {
     const kind = component.kind;
     const definition = TILE_DEFINITIONS[kind];
@@ -46,41 +84,46 @@ export function populateComponentPalette(
     if (!Number.isSafeInteger(palette.order) || palette.order < 0) {
       throw new Error(`Palette order for ${definition.name} must be a non-negative integer`);
     }
-    if (palette.order === previousOrder) {
+    if (usedOrders.has(palette.order)) {
       throw new Error(`Duplicate component palette order ${palette.order}`);
     }
-    previousOrder = palette.order;
+    usedOrders.add(palette.order);
 
     const button = document.createElement("button");
-    button.className = "palette-item";
+    button.className = "palette-item palette-tile";
     button.classList.toggle("selected", kind === selectedKind);
     button.dataset.tile = String(kind);
+    button.dataset.price = component.price === null ? "" : String(component.price);
     button.type = "button";
 
     const preview = document.createElement("canvas");
     preview.className = "tile-preview";
     preview.dataset.tilePreview = String(kind);
-    preview.width = 32;
-    preview.height = 32;
-
-    const description = document.createElement("span");
-    const name = document.createElement("strong");
-    name.textContent = definition.name;
-    const detail = document.createElement("small");
-    detail.textContent = component.price === null
-      ? palette.description
-      : `${palette.description} · Cost ${component.price}`;
-    description.append(name, detail);
-    button.append(preview, description);
+    preview.width = 40;
+    preview.height = 40;
+    button.append(preview);
 
     const shortcutDefinition = PALETTE_SHORTCUTS[index];
+    button.dataset.shortcut = shortcutDefinition?.label ?? "";
+    button.setAttribute(
+      "aria-label",
+      shortcutDefinition === undefined
+        ? definition.name
+        : `${definition.name} (${shortcutDefinition.label})`,
+    );
+    button.title = definition.name;
     if (shortcutDefinition !== undefined) {
       shortcutKinds[shortcutDefinition.code] = kind;
       const shortcut = document.createElement("kbd");
       shortcut.textContent = shortcutDefinition.label;
       button.append(shortcut);
     }
-    container.append(button);
+
+    const grid = grids.get(palette.category);
+    if (grid === undefined) {
+      throw new Error(`Palette category for ${definition.name} is not configured`);
+    }
+    grid.append(button);
   }
 
   return shortcutKinds;

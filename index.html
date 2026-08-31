@@ -48,10 +48,15 @@
           <span>TOOLS</span>
           <span class="panel-number">01</span>
         </div>
-        <div class="palette">
-          <button class="palette-item" data-tool="weld" type="button">
+        <div class="palette tool-palette">
+          <button
+            class="palette-item palette-tool"
+            data-tool="weld"
+            type="button"
+            aria-label="Weld tool (hold Control)"
+            title="Weld tool"
+          >
             <span class="swatch weld-swatch"></span>
-            <span><strong>Weld</strong><small>Join adjacent blocks into one body</small></span>
             <kbd>Ctrl</kbd>
           </button>
         </div>
@@ -79,6 +84,19 @@
           <span data-inspector-position>X -- &nbsp; Y --</span>
         </div>
         <p class="inspector-hint" data-inspector-hint>Move the pointer over the grid.</p>
+        <div class="inspector-palette" data-inspector-palette hidden>
+          <p data-inspector-palette-description></p>
+          <dl class="inspector-properties">
+            <div>
+              <dt>PRICE</dt>
+              <dd data-inspector-palette-price></dd>
+            </div>
+            <div>
+              <dt>HOTKEY</dt>
+              <dd data-inspector-palette-shortcut></dd>
+            </div>
+          </dl>
+        </div>
         <dl class="inspector-properties" data-inspector-properties hidden>
           <div>
             <dt>TILE ID</dt>

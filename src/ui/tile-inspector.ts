@@ -65,6 +65,10 @@ export class TileInspector {
   private readonly position: HTMLElement;
   private readonly hint: HTMLElement;
   private readonly properties: HTMLElement;
+  private readonly paletteDetails: HTMLElement;
+  private readonly paletteDescription: HTMLElement;
+  private readonly palettePrice: HTMLElement;
+  private readonly paletteShortcut: HTMLElement;
   private readonly id: HTMLElement;
   private readonly orientationRow: HTMLElement;
   private readonly orientation: HTMLElement;
@@ -83,6 +87,7 @@ export class TileInspector {
   private lastX = -2;
   private lastY = -2;
   private lastRevision = -1;
+  private showingPalette = false;
 
   constructor(
     root: HTMLElement,
@@ -93,6 +98,10 @@ export class TileInspector {
     this.position = requiredDescendant(root, "[data-inspector-position]");
     this.hint = requiredDescendant(root, "[data-inspector-hint]");
     this.properties = requiredDescendant(root, "[data-inspector-properties]");
+    this.paletteDetails = requiredDescendant(root, "[data-inspector-palette]");
+    this.paletteDescription = requiredDescendant(root, "[data-inspector-palette-description]");
+    this.palettePrice = requiredDescendant(root, "[data-inspector-palette-price]");
+    this.paletteShortcut = requiredDescendant(root, "[data-inspector-palette-shortcut]");
     this.id = requiredDescendant(root, "[data-inspector-id]");
     this.orientationRow = requiredDescendant(root, "[data-inspector-orientation-row]");
     this.orientation = requiredDescendant(root, "[data-inspector-orientation]");
@@ -110,14 +119,42 @@ export class TileInspector {
     this.attraction = requiredDescendant(root, "[data-inspector-attraction]");
   }
 
+  showPalette(kind: TileKind, price: number | null, shortcut: string | null): void {
+    const definition = TILE_DEFINITIONS[kind];
+    const palette = definition.palette;
+    if (palette === null) {
+      throw new Error(`${definition.name} is missing palette metadata`);
+    }
+
+    this.showingPalette = true;
+    this.root.classList.remove("tile-inspector-hidden");
+    this.root.setAttribute("aria-hidden", "false");
+    this.name.textContent = definition.name.toUpperCase();
+    this.position.textContent = "PALETTE COMPONENT";
+    this.hint.hidden = true;
+    this.properties.hidden = true;
+    this.paletteDetails.hidden = false;
+    this.paletteDescription.textContent = palette.description;
+    this.palettePrice.textContent = price === null ? "UNPRICED" : String(price);
+    this.paletteShortcut.textContent = shortcut ?? "NONE";
+  }
+
   update(position: GridPosition | null): void {
+    const wasShowingPalette = this.showingPalette;
+    this.showingPalette = false;
+    this.paletteDetails.hidden = true;
     const x = position?.x ?? -1;
     const y = position?.y ?? -1;
     const kind = position === null ? TileKind.Empty : this.world.kindAt(x, y);
     const hidden = kind === TileKind.Empty;
     this.root.classList.toggle("tile-inspector-hidden", hidden);
     this.root.setAttribute("aria-hidden", String(hidden));
-    if (x === this.lastX && y === this.lastY && this.world.revision === this.lastRevision) {
+    if (
+      !wasShowingPalette &&
+      x === this.lastX &&
+      y === this.lastY &&
+      this.world.revision === this.lastRevision
+    ) {
       return;
     }
     this.lastX = x;
@@ -267,6 +304,7 @@ export class TileInspector {
     this.position.textContent = position;
     this.hint.textContent = message;
     this.hint.hidden = false;
+    this.paletteDetails.hidden = true;
     this.properties.hidden = true;
   }
 }
