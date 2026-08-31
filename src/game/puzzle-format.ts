@@ -5,8 +5,8 @@ import { PuzzleResult } from "../simulation/puzzle-result";
 import { TILE_DEFINITIONS, TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
 
-const PUZZLE_FORMAT = "factory2d-puzzle";
-const PUZZLE_VERSION = 2;
+export const PUZZLE_FORMAT = "factory2d-puzzle";
+export const PUZZLE_VERSION = 2;
 const PUZZLE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const DEFAULT_PUZZLE_CYCLE_LIMIT = 1_000;
 export const MAX_PUZZLE_CYCLE_LIMIT = 10_000;

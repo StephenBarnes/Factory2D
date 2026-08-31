@@ -6,6 +6,7 @@ import type {
 import { NavigationController } from "./game/navigation-controller";
 import { SavedSolutionController } from "./game/saved-solution-controller";
 import { runPuzzleTests } from "./game/puzzle-test-runner";
+import { serializePuzzleTemplate } from "./game/puzzle-export";
 import { createSandboxWorld, puzzleById } from "./game/puzzles";
 import {
   type WorkshopSession,
@@ -88,8 +89,14 @@ const testReportDialog = requiredElement<HTMLDialogElement>("test-report-dialog"
 const stepButton = requiredElement<HTMLButtonElement>("step-button");
 const resetButton = requiredElement<HTMLButtonElement>("reset-button");
 const clearButton = requiredElement<HTMLButtonElement>("clear-button");
+const exportDropup = requiredElement<HTMLElement>("export-dropup");
 const exportButton = requiredElement<HTMLButtonElement>("export-button");
-const imageButton = requiredElement<HTMLButtonElement>("image-button");
+const exportOptions = requiredElement<HTMLElement>("export-options");
+const downloadSceneButton = requiredElement<HTMLButtonElement>("download-scene-button");
+const copySceneButton = requiredElement<HTMLButtonElement>("copy-scene-button");
+const downloadImageButton = requiredElement<HTMLButtonElement>("download-image-button");
+const downloadPuzzleButton = requiredElement<HTMLButtonElement>("download-puzzle-button");
+const sharePuzzleButton = requiredElement<HTMLButtonElement>("share-puzzle-button");
 const importButton = requiredElement<HTMLButtonElement>("import-button");
 const importFile = requiredElement<HTMLInputElement>("import-file");
 const animationToggle = requiredElement<HTMLInputElement>("animation-toggle");
@@ -549,6 +556,7 @@ const testReportView = new PuzzleTestReportView(testReportDialog, {
 function stopWorkshopActivity(): void {
   testingPuzzleSolution = false;
   testReportView.close();
+  closeExportOptions();
   setRunning(false);
 }
 
@@ -570,6 +578,7 @@ const navigation = new NavigationController(
       configureComponentPalette();
       updateTransportState();
       importButton.disabled = activeSession.editableRegion !== null;
+      updateExportOptionsForSession();
       updateViewportInsets();
       refreshPointerHover();
     },
@@ -755,24 +764,72 @@ function downloadBlob(blob: Blob, filename: string): void {
   URL.revokeObjectURL(objectUrl);
 }
 
-exportButton.addEventListener("click", () => {
-  const source = serializeBoard(world, simulation.tick);
-  if (source.length <= MAX_CLIPBOARD_EXPORT_CHARACTERS) {
-    void navigator.clipboard.writeText(source).catch((error: unknown) => {
-      console.warn("Could not copy the exported board to the clipboard", error);
-    });
-  }
+function setExportOptionsOpen(open: boolean): void {
+  exportOptions.hidden = !open;
+  exportButton.setAttribute("aria-expanded", String(open));
+}
 
-  downloadBlob(new Blob([source], { type: "application/json" }), "factory2d-board.json");
+function closeExportOptions(): void {
+  setExportOptionsOpen(false);
+}
+
+function updateExportOptionsForSession(): void {
+  const sandboxOnly = activeSession.editableRegion === null;
+  downloadPuzzleButton.hidden = !sandboxOnly;
+  sharePuzzleButton.hidden = !sandboxOnly;
+  sharePuzzleButton.disabled = true;
+  if (!sandboxOnly) {
+    closeExportOptions();
+  }
+}
+
+exportButton.addEventListener("click", () => {
+  setExportOptionsOpen(exportOptions.hidden !== false);
 });
 
-imageButton.addEventListener("click", () => {
+downloadSceneButton.addEventListener("click", () => {
+  closeExportOptions();
+  const source = serializeBoard(world, simulation.tick);
+  downloadBlob(new Blob([source], { type: "application/json" }), "factory2d-scene.json");
+});
+
+copySceneButton.addEventListener("click", () => {
+  closeExportOptions();
+  const source = serializeBoard(world, simulation.tick);
+  if (source.length > MAX_CLIPBOARD_EXPORT_CHARACTERS) {
+    window.alert(
+      "This scene is too large to copy to the clipboard. Download the scene file instead.",
+    );
+    return;
+  }
+  void navigator.clipboard.writeText(source).catch((error: unknown) => {
+    console.warn("Could not copy the scene to the clipboard", error);
+  });
+});
+
+downloadImageButton.addEventListener("click", () => {
+  closeExportOptions();
   canvas.toBlob((blob) => {
     if (blob === null) {
       throw new Error("Could not encode the grid image as PNG");
     }
     downloadBlob(blob, "factory2d-grid.png");
   }, "image/png");
+});
+
+downloadPuzzleButton.addEventListener("click", () => {
+  if (activeSession.editableRegion !== null) {
+    throw new Error("Puzzle files can only be exported from the sandbox");
+  }
+  closeExportOptions();
+  const source = serializePuzzleTemplate(world);
+  downloadBlob(new Blob([source], { type: "application/json" }), "factory2d-puzzle.json");
+});
+
+document.addEventListener("click", (event) => {
+  if (event.target instanceof Node && !exportDropup.contains(event.target)) {
+    closeExportOptions();
+  }
 });
 
 importButton.addEventListener("click", () => {
@@ -949,6 +1006,17 @@ canvas.addEventListener("wheel", (event) => {
 }, { passive: false });
 
 document.addEventListener("keydown", (event) => {
+  if (!exportOptions.hidden) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeExportOptions();
+      exportButton.focus();
+      return;
+    }
+    if (event.target instanceof Node && exportDropup.contains(event.target)) {
+      return;
+    }
+  }
   if (
     navigation.screen.kind === "main-menu" ||
     navigation.screen.kind === "puzzle-info" ||

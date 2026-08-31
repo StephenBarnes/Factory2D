@@ -11,6 +11,8 @@ Game flow:
 * On puzzle and sandbox screens, move the puzzle title and the back button to the bottom-left, on the bottom bar. Currently they're at the top of the palette panel.
 * For running test cases, some conveniences: Show the test cases running. Increase tick rate every n cycles so it doesn't take too long. Add a fast-forward button that runs them as fast as possible with no rendering. When a test case fails, immediately pause and show the failed state, instead of showing the results modal.
 * Add a properties button, visible only in the sandbox. Allow setting the grid size. Later other things like the background image, gravity, etc.
+* Edit format for scenes and puzzles: make the fields `orientations`, `charges`, `crossingCharges`, `furnaces` all optional, with default value of `[]`. When exporting, don't specify those fields if they're the empty list, which is often the case. This will reduce incompatibility when we add new block types and de-bloats the format.
+* Further compact orientations and charges in the export/import format, possibly storing charges per network instead of per tile. More complex per-tile state (e.g. furnace stored ticks or target/delivery-block configuration) can remain verbose. Only include full ASCII grids for fields that aren't the default value.
 
 General:
 * Allow interacting with some components using a modal box. Modal is opened when placing the block (for some of them, depending on a flag) and by pressing E while mouse is over them. Show control prompt in the tile inspector panel.
@@ -77,7 +79,6 @@ UI:
 * UI for creating multiple test cases for a puzzle. Needed so that we can create and export puzzles efficiently.
 * Add a way to copy selection to a clipboard, for transferring machines between puzzles.
 * When saving an image using the image button, crop out parts of the screen that are over the background, outside the grid, if this can be implemented easily.
-* Further compact orientations and charges in the export/import format, possibly storing charges per network instead of per tile. More complex per-tile state (e.g. furnace stored ticks or target/delivery-block configuration) can remain verbose.
 * Implement undo and redo when editing.
 * Check for any potential bugs caused by listening only to mouse-up and mouse-down events, and assuming the mouse button is held down until a mouse-up is received. Can cause accidental deletion or placing of tiles if the mouse-up event is hidden by other window events.
 * Add step-forward and step-back to the control panel at the bottom.

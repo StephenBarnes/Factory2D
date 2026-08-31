@@ -868,6 +868,44 @@ kbd {
   gap: 7px;
 }
 
+.export-dropup {
+  position: relative;
+  display: flex;
+}
+
+.export-options {
+  position: absolute;
+  z-index: 4;
+  right: 0;
+  bottom: calc(100% + 8px);
+  width: max-content;
+  min-width: 226px;
+  padding: 7px;
+  display: grid;
+  gap: 5px;
+  border: 1px solid #465560;
+  background: #101820;
+  box-shadow: 0 10px 24px rgb(0 0 0 / 45%);
+}
+
+.export-options[hidden],
+.export-options button[hidden] {
+  display: none;
+}
+
+.controls .export-options button {
+  flex: none;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+#download-puzzle-button {
+  margin-top: 4px;
+}
+
 .controls button,
 .speed-control select {
   min-height: 38px;
@@ -1185,6 +1223,14 @@ kbd {
 
   .transport {
     flex: 1 1 100%;
+  }
+
+  .transport > .export-dropup {
+    flex: 1;
+  }
+
+  .export-dropup > #export-button {
+    width: 100%;
   }
 
   .transport button {

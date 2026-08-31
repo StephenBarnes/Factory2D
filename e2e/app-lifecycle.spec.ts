@@ -186,6 +186,32 @@ test("malformed storage falls back to a usable empty state", async ({ page }) =>
   await expect(page).toHaveURL(/\/solutions\/solution-1$/);
 });
 
+test("export dropup exposes scene actions and sandbox puzzle authoring", async ({ page }) => {
+  await seedBrowserStorage(page, "empty");
+  await page.goto("/sandbox");
+
+  const exportButton = page.getByRole("button", { name: "EXPORT" });
+  await exportButton.click();
+  await expect(exportButton).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("button", { name: "DOWNLOAD SCENE FILE" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "COPY SCENE TO CLIPBOARD" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "DOWNLOAD IMAGE" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "DOWNLOAD PUZZLE FILE" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "SHARE PUZZLE" })).toBeDisabled();
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "DOWNLOAD SCENE FILE" }).click();
+  expect((await downloadPromise).suggestedFilename()).toBe("factory2d-scene.json");
+  await expect(exportButton).toHaveAttribute("aria-expanded", "false");
+
+  await page.goto("/puzzles/first-shift");
+  await page.getByRole("button", { name: "+ NEW SOLUTION" }).click();
+  await exportButton.click();
+  await expect(page.getByRole("button", { name: "DOWNLOAD SCENE FILE" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "DOWNLOAD PUZZLE FILE" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "SHARE PUZZLE" })).toHaveCount(0);
+});
+
 test("puzzle info remains horizontally contained and vertically reachable", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 640 });
   await seedBrowserStorage(page, "populated");
