@@ -100,15 +100,16 @@ The game is in early development. Currently implemented:
 * A responsive top-right cell inspector shows the hovered tile's stable ID, movement behavior, effective weldable sides, current welds, circuit connections and charge, magnetic state, orientation, attraction direction/range, and furnace recipe progress. It hides over empty cells and refreshes after simulation commits even when the pointer remains stationary.
 * Deterministic tests cover conveyor force direction, gravity priority, magnetic ceiling traversal and detachment, normal magnetic constraints, neutral stopping, reaction forces, weld isolation, complete push chains, delivery absorption and conflicts, victory results and conflicts, board round-trips, gravity chains, sand overhangs, welded and magnetically constrained bodies, furnace recipes, circuit behavior, gate truth tables, conflicts, boundaries, stable IDs, reset behavior, rendering, and pointer gesture classification.
 * Board export and import controls round-trip deterministic, versioned JSON with compact fixed-code ASCII tile and weld grids plus the latched puzzle result, sparse non-up orientations, nonzero circuit charges, independent wire-crossing axis charges, and in-progress furnace state. Weld cells use `.`, `-`, `|`, or `+` for no forward weld, right, down, or both. Exports up to one million characters are also copied to the clipboard. Imports derive dimensions from the tile grid, validate both grids and all sparse state before replacing the live board, support board sizes up to 400x300, and reconstruct fresh runtime tile IDs because IDs are intentionally excluded from the file.
-* Tagged screen routing supports the main menu, sandbox, and per-definition puzzle workshops. Development still boots directly into the sandbox through a single `INITIAL_SCREEN` setting. The responsive main menu presents the sandbox and a prerequisite-gated puzzle route; puzzle definitions own names, goals, unlock prerequisites, and fresh initial-world factories, while each visited workshop retains an independent session. Puzzle completion detection and persistence are not implemented yet.
+* Tagged screen routing supports the main menu, sandbox, and per-definition puzzle workshops. Development still boots directly into the sandbox through a single `INITIAL_SCREEN` setting. The responsive main menu presents the sandbox and a prerequisite-gated puzzle route; puzzle definitions own names, goals, unlock prerequisites, and fresh initial-world factories, while each visited workshop retains an independent session. A puzzle's latched victory result marks it complete after a simulation step, persists completed puzzle IDs in versioned local storage, and unlocks dependent puzzles on the menu.
 
 ## Code map
 
 * `index.html` — Application shell, responsive main menu, tile and weld palette, canvas, hovered-cell inspector, and simulation controls.
-* `src/main.ts` — Browser entry point, screen navigation and retained workshop sessions, input handling, build tools, bounded pan/zoom controls, overlay-aware viewport insets, inspector coordination, and animation loop.
+* `src/main.ts` — Browser entry point, screen navigation and retained workshop sessions, puzzle victory consumption and progress persistence, input handling, build tools, bounded pan/zoom controls, overlay-aware viewport insets, inspector coordination, and animation loop.
 * `src/styles.css` — Responsive main menu, application, palette, inspector, board, and control styling.
 * `src/vite-env.d.ts` — Vite client type declarations.
 * `src/game/puzzles.ts` — Ordered puzzle definitions, prerequisite-based unlock checks, and fresh sandbox and puzzle world factories.
+* `src/game/puzzle-progress.ts` — Versioned local-storage serialization, validation, and victory recording for completed puzzle IDs.
 * `src/game/screen.ts` — Tagged application-screen contract and the single development initial-screen setting.
 * `src/render/canvas-renderer.ts` — Responsive Canvas 2D grid, overlay-aware camera fitting, bounded pan and pointer-anchored zoom, revision-and-scale-keyed welded-body geometry cache, stable-ID movement interpolation in every adjacent direction, hit testing, placement previews, and hover feedback.
 * `src/render/grid-drag.ts` — Board-clipped tile-drag endpoints and continuous weld-edge traversal between pointer events.
@@ -137,13 +138,13 @@ The game is in early development. Currently implemented:
 * `tests/tile-renderer.test.ts` — Rounded body-outline and mixed-kind fill stability regression tests.
 * `tests/tile.test.ts` — Directional and non-directional tile orientation resolution regression tests.
 * `tests/puzzles.test.ts` — Puzzle ordering, prerequisite unlocking, and independent initial-world factory tests.
+* `tests/puzzle-progress.test.ts` — Puzzle victory recording, deterministic persistence, initial state, and malformed stored-progress tests.
 * `vite.config.ts` — Vite configuration with Vitest's Node test environment.
 * `tsconfig.json` — Strict browser TypeScript and project build configuration.
 
 ## Current TODOs
 
 Game flow:
-* Implement puzzle completion detection and persistent progress, then feed completed puzzle IDs into the existing prerequisite-based menu unlocking. Consume `world.puzzleResult`.
 * Implement restrictions on where the player can place blocks, defined as a region of the game grid - probably union of rectangles. Specify in the puzzle definition. Display on the puzzle as a dotted outline. (May want to define a general "union of rectangular regions" abstraction since the selection tool later could also use that.)
 * Extend puzzle definitions with editable regions, available components and their prices, physical inputs/outputs, and test cases, then enforce those constraints in puzzle workshops.
 * Change the editing model when solving puzzles: the player edits the initial board state, but as soon as they've played/run the simulation, they can no longer edit, they have to reset. Because puzzles won't allow modifying the board halfway through running a solution. We can still allow mid-run edits in the sandbox.

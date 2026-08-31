@@ -1,5 +1,10 @@
 import "./styles.css";
 import {
+  loadCompletedPuzzleIds,
+  recordPuzzleResult,
+  saveCompletedPuzzleIds,
+} from "./game/puzzle-progress";
+import {
   createSandboxWorld,
   PUZZLES,
   puzzleById,
@@ -125,8 +130,33 @@ let animationDuration = 0;
 let renderedTick = -1;
 let renderedPaletteDevicePixelRatio = 0;
 const tileKindsByShortcut = populateComponentPalette(componentPalette, selectedKind);
-const completedPuzzleIds = new Set<PuzzleId>();
+const completedPuzzleIds = loadStoredCompletedPuzzleIds();
 let activeScreen: AppScreen = INITIAL_SCREEN;
+function loadStoredCompletedPuzzleIds(): Set<PuzzleId> {
+  try {
+    return loadCompletedPuzzleIds(window.localStorage);
+  } catch (error) {
+    console.error("Could not load puzzle progress:", error);
+    return new Set();
+  }
+}
+
+function persistCompletedPuzzleIds(): void {
+  try {
+    saveCompletedPuzzleIds(window.localStorage, completedPuzzleIds);
+  } catch (error) {
+    console.error("Could not save puzzle progress:", error);
+  }
+}
+
+function consumeActivePuzzleResult(): void {
+  if (
+    activeScreen.kind === "puzzle" &&
+    recordPuzzleResult(completedPuzzleIds, activeScreen.puzzleId, world.puzzleResult)
+  ) {
+    persistCompletedPuzzleIds();
+  }
+}
 
 function updateViewportInsets(): void {
   const canvasBounds = canvas.getBoundingClientRect();
@@ -258,6 +288,7 @@ function updateAnimationControlState(): void {
 function advanceSimulation(duration: number, startedAt = performance.now()): void {
   previousWorld.copyFrom(world);
   simulation.step();
+  consumeActivePuzzleResult();
   animationStartedAt = startedAt;
   animationDuration = duration;
 }
