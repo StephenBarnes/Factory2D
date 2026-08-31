@@ -280,6 +280,33 @@ describe("circuit rendering", () => {
     expect(context.strokeStyles).toContain(CIRCUIT_CHARGE_COLORS[1]);
   });
 
+  it("colors the spark bolt by its output charge", () => {
+    const context = new RecordingCanvasContext();
+    const spark: BodyCell = {
+      x: 0,
+      y: 0,
+      kind: TileKind.Spark,
+      orientation: Direction.Up,
+      outputCharge: 1,
+      circuitConnections: WeldSide.Right,
+      circuitPortCharges: setCircuitPortCharge(0, Direction.Right, 1),
+      seamRight: false,
+      seamDown: false,
+    };
+
+    drawBody(
+      context as unknown as CanvasRenderingContext2D,
+      0,
+      0,
+      32,
+      [spark],
+      1,
+      new RecordingPath2D() as unknown as Path2D,
+    );
+
+    expect(context.fillStyles.at(-1)).toBe(CIRCUIT_CHARGE_COLORS[1]);
+  });
+
   it("colors sensor wires by network charge and its arrow by sensed output", () => {
     const context = new RecordingCanvasContext();
     const sensor: BodyCell = {

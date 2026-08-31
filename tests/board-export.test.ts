@@ -162,6 +162,18 @@ describe("board export", () => {
     expect(imported.world.kindAt(0, 0)).toBe(TileKind.FixedCharge);
   });
 
+  it("round-trips a spark rune with its compact code", () => {
+    const world = new World(1, 1);
+    world.place(0, 0, TileKind.Spark);
+
+    const serialized = serializeBoard(world, 1);
+    const imported = deserializeBoard(serialized);
+
+    expect(JSON.parse(serialized).grid).toEqual(["K"]);
+    expect(imported.tick).toBe(1);
+    expect(imported.world.kindAt(0, 0)).toBe(TileKind.Spark);
+  });
+
   it("round-trips independent wire crossing axis charges", () => {
     const world = new World(1, 1);
     world.place(0, 0, TileKind.WireCrossing);

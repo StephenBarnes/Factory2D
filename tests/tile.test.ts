@@ -29,6 +29,7 @@ describe("tile orientation", () => {
     TileKind.Sand,
     TileKind.Conduit,
     TileKind.FixedCharge,
+    TileKind.Spark,
     TileKind.WireCrossing,
     TileKind.Conveyor,
   ])(

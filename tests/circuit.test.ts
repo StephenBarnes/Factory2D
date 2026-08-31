@@ -47,6 +47,28 @@ describe("circuit networks", () => {
     expect(world.chargeAt(2, 0)).toBe(0);
   });
 
+  it("emits a one-tick spark pulse again after resetting", () => {
+    const world = new World(2, 1);
+    world.place(0, 0, TileKind.Spark);
+    world.place(1, 0, TileKind.Conduit);
+    world.setWeld(0, 0, 1, 0, true);
+    const initialWorld = world.clone();
+    const simulation = new Simulation(world);
+
+    simulation.step();
+    expect(world.chargeAt(0, 0)).toBe(1);
+    expect(world.chargeAt(1, 0)).toBe(1);
+
+    simulation.step();
+    expect(world.chargeAt(0, 0)).toBe(0);
+    expect(world.chargeAt(1, 0)).toBe(0);
+
+    simulation.resetTo(initialWorld);
+    simulation.step();
+    expect(world.chargeAt(0, 0)).toBe(1);
+    expect(world.chargeAt(1, 0)).toBe(1);
+  });
+
   it("clears an undriven conduit on the tick after its sensor is unwelded", () => {
     const world = new World(2, 2);
     world.place(0, 0, TileKind.Stone);

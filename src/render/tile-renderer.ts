@@ -606,6 +606,35 @@ function drawDecoration(
       context.restore();
       break;
     }
+    case TileDecorationStyle.Spark: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.lineWidth = Math.max(1.5, size * 0.045);
+      context.lineCap = "round";
+      context.strokeStyle = definition.decorationColor;
+      context.beginPath();
+      context.moveTo(-size * 0.24, -size * 0.24);
+      context.lineTo(-size * 0.16, -size * 0.16);
+      context.moveTo(size * 0.24, -size * 0.24);
+      context.lineTo(size * 0.16, -size * 0.16);
+      context.moveTo(size * 0.24, size * 0.24);
+      context.lineTo(size * 0.16, size * 0.16);
+      context.moveTo(-size * 0.24, size * 0.24);
+      context.lineTo(-size * 0.16, size * 0.16);
+      context.stroke();
+      context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
+      context.beginPath();
+      context.moveTo(size * 0.04, -size * 0.24);
+      context.lineTo(-size * 0.15, size * 0.03);
+      context.lineTo(-size * 0.02, size * 0.03);
+      context.lineTo(-size * 0.06, size * 0.24);
+      context.lineTo(size * 0.16, -size * 0.06);
+      context.lineTo(size * 0.03, -size * 0.06);
+      context.closePath();
+      context.fill();
+      context.restore();
+      break;
+    }
     case TileDecorationStyle.Sensor:
       context.save();
       context.translate(left + size / 2, top + size / 2);

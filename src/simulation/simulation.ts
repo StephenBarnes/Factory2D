@@ -211,6 +211,8 @@ export class Simulation {
       let outputCharge: Charge;
       if (kind === TileKind.FixedCharge) {
         outputCharge = 1;
+      } else if (kind === TileKind.Spark) {
+        outputCharge = this.tick === 0 ? 1 : 0;
       } else if (kind === TileKind.Sensor) {
         outputCharge = this.world.sensorOutputAtIndex(index);
       } else if (kind === TileKind.Delivery) {

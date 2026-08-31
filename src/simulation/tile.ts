@@ -22,6 +22,7 @@ export const enum TileKind {
   Delivery = 20,
   Victory = 21,
   FixedCharge = 22,
+  Spark = 23,
 }
 
 export const enum Direction {
@@ -61,6 +62,7 @@ export const enum TileDecorationStyle {
   Delivery = 17,
   Victory = 18,
   FixedCharge = 19,
+  Spark = 20,
 }
 
 export interface TileDefinition {
@@ -310,11 +312,34 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationStyle: TileDecorationStyle.FixedCharge,
     decorationColor: "#f3dfa0",
   },
+  [TileKind.Spark]: {
+    name: "Spark Rune",
+    boardCode: "K",
+    palette: {
+      order: 12,
+      description: "Emits +1 for the first simulation tick, then goes dark",
+      shortcut: null,
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.All,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#665273",
+    shadow: "#392d43",
+    decorationStyle: TileDecorationStyle.Spark,
+    decorationColor: "#ead5ff",
+  },
   [TileKind.Inverter]: {
     name: "Inverter Rune",
     boardCode: "I",
     palette: {
-      order: 12,
+      order: 13,
       description: "Negates the sum of up to three isolated inputs",
       shortcut: { code: "Digit8", label: "8" },
     },
@@ -337,7 +362,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Combiner Rune",
     boardCode: "+",
     palette: {
-      order: 13,
+      order: 14,
       description: "Sums up to three isolated inputs toward its output",
       shortcut: { code: "Digit9", label: "9" },
     },
@@ -360,7 +385,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Rectifier Rune",
     boardCode: "R",
     palette: {
-      order: 14,
+      order: 15,
       description: "Passes positive sums from up to three isolated inputs",
       shortcut: { code: "Digit0", label: "0" },
     },
@@ -383,7 +408,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Multiplier Rune",
     boardCode: "*",
     palette: {
-      order: 15,
+      order: 16,
       description: "Multiplies up to three connected isolated inputs",
       shortcut: { code: "KeyX", label: "X" },
     },
@@ -406,7 +431,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Subtractor Rune",
     boardCode: "-",
     palette: {
-      order: 16,
+      order: 17,
       description: "Subtracts left and right inputs from the rear input",
       shortcut: { code: "Minus", label: "−" },
     },
@@ -429,7 +454,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Charge Sensor Rune",
     boardCode: "Q",
     palette: {
-      order: 17,
+      order: 18,
       description: "Copies an adjacent tile's charge to three outputs without an input weld",
       shortcut: null,
     },
@@ -452,7 +477,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Selector Rune",
     boardCode: "T",
     palette: {
-      order: 18,
+      order: 19,
       description: "Selects the left or right input from the rear charge",
       shortcut: null,
     },
@@ -475,7 +500,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Wire Crossing",
     boardCode: "W",
     palette: {
-      order: 19,
+      order: 20,
       description: "Keeps horizontal and vertical circuit networks separate",
       shortcut: null,
     },
@@ -590,7 +615,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Delivery Box",
     boardCode: "D",
     palette: {
-      order: 20,
+      order: 21,
       description: "Absorbs a front block matching the block behind it and pulses +1 sideways",
       shortcut: null,
     },
@@ -613,7 +638,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Victory Block",
     boardCode: "V",
     palette: {
-      order: 21,
+      order: 22,
       description: "Wins on +1 input or loses on -1 input; opposing inputs jam",
       shortcut: null,
     },
