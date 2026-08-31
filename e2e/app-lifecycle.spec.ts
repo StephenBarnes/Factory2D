@@ -118,6 +118,32 @@ test("creates, edits, persists, and restores a solution on reload", async ({ pag
   }, PUZZLE_SOLUTIONS_STORAGE_KEY);
   expect(storedBoard).toBe(edited.serializedBoard);
 });
+test("tests puzzle cases in a report while sandbox keeps run controls", async ({ page }) => {
+  await seedBrowserStorage(page, "populated");
+  await page.goto("/puzzles/first-shift/solutions/solution-1");
+
+  const testButton = page.getByRole("button", { name: "◆ TEST" });
+  await expect(testButton).toBeVisible();
+  await expect(page.getByRole("button", { name: /RUN/ })).toHaveCount(0);
+  await testButton.click();
+
+  const report = page.getByRole("dialog");
+  await expect(report).toBeVisible();
+  await expect(report.getByRole("heading", { name: "TESTS FAILED" })).toBeVisible();
+  await expect(report.locator(".test-report-result")).toHaveCount(2);
+  await expect(report.getByText("CYCLE LIMIT", { exact: true })).toHaveCount(2);
+
+  await report.getByRole("button", { name: "CONTINUE EDITING" }).click();
+  await expect(report).not.toBeVisible();
+  await testButton.click();
+  await report.getByRole("button", { name: "BACK TO PUZZLE" }).click();
+  await expect(page).toHaveURL(/\/puzzles\/first-shift$/);
+
+  await page.goto("/sandbox");
+  await expect(page.getByRole("button", { name: "▶ RUN" })).toBeVisible();
+  await expect(report).not.toBeVisible();
+});
+
 
 test("duplicates an edited board into an independent restorable solution", async ({ page }) => {
   const fixture = await seedBrowserStorage(page, "edited-board");

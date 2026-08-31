@@ -5,7 +5,8 @@ import type {
 } from "./dev/diagnostic-snapshot";
 import { NavigationController } from "./game/navigation-controller";
 import { SavedSolutionController } from "./game/saved-solution-controller";
-import { createSandboxWorld } from "./game/puzzles";
+import { runPuzzleTests } from "./game/puzzle-test-runner";
+import { createSandboxWorld, puzzleById } from "./game/puzzles";
 import {
   type WorkshopSession,
   WorkshopSessionController,
@@ -38,6 +39,7 @@ import {
 import { expectDefined } from "./util/assert";
 import { TileInspector } from "./ui/tile-inspector";
 import { populateComponentPalette } from "./ui/component-palette";
+import { PuzzleTestReportView } from "./ui/puzzle-test-report";
 
 const MAX_AUTOMATIC_ANIMATION_MS = 250;
 const MANUAL_STEP_ANIMATION_MS = 200;
@@ -81,6 +83,8 @@ const bottomControls = requiredElement<HTMLElement>("bottom-controls");
 const inspectorPanel = requiredElement<HTMLElement>("tile-inspector");
 let tileInspector = new TileInspector(inspectorPanel, world);
 const playButton = requiredElement<HTMLButtonElement>("play-button");
+const transportShortcutLabel = requiredElement<HTMLElement>("transport-shortcut-label");
+const testReportDialog = requiredElement<HTMLDialogElement>("test-report-dialog");
 const stepButton = requiredElement<HTMLButtonElement>("step-button");
 const resetButton = requiredElement<HTMLButtonElement>("reset-button");
 const clearButton = requiredElement<HTMLButtonElement>("clear-button");
@@ -95,6 +99,7 @@ const stateLabel = requiredElement<HTMLSpanElement>("state-label");
 const tickCounter = requiredElement<HTMLSpanElement>("tick-counter");
 const coordinates = requiredElement<HTMLDivElement>("coordinates");
 
+let testingPuzzleSolution = false;
 let selectedKind = TileKind.Sand;
 let previousSelectedKind: TileKind = selectedKind;
 let selectedOrientation = Direction.Up;
@@ -144,16 +149,21 @@ updateViewportInsets();
 
 function updateTransportState(): void {
   const editingEnabled = activeSession.editingState.editable;
-  playButton.textContent = running ? "Ⅱ PAUSE" : "▶ RUN";
-  playButton.classList.toggle("running", running);
-  stateLight.classList.toggle("running", running);
-  stateLabel.textContent = running
-    ? "SIMULATING"
-    : editingEnabled ? "BUILD MODE" : "RESET TO EDIT";
-  stepButton.disabled = running;
-  clearButton.disabled = !editingEnabled;
+  const puzzleWorkshop = navigation.screen.kind === "puzzle";
+  playButton.textContent = puzzleWorkshop
+    ? testingPuzzleSolution ? "TESTING…" : "◆ TEST"
+    : running ? "Ⅱ PAUSE" : "▶ RUN";
+  playButton.disabled = testingPuzzleSolution;
+  playButton.classList.toggle("running", !puzzleWorkshop && running);
+  stateLight.classList.toggle("running", running || testingPuzzleSolution);
+  stateLabel.textContent = testingPuzzleSolution
+    ? "TESTING CASES"
+    : running ? "SIMULATING" : editingEnabled ? "BUILD MODE" : "RESET TO EDIT";
+  stepButton.disabled = running || testingPuzzleSolution;
+  clearButton.disabled = !editingEnabled || testingPuzzleSolution;
+  transportShortcutLabel.textContent = puzzleWorkshop ? "TEST SOLUTION" : "RUN / PAUSE";
   for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
-    item.disabled = !editingEnabled;
+    item.disabled = !editingEnabled || testingPuzzleSolution;
   }
 }
 
@@ -211,7 +221,7 @@ function advanceSimulation(duration: number, startedAt = performance.now()): voi
   }
   previousWorld.copyFrom(world);
   simulation.step();
-  navigation.consumeActivePuzzleResult();
+
   animationStartedAt = startedAt;
   animationDuration = duration;
 }
@@ -531,6 +541,17 @@ function editWeldSegment(
     saveEditedBaseline();
   }
 }
+const testReportView = new PuzzleTestReportView(testReportDialog, {
+  onContinueEditing: () => resetSimulation(),
+  onBackToPuzzle: () => navigation.leaveWorkshop(),
+});
+
+function stopWorkshopActivity(): void {
+  testingPuzzleSolution = false;
+  testReportView.close();
+  setRunning(false);
+}
+
 const savedSolutions = new SavedSolutionController(window.localStorage);
 const navigation = new NavigationController(
   {
@@ -543,7 +564,7 @@ const navigation = new NavigationController(
     menuButton,
   },
   {
-    stopSimulation: () => setRunning(false),
+    stopSimulation: stopWorkshopActivity,
     onWorkshopSessionChanged: loadActiveWorkshopSession,
     onWorkshopShown: () => {
       configureComponentPalette();
@@ -642,8 +663,46 @@ componentPalette.addEventListener("focusout", (event) => {
 });
 
 playButton.addEventListener("click", () => {
-  setRunning(!running);
+  if (navigation.screen.kind === "puzzle") {
+    void testCurrentPuzzleSolution();
+  } else {
+    setRunning(!running);
+  }
 });
+
+async function testCurrentPuzzleSolution(): Promise<void> {
+  const requestedScreen = navigation.screen;
+  if (requestedScreen.kind !== "puzzle" || testingPuzzleSolution) {
+    return;
+  }
+
+  resetSimulation();
+  testingPuzzleSolution = true;
+  updateTransportState();
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  const currentScreen = navigation.screen;
+  if (
+    currentScreen.kind !== "puzzle" ||
+    currentScreen.puzzleId !== requestedScreen.puzzleId ||
+    currentScreen.solutionId !== requestedScreen.solutionId
+  ) {
+    return;
+  }
+
+  try {
+    const report = runPuzzleTests(
+      puzzleById(currentScreen.puzzleId),
+      activeSession.baseline,
+    );
+    if (report.succeeded) {
+      navigation.recordActivePuzzleTestSuccess();
+    }
+    testReportView.show(report);
+  } finally {
+    testingPuzzleSolution = false;
+    updateTransportState();
+  }
+}
 
 stepButton.addEventListener("click", () => {
   advanceSimulation(animationsEnabled() ? MANUAL_STEP_ANIMATION_MS : 0);
@@ -890,7 +949,11 @@ canvas.addEventListener("wheel", (event) => {
 }, { passive: false });
 
 document.addEventListener("keydown", (event) => {
-  if (navigation.screen.kind === "main-menu" || navigation.screen.kind === "puzzle-info") {
+  if (
+    navigation.screen.kind === "main-menu" ||
+    navigation.screen.kind === "puzzle-info" ||
+    testReportDialog.open
+  ) {
     return;
   }
   if (event.key === "Control") {
@@ -962,8 +1025,12 @@ document.addEventListener("keydown", (event) => {
 
   if (event.code === "Space") {
     event.preventDefault();
-    setRunning(!running);
-  } else if (event.code === "KeyN" && !running) {
+    if (navigation.screen.kind === "puzzle") {
+      void testCurrentPuzzleSolution();
+    } else {
+      setRunning(!running);
+    }
+  } else if (event.code === "KeyN" && !running && !testingPuzzleSolution) {
     advanceSimulation(animationsEnabled() ? MANUAL_STEP_ANIMATION_MS : 0);
   } else if (event.code === "KeyR") {
     resetSimulation();

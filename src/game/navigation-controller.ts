@@ -15,6 +15,7 @@ import { SavedSolutionController } from "./saved-solution-controller";
 import { WorkshopSessionController } from "./workshop-session";
 import { populatePuzzleMap } from "../ui/main-menu";
 import { PuzzleInfoView } from "../ui/puzzle-info";
+import { PuzzleResult } from "../simulation/puzzle-result";
 
 type PuzzleProgressStorage = Pick<Storage, "getItem" | "setItem">;
 type NavigationHistory = Pick<History, "pushState" | "replaceState">;
@@ -161,13 +162,15 @@ export class NavigationController {
     }
   }
 
-  consumeActivePuzzleResult(): void {
+  recordActivePuzzleTestSuccess(): void {
+    if (this.currentScreen.kind !== "puzzle") {
+      throw new Error("Cannot record puzzle test success outside a puzzle workshop");
+    }
     if (
-      this.currentScreen.kind !== "puzzle" ||
       !recordPuzzleResult(
         this.completedPuzzleIds,
         this.currentScreen.puzzleId,
-        this.sessions.active.world.puzzleResult,
+        PuzzleResult.Won,
       )
     ) {
       return;

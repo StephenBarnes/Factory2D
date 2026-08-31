@@ -10,12 +10,14 @@ export type PuzzleId = string;
 export interface PuzzleTestCaseDefinition {
   readonly id: string;
   readonly name: string;
+  readonly cycleLimit: number;
   readonly createInitialWorld: () => World;
 }
 
 export interface PuzzleDefinition {
   readonly id: PuzzleId;
   readonly name: string;
+  readonly cycleLimit: number;
   readonly description: string;
   readonly features: readonly string[];
   readonly goal: string;
@@ -135,6 +137,7 @@ export function loadPuzzleDefinitions(
   return Object.freeze(loadedPuzzles.map(({ parsed }) => Object.freeze({
     id: parsed.id,
     name: parsed.name,
+    cycleLimit: parsed.cycleLimit,
     description: parsed.description,
     features: parsed.features,
     goal: parsed.goal,
@@ -147,6 +150,7 @@ export function loadPuzzleDefinitions(
         Object.freeze({
           id: testCase.id,
           name: testCase.name,
+          cycleLimit: testCase.cycleLimit,
           createInitialWorld: () => testCase.initialWorld.clone(),
         }),
       ),

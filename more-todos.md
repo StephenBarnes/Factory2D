@@ -9,6 +9,8 @@ Game flow:
 * For community puzzles, organize them automatically by their set of allowed components - they should be unlocked after the first built-in puzzle which includes all of those components among its recursive prerequisites. Construct the set of "components that have been introduced so far" for each built-in puzzle by taking union of those sets for each prereq.
 * Remove the "import" button on puzzles; it should only be displayed in the sandbox. It's already disabled in puzzles, but still visible.
 * On puzzle and sandbox screens, move the puzzle title and the back button to the bottom-left, on the bottom bar. Currently they're at the top of the palette panel.
+* For running test cases, some conveniences: Show the test cases running. Increase tick rate every n cycles so it doesn't take too long. Add a fast-forward button that runs them as fast as possible with no rendering. When a test case fails, immediately pause and show the failed state, instead of showing the results modal.
+* Add a properties button, visible only in the sandbox. Allow setting the grid size. Later other things like the background image, gravity, etc.
 
 General:
 * Allow interacting with some components using a modal box. Modal is opened when placing the block (for some of them, depending on a flag) and by pressing E while mouse is over them. Show control prompt in the tile inspector panel.
@@ -93,6 +95,9 @@ UI:
 * Settings menu: Add a button to download all player data (everything in localStorage), and a button to import that, so players could transfer data to another device.
 
 Visuals:
+* Re-theme the entire game's UI. The current palette (black, dark blue, cyan, yellow) doesn't really fit the theme. Prefer colors like earth brown, stone gray, bronze, gold. Maybe: 312312 (brown), 4B5052 (grey), F1CC38 (gold), 5C718C (blue).
+* Make nice panel outlines with corner decorations, gilded Art Deco style.
+* Add a dark mode toggle. Turn it on by default.
 * Add backgrounds for puzzles, maybe with parallax as the player pans.
 * For the piston base block, don't show the small rectangle that's meant to represent the head/arm of the piston. Only show it on the combined / retracted base+arm block, and on the extended arm block.
 * Mark the wire crossing in a way that makes it apparent it's a wire-crossing block regardless of how many circuit connections it has. Currently with one wire, or two opposite-side wires connected, it looks like a conduit block except for the background color. Maybe draw the central cross regardless of how many sides are wired.

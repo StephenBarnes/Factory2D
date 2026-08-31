@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import firstShiftFile from "../src/game/puzzles/first-shift.json";
-import { parsePuzzleFile } from "../src/game/puzzle-format";
+import {
+  DEFAULT_PUZZLE_CYCLE_LIMIT,
+  MAX_PUZZLE_CYCLE_LIMIT,
+  parsePuzzleFile,
+} from "../src/game/puzzle-format";
 import { loadPuzzleDefinitions, PUZZLES } from "../src/game/puzzles";
 import { TileKind } from "../src/simulation/tile";
 import { expectDefined } from "../src/util/assert";
@@ -57,6 +61,37 @@ describe("puzzle JSON format", () => {
     first.place(5, 3, TileKind.Empty);
     expect(second.kindAt(5, 3)).toBe(TileKind.Sand);
   });
+  it("defaults, inherits, overrides, and bounds test cycle limits", () => {
+    const defaults = parsePuzzleFile(firstShiftFile, "first-shift.json");
+    expect(defaults.cycleLimit).toBe(DEFAULT_PUZZLE_CYCLE_LIMIT);
+    expect(defaults.testCases.map((testCase) => testCase.cycleLimit)).toEqual([
+      DEFAULT_PUZZLE_CYCLE_LIMIT,
+      DEFAULT_PUZZLE_CYCLE_LIMIT,
+    ]);
+
+    const configuredFile = puzzleFile();
+    configuredFile.cycleLimit = 250;
+    const firstTestCase = expectDefined(
+      arrayField(configuredFile, "testCases")[0],
+      "Missing standard test case",
+    ) as JsonObject;
+    firstTestCase.cycleLimit = 12;
+    const configured = parsePuzzleFile(configuredFile, "configured.json");
+    expect(configured.cycleLimit).toBe(250);
+    expect(configured.testCases.map((testCase) => testCase.cycleLimit)).toEqual([12, 250]);
+
+    configuredFile.cycleLimit = MAX_PUZZLE_CYCLE_LIMIT + 1;
+    expect(() => parsePuzzleFile(configuredFile, "invalid.json")).toThrow(
+      `invalid.json: Puzzle cycleLimit must be an integer from 1 through ${MAX_PUZZLE_CYCLE_LIMIT}`,
+    );
+
+    configuredFile.cycleLimit = 250;
+    firstTestCase.cycleLimit = 0;
+    expect(() => parsePuzzleFile(configuredFile, "invalid-case.json")).toThrow(
+      "invalid-case.json: Puzzle testCases[0] cycleLimit must be an integer from 1",
+    );
+  });
+
   it("applies sparse test-case board overrides and returns independent worlds", () => {
     const parsed = parsePuzzleFile(firstShiftFile, "first-shift.json");
     expect(parsed.testCases.map((testCase) => [testCase.id, testCase.name])).toEqual([

@@ -8,6 +8,8 @@ import type { World } from "../simulation/world";
 const PUZZLE_FORMAT = "factory2d-puzzle";
 const PUZZLE_VERSION = 2;
 const PUZZLE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+export const DEFAULT_PUZZLE_CYCLE_LIMIT = 1_000;
+export const MAX_PUZZLE_CYCLE_LIMIT = 10_000;
 const PUZZLE_FIELDS = [
   "format",
   "version",
@@ -23,6 +25,7 @@ const PUZZLE_FIELDS = [
   "initialBoard",
   "testCases",
 ] as const;
+const OPTIONAL_PUZZLE_FIELDS = ["cycleLimit"] as const;
 const BOARD_FIELDS = [
   "format",
   "version",
@@ -36,6 +39,7 @@ const BOARD_FIELDS = [
   "welds",
 ] as const;
 const TEST_CASE_FIELDS = ["id", "name", "overrides"] as const;
+const OPTIONAL_TEST_CASE_FIELDS = ["cycleLimit"] as const;
 const TEST_CASE_OVERRIDE_FIELDS = ["initialBoard"] as const;
 const INITIAL_BOARD_OVERRIDE_FIELDS = [
   "grid",
@@ -60,6 +64,7 @@ function buildTileKindsByCode(): Readonly<Record<string, TileKind | undefined>> 
 export interface ParsedPuzzleTestCase {
   readonly id: string;
   readonly name: string;
+  readonly cycleLimit: number;
   readonly initialWorld: World;
 }
 
@@ -67,6 +72,7 @@ export interface ParsedPuzzleFile {
   readonly id: string;
   readonly order: number;
   readonly name: string;
+  readonly cycleLimit: number;
   readonly description: string;
   readonly goal: string;
   readonly features: readonly string[];
@@ -87,7 +93,12 @@ export function parsePuzzleFile(value: unknown, fileName: string): ParsedPuzzleF
 }
 
 function parsePuzzleFileValue(value: unknown): ParsedPuzzleFile {
-  const puzzle = requireExactObject(value, "Puzzle", PUZZLE_FIELDS);
+  const puzzle = requireExactObject(
+    value,
+    "Puzzle",
+    PUZZLE_FIELDS,
+    OPTIONAL_PUZZLE_FIELDS,
+  );
   if (puzzle.format !== PUZZLE_FORMAT) {
     throw new Error(`Puzzle format must be "${PUZZLE_FORMAT}"`);
   }
@@ -103,6 +114,7 @@ function parsePuzzleFileValue(value: unknown): ParsedPuzzleFile {
   const name = requireNonEmptyString(puzzle.name, "Puzzle name");
   const description = requireNonEmptyString(puzzle.description, "Puzzle description");
   const goal = requireNonEmptyString(puzzle.goal, "Puzzle goal");
+  const cycleLimit = parseCycleLimit(puzzle.cycleLimit, "Puzzle cycleLimit");
   const features = parseUniqueStrings(puzzle.features, "Puzzle features");
   const prerequisitePuzzleIds = parseUniqueStrings(
     puzzle.prerequisites,
@@ -126,11 +138,12 @@ function parsePuzzleFileValue(value: unknown): ParsedPuzzleFile {
   if (!editableRegion.fitsWithin(initialWorld.width, initialWorld.height)) {
     throw new Error("Puzzle editableRegions must fit within initialBoard dimensions");
   }
-  const testCases = parseTestCases(puzzle.testCases, board, initialWorld);
+  const testCases = parseTestCases(puzzle.testCases, board, initialWorld, cycleLimit);
   return Object.freeze({
     id,
     order,
     name,
+    cycleLimit,
     description,
     goal,
     features,
@@ -173,6 +186,7 @@ function parseTestCases(
   value: unknown,
   baseBoard: Record<string, unknown>,
   baseWorld: World,
+  puzzleCycleLimit: number,
 ): readonly ParsedPuzzleTestCase[] {
   const entries = requireArray(value, "Puzzle testCases");
   if (entries.length === 0) {
@@ -183,7 +197,12 @@ function parseTestCases(
   const seenIds = new Set<string>();
   for (let index = 0; index < entries.length; index += 1) {
     const label = `Puzzle testCases[${index}]`;
-    const entry = requireExactObject(entries[index], label, TEST_CASE_FIELDS);
+    const entry = requireExactObject(
+      entries[index],
+      label,
+      TEST_CASE_FIELDS,
+      OPTIONAL_TEST_CASE_FIELDS,
+    );
     const id = requireNonEmptyString(entry.id, `${label} id`);
     if (!PUZZLE_ID_PATTERN.test(id)) {
       throw new Error(
@@ -196,6 +215,9 @@ function parseTestCases(
     seenIds.add(id);
 
     const name = requireNonEmptyString(entry.name, `${label} name`);
+    const cycleLimit = Object.hasOwn(entry, "cycleLimit")
+      ? parseCycleLimit(entry.cycleLimit, `${label} cycleLimit`)
+      : puzzleCycleLimit;
     const overrides = requireSparseObject(
       entry.overrides,
       `${label} overrides`,
@@ -220,7 +242,7 @@ function parseTestCases(
         `${label} initialBoard dimensions must match Puzzle initialBoard`,
       );
     }
-    testCases.push(Object.freeze({ id, name, initialWorld }));
+    testCases.push(Object.freeze({ id, name, cycleLimit, initialWorld }));
   }
   return Object.freeze(testCases);
 }
@@ -285,22 +307,30 @@ function parseUniqueStrings(value: unknown, label: string): readonly string[] {
   return Object.freeze(strings);
 }
 
+function parseCycleLimit(value: unknown, label: string): number {
+  if (value === undefined) {
+    return DEFAULT_PUZZLE_CYCLE_LIMIT;
+  }
+  return requireInteger(value, label, 1, MAX_PUZZLE_CYCLE_LIMIT);
+}
+
 function requireExactObject(
   value: unknown,
   label: string,
-  fields: readonly string[],
+  requiredFields: readonly string[],
+  optionalFields: readonly string[] = [],
 ): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new Error(`${label} must be an object`);
   }
   const object = value as Record<string, unknown>;
-  for (const field of fields) {
+  for (const field of requiredFields) {
     if (!Object.hasOwn(object, field)) {
       throw new Error(`${label} is missing required field "${field}"`);
     }
   }
   for (const field of Object.keys(object)) {
-    if (!fields.includes(field)) {
+    if (!requiredFields.includes(field) && !optionalFields.includes(field)) {
       throw new Error(`${label} has unknown field "${field}"`);
     }
   }

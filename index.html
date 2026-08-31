@@ -112,7 +112,7 @@
           <p><span>PAN</span> Arrows, middle-drag, or Alt + right-drag</p>
           <p><span>ZOOM</span> Mouse wheel</p>
           <p><span>ROTATE / AIM</span> Q / E or WASD</p>
-          <p><span>RUN / PAUSE</span> Space</p>
+          <p><span id="transport-shortcut-label">RUN / PAUSE</span> Space</p>
           <p><span>STEP</span> N</p>
         </div>
         <div class="coordinates" id="coordinates">X -- &nbsp; Y --</div>
@@ -213,6 +213,23 @@
         </label>
       </footer>
       </section>
+      <dialog
+        class="test-report-dialog"
+        id="test-report-dialog"
+        aria-labelledby="test-report-title"
+        aria-describedby="test-report-summary"
+      >
+        <div class="test-report-status">SOLUTION VERIFICATION</div>
+        <h2 id="test-report-title" data-test-report-title>TESTS FAILED</h2>
+        <p id="test-report-summary" data-test-report-summary></p>
+        <ol class="test-report-results" data-test-report-results></ol>
+        <div class="test-report-actions">
+          <button type="button" data-test-report-continue>CONTINUE EDITING</button>
+          <button class="test-report-back" type="button" data-test-report-back>
+            BACK TO PUZZLE
+          </button>
+        </div>
+      </dialog>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>
