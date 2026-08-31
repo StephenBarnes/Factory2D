@@ -1,4 +1,5 @@
 import { chargeFromSum, type Charge } from "./circuit";
+import { furnaceRecipeFor } from "./furnace";
 import {
   Direction,
   directionX,
@@ -36,6 +37,11 @@ export class Simulation {
   private readonly circuitDriveSums: Int32Array;
   private readonly nextCircuitCharges: Int8Array;
   private readonly nextCrossingVerticalCharges: Int8Array;
+  private readonly furnaceDisabled: Uint8Array;
+  private readonly nextFurnaceProgress: Uint16Array;
+  private readonly nextFurnaceTargetIds: Uint32Array;
+  private readonly furnaceTransformTargetIndices: Int32Array;
+  private readonly furnaceTransformKinds: Uint8Array;
 
   constructor(world: World) {
     this.world = world;
@@ -55,10 +61,16 @@ export class Simulation {
     this.circuitDriveSums = new Int32Array(world.cellCount * 2);
     this.nextCircuitCharges = new Int8Array(world.cellCount);
     this.nextCrossingVerticalCharges = new Int8Array(world.cellCount);
+    this.furnaceDisabled = new Uint8Array(world.cellCount);
+    this.nextFurnaceProgress = new Uint16Array(world.cellCount);
+    this.nextFurnaceTargetIds = new Uint32Array(world.cellCount);
+    this.furnaceTransformTargetIndices = new Int32Array(world.cellCount);
+    this.furnaceTransformKinds = new Uint8Array(world.cellCount);
   }
 
   step(): number {
     this.resolveCircuits();
+    this.resolveFurnaces();
     this.collectWeldedBodies();
     this.connectMagneticallyAttractedBodies();
     this.collectBodyMembers();
@@ -80,6 +92,7 @@ export class Simulation {
     this.circuitDriveSums.fill(0);
     this.nextCircuitCharges.fill(0);
     this.nextCrossingVerticalCharges.fill(0);
+    this.furnaceDisabled.fill(0);
 
     for (let index = 0; index < this.world.cellCount; index += 1) {
       const kind = this.world.kindAtIndex(index);
@@ -205,6 +218,16 @@ export class Simulation {
         case TileKind.Selector:
           outputCharge = rearInput === 1 ? leftInput : rearInput === -1 ? rightInput : 0;
           break;
+        case TileKind.Furnace: {
+          const disabled = rearInput !== 0;
+          this.furnaceDisabled[index] = disabled ? 1 : 0;
+          const targetIndex = this.neighborIndex(index, orientation);
+          const targetKind = targetIndex < 0
+            ? TileKind.Empty
+            : this.world.kindAtIndex(targetIndex);
+          outputCharge = !disabled && furnaceRecipeFor(targetKind) !== undefined ? 1 : 0;
+          break;
+        }
         default:
           throw new Error(`Tile kind ${kind} defines circuit inputs without a gate behavior`);
       }
@@ -234,6 +257,54 @@ export class Simulation {
     this.world.applyCircuitCharges(
       this.nextCircuitCharges,
       this.nextCrossingVerticalCharges,
+    );
+  }
+
+  private resolveFurnaces(): void {
+    this.nextFurnaceProgress.fill(0);
+    this.nextFurnaceTargetIds.fill(0);
+    this.furnaceTransformTargetIndices.fill(-1);
+    this.furnaceTransformKinds.fill(TileKind.Empty);
+
+    for (let index = 0; index < this.world.cellCount; index += 1) {
+      if (this.world.kindAtIndex(index) !== TileKind.Furnace) {
+        continue;
+      }
+
+      const targetIndex = this.neighborIndex(index, this.world.orientationAtIndex(index));
+      if (targetIndex < 0) {
+        continue;
+      }
+      const recipe = furnaceRecipeFor(this.world.kindAtIndex(targetIndex));
+      if (recipe === undefined) {
+        continue;
+      }
+      const targetId = this.world.idAtIndex(targetIndex);
+      const previousTargetId = this.world.furnaceTargetIdAtIndex(index);
+      const previousProgress = this.world.furnaceProgressAtIndex(index);
+      if (this.furnaceDisabled[index] === 1) {
+        if (targetId === previousTargetId && previousProgress > 0) {
+          this.nextFurnaceProgress[index] = previousProgress;
+          this.nextFurnaceTargetIds[index] = targetId;
+        }
+        continue;
+      }
+
+      const progress = targetId === previousTargetId ? previousProgress + 1 : 1;
+      this.nextFurnaceTargetIds[index] = targetId;
+      if (progress < recipe.bakeTime) {
+        this.nextFurnaceProgress[index] = progress;
+        continue;
+      }
+      this.furnaceTransformTargetIndices[index] = targetIndex;
+      this.furnaceTransformKinds[index] = recipe.output;
+    }
+
+    this.world.applyFurnaceResults(
+      this.nextFurnaceProgress,
+      this.nextFurnaceTargetIds,
+      this.furnaceTransformTargetIndices,
+      this.furnaceTransformKinds,
     );
   }
 

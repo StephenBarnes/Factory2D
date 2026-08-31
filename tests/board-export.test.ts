@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { Simulation } from "../src/simulation/simulation";
+
 import { deserializeBoard, serializeBoard } from "../src/simulation/board-export";
 import { Direction, TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
@@ -17,7 +19,7 @@ describe("board export", () => {
 
     expect(serializeBoard(world, 17)).toBe(`${JSON.stringify({
       format: "factory2d-board",
-      version: 5,
+      version: 6,
       tick: 17,
       grid: [
         "..L",
@@ -30,6 +32,7 @@ describe("board export", () => {
         { x: 2, y: 1, charge: -1 },
       ],
       crossingCharges: [],
+      furnaces: [],
       welds: [
         "..|",
         "-..",
@@ -44,12 +47,13 @@ describe("board export", () => {
 
     expect(JSON.parse(serializeBoard(world, 0))).toEqual({
       format: "factory2d-board",
-      version: 5,
+      version: 6,
       tick: 0,
       grid: [".."],
       orientations: [],
       charges: [],
       crossingCharges: [],
+      furnaces: [],
       welds: [".."],
     });
   });
@@ -68,7 +72,7 @@ describe("board export", () => {
   it("imports grid dimensions, state, orientation, and welds", () => {
     const source = JSON.stringify({
       format: "factory2d-board",
-      version: 5,
+      version: 6,
       tick: 42,
       grid: [
         "LM",
@@ -85,6 +89,7 @@ describe("board export", () => {
         { x: 1, y: 1, charge: -1 },
       ],
       crossingCharges: [],
+      furnaces: [],
       welds: [
         "+.",
         "..",
@@ -99,7 +104,7 @@ describe("board export", () => {
     expect(imported.world.height).toBe(3);
     expect(imported.world.kindAt(0, 0)).toBe(TileKind.Magnet);
     expect(imported.world.orientationAt(0, 0)).toBe(Direction.Left);
-    expect(imported.world.kindAt(1, 0)).toBe(TileKind.Metal);
+    expect(imported.world.kindAt(1, 0)).toBe(TileKind.Iron);
     expect(imported.world.kindAt(0, 1)).toBe(TileKind.Sensor);
     expect(imported.world.orientationAt(0, 1)).toBe(Direction.Down);
     expect(imported.world.chargeAt(0, 1)).toBe(1);
@@ -143,10 +148,11 @@ describe("board export", () => {
     const imported = deserializeBoard(serialized);
 
     expect(JSON.parse(serialized)).toMatchObject({
-      version: 5,
+      version: 6,
       grid: ["W"],
       charges: [],
       crossingCharges: [{ x: 0, y: 0, horizontal: 1, vertical: -1 }],
+      furnaces: [],
     });
     expect(imported.tick).toBe(7);
     expect(imported.world.kindAt(0, 0)).toBe(TileKind.WireCrossing);
@@ -154,25 +160,75 @@ describe("board export", () => {
     expect(imported.world.chargeAtPort(0, 0, Direction.Up)).toBe(-1);
   });
 
+  it("round-trips active furnace progress without runtime target IDs", () => {
+    const world = new World(2, 1);
+    world.place(0, 0, TileKind.Furnace, Direction.Right);
+    world.place(1, 0, TileKind.Sand);
+    const simulation = new Simulation(world);
+    simulation.step();
+    simulation.step();
+
+    const serialized = serializeBoard(world, 2);
+    const imported = deserializeBoard(serialized);
+
+    expect(JSON.parse(serialized)).toMatchObject({
+      version: 6,
+      grid: ["F:"],
+      orientations: [{ x: 0, y: 0, direction: "right" }],
+      furnaces: [{ x: 0, y: 0, progress: 2 }],
+    });
+    expect(imported.world.furnaceProgressAt(0, 0)).toBe(2);
+
+    const importedSimulation = new Simulation(imported.world);
+    importedSimulation.step();
+    importedSimulation.step();
+    expect(imported.world.kindAt(1, 0)).toBe(TileKind.Glass);
+  });
+
+  it("rejects furnace progress without a valid in-progress recipe", () => {
+    const base = {
+      format: "factory2d-board",
+      version: 6,
+      tick: 0,
+      orientations: [{ x: 0, y: 0, direction: "right" }],
+      charges: [],
+      crossingCharges: [],
+      welds: [".."],
+    };
+
+    expect(() => deserializeBoard(JSON.stringify({
+      ...base,
+      grid: ["F#"],
+      furnaces: [{ x: 0, y: 0, progress: 1 }],
+    }))).toThrowError("Furnace 0 has no bakeable target");
+    expect(() => deserializeBoard(JSON.stringify({
+      ...base,
+      grid: ["F:"],
+      furnaces: [{ x: 0, y: 0, progress: 4 }],
+    }))).toThrowError("Furnace 0 progress must be an integer from 1 through 3");
+  });
+
   it("rejects malformed grid rows and unknown tile codes", () => {
     const unevenRows = JSON.stringify({
       format: "factory2d-board",
-      version: 5,
+      version: 6,
       tick: 0,
       grid: ["..", "."],
       orientations: [],
       charges: [],
       crossingCharges: [],
+      furnaces: [],
       welds: ["..", ".."],
     });
     const unknownCode = JSON.stringify({
       format: "factory2d-board",
-      version: 5,
+      version: 6,
       tick: 0,
       grid: ["?"],
       orientations: [],
       charges: [],
       crossingCharges: [],
+      furnaces: [],
       welds: ["."],
     });
 
@@ -187,7 +243,7 @@ describe("board export", () => {
   it("rejects duplicate or inapplicable orientation state", () => {
     const duplicate = JSON.stringify({
       format: "factory2d-board",
-      version: 5,
+      version: 6,
       tick: 0,
       grid: ["L"],
       orientations: [
@@ -196,16 +252,18 @@ describe("board export", () => {
       ],
       charges: [],
       crossingCharges: [],
+      furnaces: [],
       welds: ["."],
     });
     const inapplicable = JSON.stringify({
       format: "factory2d-board",
-      version: 5,
+      version: 6,
       tick: 0,
       grid: ["#"],
       orientations: [{ x: 0, y: 0, direction: "right" }],
       charges: [],
       crossingCharges: [],
+      furnaces: [],
       welds: ["."],
     });
 
@@ -220,52 +278,57 @@ describe("board export", () => {
   it("rejects malformed weld grids and welds that cannot be applied", () => {
     const wrongHeight = JSON.stringify({
       format: "factory2d-board",
-      version: 5,
+      version: 6,
       tick: 0,
       grid: ["##", "##"],
       orientations: [],
       charges: [],
       crossingCharges: [],
+      furnaces: [],
       welds: [".."],
     });
     const wrongWidth = JSON.stringify({
       format: "factory2d-board",
-      version: 5,
+      version: 6,
       tick: 0,
       grid: ["##"],
       orientations: [],
       charges: [],
       crossingCharges: [],
+      furnaces: [],
       welds: ["."],
     });
     const unknownCode = JSON.stringify({
       format: "factory2d-board",
-      version: 5,
+      version: 6,
       tick: 0,
       grid: ["#"],
       orientations: [],
       charges: [],
       crossingCharges: [],
+      furnaces: [],
       welds: ["?"],
     });
     const outside = JSON.stringify({
       format: "factory2d-board",
-      version: 5,
+      version: 6,
       tick: 0,
       grid: ["#"],
       orientations: [],
       charges: [],
       crossingCharges: [],
+      furnaces: [],
       welds: ["-"],
     });
     const incompatible = JSON.stringify({
       format: "factory2d-board",
-      version: 5,
+      version: 6,
       tick: 0,
       grid: [":#"],
       orientations: [],
       charges: [],
       crossingCharges: [],
+      furnaces: [],
       welds: ["-."],
     });
 
@@ -289,22 +352,24 @@ describe("board export", () => {
   it("rejects crossing charge state on the wrong tile or with no charge", () => {
     const wrongTile = JSON.stringify({
       format: "factory2d-board",
-      version: 5,
+      version: 6,
       tick: 0,
       grid: ["C"],
       orientations: [],
       charges: [],
       crossingCharges: [{ x: 0, y: 0, horizontal: 1, vertical: 0 }],
+      furnaces: [],
       welds: ["."],
     });
     const neutralCrossing = JSON.stringify({
       format: "factory2d-board",
-      version: 5,
+      version: 6,
       tick: 0,
       grid: ["W"],
       orientations: [],
       charges: [],
       crossingCharges: [{ x: 0, y: 0, horizontal: 0, vertical: 0 }],
+      furnaces: [],
       welds: ["."],
     });
 
@@ -319,22 +384,24 @@ describe("board export", () => {
   it("rejects invalid charge values and charged non-circuit tiles", () => {
     const invalidValue = JSON.stringify({
       format: "factory2d-board",
-      version: 5,
+      version: 6,
       tick: 0,
       grid: ["C"],
       orientations: [],
       charges: [{ x: 0, y: 0, charge: 2 }],
       crossingCharges: [],
+      furnaces: [],
       welds: ["."],
     });
     const invalidTile = JSON.stringify({
       format: "factory2d-board",
-      version: 5,
+      version: 6,
       tick: 0,
       grid: ["#"],
       orientations: [],
       charges: [{ x: 0, y: 0, charge: 1 }],
       crossingCharges: [],
+      furnaces: [],
       welds: ["."],
     });
 

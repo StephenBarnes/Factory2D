@@ -1,4 +1,5 @@
 import { isCharge, type Charge } from "./circuit";
+import { furnaceRecipeFor } from "./furnace";
 import {
   Direction,
   directionX,
@@ -25,6 +26,8 @@ export class World {
   private readonly orientations: Uint8Array;
   private readonly charges: Int8Array;
   private readonly crossingVerticalCharges: Int8Array;
+  private readonly furnaceProgress: Uint16Array;
+  private readonly furnaceTargetIds: Uint32Array;
   private nextTileId = 1;
   private readonly rightWelds: Uint8Array;
   private readonly downWelds: Uint8Array;
@@ -43,6 +46,8 @@ export class World {
     this.orientations = new Uint8Array(this.cellCount);
     this.charges = new Int8Array(this.cellCount);
     this.crossingVerticalCharges = new Int8Array(this.cellCount);
+    this.furnaceProgress = new Uint16Array(this.cellCount);
+    this.furnaceTargetIds = new Uint32Array(this.cellCount);
     this.rightWelds = new Uint8Array(this.cellCount);
     this.downWelds = new Uint8Array(this.cellCount);
   }
@@ -54,6 +59,11 @@ export class World {
 
   kindAt(x: number, y: number): TileKind {
     return this.kinds[this.indexOf(x, y)] as TileKind;
+  }
+
+  idAtIndex(index: number): number {
+    this.assertIndex(index);
+    return this.ids[index] ?? 0;
   }
 
   idAt(x: number, y: number): number {
@@ -153,6 +163,125 @@ export class World {
         changed = true;
       }
     }
+    if (changed) {
+      this.revisionValue += 1;
+    }
+  }
+
+  furnaceProgressAt(x: number, y: number): number {
+    return this.furnaceProgress[this.indexOf(x, y)] ?? 0;
+  }
+
+  furnaceProgressAtIndex(index: number): number {
+    this.assertIndex(index);
+    return this.furnaceProgress[index] ?? 0;
+  }
+
+  furnaceTargetIdAtIndex(index: number): number {
+    this.assertIndex(index);
+    return this.furnaceTargetIds[index] ?? 0;
+  }
+
+  restoreFurnaceProgress(x: number, y: number, progress: number): void {
+    const index = this.indexOf(x, y);
+    if (this.kinds[index] !== TileKind.Furnace) {
+      throw new Error(`Tile at (${x}, ${y}) is not a furnace`);
+    }
+    const targetIndex = this.directionalNeighborIndex(index);
+    const targetKind = targetIndex < 0
+      ? TileKind.Empty
+      : this.kinds[targetIndex] as TileKind;
+    const recipe = furnaceRecipeFor(targetKind);
+    if (recipe === undefined) {
+      throw new Error(`Furnace at (${x}, ${y}) has no bakeable target`);
+    }
+    if (!Number.isSafeInteger(progress) || progress <= 0 || progress >= recipe.bakeTime) {
+      throw new RangeError(
+        `Furnace progress must be between 1 and ${recipe.bakeTime - 1} ticks`,
+      );
+    }
+    const targetId = this.ids[targetIndex] ?? 0;
+    if (targetId === 0) {
+      throw new Error(`Furnace at (${x}, ${y}) has no target identity`);
+    }
+    this.furnaceProgress[index] = progress;
+    this.furnaceTargetIds[index] = targetId;
+    this.revisionValue += 1;
+  }
+
+  applyFurnaceResults(
+    progresses: Uint16Array,
+    targetIds: Uint32Array,
+    transformTargetIndices: Int32Array,
+    transformKinds: Uint8Array,
+  ): void {
+    if (
+      progresses.length !== this.cellCount ||
+      targetIds.length !== this.cellCount ||
+      transformTargetIndices.length !== this.cellCount ||
+      transformKinds.length !== this.cellCount
+    ) {
+      throw new RangeError("Furnace result buffers must match the world cell count");
+    }
+
+    let changed = false;
+    for (let index = 0; index < this.cellCount; index += 1) {
+      if (this.kinds[index] !== TileKind.Furnace) {
+        continue;
+      }
+      const progress = expectDefined(progresses[index], "next furnace progress");
+      const targetId = expectDefined(targetIds[index], "next furnace target ID");
+      const willTransform = expectDefined(
+        transformTargetIndices[index],
+        "furnace transform target",
+      ) >= 0;
+      if (
+        (progress === 0 && targetId !== 0 && !willTransform) ||
+        (progress !== 0 && targetId === 0)
+      ) {
+        throw new Error(`Furnace at index ${index} has inconsistent progress state`);
+      }
+      const storedTargetId = progress === 0 ? 0 : targetId;
+      if (
+        this.furnaceProgress[index] !== progress ||
+        this.furnaceTargetIds[index] !== storedTargetId
+      ) {
+        this.furnaceProgress[index] = progress;
+        this.furnaceTargetIds[index] = storedTargetId;
+        changed = true;
+      }
+    }
+
+    for (let index = 0; index < this.cellCount; index += 1) {
+      const targetIndex = expectDefined(
+        transformTargetIndices[index],
+        "furnace transform target",
+      );
+      if (targetIndex < 0) {
+        continue;
+      }
+      this.assertIndex(targetIndex);
+      const targetId = expectDefined(targetIds[index], "transform target ID");
+      if (targetId === 0 || this.ids[targetIndex] !== targetId) {
+        throw new Error(`Furnace at index ${index} lost its transform target`);
+      }
+      const outputKind = expectDefined(
+        transformKinds[index],
+        "furnace transform kind",
+      ) as TileKind;
+      if (outputKind === TileKind.Empty || TILE_DEFINITIONS[outputKind] === undefined) {
+        throw new Error(`Furnace at index ${index} has invalid output kind ${outputKind}`);
+      }
+      this.kinds[targetIndex] = outputKind;
+      this.orientations[targetIndex] = Direction.Up;
+      this.charges[targetIndex] = 0;
+      this.crossingVerticalCharges[targetIndex] = 0;
+      this.furnaceProgress[targetIndex] = 0;
+      this.furnaceTargetIds[targetIndex] = 0;
+      this.clearDisallowedWeldsAtIndex(targetIndex);
+      changed = true;
+    }
+
     if (changed) {
       this.revisionValue += 1;
     }
@@ -311,6 +440,8 @@ export class World {
         this.orientations[index] = orientation;
         this.charges[index] = 0;
         this.crossingVerticalCharges[index] = 0;
+        this.furnaceProgress[index] = 0;
+        this.furnaceTargetIds[index] = 0;
         this.clearDisallowedWeldsAtIndex(index);
         this.revisionValue += 1;
       }
@@ -324,6 +455,8 @@ export class World {
     this.ids[index] = id;
     this.charges[index] = 0;
     this.crossingVerticalCharges[index] = 0;
+    this.furnaceProgress[index] = 0;
+    this.furnaceTargetIds[index] = 0;
     this.orientations[index] = orientation;
     this.revisionValue += 1;
     return id;
@@ -335,6 +468,8 @@ export class World {
     this.orientations.fill(Direction.Up);
     this.charges.fill(0);
     this.crossingVerticalCharges.fill(0);
+    this.furnaceProgress.fill(0);
+    this.furnaceTargetIds.fill(0);
     this.rightWelds.fill(0);
     this.downWelds.fill(0);
     this.revisionValue += 1;
@@ -356,6 +491,8 @@ export class World {
     this.orientations.set(source.orientations);
     this.charges.set(source.charges);
     this.crossingVerticalCharges.set(source.crossingVerticalCharges);
+    this.furnaceProgress.set(source.furnaceProgress);
+    this.furnaceTargetIds.set(source.furnaceTargetIds);
     this.rightWelds.set(source.rightWelds);
     this.downWelds.set(source.downWelds);
     this.nextTileId = source.nextTileId;
@@ -446,6 +583,8 @@ export class World {
         this.crossingVerticalCharges[source],
         "moving crossing vertical charge",
       );
+      this.furnaceProgress[destination] = this.furnaceProgress[source] ?? 0;
+      this.furnaceTargetIds[destination] = this.furnaceTargetIds[source] ?? 0;
       this.rightWelds[destination] = this.rightWelds[source] ?? 0;
       this.downWelds[destination] = this.downWelds[source] ?? 0;
       this.kinds[source] = TileKind.Empty;
@@ -453,6 +592,8 @@ export class World {
       this.orientations[source] = Direction.Up;
       this.charges[source] = 0;
       this.crossingVerticalCharges[source] = 0;
+      this.furnaceProgress[source] = 0;
+      this.furnaceTargetIds[source] = 0;
       this.rightWelds[source] = 0;
       this.downWelds[source] = 0;
       movementCount += 1;
@@ -476,6 +617,20 @@ export class World {
     if (!Number.isInteger(index) || index < 0 || index >= this.cellCount) {
       throw new RangeError(`Cell index ${index} is outside the world`);
     }
+  }
+
+  private directionalNeighborIndex(index: number): number {
+    const direction = this.orientations[index] as Direction;
+    const x = index % this.width;
+    if (
+      (direction === Direction.Up && index < this.width) ||
+      (direction === Direction.Right && x >= this.width - 1) ||
+      (direction === Direction.Down && index >= this.cellCount - this.width) ||
+      (direction === Direction.Left && x === 0)
+    ) {
+      return -1;
+    }
+    return index + directionX(direction) + directionY(direction) * this.width;
   }
 
   private weldStorage(first: number, second: number): { readonly welds: Uint8Array; readonly index: number } {
@@ -568,6 +723,8 @@ export class World {
     this.orientations[index] = Direction.Up;
     this.charges[index] = 0;
     this.crossingVerticalCharges[index] = 0;
+    this.furnaceProgress[index] = 0;
+    this.furnaceTargetIds[index] = 0;
     this.ids[index] = 0;
     this.clearWeldsAtIndex(index);
   }

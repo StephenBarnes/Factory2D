@@ -1,10 +1,18 @@
+import { furnaceRecipeFor } from "./furnace";
 import type { Charge } from "./circuit";
-import { Direction, TILE_DEFINITIONS, TILE_KINDS, TileKind } from "./tile";
+import {
+  Direction,
+  directionX,
+  directionY,
+  TILE_DEFINITIONS,
+  TILE_KINDS,
+  TileKind,
+} from "./tile";
 import { World } from "./world";
 import { expectDefined } from "../util/assert";
 
 const FORMAT_NAME = "factory2d-board";
-const FORMAT_VERSION = 5;
+const FORMAT_VERSION = 6;
 const MAX_BOARD_WIDTH = 400;
 const MAX_BOARD_HEIGHT = 300;
 
@@ -58,6 +66,12 @@ interface ExportedCrossingCharge {
   readonly vertical: Charge;
 }
 
+interface ExportedFurnace {
+  readonly x: number;
+  readonly y: number;
+  readonly progress: number;
+}
+
 interface ExportedBoard {
   readonly format: typeof FORMAT_NAME;
   readonly version: typeof FORMAT_VERSION;
@@ -66,6 +80,7 @@ interface ExportedBoard {
   readonly orientations: readonly ExportedOrientation[];
   readonly charges: readonly ExportedCharge[];
   readonly crossingCharges: readonly ExportedCrossingCharge[];
+  readonly furnaces: readonly ExportedFurnace[];
   readonly welds: readonly string[];
 }
 
@@ -83,6 +98,7 @@ export function serializeBoard(world: World, tick: number): string {
   const orientations: ExportedOrientation[] = [];
   const charges: ExportedCharge[] = [];
   const crossingCharges: ExportedCrossingCharge[] = [];
+  const furnaces: ExportedFurnace[] = [];
   const welds: string[] = [];
 
   for (let y = 0; y < world.height; y += 1) {
@@ -115,6 +131,22 @@ export function serializeBoard(world: World, tick: number): string {
           charges.push({ x, y, charge });
         }
       }
+      if (kind === TileKind.Furnace) {
+        const progress = world.furnaceProgressAt(x, y);
+        const targetX = x + directionX(orientation);
+        const targetY = y + directionY(orientation);
+        const cellIndex = y * world.width + x;
+        if (
+          progress > 0 &&
+          targetX >= 0 &&
+          targetX < world.width &&
+          targetY >= 0 &&
+          targetY < world.height &&
+          world.idAt(targetX, targetY) === world.furnaceTargetIdAtIndex(cellIndex)
+        ) {
+          furnaces.push({ x, y, progress });
+        }
+      }
 
     }
     grid.push(row);
@@ -129,6 +161,7 @@ export function serializeBoard(world: World, tick: number): string {
     orientations,
     charges,
     crossingCharges,
+    furnaces,
     welds,
   };
   return `${JSON.stringify(board, null, 2)}\n`;
@@ -198,6 +231,47 @@ export function deserializeBoard(source: string): ImportedBoard {
     }
     orientationByCell[cellIndex] = direction;
     hasOrientation[cellIndex] = 1;
+  }
+
+  const furnaces = requireArray(board.furnaces, "Board furnaces");
+  const furnaceProgressByCell = new Uint16Array(width * height);
+  const hasFurnaceState = new Uint8Array(width * height);
+  for (let index = 0; index < furnaces.length; index += 1) {
+    const state = requireObject(furnaces[index], `Furnace ${index}`);
+    const x = requireInteger(state.x, `Furnace ${index} x`, 0, width - 1);
+    const y = requireInteger(state.y, `Furnace ${index} y`, 0, height - 1);
+    const cellIndex = y * width + x;
+    if (hasFurnaceState[cellIndex] === 1) {
+      throw new Error(`Furnace ${index} duplicates cell (${x}, ${y})`);
+    }
+    if (kinds[cellIndex] !== TileKind.Furnace) {
+      throw new Error(`Furnace ${index} targets a non-furnace tile`);
+    }
+    const orientation = expectDefined(
+      orientationByCell[cellIndex],
+      `furnace orientation at (${x}, ${y})`,
+    ) as Direction;
+    const targetX = x + directionX(orientation);
+    const targetY = y + directionY(orientation);
+    if (targetX < 0 || targetX >= width || targetY < 0 || targetY >= height) {
+      throw new Error(`Furnace ${index} points outside the board`);
+    }
+    const targetIndex = targetY * width + targetX;
+    const targetKind = expectDefined(
+      kinds[targetIndex],
+      `furnace target kind at (${targetX}, ${targetY})`,
+    ) as TileKind;
+    const recipe = furnaceRecipeFor(targetKind);
+    if (recipe === undefined) {
+      throw new Error(`Furnace ${index} has no bakeable target`);
+    }
+    furnaceProgressByCell[cellIndex] = requireInteger(
+      state.progress,
+      `Furnace ${index} progress`,
+      1,
+      recipe.bakeTime - 1,
+    );
+    hasFurnaceState[cellIndex] = 1;
   }
 
   const charges = requireArray(board.charges, "Board charges");
@@ -330,6 +404,19 @@ export function deserializeBoard(source: string): ImportedBoard {
           `vertical crossing charge at (${x}, ${y})`,
         ) as Charge;
         world.setCrossingCharges(x, y, horizontal, vertical);
+      }
+    }
+  }
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const cellIndex = y * width + x;
+      if (hasFurnaceState[cellIndex] === 1) {
+        world.restoreFurnaceProgress(
+          x,
+          y,
+          expectDefined(furnaceProgressByCell[cellIndex], "imported furnace progress"),
+        );
       }
     }
   }

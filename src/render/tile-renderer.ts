@@ -445,7 +445,7 @@ function drawDecoration(
       context.fill();
       context.restore();
       break;
-    case TileDecorationStyle.Metal: {
+    case TileDecorationStyle.Iron: {
       const rivetOffset = size * 0.26;
       const rivetRadius = Math.max(1, size * 0.05);
       context.beginPath();
@@ -454,6 +454,44 @@ function drawDecoration(
       drawDot(context, left + rivetOffset, top + size - rivetOffset, rivetRadius);
       drawDot(context, left + size - rivetOffset, top + size - rivetOffset, rivetRadius);
       context.fill();
+      break;
+    }
+    case TileDecorationStyle.Furnace: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.fillStyle = "#241812";
+      context.beginPath();
+      context.moveTo(-size * 0.24, size * 0.2);
+      context.lineTo(-size * 0.2, -size * 0.2);
+      context.quadraticCurveTo(0, -size * 0.34, size * 0.2, -size * 0.2);
+      context.lineTo(size * 0.24, size * 0.2);
+      context.closePath();
+      context.fill();
+      context.strokeStyle = definition.decorationColor;
+      context.lineWidth = Math.max(1.5, size * 0.055);
+      context.stroke();
+      context.fillStyle = outputCharge === 1 ? "#ff9f43" : "#5a3024";
+      context.beginPath();
+      context.moveTo(0, -size * 0.22);
+      context.bezierCurveTo(
+        size * 0.14,
+        -size * 0.06,
+        size * 0.1,
+        size * 0.1,
+        0,
+        size * 0.14,
+      );
+      context.bezierCurveTo(
+        -size * 0.12,
+        size * 0.06,
+        -size * 0.08,
+        -size * 0.08,
+        0,
+        -size * 0.22,
+      );
+      context.fill();
+      context.restore();
       break;
     }
     case TileDecorationStyle.Conduit:

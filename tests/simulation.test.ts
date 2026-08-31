@@ -240,8 +240,8 @@ describe("world editing", () => {
   it("welds a tile to every eligible occupied neighbor", () => {
     const world = new World(3, 3);
     world.place(1, 1, TileKind.Magnet, Direction.Right);
-    world.place(0, 1, TileKind.Metal);
-    world.place(2, 1, TileKind.Metal);
+    world.place(0, 1, TileKind.Iron);
+    world.place(2, 1, TileKind.Iron);
     world.place(1, 0, TileKind.Stone);
     world.place(1, 2, TileKind.Sand);
 
@@ -270,9 +270,9 @@ describe("directional magnets", () => {
   it("rejects the magnet's facing weld and removes a weld exposed by rotation", () => {
     const world = new World(3, 3);
     const magnetId = world.place(1, 1, TileKind.Magnet, Direction.Right);
-    world.place(0, 1, TileKind.Metal);
-    world.place(2, 1, TileKind.Metal);
-    world.place(1, 2, TileKind.Metal);
+    world.place(0, 1, TileKind.Iron);
+    world.place(2, 1, TileKind.Iron);
+    world.place(1, 2, TileKind.Iron);
 
     expect(world.canWeld(1, 1, 2, 1)).toBe(false);
     expect(world.setWeld(1, 1, 2, 1, true)).toBe(false);
@@ -289,7 +289,7 @@ describe("directional magnets", () => {
     const world = new World(3, 4);
     world.place(1, 2, TileKind.Magnet, Direction.Right);
     world.place(1, 3, TileKind.Platform);
-    const metalId = world.place(2, 0, TileKind.Metal);
+    const metalId = world.place(2, 0, TileKind.Iron);
     const simulation = new Simulation(world);
 
     simulation.step();
@@ -302,7 +302,7 @@ describe("directional magnets", () => {
   it("lets an unsupported attracting pair fall together", () => {
     const world = new World(3, 4);
     const magnetId = world.place(1, 0, TileKind.Magnet, Direction.Right);
-    const metalId = world.place(2, 0, TileKind.Metal);
+    const metalId = world.place(2, 0, TileKind.Iron);
     const simulation = new Simulation(world);
 
     expect(simulation.step()).toBe(2);
@@ -313,7 +313,7 @@ describe("directional magnets", () => {
   it("falls with an unsupported body beneath an attracting pair", () => {
     const world = new World(3, 5);
     const magnetId = world.place(1, 0, TileKind.Magnet, Direction.Down);
-    const metalId = world.place(1, 1, TileKind.Metal);
+    const metalId = world.place(1, 1, TileKind.Iron);
     const stoneId = world.place(1, 2, TileKind.Stone);
     const simulation = new Simulation(world);
 
@@ -326,7 +326,7 @@ describe("directional magnets", () => {
   it("holds a falling magnet when it reaches fixed metal", () => {
     const world = new World(3, 5);
     const magnetId = world.place(1, 0, TileKind.Magnet, Direction.Right);
-    world.place(2, 2, TileKind.Metal);
+    world.place(2, 2, TileKind.Iron);
     world.place(2, 3, TileKind.Platform);
     world.setWeld(2, 2, 2, 3, true);
     const simulation = new Simulation(world);

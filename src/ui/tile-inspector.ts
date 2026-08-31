@@ -1,3 +1,4 @@
+import { furnaceRecipeFor } from "../simulation/furnace";
 import {
   Direction,
   orientedSides,
@@ -68,6 +69,8 @@ export class TileInspector {
   private readonly orientationRow: HTMLElement;
   private readonly orientation: HTMLElement;
   private readonly movement: HTMLElement;
+  private readonly furnaceRow: HTMLElement;
+  private readonly furnace: HTMLElement;
   private readonly weldable: HTMLElement;
   private readonly welds: HTMLElement;
   private readonly circuitRow: HTMLElement;
@@ -94,6 +97,8 @@ export class TileInspector {
     this.orientationRow = requiredDescendant(root, "[data-inspector-orientation-row]");
     this.orientation = requiredDescendant(root, "[data-inspector-orientation]");
     this.movement = requiredDescendant(root, "[data-inspector-movement]");
+    this.furnaceRow = requiredDescendant(root, "[data-inspector-furnace-row]");
+    this.furnace = requiredDescendant(root, "[data-inspector-furnace]");
     this.weldable = requiredDescendant(root, "[data-inspector-weldable]");
     this.welds = requiredDescendant(root, "[data-inspector-welds]");
     this.circuitRow = requiredDescendant(root, "[data-inspector-circuit-row]");
@@ -146,6 +151,30 @@ export class TileInspector {
     this.attractionRow.hidden = definition.attractionRange === 0;
     if (definition.attractionRange > 0) {
       this.attraction.textContent = `${DIRECTION_NAMES[orientation]} · ${definition.attractionRange} CELL`;
+    }
+    this.furnaceRow.hidden = kind !== TileKind.Furnace;
+    if (kind === TileKind.Furnace) {
+      const targetX = position.x + DIRECTION_X[orientation];
+      const targetY = position.y + DIRECTION_Y[orientation];
+      const targetKind = targetX >= 0 &&
+          targetX < this.world.width &&
+          targetY >= 0 &&
+          targetY < this.world.height
+        ? this.world.kindAt(targetX, targetY)
+        : TileKind.Empty;
+      const recipe = furnaceRecipeFor(targetKind);
+      if (recipe === undefined) {
+        this.furnace.textContent = "IDLE · NO BAKEABLE TARGET";
+      } else {
+        const progress = this.world.furnaceProgressAt(position.x, position.y);
+        const status = progress === 0
+          ? "READY"
+          : this.world.chargeAt(position.x, position.y) === 1 ? "BAKING" : "PAUSED";
+        this.furnace.textContent =
+          `${status} · ${TILE_DEFINITIONS[recipe.input].name.toUpperCase()} → ` +
+          `${TILE_DEFINITIONS[recipe.output].name.toUpperCase()} · ` +
+          `${progress}/${recipe.bakeTime} TICKS`;
+      }
     }
     const hasCircuit = definition.circuitPorts !== 0;
     this.circuitRow.hidden = !hasCircuit;
