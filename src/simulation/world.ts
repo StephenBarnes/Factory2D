@@ -304,6 +304,39 @@ export class World {
       this.revisionValue += 1;
     }
   }
+
+  applyDeliveryAbsorptions(targetIndices: Int32Array): void {
+    if (targetIndices.length !== this.cellCount) {
+      throw new RangeError("Delivery target buffer must match the world cell count");
+    }
+
+    let absorptionCount = 0;
+    for (let deliveryIndex = 0; deliveryIndex < this.cellCount; deliveryIndex += 1) {
+      const targetIndex = expectDefined(targetIndices[deliveryIndex], "delivery target index");
+      if (targetIndex < 0) {
+        continue;
+      }
+      this.assertIndex(targetIndex);
+      if (this.kinds[deliveryIndex] !== TileKind.Delivery) {
+        throw new Error(`Non-delivery tile at index ${deliveryIndex} cannot absorb a target`);
+      }
+      if (this.kinds[targetIndex] === TileKind.Empty) {
+        throw new Error(`Delivery box at index ${deliveryIndex} lost its absorption target`);
+      }
+      absorptionCount += 1;
+    }
+
+    if (absorptionCount === 0) {
+      return;
+    }
+    for (let deliveryIndex = 0; deliveryIndex < this.cellCount; deliveryIndex += 1) {
+      const targetIndex = expectDefined(targetIndices[deliveryIndex], "delivery target index");
+      if (targetIndex >= 0) {
+        this.clearIndex(targetIndex);
+      }
+    }
+    this.revisionValue += 1;
+  }
   isWelded(x1: number, y1: number, x2: number, y2: number): boolean {
     const first = this.indexOf(x1, y1);
     const second = this.indexOf(x2, y2);

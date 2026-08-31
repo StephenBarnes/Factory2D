@@ -19,6 +19,7 @@ export const enum TileKind {
   IronOre = 17,
   Furnace = 18,
   Conveyor = 19,
+  Delivery = 20,
 }
 
 export const enum Direction {
@@ -55,6 +56,7 @@ export const enum TileDecorationStyle {
   WireCrossing = 14,
   Furnace = 15,
   Conveyor = 16,
+  Delivery = 17,
 }
 
 export interface TileDefinition {
@@ -556,6 +558,29 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     shadow: "#30383e",
     decorationStyle: TileDecorationStyle.Conveyor,
     decorationColor: "#d6c38b",
+  },
+  [TileKind.Delivery]: {
+    name: "Delivery Box",
+    boardCode: "D",
+    palette: {
+      order: 19,
+      description: "Absorbs a front block matching the block behind it and pulses +1 sideways",
+      shortcut: null,
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Right | WeldSide.Left,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#66513d",
+    shadow: "#392b20",
+    decorationStyle: TileDecorationStyle.Delivery,
+    decorationColor: "#e8c987",
   },
 };
 

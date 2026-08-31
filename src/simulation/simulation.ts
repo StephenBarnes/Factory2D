@@ -58,6 +58,8 @@ export class Simulation {
   private readonly nextFurnaceTargetIds: Uint32Array;
   private readonly furnaceTransformTargetIndices: Int32Array;
   private readonly furnaceTransformKinds: Uint8Array;
+  private readonly deliveryTargetOwners: Int32Array;
+  private readonly deliveryAbsorbTargetIndices: Int32Array;
 
   constructor(world: World) {
     this.world = world;
@@ -97,11 +99,15 @@ export class Simulation {
     this.nextFurnaceTargetIds = new Uint32Array(world.cellCount);
     this.furnaceTransformTargetIndices = new Int32Array(world.cellCount);
     this.furnaceTransformKinds = new Uint8Array(world.cellCount);
+    this.deliveryTargetOwners = new Int32Array(world.cellCount);
+    this.deliveryAbsorbTargetIndices = new Int32Array(world.cellCount);
   }
 
   step(): number {
+    this.collectDeliveryAbsorptions();
     this.resolveCircuits();
     this.resolveFurnaces();
+    this.resolveDeliveries();
     this.collectWeldedBodies();
     this.connectMagneticallyAttractedBodies();
     this.collectBodyMembers();
@@ -164,11 +170,19 @@ export class Simulation {
     }
 
     for (let index = 0; index < this.world.cellCount; index += 1) {
-      if (this.world.kindAtIndex(index) !== TileKind.Sensor) {
+      const kind = this.world.kindAtIndex(index);
+      let outputCharge: Charge;
+      if (kind === TileKind.Sensor) {
+        outputCharge = this.world.sensorOutputAtIndex(index);
+      } else if (kind === TileKind.Delivery) {
+        outputCharge = expectDefined(
+          this.deliveryAbsorbTargetIndices[index],
+          "delivery absorption target",
+        ) >= 0 ? 1 : 0;
+      } else {
         continue;
       }
 
-      const outputCharge = this.world.sensorOutputAtIndex(index);
       if (outputCharge !== 0) {
         const root = this.findCircuitRoot(this.circuitNode(index, Direction.Up));
         this.circuitDriveSums[root] =
@@ -292,6 +306,48 @@ export class Simulation {
       this.nextCircuitCharges,
       this.nextCrossingVerticalCharges,
     );
+  }
+
+  private collectDeliveryAbsorptions(): void {
+    this.deliveryTargetOwners.fill(-1);
+    this.deliveryAbsorbTargetIndices.fill(-1);
+
+    for (let index = 0; index < this.world.cellCount; index += 1) {
+      if (this.world.kindAtIndex(index) !== TileKind.Delivery) {
+        continue;
+      }
+      const orientation = this.world.orientationAtIndex(index);
+      const targetIndex = this.neighborIndex(index, orientation);
+      const referenceIndex = this.neighborIndex(index, oppositeDirection(orientation));
+      if (targetIndex < 0 || referenceIndex < 0) {
+        continue;
+      }
+      const targetKind = this.world.kindAtIndex(targetIndex);
+      if (
+        targetKind === TileKind.Empty ||
+        targetKind !== this.world.kindAtIndex(referenceIndex)
+      ) {
+        continue;
+      }
+
+      const existingOwner = expectDefined(
+        this.deliveryTargetOwners[targetIndex],
+        "delivery target owner",
+      );
+      if (existingOwner === -1) {
+        this.deliveryTargetOwners[targetIndex] = index;
+        this.deliveryAbsorbTargetIndices[index] = targetIndex;
+      } else {
+        if (existingOwner >= 0) {
+          this.deliveryAbsorbTargetIndices[existingOwner] = -1;
+        }
+        this.deliveryTargetOwners[targetIndex] = -2;
+      }
+    }
+  }
+
+  private resolveDeliveries(): void {
+    this.world.applyDeliveryAbsorptions(this.deliveryAbsorbTargetIndices);
   }
 
   private resolveFurnaces(): void {

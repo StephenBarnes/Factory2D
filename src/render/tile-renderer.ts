@@ -498,6 +498,39 @@ function drawDecoration(
       context.restore();
       break;
     }
+    case TileDecorationStyle.Delivery: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.fillStyle = "#241a12";
+      context.strokeStyle = definition.decorationColor;
+      context.lineWidth = Math.max(1.5, size * 0.055);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.beginPath();
+      context.moveTo(-size * 0.25, -size * 0.29);
+      context.lineTo(-size * 0.25, size * 0.23);
+      context.lineTo(size * 0.25, size * 0.23);
+      context.lineTo(size * 0.25, -size * 0.29);
+      context.lineTo(size * 0.13, -size * 0.18);
+      context.lineTo(-size * 0.13, -size * 0.18);
+      context.closePath();
+      context.fill();
+      context.stroke();
+      context.beginPath();
+      context.moveTo(0, -size * 0.3);
+      context.lineTo(0, size * 0.06);
+      context.moveTo(-size * 0.1, -size * 0.04);
+      context.lineTo(0, size * 0.06);
+      context.lineTo(size * 0.1, -size * 0.04);
+      context.stroke();
+      context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
+      context.beginPath();
+      drawDot(context, 0, size * 0.16, Math.max(1.5, size * 0.06));
+      context.fill();
+      context.restore();
+      break;
+    }
     case TileDecorationStyle.Conveyor: {
       const inset = size * 0.2;
       context.save();
