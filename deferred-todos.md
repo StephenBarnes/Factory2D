@@ -3,7 +3,7 @@ Game flow:
 * Implement a text-box tool that places and edits text boxes on the game screen. Useful for tutorial puzzles, and also for players that want to label/annotate their designs. Model them separate from the component grid - they're not grid-aligned and don't occupy tiles.
 
 Components useful for designing puzzles in-world:
-* Add a charge counter component - counts up from zero every tick it receives a charge on the back, and outputs a charge once it reaches a configured threshold. Requires some kind of UI for setting the threshold - maybe open a modal input box once the block is placed, and when pressing the F key with mouse over the block. (We'll need similar modals for some other configurable components, like ROMs.) Render the current count on the block.
+* Add a charge counter component - counts up from zero every tick it receives a charge on the back, and outputs a charge once it reaches a configured threshold. Requires some kind of UI for setting the threshold - maybe open a modal input box once the block is placed, and when pressing the E key with mouse over the block. (We'll need similar modals for some other configurable components, like ROMs.) Render the current count on the block.
 * Add a dispenser component that dispenses a copy of the block behind it, creating the duplicate in front of it, when it receives a charge on the side.
 * Add ROM component: +1/-1 on one side moves cursor, other sides output the stored value, modal allows setting ROM size and value in each cell.
 * Add a signal-monitor component, and ROM-grapher component. In the puzzle screen, add an additional panel on the right that shows a readout of the signal received by the signal monitor every tick, and also shows a graph of the values in any ROM adjacent to the ROM-monitor. This is for puzzles - we can show the signals that the player will receive, the signals we expect them to output, and the actual signal they emit, similar to a Zachtronics game.
@@ -26,6 +26,9 @@ Components:
 * Grinder blocks that process a block in front into a product block - exactly like the furnace, but with a distinct table of recipes and different appearance (and later animation and sound).
 * A drill/destroyer block that destroys the block in front of it.
 * Add an indestructible flag. Blocks like crushers and drills should not be able to destroy these. Needed to prevent some exploits when solving puzzles, e.g. by drilling into the ground and activating the victory block.
+* Replace the current magnet with an electromagnet. Positive and negative charges make it switch polarity. Both nonzero polarities stick to iron. Like magnets repel, opposite magnets attract.
+* Maybe add static non-controllable magnets, which are also non-directional.
+* Component that makes its entire welded body immune to gravity. Can still be pushed down by an independent body on top that falls under gravity.
 
 Performance:
 * Profile to determine if there's any need to optimize, and if so, what to optimize.
@@ -39,7 +42,7 @@ Circuit network:
 * Figure out how to handle wires that become split or welded together while a game runs. May already be handled correctly.
 * Maybe extend the set of charges (0, +1, -1) to add orthogonal +i and -i charges, or add a 2-wire tile with components for reading the different wires.
 * Maybe add min() and max() gates.
-* Implement a "rune array" component for miniaturizing circuits. When placed, or when clicking on the array with array tile selected, or when pressing F key with mouse over it, open a modal box that allows configuring it by placing "miniature" components on a 5x5 grid "inside" the array. The 4 edge-center tiles of the array's grid are logically connected to the rune array's 4 sides.
+* Implement a "rune array" component for miniaturizing circuits. When placed, or when clicking on the array with array tile selected, or when pressing E key with mouse over it, open a modal box that allows configuring it by placing "miniature" components on a 5x5 grid "inside" the array. The 4 edge-center tiles of the array's grid are logically connected to the rune array's 4 sides.
 * Add a system of mechanical devices, a bit like our current ternary circuit system (conduits, inverter, etc.) but with different visuals and different mechanics. Since the game is 2D, we're restricted to 2D motion. Add chain drives that can rotate clockwise (+1), counterclockwise (-1), or stay still. Add gears (closer to one edge of the cell) that rotate in the inverse direction from that cell. Tint rotating components blue/red to make charges more visually distinct. Add equivalents for our runes: sensor rune becomes pressure plate, inverter is just a gear, wire-crossing is crossed chains. Others I'm not sure about: combiner, rectifier, multiplier, subtractor, sensor, selector. Also motors and generators to convert between runes/conduits and these clockwork components. We may add this as a later alternative to runes and conduits, for additional challenge.
 
 Don't add, for circuit network, because they can be built from a few existing components:
@@ -55,12 +58,17 @@ Visuals:
 Game feel:
 * Try out alternate easing for movements. Maybe define per-block easing.
 * Add sounds. On block placement/removal, welding/unwelding. On victory block triggering.
+* Add blocks that play a chime or other sound when charged.
 
 UI:
 * Add a selection tool, for selecting a rectangular region of tiles and copying, pasting, moving, and rotating.
-* Add a way to save a selected region in a list of saved machines, and import from that. Make it usable for transferring partial machines from one puzzle solution to another.
+* Add a way to save a selected region in a list of saved machines, and import from that. Make it usable for transferring partial machines from one puzzle solution to another. Requires a clipboard manager button and panel.
+* UI for creating multiple test cases for a puzzle. Needed so that we can create and export puzzles efficiently.
 * Add a way to copy selection to a clipboard, for transferring machines between puzzles.
 * When saving an image using the image button, crop out parts of the screen that are over the background, outside the grid, if this can be implemented easily.
 * Further compact orientations and charges in the export/import format, possibly storing charges per network instead of per tile. More complex per-tile state (e.g. furnace stored ticks or target/delivery-block configuration) can remain verbose.
 * Implement undo and redo when editing.
 * Check for any potential bugs caused by listening only to mouse-up and mouse-down events, and assuming the mouse button is held down until a mouse-up is received. Can cause accidental deletion or placing of tiles if the mouse-up event is hidden by other window events.
+* Add step-forward and step-back to the control panel at the bottom.
+* Add hotkeys for game controls: step-forward, step-back, reset, clear, and speed controls.
+* Show current price in the control panel. Animate text like "+T2" jumping off it as components are placed.

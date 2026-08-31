@@ -1,5 +1,6 @@
 import "./styles.css";
 import type { GridRegion } from "./game/grid-region";
+import { WorkshopEditingState } from "./game/workshop-editing-state";
 import type { PuzzleComponents } from "./game/puzzle-components";
 import {
   loadCompletedPuzzleIds,
@@ -66,6 +67,7 @@ interface GameSession {
   previousWorld: World;
   readonly editableRegion: GridRegion | null;
   readonly availableComponents: PuzzleComponents | null;
+  readonly editingState: WorkshopEditingState;
 }
 
 function createGameSession(
@@ -80,6 +82,7 @@ function createGameSession(
     previousWorld: world.clone(),
     editableRegion,
     availableComponents,
+    editingState: new WorkshopEditingState(editableRegion !== null),
   };
 }
 
@@ -192,17 +195,34 @@ overlayResizeObserver.observe(inspectorPanel);
 updateViewportInsets();
 
 function updateTransportState(): void {
+  const editingEnabled = activeSession.editingState.editable;
   playButton.textContent = running ? "Ⅱ PAUSE" : "▶ RUN";
   playButton.classList.toggle("running", running);
   stateLight.classList.toggle("running", running);
-  stateLabel.textContent = running ? "SIMULATING" : "BUILD MODE";
+  stateLabel.textContent = running
+    ? "SIMULATING"
+    : editingEnabled ? "BUILD MODE" : "RESET TO EDIT";
   stepButton.disabled = running;
+  clearButton.disabled = !editingEnabled;
+  for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
+    item.disabled = !editingEnabled;
+  }
+}
+
+function markSimulationStarted(): boolean {
+  const wasEditable = activeSession.editingState.editable;
+  activeSession.editingState.beginSimulation();
+  return wasEditable !== activeSession.editingState.editable;
 }
 
 function setRunning(nextRunning: boolean): void {
+  const editingChanged = nextRunning && markSimulationStarted();
   running = nextRunning;
   accumulatedTime = 0;
   updateTransportState();
+  if (editingChanged) {
+    refreshPointerHover();
+  }
 }
 function persistActiveSession(): void {
   activeSession.world = world;
@@ -279,6 +299,7 @@ function showScreen(screen: AppScreen): void {
     gameScreen.setAttribute("aria-label", `${puzzle.name} puzzle workshop`);
   }
   configureComponentPalette();
+  updateTransportState();
   importButton.disabled = activeSession.editableRegion !== null;
 
   updateViewportInsets();
@@ -307,6 +328,10 @@ function updateAnimationControlState(): void {
 
 
 function advanceSimulation(duration: number, startedAt = performance.now()): void {
+  if (markSimulationStarted()) {
+    updateTransportState();
+    refreshPointerHover();
+  }
   previousWorld.copyFrom(world);
   simulation.step();
   consumeActivePuzzleResult();
@@ -326,7 +351,9 @@ function easedAnimationProgress(currentTime: number): number {
 }
 
 function refreshPointerHover(): void {
-  if (selectedTool === "weld") {
+  if (!activeSession.editingState.editable) {
+    renderer.setHover(hoveredCell);
+  } else if (selectedTool === "weld") {
     renderer.setHoverEdge(hoveredEdge);
   } else {
     renderer.setHover(
@@ -486,7 +513,7 @@ function editCellLine(
   erase: boolean,
   weldPlacedTiles: boolean,
 ): void {
-  if (running || (!erase && !componentIsAvailable(selectedKind))) {
+  if (!activeSession.editingState.editable || (!erase && !componentIsAvailable(selectedKind))) {
     return;
   }
 
@@ -538,7 +565,7 @@ function editCellLine(
 
 function editWeld(edge: GridEdge, erase: boolean): void {
   if (
-    !running &&
+    activeSession.editingState.editable &&
     canEditEdge(edge.x1, edge.y1, edge.x2, edge.y2) &&
     world.setWeld(edge.x1, edge.y1, edge.x2, edge.y2, !erase)
   ) {
@@ -552,7 +579,7 @@ function editWeldSegment(
   endpointEdge: GridEdge | null,
   erase: boolean,
 ): void {
-  if (running) {
+  if (!activeSession.editingState.editable) {
     return;
   }
 
@@ -616,14 +643,19 @@ speedSelect.addEventListener("change", () => {
 });
 
 
-resetButton.addEventListener("click", () => {
+function resetSimulation(): void {
   setRunning(false);
+  activeSession.editingState.resetSimulation();
   simulation.resetTo(baseline);
   finishAnimation();
-});
+  updateTransportState();
+  refreshPointerHover();
+}
+
+resetButton.addEventListener("click", resetSimulation);
 
 clearButton.addEventListener("click", () => {
-  if (running) {
+  if (!activeSession.editingState.editable) {
     return;
   }
   if (activeSession.editableRegion === null) {
@@ -716,7 +748,7 @@ canvas.addEventListener("pointerdown", (event) => {
   const cell = renderer.cellFromGridPoint(point);
   const gesture = pointerGesture(event.button, event.altKey);
 
-  if (gesture === null || (running && gesture === "edit")) {
+  if (gesture === null || (!activeSession.editingState.editable && gesture === "edit")) {
     return;
   }
 
@@ -899,7 +931,11 @@ document.addEventListener("keydown", (event) => {
     refreshPointerHover();
     return;
   }
-  if (selectedTool === "tile" && TILE_DEFINITIONS[selectedKind].usesOrientation && !running) {
+  if (
+    selectedTool === "tile" &&
+    TILE_DEFINITIONS[selectedKind].usesOrientation &&
+    activeSession.editingState.editable
+  ) {
     let orientation: Direction | null = null;
     if (event.code === "KeyQ") {
       orientation = ((selectedOrientation + 3) & 3) as Direction;
@@ -928,9 +964,7 @@ document.addEventListener("keydown", (event) => {
   } else if (event.code === "KeyN" && !running) {
     advanceSimulation(animationsEnabled() ? MANUAL_STEP_ANIMATION_MS : 0);
   } else if (event.code === "KeyR") {
-    setRunning(false);
-    simulation.resetTo(baseline);
-    finishAnimation();
+    resetSimulation();
   } else {
     const shortcutKind = tileKindsByShortcut[event.code];
     if (shortcutKind !== undefined) {

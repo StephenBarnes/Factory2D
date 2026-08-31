@@ -429,10 +429,14 @@ canvas {
   transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
 }
 
-.palette-item:hover {
+.palette-item:hover:not(:disabled) {
   border-color: #3e4d5a;
   background: #18222c;
   transform: translateX(2px);
+}
+.palette-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
 }
 
 .palette-item.selected {

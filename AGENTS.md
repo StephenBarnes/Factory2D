@@ -103,7 +103,7 @@ The game is in early development. Currently implemented:
 * Deterministic tests cover conveyor force direction, gravity priority, magnetic ceiling traversal and detachment, normal magnetic constraints, neutral stopping, reaction forces, weld isolation, complete push chains, delivery absorption and conflicts, victory results and conflicts, board round-trips, gravity chains, sand overhangs, welded and magnetically constrained bodies, furnace recipes, fixed and first-tick spark circuit drivers, gate truth tables, conflicts, boundaries, stable IDs, reset behavior, rendering, and pointer gesture classification.
 * Board export and import controls round-trip deterministic, versioned JSON with compact fixed-code ASCII tile and weld grids plus the latched puzzle result, sparse non-up orientations, nonzero circuit charges, independent wire-crossing axis charges, and in-progress furnace state. Weld cells use `.`, `-`, `|`, or `+` for no forward weld, right, down, or both. Exports up to one million characters are also copied to the clipboard. Imports derive dimensions from the tile grid, validate both grids and all sparse state before replacing the live board, support board sizes up to 400x300, and reconstruct fresh runtime tile IDs because IDs are intentionally excluded from the file.
 * Tagged screen routing supports the main menu, sandbox, and per-definition puzzle workshops. Development still boots directly into the sandbox through a single `INITIAL_SCREEN` setting. The responsive main menu presents the sandbox and a prerequisite-gated puzzle route; puzzle definitions own names, goals, unlock prerequisites, and fresh initial-world factories, while each visited workshop retains an independent session. A puzzle's latched victory result marks it complete after a simulation step, persists completed puzzle IDs in versioned local storage, and unlocks dependent puzzles on the menu.
-* Puzzle definitions provide reusable unions of rectangular editable regions. Puzzle workshops render their boundaries as dotted gold outlines, restrict cell edits to the region, allow weld edits on internal and perimeter edges, and keep the outer grid boundary non-interactive. Clearing and board imports preserve fixed terrain outside the region; sandbox editing remains unrestricted.
+* Puzzle definitions provide reusable unions of rectangular editable regions. Puzzle workshops render their boundaries as dotted gold outlines, restrict cell edits to the region, allow weld edits on internal and perimeter edges, and keep the outer grid boundary non-interactive. Starting or stepping a puzzle simulation locks board editing until reset, while sandbox editing remains available during simulation. Clearing and board imports preserve fixed terrain outside the region.
 * Each puzzle owns a validated, priced component catalog. Puzzle workshops show only those components and their costs, reject unavailable palette shortcuts and picks, and enforce availability again at placement; the sandbox retains the complete unpriced palette.
 
 ## Code map
@@ -117,6 +117,7 @@ The game is in early development. Currently implemented:
 * `src/game/grid-region.ts` — Validated unions of axis-aligned grid rectangles with cell, edge, board-bounds, and deduplicated boundary queries.
 * `src/game/puzzle-progress.ts` — Versioned local-storage serialization, validation, and victory recording for completed puzzle IDs.
 * `src/game/screen.ts` — Tagged application-screen contract and the single development initial-screen setting.
+* `src/game/workshop-editing-state.ts` — Per-session puzzle edit locking after simulation starts, with reset and unrestricted sandbox policies.
 * `src/render/canvas-renderer.ts` — Responsive Canvas 2D grid, editable-region boundary rendering and invalid-hover feedback, overlay-aware camera fitting, bounded pan and pointer-anchored zoom, revision-and-scale-keyed welded-body geometry cache, stable-ID movement interpolation in every adjacent direction, hit testing, placement previews, and hover feedback.
 * `src/render/grid-drag.ts` — Board-clipped tile-drag endpoints and continuous weld-edge traversal between pointer events.
 * `src/render/pointer-gesture.ts` — Button/modifier gesture classification and middle-click drag-threshold policy.
@@ -146,6 +147,7 @@ The game is in early development. Currently implemented:
 * `tests/tile.test.ts` — Directional and non-directional tile orientation resolution regression tests.
 * `tests/puzzles.test.ts` — Puzzle ordering, prerequisite unlocking, priced component-catalog validation, and independent initial-world factory tests.
 * `tests/puzzle-progress.test.ts` — Puzzle victory recording, deterministic persistence, initial state, and malformed stored-progress tests.
+* `tests/workshop-editing-state.test.ts` — Puzzle lock/reset and unrestricted sandbox editing-policy tests.
 * `vite.config.ts` — Vite configuration with Vitest's Node test environment.
 * `tsconfig.json` — Strict browser TypeScript and project build configuration.
 
@@ -154,12 +156,18 @@ The game is in early development. Currently implemented:
 Game flow:
 * When selecting a puzzle, before jumping straight into the puzzle's game screen, add a puzzle info screen. It should show a description of the puzzle, with space for features below.
 * On the puzzle info screen, show a list of saved solutions and their scores (placeholder scores for now), and have buttons to create a new solution, duplicate an existing solution, edit selected solution, and delete solutions.
-* Change the editing model when solving puzzles: the player edits the initial board state, but as soon as they've played/run the simulation, they can no longer edit, they have to reset. Because puzzles won't allow modifying the board halfway through running a solution. We can still allow mid-run edits in the sandbox.
 * Add a way to specify multiple test cases for each puzzle. These will be modifications to the puzzle definition, usually small, e.g. changing the values stored in one ROM component. The player builds one solution which must work for all test cases.
 * Add a button to test the current solution - runs all test cases in series, with some time limit (defined per puzzle or test case), then checks if all resulted in victory, and displays a report with the puzzle's success/failure, with buttons to continue editing or go back to puzzle info screen. As a follow-up, also compute and display score: price, cycles, footprint.
 
 UI:
-* Make the left palette more compact. For tiles, show only the tile image, price, and hotkey, not name or description. On mouseover of palette tiles, show the tile inspector/detail panel with more info: the palette entry's name and description.
+* Rework overall UI structure. Anchor the floating palette panel (on the left) and floating control panel (bottom) to the screen borders, instead of floating on top of the visible grid. Limit the `#game-canvas` to the rectangular region not covered by those two panels, instead of occupying the entire background.
+* Organize the palette into sections for different categories: raw materials, mechanisms (conveyor belt), circuit components (sensor, conduit, gates), machines (furnace, magnet), and puzzle tools (delivery box, victory block). Keep the tools at the top (currently only weld tool), with hotkeys shown (Ctrl for weld).
+* Make the left palette more compact. For tiles, show only the tile image, and hotkey overlayed in the corner of the tile image; not name or description or price. Show these tiles compactly in a grid, with multiple per row.
+* On mouseover of palette tiles, show the tile inspector panel with more info: the palette entry's name, price, hotkey, and description. (Currently the tile inspector panel only displays tile instances on the grid; need to rework it to also handle tile kinds.)
+* Small: Currently if I switch speed to 60 ticks per second, and then back to 5 ticks per second, animation remains turned off, which is an unexpected/unintentional side effect. We should instead leave the animation checkbox checked and not greyed-out/disabled, but just treat it as unchecked when running at 60 ticks per second, i.e. animate iff `checkbox ticked AND speed != 60`.
+* Modify hotkeys. Instead of an arbitrary predefined 0-9 key for some things, rather procedurally decide the hotkeys based on the palette available for sandbox or for a given puzzle. Assign hotkeys 1-9 and 0 to the first 10 palette entries, and no hotkey to the rest.
+* Add ctrl + mousewheel to scroll through palette entries.
+* (1) Remove Q/E rotation keys; we already have WASD for that. Then modify block-picking on middle mouse button: (2) Add Q key as alternative for picking block under mouse. (3) When using middle-click or Q on an empty block, instead pick the last selected tile. If I middle-click on blocks in this order: `sand, iron, iron, empty`, then the selected block after each click is `sand, iron, iron, sand`.
 
 More items in `deferred-todos.md`.
 
@@ -171,7 +179,7 @@ Handle unexpected undefineds loudly. When a lookup is logically guaranteed to su
 
 Prefer a new focused file for a new concern.
 
-Let's target one screen of blocks, maybe 400x300 tiles at most, on low-end hardware, animated at 60 FPS, with maybe 5 sim update steps per second.
+For performance, target one screen of blocks, 400x300 tiles at most, on low-end hardware, animated at 60 FPS, with 5 sim update steps per second.
 
 No legacy compatibility is required. We are in early development. Make clean cutovers and remove obsolete callsites/aliases.
 
