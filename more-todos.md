@@ -4,6 +4,7 @@ Game flow:
 * DEFER(until we have selection tool) Allow converting selection to the allowed placement region with a button, only in the sandbox. For designing shareable puzzles.
 * DEFER(until test JSON format) Implement a text-box tool that places and edits text boxes on the game screen. Useful for tutorial puzzles, and also for players that want to label/annotate their designs. Model them separate from the component grid - they're not grid-aligned and don't occupy tiles.
 * DEFER Add back-end server and database. Probably Cloudflare Workers + D1 + R2. Then make the game request histogram data and shared puzzles, and allow submitting scores and shared puzzles.
+* DEFER Use `crypto.randomUUID()` to assign each install an ID. Allow voting community-created puzzles up and down. We can assume users aren't malicious, this is a zero-stakes indie game; expect under 10 players per day. We want to avoid setting up a whole auth system or requiring email addresses, etc. Using a simple unique ID allows exploits (e.g. clear browser data and double-vote) but we'll assume nobody does that. Version the database and roll back manually if needed. If the game becomes popular enough to need more than that, upgrade to a more robust system.
 
 General:
 * Allow interacting with some components using a modal box. Modal is opened when placing the block (for some of them, depending on a flag) and by pressing E while mouse is over them. Show control prompt in the tile inspector panel.
@@ -36,6 +37,7 @@ Components:
 * Furnaces could have special behavior if said neighbor is surrounded by certain other neighbors.
 * Furnaces could trigger a block to weld to neighbors after cooking it.
 * Furnaces could have stages, e.g. cookie dough -> cookie -> burnt cookie, creating timing challenges.
+* Make the glass block look transparent. Add a transparent flag in the tile definition. Make the sensor not detect transparent blocks.
 
 Performance:
 * Profile to determine if there's any need to optimize, and if so, what to optimize.
@@ -75,16 +77,21 @@ UI:
 * Add step-forward and step-back to the control panel at the bottom.
 * Add hotkeys for game controls: step-forward, step-back, reset, clear, and speed controls.
 * Show current price in the control panel. Animate text like "+T2" jumping off it as components are placed.
-* Improve piston extension/retraction animation.
-* Bug: the tile inspector/detail panel should show info on the palette entries while the mouse is over them, and info on the tile under the mouse when the mouse is over a placed tile instance. Currently after clicking on a palette entry, if the mouse then moves away and moves over placed tiles, it still shows the palette entry's info instead of the moused-over tile instance's info, unless the player clicks on empty space.
 * Add shift + mousewheel to scroll through palette entries.
 * Middle-click on palette should act like left-click on palette.
 * The charge sensor rune should not allow circuit connections on the side it's facing, because that connection doesn't do anything. It should allow welds, but not connect to circuits on that side.
 * We'll show a sidebar with all interactions relevant for a given puzzle.
 * Solutions rated by percentile as coal, iron, silver, gold, mithril, etc.
+* Add support for mobile and touch screens.
+* Add an options menu accessed from the main menu.
+* Options menu: Add color-blindness options for people who can't distinguish red and blue circuit wires. Maybe just let them specify colors (from a short menu) for charges +1 and -1.
 
 Visuals:
+* Add backgrounds for puzzles, maybe with parallax as the player pans.
 * For the piston base block, don't show the small rectangle that's meant to represent the head/arm of the piston. Only show it on the combined / retracted base+arm block, and on the extended arm block.
 * Mark the wire crossing in a way that makes it apparent it's a wire-crossing block regardless of how many circuit connections it has. Currently with one wire, or two opposite-side wires connected, it looks like a conduit block except for the background color. Maybe draw the central cross regardless of how many sides are wired.
 * Add animation for the delivery box - animate tiles moving into it, and shrinking, as they're absorbed.
-* Replace the current icon set with more intuitive or pretty symbols, matching the rune theme. Make stone/glass/platform have two parallel lines instead of the Z-lightning-bolt. Block sensor should have angular rune-like eye symbol (hollow diamond with center diamond for the pupil); charge sensor should be the same eye with lighting bolt replacing pupil. Fixed charge should have 3 lighting bolts, not plus symbol and circle. Inverter should be "hagalaz" N/H symbol. Subtractor should mark back with a small plus. Rectifier should be "thurisaz" `|>` instead of current `>|`. Victory block should have "jera" rune symbol. Magnet should be reworked, but defer until we change its mechanics.
+* Replace the current icon set with more intuitive or pretty symbols, matching the rune theme. Make stone/glass/platform have two parallel lines instead of the Z-lightning-bolt. Block sensor should have angular rune-like eye symbol (hollow diamond with center diamond for the pupil); charge sensor should be the same eye with lighting bolt replacing pupil. Fixed charge should have 3 lighting bolts, not plus symbol and circle. Inverter should be "hagalaz" N/H symbol. Subtractor should mark back with a small plus. Rectifier should be "thurisaz" `|>` instead of current `>|`. Victory block should have "jera" rune symbol. Magnet should be reworked, but defer until we change its mechanics. Also give them sensible background colors, e.g. shades of purple for all sensors, teal/blue for all 3-input mathematical transforms.
+* Display truth tables on inspector, for the tooltips.
+* Improve piston extension/retraction animation.
+* Bug: the tile inspector/detail panel should show info on the palette entries while the mouse is over them, and info on the tile under the mouse when the mouse is over a placed tile instance. Currently after clicking on a palette entry, if the mouse then moves away and moves over placed tiles, it still shows the palette entry's info instead of the moused-over tile instance's info, unless the player clicks on empty space.

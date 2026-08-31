@@ -1,10 +1,11 @@
-import { GridRegion } from "./grid-region";
-import { PuzzleComponents } from "./puzzle-components";
-import { Direction, TileKind } from "../simulation/tile";
+import type { GridRegion } from "./grid-region";
+import { parsePuzzleFile, type ParsedPuzzleFile } from "./puzzle-format";
+import type { PuzzleComponents } from "./puzzle-components";
+import { TileKind } from "../simulation/tile";
 import { World } from "../simulation/world";
 import { expectDefined } from "../util/assert";
 
-export type PuzzleId = "first-shift" | "beltworks" | "runic-relay";
+export type PuzzleId = string;
 
 export interface PuzzleDefinition {
   readonly id: PuzzleId;
@@ -24,41 +25,6 @@ function addFloor(world: World): void {
   }
 }
 
-function createFirstShiftWorld(): World {
-  const world = new World(20, 14);
-  addFloor(world);
-  for (let x = 3; x <= 7; x += 1) {
-    world.place(x, 9, TileKind.Platform);
-  }
-  world.place(5, 3, TileKind.Sand);
-  world.place(5, 4, TileKind.Sand);
-  return world;
-}
-
-function createBeltworksWorld(): World {
-  const world = new World(20, 14);
-  addFloor(world);
-  for (let x = 3; x <= 8; x += 1) {
-    world.place(x, 10, TileKind.Platform);
-  }
-  world.place(5, 9, TileKind.Conveyor);
-  world.place(6, 9, TileKind.Conveyor);
-  world.place(7, 9, TileKind.Conveyor);
-  world.place(5, 8, TileKind.Stone);
-  return world;
-}
-
-function createRunicRelayWorld(): World {
-  const world = new World(20, 14);
-  addFloor(world);
-  world.place(7, 9, TileKind.Sensor, Direction.Right);
-  world.place(8, 9, TileKind.Conduit);
-  world.place(9, 9, TileKind.Conduit);
-  world.place(10, 9, TileKind.Inverter, Direction.Right);
-  world.place(11, 9, TileKind.Conduit);
-  world.place(12, 9, TileKind.Conduit);
-  return world;
-}
 
 export function createSandboxWorld(): World {
   const world = new World(20, 14);
@@ -76,69 +42,141 @@ export function createSandboxWorld(): World {
   return world;
 }
 
-export const PUZZLES: readonly PuzzleDefinition[] = [
-  {
-    id: "first-shift",
-    name: "First Shift",
-    description: "A small gravity workshop for the first puzzle flow.",
-    features: ["Gravity", "Restricted build zone"],
-    goal: "Move both loads of sand below the raised platform.",
-    editableRegion: new GridRegion([{ x: 8, y: 2, width: 10, height: 11 }]),
-    availableComponents: new PuzzleComponents([
-      { kind: TileKind.Stone, price: 1 },
-      { kind: TileKind.Platform, price: 3 },
-    ]),
-    prerequisitePuzzleIds: [],
-    createInitialWorld: createFirstShiftWorld,
-  },
-  {
-    id: "beltworks",
-    name: "Beltworks",
-    description: "A conveyor workshop unlocked after the first shift.",
-    goal: "Carry the stone to the far side of the platform.",
-    features: ["Conveyor belts", "Powered mechanisms"],
-    editableRegion: new GridRegion([{ x: 9, y: 3, width: 9, height: 10 }]),
-    availableComponents: new PuzzleComponents([
-      { kind: TileKind.Stone, price: 1 },
-      { kind: TileKind.Platform, price: 3 },
-      { kind: TileKind.Conveyor, price: 5 },
-      { kind: TileKind.Conduit, price: 1 },
-      { kind: TileKind.FixedCharge, price: 2 },
-    ]),
-    prerequisitePuzzleIds: ["first-shift"],
-    createInitialWorld: createBeltworksWorld,
-  },
-  {
-    id: "runic-relay",
-    name: "Runic Relay",
-    description: "A signal-routing workshop unlocked after Beltworks.",
-    goal: "Route and invert the sensor signal.",
-    features: ["Runic circuits", "Signal inversion", "Split build zones"],
-    editableRegion: new GridRegion([
-      { x: 2, y: 2, width: 4, height: 10 },
-      { x: 13, y: 2, width: 5, height: 10 },
-    ]),
-    availableComponents: new PuzzleComponents([
-      { kind: TileKind.Conduit, price: 1 },
-      { kind: TileKind.FixedCharge, price: 2 },
-      { kind: TileKind.Spark, price: 3 },
-      { kind: TileKind.Inverter, price: 4 },
-      { kind: TileKind.Combiner, price: 4 },
-      { kind: TileKind.WireCrossing, price: 3 },
-    ]),
-    prerequisitePuzzleIds: ["beltworks"],
-    createInitialWorld: createRunicRelayWorld,
-  },
-];
+interface LoadedPuzzle {
+  readonly sourcePath: string;
+  readonly parsed: ParsedPuzzleFile;
+}
 
-const PUZZLES_BY_ID: Readonly<Record<PuzzleId, PuzzleDefinition>> = {
-  "first-shift": expectDefined(PUZZLES[0], "Missing first-shift puzzle definition"),
-  beltworks: expectDefined(PUZZLES[1], "Missing beltworks puzzle definition"),
-  "runic-relay": expectDefined(PUZZLES[2], "Missing runic-relay puzzle definition"),
-};
+const PUZZLE_FILE_MODULES: Readonly<Record<string, unknown>> =
+  typeof process === "undefined"
+    ? import.meta.glob<unknown>("./puzzles/*.json", {
+        eager: true,
+        import: "default",
+      })
+    : loadNodePuzzleFiles();
+
+function loadNodePuzzleFiles(): Readonly<Record<string, unknown>> {
+  const fileSystem = process.getBuiltinModule("node:fs");
+  const puzzleDirectory = "./puzzles/";
+  const directoryUrl = new URL(puzzleDirectory, import.meta.url);
+  const files: Record<string, unknown> = Object.create(null);
+  for (const fileName of fileSystem.readdirSync(directoryUrl)) {
+    if (!fileName.endsWith(".json")) {
+      continue;
+    }
+    const sourcePath = `./puzzles/${fileName}`;
+    const source = fileSystem.readFileSync(new URL(fileName, directoryUrl), "utf8");
+    try {
+      files[sourcePath] = JSON.parse(source) as unknown;
+    } catch {
+      throw new Error(`${sourcePath}: file is not valid JSON`);
+    }
+  }
+  return files;
+}
+
+export const PUZZLES = loadPuzzleDefinitions(PUZZLE_FILE_MODULES);
+
+export function loadPuzzleDefinitions(
+  files: Readonly<Record<string, unknown>>,
+): readonly PuzzleDefinition[] {
+  const loadedPuzzles: LoadedPuzzle[] = [];
+  const loadedById: Record<string, LoadedPuzzle | undefined> = Object.create(null);
+  const loadedByOrder: Record<number, LoadedPuzzle | undefined> = Object.create(null);
+
+  for (const [sourcePath, value] of Object.entries(files)) {
+    const parsed = parsePuzzleFile(value, sourcePath);
+    const fileName = sourcePath.slice(sourcePath.lastIndexOf("/") + 1);
+    if (fileName !== `${parsed.id}.json`) {
+      throw new Error(
+        `${sourcePath}: file name must match puzzle id "${parsed.id}.json"`,
+      );
+    }
+    const existingId = loadedById[parsed.id];
+    if (existingId !== undefined) {
+      throw new Error(
+        `${sourcePath}: puzzle id "${parsed.id}" is already defined by ${existingId.sourcePath}`,
+      );
+    }
+    const existingOrder = loadedByOrder[parsed.order];
+    if (existingOrder !== undefined) {
+      throw new Error(
+        `${sourcePath}: puzzle order ${parsed.order} is already used by ${existingOrder.sourcePath}`,
+      );
+    }
+    const loaded = { sourcePath, parsed };
+    loadedPuzzles.push(loaded);
+    loadedById[parsed.id] = loaded;
+    loadedByOrder[parsed.order] = loaded;
+  }
+
+  if (loadedPuzzles.length === 0) {
+    throw new Error("At least one shipped puzzle JSON file is required");
+  }
+  for (const loaded of loadedPuzzles) {
+    for (const prerequisiteId of loaded.parsed.prerequisitePuzzleIds) {
+      if (loadedById[prerequisiteId] === undefined) {
+        throw new Error(
+          `${loaded.sourcePath}: prerequisite puzzle "${prerequisiteId}" does not exist`,
+        );
+      }
+    }
+  }
+  validateAcyclicPrerequisites(loadedPuzzles, loadedById);
+
+  loadedPuzzles.sort((left, right) => left.parsed.order - right.parsed.order);
+  return Object.freeze(loadedPuzzles.map(({ parsed }) => Object.freeze({
+    id: parsed.id,
+    name: parsed.name,
+    description: parsed.description,
+    features: parsed.features,
+    goal: parsed.goal,
+    editableRegion: parsed.editableRegion,
+    availableComponents: parsed.availableComponents,
+    prerequisitePuzzleIds: parsed.prerequisitePuzzleIds,
+    createInitialWorld: () => parsed.initialWorld.clone(),
+  })));
+}
+
+function validateAcyclicPrerequisites(
+  loadedPuzzles: readonly LoadedPuzzle[],
+  loadedById: Readonly<Record<string, LoadedPuzzle | undefined>>,
+): void {
+  const visiting: Record<string, true | undefined> = Object.create(null);
+  const visited: Record<string, true | undefined> = Object.create(null);
+
+  function visit(loaded: LoadedPuzzle): void {
+    const id = loaded.parsed.id;
+    if (visiting[id] === true) {
+      throw new Error(`${loaded.sourcePath}: prerequisite graph contains a cycle at "${id}"`);
+    }
+    if (visited[id] === true) {
+      return;
+    }
+    visiting[id] = true;
+    for (const prerequisiteId of loaded.parsed.prerequisitePuzzleIds) {
+      visit(expectDefined(
+        loadedById[prerequisiteId],
+        `Missing validated prerequisite "${prerequisiteId}"`,
+      ));
+    }
+    delete visiting[id];
+    visited[id] = true;
+  }
+
+  for (const loaded of loadedPuzzles) {
+    visit(loaded);
+  }
+}
+
+const puzzlesById: Record<string, PuzzleDefinition | undefined> = Object.create(null);
+for (const puzzle of PUZZLES) {
+  puzzlesById[puzzle.id] = puzzle;
+}
+const PUZZLES_BY_ID = Object.freeze(puzzlesById);
 
 export function puzzleById(id: PuzzleId): PuzzleDefinition {
-  return PUZZLES_BY_ID[id];
+  return expectDefined(PUZZLES_BY_ID[id], `Unknown puzzle id "${id}"`);
 }
 
 export function isPuzzleUnlocked(

@@ -189,8 +189,22 @@ export function deserializeBoard(source: string): ImportedBoard {
   } catch {
     throw new Error("Board file is not valid JSON");
   }
+  return deserializeBoardValue(parsed);
+}
 
-  const board = requireObject(parsed, "Board");
+export function deserializeBoardValue(value: unknown): ImportedBoard {
+  const board = requireObject(value, "Board", [
+    "format",
+    "version",
+    "tick",
+    "result",
+    "grid",
+    "orientations",
+    "charges",
+    "crossingCharges",
+    "furnaces",
+    "welds",
+  ]);
   if (board.format !== FORMAT_NAME) {
     throw new Error(`Board format must be "${FORMAT_NAME}"`);
   }
@@ -232,7 +246,11 @@ export function deserializeBoard(source: string): ImportedBoard {
   const orientationByCell = new Uint8Array(width * height);
   const hasOrientation = new Uint8Array(width * height);
   for (let index = 0; index < orientations.length; index += 1) {
-    const state = requireObject(orientations[index], `Orientation ${index}`);
+    const state = requireObject(orientations[index], `Orientation ${index}`, [
+      "x",
+      "y",
+      "direction",
+    ]);
     const x = requireInteger(state.x, `Orientation ${index} x`, 0, width - 1);
     const y = requireInteger(state.y, `Orientation ${index} y`, 0, height - 1);
     const cellIndex = y * width + x;
@@ -257,7 +275,11 @@ export function deserializeBoard(source: string): ImportedBoard {
   const furnaceProgressByCell = new Uint16Array(width * height);
   const hasFurnaceState = new Uint8Array(width * height);
   for (let index = 0; index < furnaces.length; index += 1) {
-    const state = requireObject(furnaces[index], `Furnace ${index}`);
+    const state = requireObject(furnaces[index], `Furnace ${index}`, [
+      "x",
+      "y",
+      "progress",
+    ]);
     const x = requireInteger(state.x, `Furnace ${index} x`, 0, width - 1);
     const y = requireInteger(state.y, `Furnace ${index} y`, 0, height - 1);
     const cellIndex = y * width + x;
@@ -298,7 +320,7 @@ export function deserializeBoard(source: string): ImportedBoard {
   const chargeByCell = new Int8Array(width * height);
   const hasCharge = new Uint8Array(width * height);
   for (let index = 0; index < charges.length; index += 1) {
-    const state = requireObject(charges[index], `Charge ${index}`);
+    const state = requireObject(charges[index], `Charge ${index}`, ["x", "y", "charge"]);
     const x = requireInteger(state.x, `Charge ${index} x`, 0, width - 1);
     const y = requireInteger(state.y, `Charge ${index} y`, 0, height - 1);
     const cellIndex = y * width + x;
@@ -322,7 +344,12 @@ export function deserializeBoard(source: string): ImportedBoard {
   const verticalChargeByCell = new Int8Array(width * height);
   const hasCrossingCharge = new Uint8Array(width * height);
   for (let index = 0; index < crossingCharges.length; index += 1) {
-    const state = requireObject(crossingCharges[index], `Crossing charge ${index}`);
+    const state = requireObject(crossingCharges[index], `Crossing charge ${index}`, [
+      "x",
+      "y",
+      "horizontal",
+      "vertical",
+    ]);
     const x = requireInteger(state.x, `Crossing charge ${index} x`, 0, width - 1);
     const y = requireInteger(state.y, `Crossing charge ${index} y`, 0, height - 1);
     const cellIndex = y * width + x;
@@ -463,11 +490,21 @@ export function deserializeBoard(source: string): ImportedBoard {
   return { world, tick };
 }
 
-function requireObject(value: unknown, label: string): Record<string, unknown> {
+function requireObject(
+  value: unknown,
+  label: string,
+  fields: readonly string[],
+): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new Error(`${label} must be an object`);
   }
-  return value as Record<string, unknown>;
+  const object = value as Record<string, unknown>;
+  for (const field of Object.keys(object)) {
+    if (!fields.includes(field)) {
+      throw new Error(`${label} has unknown field "${field}"`);
+    }
+  }
+  return object;
 }
 
 function requireArray(value: unknown, label: string): readonly unknown[] {

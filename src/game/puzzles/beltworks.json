@@ -1,0 +1,61 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 1,
+  "id": "beltworks",
+  "order": 1,
+  "name": "Beltworks",
+  "description": "A conveyor workshop unlocked after the first shift.",
+  "goal": "Carry the stone to the far side of the platform.",
+  "features": ["Conveyor belts", "Powered mechanisms"],
+  "prerequisites": ["first-shift"],
+  "components": [
+    { "code": "#", "price": 1 },
+    { "code": "=", "price": 3 },
+    { "code": "B", "price": 5 },
+    { "code": "C", "price": 1 },
+    { "code": "1", "price": 2 }
+  ],
+  "editableRegions": [{ "x": 9, "y": 3, "width": 9, "height": 10 }],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 8,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      ".....#..............",
+      ".....BBB............",
+      "...======...........",
+      "....................",
+      "....................",
+      "===================="
+    ],
+    "orientations": [],
+    "charges": [],
+    "crossingCharges": [],
+    "furnaces": [],
+    "welds": [
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "...................."
+    ]
+  }
+}

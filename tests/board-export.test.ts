@@ -80,6 +80,21 @@ describe("board export", () => {
     );
   });
 
+  it("rejects unknown board and state fields", () => {
+    const board = JSON.parse(serializeBoard(new World(1, 1), 0)) as Record<string, unknown>;
+    board.unexpected = true;
+    expect(() => deserializeBoard(JSON.stringify(board))).toThrowError(
+      'Board has unknown field "unexpected"',
+    );
+
+    delete board.unexpected;
+    board.grid = ["S"];
+    board.orientations = [{ x: 0, y: 0, direction: "right", unexpected: true }];
+    expect(() => deserializeBoard(JSON.stringify(board))).toThrowError(
+      'Orientation 0 has unknown field "unexpected"',
+    );
+  });
+
   it("imports grid dimensions, state, orientation, and welds", () => {
     const source = JSON.stringify({
       format: "factory2d-board",
