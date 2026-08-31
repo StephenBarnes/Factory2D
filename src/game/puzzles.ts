@@ -7,6 +7,12 @@ import { expectDefined } from "../util/assert";
 
 export type PuzzleId = string;
 
+export interface PuzzleTestCaseDefinition {
+  readonly id: string;
+  readonly name: string;
+  readonly createInitialWorld: () => World;
+}
+
 export interface PuzzleDefinition {
   readonly id: PuzzleId;
   readonly name: string;
@@ -17,6 +23,7 @@ export interface PuzzleDefinition {
   readonly availableComponents: PuzzleComponents;
   readonly prerequisitePuzzleIds: readonly PuzzleId[];
   readonly createInitialWorld: () => World;
+  readonly testCases: readonly PuzzleTestCaseDefinition[];
 }
 
 function addFloor(world: World): void {
@@ -135,6 +142,15 @@ export function loadPuzzleDefinitions(
     availableComponents: parsed.availableComponents,
     prerequisitePuzzleIds: parsed.prerequisitePuzzleIds,
     createInitialWorld: () => parsed.initialWorld.clone(),
+    testCases: Object.freeze(
+      parsed.testCases.map((testCase) =>
+        Object.freeze({
+          id: testCase.id,
+          name: testCase.name,
+          createInitialWorld: () => testCase.initialWorld.clone(),
+        }),
+      ),
+    ),
   })));
 }
 

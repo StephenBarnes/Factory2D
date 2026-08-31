@@ -1,12 +1,12 @@
 import { GridRegion, type GridRectangle } from "./grid-region";
 import { PuzzleComponents, type PricedComponent } from "./puzzle-components";
-import { deserializeBoardValue } from "../simulation/board-export";
+import { deserializeBoardValue, type ImportedBoard } from "../simulation/board-export";
 import { PuzzleResult } from "../simulation/puzzle-result";
 import { TILE_DEFINITIONS, TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
 
 const PUZZLE_FORMAT = "factory2d-puzzle";
-const PUZZLE_VERSION = 1;
+const PUZZLE_VERSION = 2;
 const PUZZLE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const PUZZLE_FIELDS = [
   "format",
@@ -21,12 +21,23 @@ const PUZZLE_FIELDS = [
   "components",
   "editableRegions",
   "initialBoard",
+  "testCases",
 ] as const;
 const BOARD_FIELDS = [
   "format",
   "version",
   "tick",
   "result",
+  "grid",
+  "orientations",
+  "charges",
+  "crossingCharges",
+  "furnaces",
+  "welds",
+] as const;
+const TEST_CASE_FIELDS = ["id", "name", "overrides"] as const;
+const TEST_CASE_OVERRIDE_FIELDS = ["initialBoard"] as const;
+const INITIAL_BOARD_OVERRIDE_FIELDS = [
   "grid",
   "orientations",
   "charges",
@@ -46,6 +57,12 @@ function buildTileKindsByCode(): Readonly<Record<string, TileKind | undefined>> 
   return kindsByCode;
 }
 
+export interface ParsedPuzzleTestCase {
+  readonly id: string;
+  readonly name: string;
+  readonly initialWorld: World;
+}
+
 export interface ParsedPuzzleFile {
   readonly id: string;
   readonly order: number;
@@ -57,6 +74,7 @@ export interface ParsedPuzzleFile {
   readonly editableRegion: GridRegion;
   readonly availableComponents: PuzzleComponents;
   readonly initialWorld: World;
+  readonly testCases: readonly ParsedPuzzleTestCase[];
 }
 
 export function parsePuzzleFile(value: unknown, fileName: string): ParsedPuzzleFile {
@@ -104,17 +122,11 @@ function parsePuzzleFileValue(value: unknown): ParsedPuzzleFile {
   const availableComponents = parseComponents(puzzle.components);
   const editableRegion = parseEditableRegion(puzzle.editableRegions);
   const board = requireExactObject(puzzle.initialBoard, "Puzzle initialBoard", BOARD_FIELDS);
-  const importedBoard = deserializeBoardValue(board);
-  if (importedBoard.tick !== 0) {
-    throw new Error("Puzzle initialBoard tick must be 0");
-  }
-  if (importedBoard.world.puzzleResult !== PuzzleResult.InProgress) {
-    throw new Error('Puzzle initialBoard result must be "in-progress"');
-  }
-  if (!editableRegion.fitsWithin(importedBoard.world.width, importedBoard.world.height)) {
+  const initialWorld = parseInitialWorld(board, "Puzzle initialBoard");
+  if (!editableRegion.fitsWithin(initialWorld.width, initialWorld.height)) {
     throw new Error("Puzzle editableRegions must fit within initialBoard dimensions");
   }
-
+  const testCases = parseTestCases(puzzle.testCases, board, initialWorld);
   return Object.freeze({
     id,
     order,
@@ -125,8 +137,82 @@ function parsePuzzleFileValue(value: unknown): ParsedPuzzleFile {
     prerequisitePuzzleIds,
     editableRegion,
     availableComponents,
-    initialWorld: importedBoard.world,
+    initialWorld,
+    testCases,
   });
+}
+
+function parseInitialWorld(board: Record<string, unknown>, label: string): World {
+  let importedBoard: ImportedBoard;
+  try {
+    importedBoard = deserializeBoardValue(board);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`${label} is invalid: ${message}`);
+  }
+  if (importedBoard.tick !== 0) {
+    throw new Error(`${label} tick must be 0`);
+  }
+  if (importedBoard.world.puzzleResult !== PuzzleResult.InProgress) {
+    throw new Error(`${label} result must be "in-progress"`);
+  }
+  return importedBoard.world;
+}
+
+function parseTestCases(
+  value: unknown,
+  baseBoard: Record<string, unknown>,
+  baseWorld: World,
+): readonly ParsedPuzzleTestCase[] {
+  const entries = requireArray(value, "Puzzle testCases");
+  if (entries.length === 0) {
+    throw new Error("Puzzle testCases must contain at least one test case");
+  }
+
+  const testCases: ParsedPuzzleTestCase[] = [];
+  const seenIds = new Set<string>();
+  for (let index = 0; index < entries.length; index += 1) {
+    const label = `Puzzle testCases[${index}]`;
+    const entry = requireExactObject(entries[index], label, TEST_CASE_FIELDS);
+    const id = requireNonEmptyString(entry.id, `${label} id`);
+    if (!PUZZLE_ID_PATTERN.test(id)) {
+      throw new Error(
+        `${label} id must contain lowercase letters, digits, and single hyphens only`,
+      );
+    }
+    if (seenIds.has(id)) {
+      throw new Error(`Puzzle testCases contains duplicate id "${id}"`);
+    }
+    seenIds.add(id);
+
+    const name = requireNonEmptyString(entry.name, `${label} name`);
+    const overrides = requireSparseObject(
+      entry.overrides,
+      `${label} overrides`,
+      TEST_CASE_OVERRIDE_FIELDS,
+    );
+    const initialBoardOverrides = Object.hasOwn(overrides, "initialBoard")
+      ? requireSparseObject(
+          overrides.initialBoard,
+          `${label} overrides initialBoard`,
+          INITIAL_BOARD_OVERRIDE_FIELDS,
+        )
+      : {};
+    const initialWorld = parseInitialWorld(
+      { ...baseBoard, ...initialBoardOverrides },
+      `${label} initialBoard`,
+    );
+    if (
+      initialWorld.width !== baseWorld.width ||
+      initialWorld.height !== baseWorld.height
+    ) {
+      throw new Error(
+        `${label} initialBoard dimensions must match Puzzle initialBoard`,
+      );
+    }
+    testCases.push(Object.freeze({ id, name, initialWorld }));
+  }
+  return Object.freeze(testCases);
 }
 
 function parseComponents(value: unknown): PuzzleComponents {
@@ -210,6 +296,23 @@ function requireExactObject(
   }
   return object;
 }
+function requireSparseObject(
+  value: unknown,
+  label: string,
+  fields: readonly string[],
+): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(`${label} must be an object`);
+  }
+  const object = value as Record<string, unknown>;
+  for (const field of Object.keys(object)) {
+    if (!fields.includes(field)) {
+      throw new Error(`${label} has unknown field "${field}"`);
+    }
+  }
+  return object;
+}
+
 
 function requireArray(value: unknown, label: string): readonly unknown[] {
   if (!Array.isArray(value)) {
