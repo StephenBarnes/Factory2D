@@ -4,6 +4,7 @@ import {
   directionX,
   directionY,
   orientedSides,
+  oppositeDirection,
   TILE_DEFINITIONS,
   TileKind,
   WeldSide,
@@ -34,6 +35,7 @@ export class Simulation {
   private readonly circuitRoots: Int32Array;
   private readonly circuitDriveSums: Int32Array;
   private readonly nextCircuitCharges: Int8Array;
+  private readonly nextCrossingVerticalCharges: Int8Array;
 
   constructor(world: World) {
     this.world = world;
@@ -49,9 +51,10 @@ export class Simulation {
     this.dependencyDependents = new Int32Array(world.cellCount);
     this.nextDependency = new Int32Array(world.cellCount);
     this.blockedBodyQueue = new Int32Array(world.cellCount);
-    this.circuitRoots = new Int32Array(world.cellCount);
-    this.circuitDriveSums = new Int32Array(world.cellCount);
+    this.circuitRoots = new Int32Array(world.cellCount * 2);
+    this.circuitDriveSums = new Int32Array(world.cellCount * 2);
     this.nextCircuitCharges = new Int8Array(world.cellCount);
+    this.nextCrossingVerticalCharges = new Int8Array(world.cellCount);
   }
 
   step(): number {
@@ -76,35 +79,40 @@ export class Simulation {
     this.circuitRoots.fill(-1);
     this.circuitDriveSums.fill(0);
     this.nextCircuitCharges.fill(0);
+    this.nextCrossingVerticalCharges.fill(0);
 
     for (let index = 0; index < this.world.cellCount; index += 1) {
-      const definition = TILE_DEFINITIONS[this.world.kindAtIndex(index)];
-      if (
-        definition.circuitPorts !== 0 &&
-        definition.circuitInputPorts === 0
-      ) {
-        this.circuitRoots[index] = index;
+      const kind = this.world.kindAtIndex(index);
+      const definition = TILE_DEFINITIONS[kind];
+      if (definition.circuitPorts === 0 || definition.circuitInputPorts !== 0) {
+        continue;
+      }
+
+      const primaryNode = index * 2;
+      this.circuitRoots[primaryNode] = primaryNode;
+      if (kind === TileKind.WireCrossing) {
+        this.circuitRoots[primaryNode + 1] = primaryNode + 1;
       }
     }
 
     for (let index = 0; index < this.world.cellCount; index += 1) {
-      if (expectDefined(this.circuitRoots[index], "circuit root marker") < 0) {
-        continue;
-      }
-      if (
-        this.world.hasCircuitConnectionAtIndex(index, Direction.Right) &&
-        expectDefined(this.circuitRoots[index + 1], "neighbor circuit root marker") >= 0
-      ) {
-        this.unionCircuitTiles(index, index + 1);
-      }
-      if (
-        this.world.hasCircuitConnectionAtIndex(index, Direction.Down) &&
-        expectDefined(
-          this.circuitRoots[index + this.world.width],
-          "neighbor circuit root marker",
-        ) >= 0
-      ) {
-        this.unionCircuitTiles(index, index + this.world.width);
+      for (let value = Direction.Right; value <= Direction.Down; value += 1) {
+        const direction = value as Direction;
+        if (!this.world.hasCircuitConnectionAtIndex(index, direction)) {
+          continue;
+        }
+        const neighbor = this.neighborIndex(index, direction);
+        if (neighbor < 0) {
+          throw new Error(`Connected circuit at index ${index} has no neighbor`);
+        }
+        const ownNode = this.circuitNode(index, direction);
+        const neighborNode = this.circuitNode(neighbor, oppositeDirection(direction));
+        if (
+          expectDefined(this.circuitRoots[ownNode], "circuit root marker") >= 0 &&
+          expectDefined(this.circuitRoots[neighborNode], "neighbor circuit root marker") >= 0
+        ) {
+          this.unionCircuitNodes(ownNode, neighborNode);
+        }
       }
     }
 
@@ -115,7 +123,7 @@ export class Simulation {
 
       const outputCharge = this.world.sensorOutputAtIndex(index);
       if (outputCharge !== 0) {
-        const root = this.findCircuitRoot(index);
+        const root = this.findCircuitRoot(this.circuitNode(index, Direction.Up));
         this.circuitDriveSums[root] =
           expectDefined(this.circuitDriveSums[root], "circuit drive sum") + outputCharge;
       }
@@ -131,7 +139,9 @@ export class Simulation {
       const orientation = this.world.orientationAtIndex(index);
       if (kind === TileKind.ChargeSensor) {
         const inputIndex = this.neighborIndex(index, orientation);
-        const outputCharge = inputIndex < 0 ? 0 : this.world.chargeAtIndex(inputIndex);
+        const outputCharge = inputIndex < 0
+          ? 0
+          : this.world.chargeAtPortIndex(inputIndex, oppositeDirection(orientation));
         this.driveCircuitOutputs(
           index,
           orientedSides(definition.circuitOutputPorts, orientation),
@@ -157,7 +167,10 @@ export class Simulation {
         if (inputIndex < 0) {
           throw new Error(`Connected circuit input at index ${index} has no neighbor`);
         }
-        const inputCharge = this.world.chargeAtIndex(inputIndex);
+        const inputCharge = this.world.chargeAtPortIndex(
+          inputIndex,
+          oppositeDirection(direction),
+        );
         if (kind === TileKind.Multiplier) {
           inputProduct *= inputCharge;
         }
@@ -203,15 +216,25 @@ export class Simulation {
     }
 
     for (let index = 0; index < this.world.cellCount; index += 1) {
-      if (expectDefined(this.circuitRoots[index], "circuit root marker") < 0) {
-        continue;
+      const primaryNode = index * 2;
+      if (expectDefined(this.circuitRoots[primaryNode], "circuit root marker") >= 0) {
+        const root = this.findCircuitRoot(primaryNode);
+        this.nextCircuitCharges[index] = chargeFromSum(
+          expectDefined(this.circuitDriveSums[root], "circuit drive sum"),
+        );
       }
-      const root = this.findCircuitRoot(index);
-      this.nextCircuitCharges[index] = chargeFromSum(
-        expectDefined(this.circuitDriveSums[root], "circuit drive sum"),
-      );
+      const verticalNode = primaryNode + 1;
+      if (expectDefined(this.circuitRoots[verticalNode], "circuit root marker") >= 0) {
+        const root = this.findCircuitRoot(verticalNode);
+        this.nextCrossingVerticalCharges[index] = chargeFromSum(
+          expectDefined(this.circuitDriveSums[root], "vertical circuit drive sum"),
+        );
+      }
     }
-    this.world.applyCircuitCharges(this.nextCircuitCharges);
+    this.world.applyCircuitCharges(
+      this.nextCircuitCharges,
+      this.nextCrossingVerticalCharges,
+    );
   }
 
   private driveCircuitOutputs(
@@ -228,18 +251,24 @@ export class Simulation {
       const outputIndex = this.neighborIndex(index, outputDirection);
       if (
         outputIndex < 0 ||
-        !this.world.hasCircuitConnectionAtIndex(index, outputDirection) ||
-        expectDefined(this.circuitRoots[outputIndex], "output circuit root marker") < 0
+        !this.world.hasCircuitConnectionAtIndex(index, outputDirection)
       ) {
         continue;
       }
-      const outputRoot = this.findCircuitRoot(outputIndex);
+      const outputNode = this.circuitNode(
+        outputIndex,
+        oppositeDirection(outputDirection),
+      );
+      if (expectDefined(this.circuitRoots[outputNode], "output circuit root marker") < 0) {
+        continue;
+      }
+      const outputRoot = this.findCircuitRoot(outputNode);
       this.circuitDriveSums[outputRoot] =
         expectDefined(this.circuitDriveSums[outputRoot], "circuit drive sum") + outputCharge;
     }
   }
 
-  private unionCircuitTiles(first: number, second: number): void {
+  private unionCircuitNodes(first: number, second: number): void {
     const firstRoot = this.findCircuitRoot(first);
     const secondRoot = this.findCircuitRoot(second);
     if (firstRoot === secondRoot) {
@@ -250,6 +279,12 @@ export class Simulation {
     } else {
       this.circuitRoots[firstRoot] = secondRoot;
     }
+  }
+
+  private circuitNode(index: number, direction: Direction): number {
+    const verticalAxis = this.world.kindAtIndex(index) === TileKind.WireCrossing &&
+      (direction === Direction.Up || direction === Direction.Down);
+    return index * 2 + (verticalAxis ? 1 : 0);
   }
 
   private neighborIndex(index: number, direction: Direction): number {

@@ -3,6 +3,7 @@ import {
   directionX,
   directionY,
   orientedSides,
+  oppositeDirection,
   TILE_DEFINITIONS,
   TileKind,
   WeldSide,
@@ -420,7 +421,7 @@ export class CanvasRenderer {
       cell.y = (index - x) / width;
       cell.kind = world.kindAtIndex(index);
       cell.orientation = world.orientationAtIndex(index);
-      const networkCharge = world.chargeAtIndex(index);
+      const networkCharge = world.chargeAtPortIndex(index, Direction.Up);
       cell.outputCharge = cell.kind === TileKind.Sensor
         ? world.sensorOutputAtIndex(index)
         : networkCharge;
@@ -437,10 +438,11 @@ export class CanvasRenderer {
         }
         cell.circuitConnections |= 1 << direction;
         const portCharge = (inputPorts & (1 << direction)) !== 0
-          ? world.chargeAtIndex(
+          ? world.chargeAtPortIndex(
             index + directionX(direction) + directionY(direction) * width,
+            oppositeDirection(direction),
           )
-          : networkCharge;
+          : world.chargeAtPortIndex(index, direction);
         cell.circuitPortCharges = setCircuitPortCharge(
           cell.circuitPortCharges,
           direction,

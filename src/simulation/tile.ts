@@ -14,6 +14,7 @@ export const enum TileKind {
   Subtractor = 12,
   ChargeSensor = 13,
   Selector = 14,
+  WireCrossing = 15,
 }
 
 export const enum Direction {
@@ -47,6 +48,7 @@ export const enum TileDecorationStyle {
   Subtractor = 11,
   ChargeSensor = 12,
   Selector = 13,
+  WireCrossing = 14,
 }
 
 export interface TileDefinition {
@@ -433,6 +435,29 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     shadow: "#363047",
     decorationStyle: TileDecorationStyle.Selector,
     decorationColor: "#e2dcfa",
+  },
+  [TileKind.WireCrossing]: {
+    name: "Wire Crossing",
+    boardCode: "W",
+    palette: {
+      order: 14,
+      description: "Keeps horizontal and vertical circuit networks separate",
+      shortcut: null,
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.All,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#526875",
+    shadow: "#2d3b43",
+    decorationStyle: TileDecorationStyle.WireCrossing,
+    decorationColor: "#d5e9f2",
   },
 };
 

@@ -4,7 +4,7 @@ import { World } from "./world";
 import { expectDefined } from "../util/assert";
 
 const FORMAT_NAME = "factory2d-board";
-const FORMAT_VERSION = 4;
+const FORMAT_VERSION = 5;
 const MAX_BOARD_WIDTH = 400;
 const MAX_BOARD_HEIGHT = 300;
 
@@ -51,6 +51,12 @@ interface ExportedCharge {
   readonly charge: -1 | 1;
 }
 
+interface ExportedCrossingCharge {
+  readonly x: number;
+  readonly y: number;
+  readonly horizontal: Charge;
+  readonly vertical: Charge;
+}
 
 interface ExportedBoard {
   readonly format: typeof FORMAT_NAME;
@@ -59,6 +65,7 @@ interface ExportedBoard {
   readonly grid: readonly string[];
   readonly orientations: readonly ExportedOrientation[];
   readonly charges: readonly ExportedCharge[];
+  readonly crossingCharges: readonly ExportedCrossingCharge[];
   readonly welds: readonly string[];
 }
 
@@ -75,6 +82,7 @@ export function serializeBoard(world: World, tick: number): string {
   const grid: string[] = [];
   const orientations: ExportedOrientation[] = [];
   const charges: ExportedCharge[] = [];
+  const crossingCharges: ExportedCrossingCharge[] = [];
   const welds: string[] = [];
 
   for (let y = 0; y < world.height; y += 1) {
@@ -95,9 +103,17 @@ export function serializeBoard(world: World, tick: number): string {
         orientations.push({ x, y, direction: DIRECTION_NAMES[orientation] });
       }
 
-      const charge = world.chargeAt(x, y);
-      if (charge !== 0) {
-        charges.push({ x, y, charge });
+      if (kind === TileKind.WireCrossing) {
+        const horizontal = world.chargeAtPort(x, y, Direction.Left);
+        const vertical = world.chargeAtPort(x, y, Direction.Up);
+        if (horizontal !== 0 || vertical !== 0) {
+          crossingCharges.push({ x, y, horizontal, vertical });
+        }
+      } else {
+        const charge = world.chargeAt(x, y);
+        if (charge !== 0) {
+          charges.push({ x, y, charge });
+        }
       }
 
     }
@@ -112,6 +128,7 @@ export function serializeBoard(world: World, tick: number): string {
     grid,
     orientations,
     charges,
+    crossingCharges,
     welds,
   };
   return `${JSON.stringify(board, null, 2)}\n`;
@@ -191,6 +208,10 @@ export function deserializeBoard(source: string): ImportedBoard {
     const x = requireInteger(state.x, `Charge ${index} x`, 0, width - 1);
     const y = requireInteger(state.y, `Charge ${index} y`, 0, height - 1);
     const cellIndex = y * width + x;
+    const kind = expectDefined(kinds[cellIndex], `tile kind at (${x}, ${y})`) as TileKind;
+    if (kind === TileKind.WireCrossing) {
+      throw new Error(`Charge ${index} targets a wire crossing`);
+    }
     if (hasCharge[cellIndex] === 1) {
       throw new Error(`Charge ${index} duplicates cell (${x}, ${y})`);
     }
@@ -202,6 +223,42 @@ export function deserializeBoard(source: string): ImportedBoard {
     chargeByCell[cellIndex] = charge;
     hasCharge[cellIndex] = 1;
   }
+  const crossingCharges = requireArray(board.crossingCharges, "Board crossing charges");
+  const horizontalChargeByCell = new Int8Array(width * height);
+  const verticalChargeByCell = new Int8Array(width * height);
+  const hasCrossingCharge = new Uint8Array(width * height);
+  for (let index = 0; index < crossingCharges.length; index += 1) {
+    const state = requireObject(crossingCharges[index], `Crossing charge ${index}`);
+    const x = requireInteger(state.x, `Crossing charge ${index} x`, 0, width - 1);
+    const y = requireInteger(state.y, `Crossing charge ${index} y`, 0, height - 1);
+    const cellIndex = y * width + x;
+    if (hasCrossingCharge[cellIndex] === 1) {
+      throw new Error(`Crossing charge ${index} duplicates cell (${x}, ${y})`);
+    }
+    if (kinds[cellIndex] !== TileKind.WireCrossing) {
+      throw new Error(`Crossing charge ${index} targets a non-crossing tile`);
+    }
+
+    const horizontal = requireInteger(
+      state.horizontal,
+      `Crossing charge ${index} horizontal`,
+      -1,
+      1,
+    ) as Charge;
+    const vertical = requireInteger(
+      state.vertical,
+      `Crossing charge ${index} vertical`,
+      -1,
+      1,
+    ) as Charge;
+    if (horizontal === 0 && vertical === 0) {
+      throw new Error(`Crossing charge ${index} must contain a nonzero charge`);
+    }
+    horizontalChargeByCell[cellIndex] = horizontal;
+    verticalChargeByCell[cellIndex] = vertical;
+    hasCrossingCharge[cellIndex] = 1;
+  }
+
 
   const welds = requireArray(board.welds, "Board weld grid");
   if (welds.length !== height) {
@@ -262,6 +319,17 @@ export function deserializeBoard(source: string): ImportedBoard {
           `tile charge at (${x}, ${y})`,
         ) as Charge;
         world.setCharge(x, y, charge);
+      }
+      if (hasCrossingCharge[cellIndex] === 1) {
+        const horizontal = expectDefined(
+          horizontalChargeByCell[cellIndex],
+          `horizontal crossing charge at (${x}, ${y})`,
+        ) as Charge;
+        const vertical = expectDefined(
+          verticalChargeByCell[cellIndex],
+          `vertical crossing charge at (${x}, ${y})`,
+        ) as Charge;
+        world.setCrossingCharges(x, y, horizontal, vertical);
       }
     }
   }

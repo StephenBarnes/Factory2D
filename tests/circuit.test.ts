@@ -493,4 +493,47 @@ describe("circuit networks", () => {
       expect(world.chargeAt(1, 0)).toBe(output);
     },
   );
+
+  it("keeps horizontal and vertical wire-crossing networks independent", () => {
+    const world = new World(4, 5);
+    world.place(0, 3, TileKind.Platform);
+    world.place(1, 3, TileKind.Sensor, Direction.Left);
+    world.place(2, 3, TileKind.WireCrossing);
+    world.place(3, 3, TileKind.Conduit);
+    world.place(2, 0, TileKind.Platform);
+    world.place(2, 1, TileKind.Sensor, Direction.Up);
+    world.place(2, 2, TileKind.Inverter, Direction.Down);
+    world.place(2, 4, TileKind.Conduit);
+    world.setWeld(1, 3, 2, 3, true);
+    world.setWeld(2, 3, 3, 3, true);
+    world.setWeld(2, 1, 2, 2, true);
+    world.setWeld(2, 2, 2, 3, true);
+    world.setWeld(2, 3, 2, 4, true);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+    simulation.step();
+
+    expect(world.chargeAtPort(2, 3, Direction.Left)).toBe(1);
+    expect(world.chargeAtPort(2, 3, Direction.Right)).toBe(1);
+    expect(world.chargeAtPort(2, 3, Direction.Up)).toBe(-1);
+    expect(world.chargeAtPort(2, 3, Direction.Down)).toBe(-1);
+    expect(world.chargeAt(3, 3)).toBe(1);
+    expect(world.chargeAt(2, 4)).toBe(-1);
+  });
+
+  it("restores both wire-crossing axis charges from a snapshot", () => {
+    const world = new World(1, 1);
+    world.place(0, 0, TileKind.WireCrossing);
+    world.setCrossingCharges(0, 0, 1, -1);
+    const snapshot = world.clone();
+    const simulation = new Simulation(world);
+    world.setCrossingCharges(0, 0, 0, 0);
+
+    simulation.resetTo(snapshot);
+
+    expect(world.chargeAtPort(0, 0, Direction.Left)).toBe(1);
+    expect(world.chargeAtPort(0, 0, Direction.Up)).toBe(-1);
+  });
+
 });

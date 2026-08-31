@@ -1,6 +1,7 @@
 Components:
 * Add a piston block. It should be one block showing the arm and base of the piston overlapping. When it receives a charge, it should extend the arm, making it two separate blocks (considered welded together). When no charge is received, it should try to retract. This is a special case because we have effectively 2 blocks that can overlap, which is not usually allowed; but we could model it without overlaps, as 3 separate block types (arm, base, and combined arm+base), though we would still need to modify animation to show the arm extending.
 * Implement a target component that absorbs adjacent blocks of a specified type, and marks the puzzle as completed once some number have been absorbed. Requires a UI for setting which block to absorb, and how many. This will be used in the sandbox for designing puzzles.
+* A sensor that detects when the sensor's own tile moves, and outputs +1 on that side, -1 on the other side.
 * Add a dispenser component that dispenses a selected block when it receives charge. Used for creating puzzle inputs.
 * Welder blocks.
 * Splitter blocks.
@@ -25,6 +26,7 @@ Circuit network:
 * Maybe extend the set of charges (0, +1, -1) to add orthogonal +i and -i charges, or add a 2-wire tile with components for reading the different wires.
 * Maybe add min() and max() gates.
 * Implement a "rune array" component for miniaturizing circuits. When placed, or when clicking on the array with array tile selected, or when pressing F key with mouse over it, open a modal box that allows configuring it by placing "miniature" components on a 5x5 grid "inside" the array. The 4 edge-center tiles of the array's grid are logically connected to the rune array's 4 sides.
+* Don't add AND/OR/NAND/NOR, edge detectors, or latches, because they can be built from 1-3 existing components and fixed inputs.
 
 Game flow:
 * Change the editing model when solving puzzles: the player edits the initial board state, but as soon as they've played/run the simulation, they can no longer edit, they have to reset. Because puzzles won't allow modifying the board halfway through running a solution. We can still allow mid-run edits in the sandbox.
@@ -36,5 +38,6 @@ Game flow:
 
 UI:
 * Add a selection tool, for selecting a rectangular region of tiles and copying, pasting, moving, and rotating.
+* Add a way to save a selected region in a list of saved machines, and import from that. Make it usable for transferring partial machines from one puzzle solution to another.
 * Add a way to copy selection to a clipboard, for transferring machines between puzzles.
 * When saving an image using the image button, crop out parts of the screen that are over the background, outside the grid, if this can be implemented easily.

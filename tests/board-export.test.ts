@@ -17,7 +17,7 @@ describe("board export", () => {
 
     expect(serializeBoard(world, 17)).toBe(`${JSON.stringify({
       format: "factory2d-board",
-      version: 4,
+      version: 5,
       tick: 17,
       grid: [
         "..L",
@@ -29,6 +29,7 @@ describe("board export", () => {
       charges: [
         { x: 2, y: 1, charge: -1 },
       ],
+      crossingCharges: [],
       welds: [
         "..|",
         "-..",
@@ -43,11 +44,12 @@ describe("board export", () => {
 
     expect(JSON.parse(serializeBoard(world, 0))).toEqual({
       format: "factory2d-board",
-      version: 4,
+      version: 5,
       tick: 0,
       grid: [".."],
       orientations: [],
       charges: [],
+      crossingCharges: [],
       welds: [".."],
     });
   });
@@ -66,7 +68,7 @@ describe("board export", () => {
   it("imports grid dimensions, state, orientation, and welds", () => {
     const source = JSON.stringify({
       format: "factory2d-board",
-      version: 4,
+      version: 5,
       tick: 42,
       grid: [
         "LM",
@@ -82,6 +84,7 @@ describe("board export", () => {
         { x: 0, y: 1, charge: 1 },
         { x: 1, y: 1, charge: -1 },
       ],
+      crossingCharges: [],
       welds: [
         "+.",
         "..",
@@ -131,23 +134,45 @@ describe("board export", () => {
     expect(imported.world.chargeAt(0, 0)).toBe(-1);
   });
 
+  it("round-trips independent wire crossing axis charges", () => {
+    const world = new World(1, 1);
+    world.place(0, 0, TileKind.WireCrossing);
+    world.setCrossingCharges(0, 0, 1, -1);
+
+    const serialized = serializeBoard(world, 7);
+    const imported = deserializeBoard(serialized);
+
+    expect(JSON.parse(serialized)).toMatchObject({
+      version: 5,
+      grid: ["W"],
+      charges: [],
+      crossingCharges: [{ x: 0, y: 0, horizontal: 1, vertical: -1 }],
+    });
+    expect(imported.tick).toBe(7);
+    expect(imported.world.kindAt(0, 0)).toBe(TileKind.WireCrossing);
+    expect(imported.world.chargeAtPort(0, 0, Direction.Left)).toBe(1);
+    expect(imported.world.chargeAtPort(0, 0, Direction.Up)).toBe(-1);
+  });
+
   it("rejects malformed grid rows and unknown tile codes", () => {
     const unevenRows = JSON.stringify({
       format: "factory2d-board",
-      version: 4,
+      version: 5,
       tick: 0,
       grid: ["..", "."],
       orientations: [],
       charges: [],
+      crossingCharges: [],
       welds: ["..", ".."],
     });
     const unknownCode = JSON.stringify({
       format: "factory2d-board",
-      version: 4,
+      version: 5,
       tick: 0,
       grid: ["?"],
       orientations: [],
       charges: [],
+      crossingCharges: [],
       welds: ["."],
     });
 
@@ -162,7 +187,7 @@ describe("board export", () => {
   it("rejects duplicate or inapplicable orientation state", () => {
     const duplicate = JSON.stringify({
       format: "factory2d-board",
-      version: 4,
+      version: 5,
       tick: 0,
       grid: ["L"],
       orientations: [
@@ -170,15 +195,17 @@ describe("board export", () => {
         { x: 0, y: 0, direction: "left" },
       ],
       charges: [],
+      crossingCharges: [],
       welds: ["."],
     });
     const inapplicable = JSON.stringify({
       format: "factory2d-board",
-      version: 4,
+      version: 5,
       tick: 0,
       grid: ["#"],
       orientations: [{ x: 0, y: 0, direction: "right" }],
       charges: [],
+      crossingCharges: [],
       welds: ["."],
     });
 
@@ -193,47 +220,52 @@ describe("board export", () => {
   it("rejects malformed weld grids and welds that cannot be applied", () => {
     const wrongHeight = JSON.stringify({
       format: "factory2d-board",
-      version: 4,
+      version: 5,
       tick: 0,
       grid: ["##", "##"],
       orientations: [],
       charges: [],
+      crossingCharges: [],
       welds: [".."],
     });
     const wrongWidth = JSON.stringify({
       format: "factory2d-board",
-      version: 4,
+      version: 5,
       tick: 0,
       grid: ["##"],
       orientations: [],
       charges: [],
+      crossingCharges: [],
       welds: ["."],
     });
     const unknownCode = JSON.stringify({
       format: "factory2d-board",
-      version: 4,
+      version: 5,
       tick: 0,
       grid: ["#"],
       orientations: [],
       charges: [],
+      crossingCharges: [],
       welds: ["?"],
     });
     const outside = JSON.stringify({
       format: "factory2d-board",
-      version: 4,
+      version: 5,
       tick: 0,
       grid: ["#"],
       orientations: [],
       charges: [],
+      crossingCharges: [],
       welds: ["-"],
     });
     const incompatible = JSON.stringify({
       format: "factory2d-board",
-      version: 4,
+      version: 5,
       tick: 0,
       grid: [":#"],
       orientations: [],
       charges: [],
+      crossingCharges: [],
       welds: ["-."],
     });
 
@@ -254,23 +286,55 @@ describe("board export", () => {
     );
   });
 
+  it("rejects crossing charge state on the wrong tile or with no charge", () => {
+    const wrongTile = JSON.stringify({
+      format: "factory2d-board",
+      version: 5,
+      tick: 0,
+      grid: ["C"],
+      orientations: [],
+      charges: [],
+      crossingCharges: [{ x: 0, y: 0, horizontal: 1, vertical: 0 }],
+      welds: ["."],
+    });
+    const neutralCrossing = JSON.stringify({
+      format: "factory2d-board",
+      version: 5,
+      tick: 0,
+      grid: ["W"],
+      orientations: [],
+      charges: [],
+      crossingCharges: [{ x: 0, y: 0, horizontal: 0, vertical: 0 }],
+      welds: ["."],
+    });
+
+    expect(() => deserializeBoard(wrongTile)).toThrowError(
+      "Crossing charge 0 targets a non-crossing tile",
+    );
+    expect(() => deserializeBoard(neutralCrossing)).toThrowError(
+      "Crossing charge 0 must contain a nonzero charge",
+    );
+  });
+
   it("rejects invalid charge values and charged non-circuit tiles", () => {
     const invalidValue = JSON.stringify({
       format: "factory2d-board",
-      version: 4,
+      version: 5,
       tick: 0,
       grid: ["C"],
       orientations: [],
       charges: [{ x: 0, y: 0, charge: 2 }],
+      crossingCharges: [],
       welds: ["."],
     });
     const invalidTile = JSON.stringify({
       format: "factory2d-board",
-      version: 4,
+      version: 5,
       tick: 0,
       grid: ["#"],
       orientations: [],
       charges: [{ x: 0, y: 0, charge: 1 }],
+      crossingCharges: [],
       welds: ["."],
     });
 

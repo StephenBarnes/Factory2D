@@ -400,7 +400,8 @@ function drawDecoration(
       size,
       circuitConnections,
       circuitPortCharges,
-      definition.circuitInputPorts !== WeldSide.None,
+      definition.circuitInputPorts !== WeldSide.None ||
+        definition.decorationStyle === TileDecorationStyle.WireCrossing,
     );
   }
   context.fillStyle = definition.decorationColor;
@@ -632,6 +633,67 @@ function drawDecoration(
       drawDot(context, 0, -size * 0.24, Math.max(1.5, size * 0.055));
       context.fill();
       context.restore();
+      break;
+    }
+    case TileDecorationStyle.WireCrossing: {
+      const visibleConnections = circuitConnections === WeldSide.None
+        ? WeldSide.All
+        : circuitConnections;
+      const centerX = left + size / 2;
+      const centerY = top + size / 2;
+      const innerOffset = size * 0.27;
+      const traceWidth = Math.max(2, size * 0.12);
+      context.lineCap = "round";
+      context.lineWidth = traceWidth;
+      if ((visibleConnections & WeldSide.Left) !== 0) {
+        context.strokeStyle = CIRCUIT_CHARGE_COLORS[
+          circuitPortCharge(circuitPortCharges, Direction.Left)
+        ];
+        context.beginPath();
+        context.moveTo(centerX - innerOffset, centerY);
+        context.lineTo(centerX, centerY);
+        context.stroke();
+      }
+      if ((visibleConnections & WeldSide.Right) !== 0) {
+        context.strokeStyle = CIRCUIT_CHARGE_COLORS[
+          circuitPortCharge(circuitPortCharges, Direction.Right)
+        ];
+        context.beginPath();
+        context.moveTo(centerX, centerY);
+        context.lineTo(centerX + innerOffset, centerY);
+        context.stroke();
+      }
+      context.strokeStyle = definition.fill;
+      context.lineWidth = traceWidth * 1.75;
+      context.beginPath();
+      if ((visibleConnections & WeldSide.Up) !== 0) {
+        context.moveTo(centerX, centerY - innerOffset);
+        context.lineTo(centerX, centerY);
+      }
+      if ((visibleConnections & WeldSide.Down) !== 0) {
+        context.moveTo(centerX, centerY);
+        context.lineTo(centerX, centerY + innerOffset);
+      }
+      context.stroke();
+      context.lineWidth = traceWidth;
+      if ((visibleConnections & WeldSide.Up) !== 0) {
+        context.strokeStyle = CIRCUIT_CHARGE_COLORS[
+          circuitPortCharge(circuitPortCharges, Direction.Up)
+        ];
+        context.beginPath();
+        context.moveTo(centerX, centerY - innerOffset);
+        context.lineTo(centerX, centerY);
+        context.stroke();
+      }
+      if ((visibleConnections & WeldSide.Down) !== 0) {
+        context.strokeStyle = CIRCUIT_CHARGE_COLORS[
+          circuitPortCharge(circuitPortCharges, Direction.Down)
+        ];
+        context.beginPath();
+        context.moveTo(centerX, centerY);
+        context.lineTo(centerX, centerY + innerOffset);
+        context.stroke();
+      }
       break;
     }
     case TileDecorationStyle.None:

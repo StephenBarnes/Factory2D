@@ -391,6 +391,51 @@ describe("circuit rendering", () => {
       expect(inputSegment?.toY).toBeCloseTo(inputDirection === Direction.Down ? 24.32 : 16);
     },
   );
+
+  it("colors wire-crossing axes independently", () => {
+    const context = new RecordingCanvasContext();
+    let portCharges = setCircuitPortCharge(0, Direction.Left, 1);
+    portCharges = setCircuitPortCharge(portCharges, Direction.Right, 1);
+    portCharges = setCircuitPortCharge(portCharges, Direction.Up, -1);
+    portCharges = setCircuitPortCharge(portCharges, Direction.Down, -1);
+    const crossing: BodyCell = {
+      x: 0,
+      y: 0,
+      kind: TileKind.WireCrossing,
+      orientation: Direction.Up,
+      outputCharge: 0,
+      circuitConnections: WeldSide.All,
+      circuitPortCharges: portCharges,
+      seamRight: false,
+      seamDown: false,
+    };
+
+    drawBody(
+      context as unknown as CanvasRenderingContext2D,
+      0,
+      0,
+      32,
+      [crossing],
+      1,
+      new RecordingPath2D() as unknown as Path2D,
+    );
+
+    const horizontalSegments = context.strokes
+      .filter((stroke) => stroke.strokeStyle === CIRCUIT_CHARGE_COLORS[1])
+      .flatMap((stroke) => stroke.segments);
+    const verticalSegments = context.strokes
+      .filter((stroke) => stroke.strokeStyle === CIRCUIT_CHARGE_COLORS[-1])
+      .flatMap((stroke) => stroke.segments);
+    expect(horizontalSegments.length).toBeGreaterThan(0);
+    expect(verticalSegments.length).toBeGreaterThan(0);
+    expect(
+      horizontalSegments.every((segment) => segment.fromY === segment.toY),
+    ).toBe(true);
+    expect(
+      verticalSegments.every((segment) => segment.fromX === segment.toX),
+    ).toBe(true);
+  });
+
 });
 
 describe("body outline tracing", () => {

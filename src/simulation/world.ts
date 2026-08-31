@@ -24,6 +24,7 @@ export class World {
   private readonly ids: Uint32Array;
   private readonly orientations: Uint8Array;
   private readonly charges: Int8Array;
+  private readonly crossingVerticalCharges: Int8Array;
   private nextTileId = 1;
   private readonly rightWelds: Uint8Array;
   private readonly downWelds: Uint8Array;
@@ -41,6 +42,7 @@ export class World {
     this.ids = new Uint32Array(this.cellCount);
     this.orientations = new Uint8Array(this.cellCount);
     this.charges = new Int8Array(this.cellCount);
+    this.crossingVerticalCharges = new Int8Array(this.cellCount);
     this.rightWelds = new Uint8Array(this.cellCount);
     this.downWelds = new Uint8Array(this.cellCount);
   }
@@ -62,9 +64,12 @@ export class World {
   }
 
   chargeAt(x: number, y: number): Charge {
-    return this.charges[this.indexOf(x, y)] as Charge;
+    const index = this.indexOf(x, y);
+    if (this.kinds[index] === TileKind.WireCrossing) {
+      throw new Error("Wire crossing charges must be read from a circuit port");
+    }
+    return this.charges[index] as Charge;
   }
-
 
   tileAt(x: number, y: number): Tile {
     const index = this.indexOf(x, y);
@@ -79,31 +84,72 @@ export class World {
     if (!isCharge(charge)) {
       throw new RangeError(`Invalid circuit charge ${charge as number}`);
     }
-    if (charge !== 0 && TILE_DEFINITIONS[this.kinds[index] as TileKind].circuitPorts === 0) {
+    const kind = this.kinds[index] as TileKind;
+    if (charge !== 0 && TILE_DEFINITIONS[kind].circuitPorts === 0) {
       throw new Error("Only circuit-connected tiles can hold a nonzero charge");
     }
-    if (this.charges[index] !== charge) {
+    if (kind === TileKind.WireCrossing && charge !== 0) {
+      throw new Error("Wire crossing charges must specify a circuit axis");
+    }
+    if (
+      this.charges[index] !== charge ||
+      (kind === TileKind.WireCrossing && this.crossingVerticalCharges[index] !== 0)
+    ) {
       this.charges[index] = charge;
+      this.crossingVerticalCharges[index] = 0;
       this.revisionValue += 1;
     }
   }
 
-  applyCircuitCharges(charges: Int8Array): void {
-    if (charges.length !== this.cellCount) {
-      throw new RangeError("Circuit charge buffer must match the world cell count");
+  setCrossingCharges(x: number, y: number, horizontal: Charge, vertical: Charge): void {
+    const index = this.indexOf(x, y);
+    if (this.kinds[index] !== TileKind.WireCrossing) {
+      throw new Error(`Tile at (${x}, ${y}) is not a wire crossing`);
+    }
+    if (!isCharge(horizontal) || !isCharge(vertical)) {
+      throw new RangeError("Invalid wire crossing charge");
+    }
+    if (
+      this.charges[index] !== horizontal ||
+      this.crossingVerticalCharges[index] !== vertical
+    ) {
+      this.charges[index] = horizontal;
+      this.crossingVerticalCharges[index] = vertical;
+      this.revisionValue += 1;
+    }
+  }
+
+  applyCircuitCharges(charges: Int8Array, crossingVerticalCharges: Int8Array): void {
+    if (
+      charges.length !== this.cellCount ||
+      crossingVerticalCharges.length !== this.cellCount
+    ) {
+      throw new RangeError("Circuit charge buffers must match the world cell count");
     }
 
     let changed = false;
     for (let index = 0; index < this.cellCount; index += 1) {
       const charge = expectDefined(charges[index], "circuit charge");
-      if (!isCharge(charge)) {
-        throw new RangeError(`Invalid circuit charge ${charge}`);
+      const verticalCharge = expectDefined(
+        crossingVerticalCharges[index],
+        "crossing vertical charge",
+      );
+      if (!isCharge(charge) || !isCharge(verticalCharge)) {
+        throw new RangeError(`Invalid circuit charges ${charge}, ${verticalCharge}`);
       }
-      if (charge !== 0 && TILE_DEFINITIONS[this.kinds[index] as TileKind].circuitPorts === 0) {
+      const kind = this.kinds[index] as TileKind;
+      if (charge !== 0 && TILE_DEFINITIONS[kind].circuitPorts === 0) {
         throw new Error(`Non-circuit tile at index ${index} cannot hold charge`);
       }
-      if (this.charges[index] !== charge) {
+      if (verticalCharge !== 0 && kind !== TileKind.WireCrossing) {
+        throw new Error(`Non-crossing tile at index ${index} cannot hold vertical charge`);
+      }
+      if (
+        this.charges[index] !== charge ||
+        this.crossingVerticalCharges[index] !== verticalCharge
+      ) {
         this.charges[index] = charge;
+        this.crossingVerticalCharges[index] = verticalCharge;
         changed = true;
       }
     }
@@ -264,6 +310,7 @@ export class World {
       if (this.orientations[index] !== orientation) {
         this.orientations[index] = orientation;
         this.charges[index] = 0;
+        this.crossingVerticalCharges[index] = 0;
         this.clearDisallowedWeldsAtIndex(index);
         this.revisionValue += 1;
       }
@@ -276,6 +323,7 @@ export class World {
     this.kinds[index] = kind;
     this.ids[index] = id;
     this.charges[index] = 0;
+    this.crossingVerticalCharges[index] = 0;
     this.orientations[index] = orientation;
     this.revisionValue += 1;
     return id;
@@ -286,6 +334,7 @@ export class World {
     this.ids.fill(0);
     this.orientations.fill(Direction.Up);
     this.charges.fill(0);
+    this.crossingVerticalCharges.fill(0);
     this.rightWelds.fill(0);
     this.downWelds.fill(0);
     this.revisionValue += 1;
@@ -306,6 +355,7 @@ export class World {
     this.ids.set(source.ids);
     this.orientations.set(source.orientations);
     this.charges.set(source.charges);
+    this.crossingVerticalCharges.set(source.crossingVerticalCharges);
     this.rightWelds.set(source.rightWelds);
     this.downWelds.set(source.downWelds);
     this.nextTileId = source.nextTileId;
@@ -321,9 +371,23 @@ export class World {
     return this.orientations[index] as Direction;
   }
 
-  chargeAtIndex(index: number): Charge {
+  chargeAtPort(x: number, y: number, direction: Direction): Charge {
+    return this.chargeAtPortIndex(this.indexOf(x, y), direction);
+  }
+
+  chargeAtPortIndex(index: number, direction: Direction): Charge {
     this.assertIndex(index);
-    return this.charges[index] as Charge;
+    if (
+      !Number.isInteger(direction) ||
+      direction < Direction.Up ||
+      direction > Direction.Left
+    ) {
+      throw new RangeError(`Invalid circuit direction ${direction as number}`);
+    }
+    return this.kinds[index] === TileKind.WireCrossing &&
+        (direction === Direction.Up || direction === Direction.Down)
+      ? this.crossingVerticalCharges[index] as Charge
+      : this.charges[index] as Charge;
   }
 
   sensorOutputAtIndex(index: number): Charge {
@@ -378,12 +442,17 @@ export class World {
       this.ids[destination] = this.ids[source] ?? 0;
       this.orientations[destination] = this.orientations[source] ?? Direction.Up;
       this.charges[destination] = expectDefined(this.charges[source], "moving tile charge");
+      this.crossingVerticalCharges[destination] = expectDefined(
+        this.crossingVerticalCharges[source],
+        "moving crossing vertical charge",
+      );
       this.rightWelds[destination] = this.rightWelds[source] ?? 0;
       this.downWelds[destination] = this.downWelds[source] ?? 0;
       this.kinds[source] = TileKind.Empty;
       this.ids[source] = 0;
       this.orientations[source] = Direction.Up;
       this.charges[source] = 0;
+      this.crossingVerticalCharges[source] = 0;
       this.rightWelds[source] = 0;
       this.downWelds[source] = 0;
       movementCount += 1;
@@ -498,6 +567,7 @@ export class World {
     this.kinds[index] = TileKind.Empty;
     this.orientations[index] = Direction.Up;
     this.charges[index] = 0;
+    this.crossingVerticalCharges[index] = 0;
     this.ids[index] = 0;
     this.clearWeldsAtIndex(index);
   }

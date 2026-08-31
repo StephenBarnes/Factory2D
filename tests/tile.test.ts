@@ -24,7 +24,7 @@ describe("tile orientation", () => {
     },
   );
 
-  it.each([TileKind.Sand, TileKind.Conduit])(
+  it.each([TileKind.Sand, TileKind.Conduit, TileKind.WireCrossing])(
     "uses the canonical orientation for non-directional kind %s",
     (kind) => {
       expect(orientationForKind(kind, Direction.Left)).toBe(Direction.Up);

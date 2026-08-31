@@ -52,6 +52,12 @@ function appendDirection(current: string, direction: Direction): string {
   return `${current}${separator}${DIRECTION_NAMES[direction]}`;
 }
 
+function formatCharge(charge: number): string {
+  return charge < 0
+    ? "-1 · NEGATIVE"
+    : charge > 0 ? "+1 · POSITIVE" : "0 · NEUTRAL";
+}
+
 export class TileInspector {
   private readonly root: HTMLElement;
   private readonly name: HTMLElement;
@@ -145,13 +151,25 @@ export class TileInspector {
     this.circuitRow.hidden = !hasCircuit;
     this.chargeRow.hidden = !hasCircuit;
     if (hasCircuit) {
-      const charge = this.world.chargeAt(position.x, position.y);
-      const chargeLabel = charge < 0
-        ? "-1 · NEGATIVE"
-        : charge > 0 ? "+1 · POSITIVE" : "0 · NEUTRAL";
-      this.charge.textContent = definition.circuitInputPorts !== 0
-        ? `OUTPUT ${chargeLabel}`
-        : chargeLabel;
+      if (kind === TileKind.WireCrossing) {
+        const horizontal = this.world.chargeAtPort(
+          position.x,
+          position.y,
+          Direction.Left,
+        );
+        const vertical = this.world.chargeAtPort(
+          position.x,
+          position.y,
+          Direction.Up,
+        );
+        this.charge.textContent =
+          `H ${formatCharge(horizontal)} / V ${formatCharge(vertical)}`;
+      } else {
+        const chargeLabel = formatCharge(this.world.chargeAt(position.x, position.y));
+        this.charge.textContent = definition.circuitInputPorts !== 0
+          ? `OUTPUT ${chargeLabel}`
+          : chargeLabel;
+      }
     }
 
     const cellIndex = position.y * this.world.width + position.x;
