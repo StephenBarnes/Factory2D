@@ -1,4 +1,10 @@
 import {
+  appScreenPath,
+  resolveAppPath,
+  resolveAppScreen,
+  type AppRouteAccess,
+} from "./app-route";
+import {
   loadCompletedPuzzleIds,
   recordPuzzleResult,
   saveCompletedPuzzleIds,
@@ -11,6 +17,8 @@ import { populatePuzzleMap } from "../ui/main-menu";
 import { PuzzleInfoView } from "../ui/puzzle-info";
 
 type PuzzleProgressStorage = Pick<Storage, "getItem" | "setItem">;
+type NavigationHistory = Pick<History, "pushState" | "replaceState">;
+
 
 export interface NavigationElements {
   readonly gameScreen: HTMLElement;
@@ -32,6 +40,8 @@ export class NavigationController {
   private readonly puzzleInfoView: PuzzleInfoView;
   private readonly completedPuzzleIds: Set<PuzzleId>;
   private currentScreen: AppScreen = { kind: "main-menu" };
+  private readonly routeAccess: AppRouteAccess;
+
 
   constructor(
     private readonly elements: NavigationElements,
@@ -39,6 +49,7 @@ export class NavigationController {
     private readonly sessions: WorkshopSessionController,
     private readonly solutions: SavedSolutionController,
     private readonly storage: PuzzleProgressStorage,
+    private readonly history: NavigationHistory,
   ) {
     this.puzzleInfoView = new PuzzleInfoView(elements.puzzleInfoScreen);
     try {
@@ -47,6 +58,11 @@ export class NavigationController {
       console.error("Could not load puzzle progress:", error);
       this.completedPuzzleIds = new Set();
     }
+    this.routeAccess = {
+      completedPuzzleIds: this.completedPuzzleIds,
+      solutionExists: (puzzleId, solutionId) =>
+        this.solutions.findById(solutionId)?.puzzleId === puzzleId,
+    };
   }
 
   get screen(): AppScreen {
@@ -54,6 +70,21 @@ export class NavigationController {
   }
 
   navigate(screen: AppScreen): void {
+    const resolvedScreen = resolveAppScreen(screen, this.routeAccess);
+    this.showScreen(resolvedScreen);
+    this.history.pushState(null, "", appScreenPath(resolvedScreen));
+  }
+
+  navigatePath(pathname: string): void {
+    const screen = resolveAppPath(pathname, this.routeAccess);
+    this.showScreen(screen);
+    const canonicalPath = appScreenPath(screen);
+    if (pathname !== canonicalPath) {
+      this.history.replaceState(null, "", canonicalPath);
+    }
+  }
+
+  private showScreen(screen: AppScreen): void {
     this.callbacks.stopSimulation();
     this.persistActiveSolutionBoard();
     this.currentScreen = screen;

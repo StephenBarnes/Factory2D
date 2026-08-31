@@ -29,6 +29,10 @@ export class SavedSolutionController {
     return this.puzzleSolutions.forPuzzle(puzzleId);
   }
 
+  findById(solutionId: string): SavedPuzzleSolution | undefined {
+    return this.puzzleSolutions.findById(solutionId);
+  }
+
   byId(solutionId: string): SavedPuzzleSolution {
     return this.puzzleSolutions.byId(solutionId);
   }

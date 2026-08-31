@@ -101,8 +101,12 @@ export class PuzzleSolutions {
     return this.solutions.filter((solution) => solution.puzzleId === puzzleId);
   }
 
+  findById(id: string): SavedPuzzleSolution | undefined {
+    return this.solutions.find((candidate) => candidate.id === id);
+  }
+
   byId(id: string): SavedPuzzleSolution {
-    const solution = this.solutions.find((candidate) => candidate.id === id);
+    const solution = this.findById(id);
     if (solution === undefined) {
       throw new Error(`Unknown puzzle solution ${id}`);
     }

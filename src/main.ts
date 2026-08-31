@@ -2,7 +2,6 @@ import "./styles.css";
 import { NavigationController } from "./game/navigation-controller";
 import { SavedSolutionController } from "./game/saved-solution-controller";
 import { createSandboxWorld } from "./game/puzzles";
-import { INITIAL_SCREEN } from "./game/screen";
 import {
   type WorkshopSession,
   WorkshopSessionController,
@@ -546,6 +545,7 @@ const navigation = new NavigationController(
   sessions,
   savedSolutions,
   window.localStorage,
+  window.history,
 );
 
 
@@ -942,6 +942,9 @@ window.addEventListener("blur", () => {
     selectTile(selectedKind);
   }
 });
+window.addEventListener("popstate", () => {
+  navigation.navigatePath(window.location.pathname);
+});
 window.addEventListener("pagehide", () => navigation.persistActiveSolutionBoard());
 window.addEventListener("resize", () => {
   renderPalettePreviews();
@@ -988,5 +991,5 @@ function frame(currentTime: number): void {
 }
 
 updateTransportState();
-navigation.navigate(INITIAL_SCREEN);
+navigation.navigatePath(window.location.pathname);
 requestAnimationFrame(frame);
