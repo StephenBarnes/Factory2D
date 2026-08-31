@@ -312,15 +312,10 @@ function finishAnimation(): void {
 }
 function animationsEnabled(): boolean {
   return animationToggle.checked &&
-    Number(speedSelect.value) < HIGH_SPEED_TICKS_PER_SECOND;
+    Number(speedSelect.value) !== HIGH_SPEED_TICKS_PER_SECOND;
 }
 
-function updateAnimationControlState(): void {
-  const highSpeed = Number(speedSelect.value) >= HIGH_SPEED_TICKS_PER_SECOND;
-  if (highSpeed) {
-    animationToggle.checked = false;
-  }
-  animationToggle.disabled = highSpeed;
+function finishAnimationIfDisabled(): void {
   if (!animationsEnabled()) {
     finishAnimation();
   }
@@ -631,15 +626,11 @@ playButton.addEventListener("click", () => {
 stepButton.addEventListener("click", () => {
   advanceSimulation(animationsEnabled() ? MANUAL_STEP_ANIMATION_MS : 0);
 });
-animationToggle.addEventListener("change", () => {
-  if (!animationToggle.checked) {
-    finishAnimation();
-  }
-});
+animationToggle.addEventListener("change", finishAnimationIfDisabled);
 
 speedSelect.addEventListener("change", () => {
   accumulatedTime = 0;
-  updateAnimationControlState();
+  finishAnimationIfDisabled();
 });
 
 
@@ -1031,6 +1022,5 @@ function frame(currentTime: number): void {
 }
 
 updateTransportState();
-updateAnimationControlState();
 showScreen(INITIAL_SCREEN);
 requestAnimationFrame(frame);

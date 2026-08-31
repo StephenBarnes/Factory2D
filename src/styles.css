@@ -649,10 +649,6 @@ kbd {
   accent-color: #78dcca;
 }
 
-.animation-control:has(input:disabled) {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
 
 .speed-control select {
   padding: 0 28px 0 9px;
