@@ -85,6 +85,22 @@ describe("pistons", () => {
     expect(world.isWelded(2, 1, 1, 1)).toBe(true);
   });
 
+  it("recoils when its arm faces the world boundary", () => {
+    const world = new World(5, 4);
+    const pistonId = world.place(2, 3, TileKind.Piston, Direction.Down);
+    const inputId = world.place(1, 3, TileKind.FixedCharge);
+    world.setWeld(2, 3, 1, 3, true);
+
+    expect(new Simulation(world).step()).toBe(3);
+
+    expect(world.kindAt(2, 2)).toBe(TileKind.PistonBase);
+    expect(world.kindAt(2, 3)).toBe(TileKind.PistonArm);
+    expect(world.idAt(2, 3)).toBe(pistonId);
+    expect(world.idAt(1, 2)).toBe(inputId);
+    expect(world.isWelded(2, 2, 2, 3)).toBe(true);
+    expect(world.isWelded(2, 2, 1, 2)).toBe(true);
+  });
+
   it("pushes a complete obstruction chain while recoiling", () => {
     const world = new World(5, 6);
     world.place(2, 3, TileKind.Piston, Direction.Down);

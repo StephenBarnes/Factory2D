@@ -270,6 +270,14 @@ export class Simulation {
       const orientation = this.world.orientationAtIndex(base);
       const arm = this.neighborIndex(base, orientation);
       if (arm < 0) {
+        if (action === 1) {
+          this.pistonActions[base] = action;
+          this.pistonBaseRoots[base] = expectDefined(
+            this.bodyRoots[base],
+            "boundary-braced piston base body",
+          );
+          this.pistonRecoilExtensions[base] = 1;
+        }
         continue;
       }
       if (
