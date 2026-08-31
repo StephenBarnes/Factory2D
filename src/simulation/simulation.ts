@@ -209,7 +209,9 @@ export class Simulation {
     for (let index = 0; index < this.world.cellCount; index += 1) {
       const kind = this.world.kindAtIndex(index);
       let outputCharge: Charge;
-      if (kind === TileKind.Sensor) {
+      if (kind === TileKind.FixedCharge) {
+        outputCharge = 1;
+      } else if (kind === TileKind.Sensor) {
         outputCharge = this.world.sensorOutputAtIndex(index);
       } else if (kind === TileKind.Delivery) {
         outputCharge = expectDefined(

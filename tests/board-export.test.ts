@@ -151,6 +151,17 @@ describe("board export", () => {
     expect(imported.world.chargeAt(0, 0)).toBe(-1);
   });
 
+  it("round-trips a fixed charge rune with its compact code", () => {
+    const world = new World(1, 1);
+    world.place(0, 0, TileKind.FixedCharge);
+
+    const serialized = serializeBoard(world, 3);
+    const imported = deserializeBoard(serialized);
+
+    expect(JSON.parse(serialized).grid).toEqual(["1"]);
+    expect(imported.world.kindAt(0, 0)).toBe(TileKind.FixedCharge);
+  });
+
   it("round-trips independent wire crossing axis charges", () => {
     const world = new World(1, 1);
     world.place(0, 0, TileKind.WireCrossing);

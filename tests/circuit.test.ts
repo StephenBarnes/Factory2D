@@ -24,6 +24,29 @@ describe("circuit networks", () => {
     expect(world.chargeAt(3, 1)).toBe(0);
   });
 
+  it("drives a welded circuit with +1 constantly", () => {
+    const world = new World(3, 1);
+    world.place(0, 0, TileKind.FixedCharge);
+    world.place(1, 0, TileKind.Conduit);
+    world.place(2, 0, TileKind.Conduit);
+    world.setWeld(0, 0, 1, 0, true);
+    world.setWeld(1, 0, 2, 0, true);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+
+    expect(world.chargeAt(0, 0)).toBe(1);
+    expect(world.chargeAt(1, 0)).toBe(1);
+    expect(world.chargeAt(2, 0)).toBe(1);
+
+    world.setWeld(0, 0, 1, 0, false);
+    simulation.step();
+
+    expect(world.chargeAt(0, 0)).toBe(1);
+    expect(world.chargeAt(1, 0)).toBe(0);
+    expect(world.chargeAt(2, 0)).toBe(0);
+  });
+
   it("clears an undriven conduit on the tick after its sensor is unwelded", () => {
     const world = new World(2, 2);
     world.place(0, 0, TileKind.Stone);

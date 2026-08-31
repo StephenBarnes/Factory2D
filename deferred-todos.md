@@ -5,13 +5,17 @@ Components:
 * Splitter blocks.
 * Comparers: compare front neighbor to back neighbor, and output +1 on sides if they're equal, else output 0.
 * Electrical components like logic gates, delays, latches, diodes, brush connectors (or voltage sensors, rather).
-* Assemblers that convert a group of blocks welded in a specific way into one block. For example iron and copper blocks welded in a specific way are converted to a piston block.
+* Assemblers that convert a group of blocks welded in a specific way into one block. For example iron and copper blocks welded in a specific way are converted to a piston block. We also want this to be able to convert one block to multiple (unwelded) blocks - so need to store a queue of blocks to emit, emit them one-by-one when the output tile is empty, and prevent the assembler from running when the queue is non-empty or over some limit.
 * Flipper: attaches to one block, then flips the entire connected/welded group of blocks around that line horizontally or vertically, if it would not collide/overlap other blocks.
 * Laser splitter: splits everything in a line.
 * Configurable components where the player can enter a number in a text box, e.g. a configurable-delay repeater.
 * Component that rotates a neighboring block or body around itself.
 * Add a fragility flag to tile kinds, and set it to true for glass blocks. A fragile block that drops and then stops falling should be deleted, animated with a simple shatter effect.
 * Add a cushion flag and cushion block. Fragile blocks that fall onto a cushion block do not shatter.
+* Add a press/stamper/crusher. Behaves similarly to the piston, but (1) if piston extension is blocked by another tile, and that tile can't be moved, it instead unwelds and destroys that tile; and (2) we have a list of recipes for transforming the tile that the extended arm touches, on extension.
+* Grinder blocks that process a block in front into a product block - exactly like the furnace, but with a distinct table of recipes and different appearance (and later animation and sound).
+* A drill/destroyer block that destroys the block in front of it.
+* Add an indestructible flag. Blocks like crushers and drills should not be able to destroy these. Needed to prevent some exploits when solving puzzles, e.g. by drilling into the ground and activating the victory block.
 
 Performance:
 * Profile to determine if there's any need to optimize, and if so, what to optimize.
@@ -36,6 +40,11 @@ Don't add, for circuit network, because they can be built from a few existing co
 
 Visuals:
 * Mark the wire crossing in a way that makes it apparent it's a wire-crossing block when exactly one side is connected to a wire. Currently that's not visually distinct. Maybe draw the central cross regardless of how many sides are wired.
+* Add animation for the delivery box - animate tiles moving into it, and shrinking, as they're absorbed.
+
+Game feel:
+* Try out alternate easing for movements. Maybe define per-block easing.
+* Add sounds. On block placement/removal, welding/unwelding. On victory block triggering.
 
 UI:
 * Add a selection tool, for selecting a rectangular region of tiles and copying, pasting, moving, and rotating.

@@ -21,6 +21,7 @@ export const enum TileKind {
   Conveyor = 19,
   Delivery = 20,
   Victory = 21,
+  FixedCharge = 22,
 }
 
 export const enum Direction {
@@ -59,6 +60,7 @@ export const enum TileDecorationStyle {
   Conveyor = 16,
   Delivery = 17,
   Victory = 18,
+  FixedCharge = 19,
 }
 
 export interface TileDefinition {
@@ -285,11 +287,34 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationStyle: TileDecorationStyle.Sensor,
     decorationColor: "#d9c8ff",
   },
+  [TileKind.FixedCharge]: {
+    name: "Fixed Charge Rune",
+    boardCode: "1",
+    palette: {
+      order: 11,
+      description: "Emits +1 constantly into its welded circuit network",
+      shortcut: null,
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.All,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#6d6047",
+    shadow: "#403722",
+    decorationStyle: TileDecorationStyle.FixedCharge,
+    decorationColor: "#f3dfa0",
+  },
   [TileKind.Inverter]: {
     name: "Inverter Rune",
     boardCode: "I",
     palette: {
-      order: 11,
+      order: 12,
       description: "Negates the sum of up to three isolated inputs",
       shortcut: { code: "Digit8", label: "8" },
     },
@@ -312,7 +337,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Combiner Rune",
     boardCode: "+",
     palette: {
-      order: 12,
+      order: 13,
       description: "Sums up to three isolated inputs toward its output",
       shortcut: { code: "Digit9", label: "9" },
     },
@@ -335,7 +360,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Rectifier Rune",
     boardCode: "R",
     palette: {
-      order: 13,
+      order: 14,
       description: "Passes positive sums from up to three isolated inputs",
       shortcut: { code: "Digit0", label: "0" },
     },
@@ -358,7 +383,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Multiplier Rune",
     boardCode: "*",
     palette: {
-      order: 14,
+      order: 15,
       description: "Multiplies up to three connected isolated inputs",
       shortcut: { code: "KeyX", label: "X" },
     },
@@ -381,7 +406,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Subtractor Rune",
     boardCode: "-",
     palette: {
-      order: 15,
+      order: 16,
       description: "Subtracts left and right inputs from the rear input",
       shortcut: { code: "Minus", label: "−" },
     },
@@ -404,7 +429,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Charge Sensor Rune",
     boardCode: "Q",
     palette: {
-      order: 16,
+      order: 17,
       description: "Copies an adjacent tile's charge to three outputs without an input weld",
       shortcut: null,
     },
@@ -427,7 +452,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Selector Rune",
     boardCode: "T",
     palette: {
-      order: 17,
+      order: 18,
       description: "Selects the left or right input from the rear charge",
       shortcut: null,
     },
@@ -450,7 +475,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Wire Crossing",
     boardCode: "W",
     palette: {
-      order: 18,
+      order: 19,
       description: "Keeps horizontal and vertical circuit networks separate",
       shortcut: null,
     },
@@ -565,7 +590,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Delivery Box",
     boardCode: "D",
     palette: {
-      order: 19,
+      order: 20,
       description: "Absorbs a front block matching the block behind it and pulses +1 sideways",
       shortcut: null,
     },
@@ -588,7 +613,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Victory Block",
     boardCode: "V",
     palette: {
-      order: 20,
+      order: 21,
       description: "Wins on +1 input or loses on -1 input; opposing inputs jam",
       shortcut: null,
     },

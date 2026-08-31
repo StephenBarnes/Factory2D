@@ -587,6 +587,25 @@ function drawDecoration(
       drawDot(context, left + size / 2, top + size / 2, Math.max(2, size * 0.13));
       context.fill();
       break;
+    case TileDecorationStyle.FixedCharge: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.lineWidth = Math.max(1.5, size * 0.055);
+      context.lineCap = "round";
+      context.strokeStyle = definition.decorationColor;
+      context.beginPath();
+      drawDot(context, 0, 0, size * 0.21);
+      context.stroke();
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
+      context.beginPath();
+      context.moveTo(-size * 0.11, 0);
+      context.lineTo(size * 0.11, 0);
+      context.moveTo(0, -size * 0.11);
+      context.lineTo(0, size * 0.11);
+      context.stroke();
+      context.restore();
+      break;
+    }
     case TileDecorationStyle.Sensor:
       context.save();
       context.translate(left + size / 2, top + size / 2);
