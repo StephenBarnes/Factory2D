@@ -124,6 +124,7 @@ const tickCounter = requiredElement<HTMLSpanElement>("tick-counter");
 const coordinates = requiredElement<HTMLDivElement>("coordinates");
 
 let selectedKind = TileKind.Sand;
+let previousSelectedKind: TileKind = selectedKind;
 let selectedOrientation = Direction.Up;
 let selectedTool: "tile" | "weld" = "tile";
 let temporaryWeldActive = false;
@@ -371,6 +372,9 @@ function configureComponentPalette(): void {
       "Puzzle component list is unexpectedly empty",
     ).kind;
   }
+  if (availableComponents !== null && !availableComponents.has(previousSelectedKind)) {
+    previousSelectedKind = selectedKind;
+  }
   tileKindsByShortcut = populateComponentPalette(
     componentPalette,
     selectedTool === "tile" ? selectedKind : null,
@@ -388,7 +392,10 @@ function selectTile(kind: TileKind): void {
   if (!componentIsAvailable(kind)) {
     return;
   }
-  selectedKind = kind;
+  if (kind !== selectedKind) {
+    previousSelectedKind = selectedKind;
+    selectedKind = kind;
+  }
   if (temporaryWeldActive) {
     selectWeldTool();
     return;
@@ -399,6 +406,22 @@ function selectTile(kind: TileKind): void {
     item.classList.toggle("selected", item.dataset.tile === String(kind));
   }
   refreshPointerHover();
+}
+
+function pickTileAt(cell: GridCell): void {
+  const kind = world.kindAt(cell.x, cell.y);
+  if (kind === TileKind.Empty) {
+    selectTile(previousSelectedKind);
+    return;
+  }
+  if (!componentIsAvailable(kind)) {
+    return;
+  }
+
+  selectTile(kind);
+  if (TILE_DEFINITIONS[kind].usesOrientation) {
+    setSelectedOrientation(world.orientationAt(cell.x, cell.y));
+  }
 }
 
 function renderPalettePreviews(): void {
@@ -841,15 +864,7 @@ function finishPointerGesture(event: PointerEvent): void {
     activePointerMode === "pick-or-pan" &&
     pendingPickCell !== null
   ) {
-    const kind = world.kindAt(pendingPickCell.x, pendingPickCell.y);
-    if (kind !== TileKind.Empty) {
-      selectTile(kind);
-      if (TILE_DEFINITIONS[kind].usesOrientation) {
-        setSelectedOrientation(
-          world.orientationAt(pendingPickCell.x, pendingPickCell.y),
-        );
-      }
-    }
+    pickTileAt(pendingPickCell);
   }
   activePointerId = null;
   activePointerMode = null;
@@ -922,17 +937,21 @@ document.addEventListener("keydown", (event) => {
     refreshPointerHover();
     return;
   }
+  if (event.code === "KeyQ") {
+    event.preventDefault();
+    if (hoveredCell !== null) {
+      pickTileAt(hoveredCell);
+    }
+    return;
+  }
+
   if (
     selectedTool === "tile" &&
     TILE_DEFINITIONS[selectedKind].usesOrientation &&
     activeSession.editingState.editable
   ) {
     let orientation: Direction | null = null;
-    if (event.code === "KeyQ") {
-      orientation = ((selectedOrientation + 3) & 3) as Direction;
-    } else if (event.code === "KeyE") {
-      orientation = ((selectedOrientation + 1) & 3) as Direction;
-    } else if (event.code === "KeyW") {
+    if (event.code === "KeyW") {
       orientation = Direction.Up;
     } else if (event.code === "KeyD") {
       orientation = Direction.Right;
