@@ -61,9 +61,7 @@ const ACTIVE_DIRECTIONS = [
   { charge: 1 as const, side: Direction.Up },
   { charge: 1 as const, side: Direction.Right },
   { charge: 1 as const, side: Direction.Down },
-  { charge: 1 as const, side: Direction.Left },
   { charge: -1 as const, side: Direction.Up },
-  { charge: -1 as const, side: Direction.Right },
   { charge: -1 as const, side: Direction.Down },
   { charge: -1 as const, side: Direction.Left },
 ];
@@ -80,6 +78,9 @@ describe("conveyor belt forces", () => {
       const targetX = conveyorX + DIRECTION_X[side];
       const targetY = conveyorY + DIRECTION_Y[side];
       const targetId = world.place(targetX, targetY, TileKind.Stone);
+      if (side === Direction.Down) {
+        world.place(targetX, targetY + 1, TileKind.Platform);
+      }
       const forceDirection = rotate(side, charge);
       const expectedX = targetX + DIRECTION_X[forceDirection];
       const expectedY = targetY + DIRECTION_Y[forceDirection];
@@ -106,6 +107,7 @@ describe("conveyor belt forces", () => {
     placeFixedPoweredConveyor(world, 4, 4, 1, Direction.Down);
     const firstId = world.place(4, 3, TileKind.Stone);
     const secondId = world.place(5, 3, TileKind.Iron);
+    world.place(5, 4, TileKind.Platform);
 
     expect(new Simulation(world).step()).toBe(2);
     expect(world.idAt(5, 3)).toBe(firstId);
@@ -135,12 +137,51 @@ describe("conveyor belt forces", () => {
     world.place(5, 4, TileKind.Platform);
     world.setWeld(5, 3, 5, 4, true);
     const targetId = world.place(3, 2, TileKind.Stone);
+    world.place(4, 4, TileKind.Platform);
 
     expect(new Simulation(world).step()).toBe(3);
     expect(world.idAt(2, 3)).toBe(conveyorId);
     expect(world.idAt(3, 3)).toBe(sensorId);
     expect(world.idAt(4, 2)).toBe(targetId);
   });
+
+  it("lets an unsupported powered assembly fall instead of gripping a ceiling", () => {
+    const world = new World(8, 7);
+    for (let x = 1; x <= 6; x += 1) {
+      world.place(x, 1, TileKind.Platform);
+    }
+    const sensorId = world.place(3, 2, TileKind.Sensor, Direction.Up);
+    const conveyorId = world.place(4, 2, TileKind.Conveyor);
+    world.setWeld(3, 2, 4, 2, true);
+
+    expect(new Simulation(world).step()).toBe(2);
+    expect(world.idAt(3, 3)).toBe(sensorId);
+    expect(world.idAt(4, 3)).toBe(conveyorId);
+  });
+
+  it("does not lift a gravity-affected block from fixed support", () => {
+    const world = new World(9, 9);
+    placeFixedPoweredConveyor(world, 4, 4, -1, Direction.Left);
+    const targetId = world.place(5, 4, TileKind.Stone);
+    world.place(5, 5, TileKind.Platform);
+
+    expect(new Simulation(world).step()).toBe(0);
+    expect(world.idAt(5, 4)).toBe(targetId);
+  });
+
+  it.each([-1, 1] as const)(
+    "lets unsupported blocks fall symmetrically beside a conveyor with charge %i",
+    (charge) => {
+      const world = new World(9, 9);
+      placeFixedPoweredConveyor(world, 4, 4, charge, Direction.Up);
+      const leftId = world.place(3, 4, TileKind.Stone);
+      const rightId = world.place(5, 4, TileKind.Iron);
+
+      expect(new Simulation(world).step()).toBe(2);
+      expect(world.idAt(3, 5)).toBe(leftId);
+      expect(world.idAt(5, 5)).toBe(rightId);
+    },
+  );
 
   it("does not apply force across a welded edge", () => {
     const world = new World(9, 9);

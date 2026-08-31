@@ -36,6 +36,7 @@ export class Simulation {
   private readonly movementQueue: Int32Array;
   private readonly jammedBodies: Uint8Array;
   private readonly destinationOwners: Int32Array;
+  private readonly gravityDestinationOwners: Int32Array;
   private readonly dependencyHeads: Int32Array;
   private readonly dependencyDependents: Int32Array;
   private readonly nextDependency: Int32Array;
@@ -67,6 +68,7 @@ export class Simulation {
     this.movementQueue = new Int32Array(world.cellCount);
     this.jammedBodies = new Uint8Array(world.cellCount);
     this.destinationOwners = new Int32Array(world.cellCount);
+    this.gravityDestinationOwners = new Int32Array(world.cellCount);
     this.dependencyHeads = new Int32Array(world.cellCount);
     this.dependencyDependents = new Int32Array(world.cellCount);
     this.nextDependency = new Int32Array(world.cellCount);
@@ -89,7 +91,6 @@ export class Simulation {
     this.connectMagneticallyAttractedBodies();
     this.collectBodyMembers();
     this.chooseMovements();
-    this.resolveDestinationConflicts();
 
     const movementCount = this.world.moveBodies(
       this.bodyRoots,
@@ -495,12 +496,19 @@ export class Simulation {
     }
   }
 
+  /**
+   * Gravity resolves before lower-priority conveyor movement. A conveyor can
+   * move a supported body, but cannot redirect a falling body or claim its
+   * destination.
+   */
   private chooseMovements(): void {
     this.horizontalMoves.fill(0);
     this.verticalMoves.fill(0);
+    this.drivenBodies.fill(0);
+    this.chooseGravityMovements();
+    this.resolveDestinationConflicts();
     this.collectConveyorForces();
     this.resolveDrivenMovements();
-    this.chooseGravityMovements();
   }
 
   private collectConveyorForces(): void {
@@ -555,16 +563,25 @@ export class Simulation {
     }
 
     for (let root = 0; root < this.world.cellCount; root += 1) {
-      if (expectDefined(this.bodyHeads[root], "body head") < 0) {
+      if (
+        expectDefined(this.bodyHeads[root], "body head") < 0 ||
+        this.verticalMoves[root] === 1
+      ) {
         continue;
       }
       const forceX = expectDefined(this.bodyForceX[root], "horizontal body force");
       const forceY = expectDefined(this.bodyForceY[root], "vertical body force");
-      if (forceX === 0 && forceY === 0) {
+      const moveX = forceX < 0 ? -1 : forceX > 0 ? 1 : 0;
+      const moveY = forceY > 0
+        ? 1
+        : forceY < 0 && this.bodyFalls[root] === 0
+          ? -1
+          : 0;
+      if (moveX === 0 && moveY === 0) {
         continue;
       }
-      this.horizontalMoves[root] = forceX < 0 ? -1 : forceX > 0 ? 1 : 0;
-      this.verticalMoves[root] = forceY < 0 ? -1 : forceY > 0 ? 1 : 0;
+      this.horizontalMoves[root] = moveX;
+      this.verticalMoves[root] = moveY;
       this.drivenBodies[root] = 1;
       this.movementQueue[queueLength] = root;
       queueLength += 1;
@@ -603,6 +620,13 @@ export class Simulation {
         if (blocker < 0 || blocker === root) {
           continue;
         }
+        if (
+          this.drivenBodies[blocker] === 0 &&
+          this.verticalMoves[blocker] === 1
+        ) {
+          this.blockMovementGroup(root);
+          continue;
+        }
         if (this.bodyFalls[blocker] === 0) {
           this.blockMovementGroup(root);
           continue;
@@ -628,6 +652,22 @@ export class Simulation {
       }
     }
 
+    this.gravityDestinationOwners.fill(-1);
+    for (let root = 0; root < this.world.cellCount; root += 1) {
+      if (this.drivenBodies[root] === 1 || this.verticalMoves[root] !== 1) {
+        continue;
+      }
+      const moveX = expectDefined(this.horizontalMoves[root], "horizontal gravity movement");
+      for (
+        let member = expectDefined(this.bodyHeads[root], "body head");
+        member >= 0;
+        member = expectDefined(this.nextBodyMember[member], "next body member")
+      ) {
+        const destination = member + moveX + this.world.width;
+        this.gravityDestinationOwners[destination] = root;
+      }
+    }
+
     this.destinationOwners.fill(-1);
     for (let root = 0; root < this.world.cellCount; root += 1) {
       if (
@@ -645,6 +685,15 @@ export class Simulation {
       ) {
         const destination = member + moveX + moveY * this.world.width;
         const owner = expectDefined(this.destinationOwners[destination], "destination owner");
+        if (
+          expectDefined(
+            this.gravityDestinationOwners[destination],
+            "gravity destination owner",
+          ) >= 0
+        ) {
+          this.blockMovementGroup(root);
+          continue;
+        }
         if (
           owner >= 0 &&
           this.findMovementGroup(owner) !== this.findMovementGroup(root)
