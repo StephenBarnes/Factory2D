@@ -1,15 +1,14 @@
-import { chargeFromSum, type Charge } from "./circuit";
-import { furnaceRecipeFor } from "./furnace";
+import { CircuitResolver } from "./circuit-resolver";
+import { DeliveryResolver } from "./delivery-resolver";
+import { FurnaceResolver } from "./furnace-resolver";
 import { PuzzleResult } from "./puzzle-result";
 import {
   Direction,
   directionX,
   directionY,
-  orientedSides,
   oppositeDirection,
   TILE_DEFINITIONS,
   TileKind,
-  WeldSide,
 } from "./tile";
 import { World } from "./world";
 import { expectDefined } from "../util/assert";
@@ -20,6 +19,9 @@ import { expectDefined } from "../util/assert";
  */
 export class Simulation {
   readonly world: World;
+  private readonly circuitResolver: CircuitResolver;
+  private readonly deliveryResolver: DeliveryResolver;
+  private readonly furnaceResolver: FurnaceResolver;
   tick = 0;
 
   private readonly bodyRoots: Int32Array;
@@ -50,17 +52,6 @@ export class Simulation {
   private readonly magneticConstraintIsVertical: Uint8Array;
   private readonly nextMagneticConstraint: Int32Array;
   private magneticConstraintCount = 0;
-  private readonly circuitRoots: Int32Array;
-  private readonly circuitDriveSums: Int32Array;
-  private readonly nextCircuitCharges: Int8Array;
-  private readonly nextCrossingVerticalCharges: Int8Array;
-  private readonly furnaceDisabled: Uint8Array;
-  private readonly nextFurnaceProgress: Uint16Array;
-  private readonly nextFurnaceTargetIds: Uint32Array;
-  private readonly furnaceTransformTargetIndices: Int32Array;
-  private readonly furnaceTransformKinds: Uint8Array;
-  private readonly deliveryTargetOwners: Int32Array;
-  private readonly deliveryAbsorbTargetIndices: Int32Array;
   private readonly pistonActions: Int8Array;
   private readonly pistonHeadWelds: Uint8Array;
   private readonly pistonArmIds: Uint32Array;
@@ -75,6 +66,9 @@ export class Simulation {
 
   constructor(world: World) {
     this.world = world;
+    this.circuitResolver = new CircuitResolver(world);
+    this.deliveryResolver = new DeliveryResolver(world);
+    this.furnaceResolver = new FurnaceResolver(world);
     this.bodyRoots = new Int32Array(world.cellCount);
     this.weldedBodyRoots = new Int32Array(world.cellCount);
     this.bodyHeads = new Int32Array(world.cellCount);
@@ -102,17 +96,6 @@ export class Simulation {
     this.magneticConstraintOtherBodies = new Int32Array(world.cellCount * 2);
     this.magneticConstraintIsVertical = new Uint8Array(world.cellCount * 2);
     this.nextMagneticConstraint = new Int32Array(world.cellCount * 2);
-    this.circuitRoots = new Int32Array(world.cellCount * 2);
-    this.circuitDriveSums = new Int32Array(world.cellCount * 2);
-    this.nextCircuitCharges = new Int8Array(world.cellCount);
-    this.nextCrossingVerticalCharges = new Int8Array(world.cellCount);
-    this.furnaceDisabled = new Uint8Array(world.cellCount);
-    this.nextFurnaceProgress = new Uint16Array(world.cellCount);
-    this.nextFurnaceTargetIds = new Uint32Array(world.cellCount);
-    this.furnaceTransformTargetIndices = new Int32Array(world.cellCount);
-    this.furnaceTransformKinds = new Uint8Array(world.cellCount);
-    this.deliveryTargetOwners = new Int32Array(world.cellCount);
-    this.deliveryAbsorbTargetIndices = new Int32Array(world.cellCount);
     this.pistonActions = new Int8Array(world.cellCount);
     this.pistonHeadWelds = new Uint8Array(world.cellCount);
     this.pistonArmIds = new Uint32Array(world.cellCount);
@@ -128,10 +111,10 @@ export class Simulation {
 
   step(): number {
     this.resolveVictoryBlocks();
-    this.collectDeliveryAbsorptions();
-    this.resolveCircuits();
-    this.resolveFurnaces();
-    this.resolveDeliveries();
+    this.deliveryResolver.collect();
+    this.circuitResolver.resolve(this.tick, this.deliveryResolver.absorptionTargetIndices);
+    this.furnaceResolver.resolve(this.circuitResolver.furnaceDisabled);
+    this.deliveryResolver.commit();
     this.collectWeldedBodies();
     this.connectMagneticallyAttractedBodies();
     this.collectBodyMembers();
@@ -671,331 +654,6 @@ export class Simulation {
     this.tick = 0;
   }
 
-  private resolveCircuits(): void {
-    this.circuitRoots.fill(-1);
-    this.circuitDriveSums.fill(0);
-    this.nextCircuitCharges.fill(0);
-    this.nextCrossingVerticalCharges.fill(0);
-    this.furnaceDisabled.fill(0);
-
-    for (let index = 0; index < this.world.cellCount; index += 1) {
-      const kind = this.world.kindAtIndex(index);
-      const definition = TILE_DEFINITIONS[kind];
-      if (definition.circuitPorts === 0 || definition.circuitInputPorts !== 0) {
-        continue;
-      }
-
-      const primaryNode = index * 2;
-      this.circuitRoots[primaryNode] = primaryNode;
-      if (kind === TileKind.WireCrossing) {
-        this.circuitRoots[primaryNode + 1] = primaryNode + 1;
-      }
-    }
-
-    for (let index = 0; index < this.world.cellCount; index += 1) {
-      for (let value = Direction.Right; value <= Direction.Down; value += 1) {
-        const direction = value as Direction;
-        if (!this.world.hasCircuitConnectionAtIndex(index, direction)) {
-          continue;
-        }
-        const neighbor = this.neighborIndex(index, direction);
-        if (neighbor < 0) {
-          throw new Error(`Connected circuit at index ${index} has no neighbor`);
-        }
-        const ownNode = this.circuitNode(index, direction);
-        const neighborNode = this.circuitNode(neighbor, oppositeDirection(direction));
-        if (
-          expectDefined(this.circuitRoots[ownNode], "circuit root marker") >= 0 &&
-          expectDefined(this.circuitRoots[neighborNode], "neighbor circuit root marker") >= 0
-        ) {
-          this.unionCircuitNodes(ownNode, neighborNode);
-        }
-      }
-    }
-
-    for (let index = 0; index < this.world.cellCount; index += 1) {
-      const kind = this.world.kindAtIndex(index);
-      let outputCharge: Charge;
-      if (kind === TileKind.FixedCharge) {
-        outputCharge = 1;
-      } else if (kind === TileKind.Spark) {
-        outputCharge = this.tick === 0 ? 1 : 0;
-      } else if (kind === TileKind.Sensor) {
-        outputCharge = this.world.sensorOutputAtIndex(index);
-      } else if (kind === TileKind.Delivery) {
-        outputCharge = expectDefined(
-          this.deliveryAbsorbTargetIndices[index],
-          "delivery absorption target",
-        ) >= 0 ? 1 : 0;
-      } else {
-        continue;
-      }
-
-      if (outputCharge !== 0) {
-        const root = this.findCircuitRoot(this.circuitNode(index, Direction.Up));
-        this.circuitDriveSums[root] =
-          expectDefined(this.circuitDriveSums[root], "circuit drive sum") + outputCharge;
-      }
-    }
-
-    for (let index = 0; index < this.world.cellCount; index += 1) {
-      const kind = this.world.kindAtIndex(index);
-      const definition = TILE_DEFINITIONS[kind];
-      if (definition.circuitInputPorts === 0 || kind === TileKind.Victory) {
-        continue;
-      }
-
-      const orientation = this.world.orientationAtIndex(index);
-      if (kind === TileKind.ChargeSensor) {
-        const inputIndex = this.neighborIndex(index, orientation);
-        const outputCharge = inputIndex < 0
-          ? 0
-          : this.world.chargeAtPortIndex(inputIndex, oppositeDirection(orientation));
-        this.driveCircuitOutputs(
-          index,
-          orientedSides(definition.circuitOutputPorts, orientation),
-          outputCharge,
-        );
-        continue;
-      }
-      const inputSides = orientedSides(definition.circuitInputPorts, orientation);
-      let inputSum = 0;
-      let inputProduct = 1;
-      let leftInput: Charge = 0;
-      let rightInput: Charge = 0;
-      let rearInput: Charge = 0;
-      for (let value = Direction.Up; value <= Direction.Left; value += 1) {
-        const direction = value as Direction;
-        if (
-          (inputSides & (1 << direction)) === 0 ||
-          !this.world.hasCircuitConnectionAtIndex(index, direction)
-        ) {
-          continue;
-        }
-        const inputIndex = this.neighborIndex(index, direction);
-        if (inputIndex < 0) {
-          throw new Error(`Connected circuit input at index ${index} has no neighbor`);
-        }
-        const inputCharge = this.world.chargeAtPortIndex(
-          inputIndex,
-          oppositeDirection(direction),
-        );
-        if (kind === TileKind.Multiplier) {
-          inputProduct *= inputCharge;
-        }
-        inputSum += inputCharge;
-        const relativeDirection = ((direction - orientation + 4) & 3) as Direction;
-        if (relativeDirection === Direction.Left) {
-          leftInput = inputCharge;
-        } else if (relativeDirection === Direction.Right) {
-          rightInput = inputCharge;
-        } else if (relativeDirection === Direction.Down) {
-          rearInput = inputCharge;
-        }
-      }
-
-      let outputCharge: Charge;
-      switch (kind) {
-        case TileKind.Inverter:
-          outputCharge = chargeFromSum(-inputSum);
-          break;
-        case TileKind.Combiner:
-          outputCharge = chargeFromSum(inputSum);
-          break;
-        case TileKind.Rectifier:
-          outputCharge = inputSum > 0 ? 1 : 0;
-          break;
-        case TileKind.Multiplier:
-          outputCharge = chargeFromSum(inputProduct);
-          break;
-        case TileKind.Subtractor:
-          outputCharge = chargeFromSum(inputSum - 2 * leftInput - 2 * rightInput);
-          break;
-        case TileKind.Selector:
-          outputCharge = rearInput === 1 ? leftInput : rearInput === -1 ? rightInput : 0;
-          break;
-        case TileKind.Furnace: {
-          const disabled = rearInput !== 0;
-          this.furnaceDisabled[index] = disabled ? 1 : 0;
-          const targetIndex = this.neighborIndex(index, orientation);
-          const targetKind = targetIndex < 0
-            ? TileKind.Empty
-            : this.world.kindAtIndex(targetIndex);
-          outputCharge = !disabled && furnaceRecipeFor(targetKind) !== undefined ? 1 : 0;
-          break;
-        }
-        default:
-          throw new Error(`Tile kind ${kind} defines circuit inputs without a gate behavior`);
-      }
-      this.driveCircuitOutputs(
-        index,
-        orientedSides(definition.circuitOutputPorts, orientation),
-        outputCharge,
-      );
-    }
-
-    for (let index = 0; index < this.world.cellCount; index += 1) {
-      const primaryNode = index * 2;
-      if (expectDefined(this.circuitRoots[primaryNode], "circuit root marker") >= 0) {
-        const root = this.findCircuitRoot(primaryNode);
-        this.nextCircuitCharges[index] = chargeFromSum(
-          expectDefined(this.circuitDriveSums[root], "circuit drive sum"),
-        );
-      }
-      const verticalNode = primaryNode + 1;
-      if (expectDefined(this.circuitRoots[verticalNode], "circuit root marker") >= 0) {
-        const root = this.findCircuitRoot(verticalNode);
-        this.nextCrossingVerticalCharges[index] = chargeFromSum(
-          expectDefined(this.circuitDriveSums[root], "vertical circuit drive sum"),
-        );
-      }
-    }
-    this.world.applyCircuitCharges(
-      this.nextCircuitCharges,
-      this.nextCrossingVerticalCharges,
-    );
-  }
-
-  private collectDeliveryAbsorptions(): void {
-    this.deliveryTargetOwners.fill(-1);
-    this.deliveryAbsorbTargetIndices.fill(-1);
-
-    for (let index = 0; index < this.world.cellCount; index += 1) {
-      if (this.world.kindAtIndex(index) !== TileKind.Delivery) {
-        continue;
-      }
-      const orientation = this.world.orientationAtIndex(index);
-      const targetIndex = this.neighborIndex(index, orientation);
-      const referenceIndex = this.neighborIndex(index, oppositeDirection(orientation));
-      if (targetIndex < 0 || referenceIndex < 0) {
-        continue;
-      }
-      const targetKind = this.world.kindAtIndex(targetIndex);
-      if (
-        targetKind === TileKind.Empty ||
-        targetKind !== this.world.kindAtIndex(referenceIndex)
-      ) {
-        continue;
-      }
-
-      const existingOwner = expectDefined(
-        this.deliveryTargetOwners[targetIndex],
-        "delivery target owner",
-      );
-      if (existingOwner === -1) {
-        this.deliveryTargetOwners[targetIndex] = index;
-        this.deliveryAbsorbTargetIndices[index] = targetIndex;
-      } else {
-        if (existingOwner >= 0) {
-          this.deliveryAbsorbTargetIndices[existingOwner] = -1;
-        }
-        this.deliveryTargetOwners[targetIndex] = -2;
-      }
-    }
-  }
-
-  private resolveDeliveries(): void {
-    this.world.applyDeliveryAbsorptions(this.deliveryAbsorbTargetIndices);
-  }
-
-  private resolveFurnaces(): void {
-    this.nextFurnaceProgress.fill(0);
-    this.nextFurnaceTargetIds.fill(0);
-    this.furnaceTransformTargetIndices.fill(-1);
-    this.furnaceTransformKinds.fill(TileKind.Empty);
-
-    for (let index = 0; index < this.world.cellCount; index += 1) {
-      if (this.world.kindAtIndex(index) !== TileKind.Furnace) {
-        continue;
-      }
-
-      const targetIndex = this.neighborIndex(index, this.world.orientationAtIndex(index));
-      if (targetIndex < 0) {
-        continue;
-      }
-      const recipe = furnaceRecipeFor(this.world.kindAtIndex(targetIndex));
-      if (recipe === undefined) {
-        continue;
-      }
-      const targetId = this.world.idAtIndex(targetIndex);
-      const previousTargetId = this.world.furnaceTargetIdAtIndex(index);
-      const previousProgress = this.world.furnaceProgressAtIndex(index);
-      if (this.furnaceDisabled[index] === 1) {
-        if (targetId === previousTargetId && previousProgress > 0) {
-          this.nextFurnaceProgress[index] = previousProgress;
-          this.nextFurnaceTargetIds[index] = targetId;
-        }
-        continue;
-      }
-
-      const progress = targetId === previousTargetId ? previousProgress + 1 : 1;
-      this.nextFurnaceTargetIds[index] = targetId;
-      if (progress < recipe.bakeTime) {
-        this.nextFurnaceProgress[index] = progress;
-        continue;
-      }
-      this.furnaceTransformTargetIndices[index] = targetIndex;
-      this.furnaceTransformKinds[index] = recipe.output;
-    }
-
-    this.world.applyFurnaceResults(
-      this.nextFurnaceProgress,
-      this.nextFurnaceTargetIds,
-      this.furnaceTransformTargetIndices,
-      this.furnaceTransformKinds,
-    );
-  }
-
-  private driveCircuitOutputs(
-    index: number,
-    outputSides: WeldSide,
-    outputCharge: Charge,
-  ): void {
-    this.nextCircuitCharges[index] = outputCharge;
-    for (let value = Direction.Up; value <= Direction.Left; value += 1) {
-      const outputDirection = value as Direction;
-      if ((outputSides & (1 << outputDirection)) === 0) {
-        continue;
-      }
-      const outputIndex = this.neighborIndex(index, outputDirection);
-      if (
-        outputIndex < 0 ||
-        !this.world.hasCircuitConnectionAtIndex(index, outputDirection)
-      ) {
-        continue;
-      }
-      const outputNode = this.circuitNode(
-        outputIndex,
-        oppositeDirection(outputDirection),
-      );
-      if (expectDefined(this.circuitRoots[outputNode], "output circuit root marker") < 0) {
-        continue;
-      }
-      const outputRoot = this.findCircuitRoot(outputNode);
-      this.circuitDriveSums[outputRoot] =
-        expectDefined(this.circuitDriveSums[outputRoot], "circuit drive sum") + outputCharge;
-    }
-  }
-
-  private unionCircuitNodes(first: number, second: number): void {
-    const firstRoot = this.findCircuitRoot(first);
-    const secondRoot = this.findCircuitRoot(second);
-    if (firstRoot === secondRoot) {
-      return;
-    }
-    if (firstRoot < secondRoot) {
-      this.circuitRoots[secondRoot] = firstRoot;
-    } else {
-      this.circuitRoots[firstRoot] = secondRoot;
-    }
-  }
-
-  private circuitNode(index: number, direction: Direction): number {
-    const verticalAxis = this.world.kindAtIndex(index) === TileKind.WireCrossing &&
-      (direction === Direction.Up || direction === Direction.Down);
-    return index * 2 + (verticalAxis ? 1 : 0);
-  }
-
   private neighborIndex(index: number, direction: Direction): number {
     const x = index % this.world.width;
     switch (direction) {
@@ -1010,24 +668,10 @@ export class Simulation {
       case Direction.Left:
         return x > 0 ? index - 1 : -1;
       default:
-        throw new RangeError(`Invalid circuit direction ${direction as number}`);
+        throw new RangeError(`Invalid direction ${direction as number}`);
     }
   }
 
-  private findCircuitRoot(index: number): number {
-    let root = index;
-    let parent = expectDefined(this.circuitRoots[root], "circuit parent");
-    while (parent !== root) {
-      root = parent;
-      parent = expectDefined(this.circuitRoots[root], "circuit parent");
-    }
-    while (index !== root) {
-      const nextIndex = expectDefined(this.circuitRoots[index], "circuit parent");
-      this.circuitRoots[index] = root;
-      index = nextIndex;
-    }
-    return root;
-  }
 
   private collectWeldedBodies(): void {
     this.bodyRoots.fill(-1);
@@ -1039,7 +683,7 @@ export class Simulation {
     }
 
     for (let index = 0; index < this.world.cellCount; index += 1) {
-      if ((this.bodyRoots[index] ?? -1) < 0) {
+      if (expectDefined(this.bodyRoots[index], "welded body root marker") < 0) {
         continue;
       }
       if (this.world.hasRightWeldAtIndex(index)) {
@@ -1145,13 +789,13 @@ export class Simulation {
     this.bodyFalls.fill(1);
     this.bodySlidesDiagonally.fill(1);
     for (let index = this.world.cellCount - 1; index >= 0; index -= 1) {
-      if ((this.bodyRoots[index] ?? -1) < 0) {
+      if (expectDefined(this.bodyRoots[index], "body root marker") < 0) {
         continue;
       }
 
       const root = this.findBodyRoot(index);
       this.bodyRoots[index] = root;
-      this.nextBodyMember[index] = this.bodyHeads[root] ?? -1;
+      this.nextBodyMember[index] = expectDefined(this.bodyHeads[root], "body member head");
       this.bodyHeads[root] = index;
       const definition = TILE_DEFINITIONS[this.world.kindAtIndex(index)];
       if (!definition.affectedByGravity) {
@@ -1766,14 +1410,25 @@ export class Simulation {
 
   private findBodyRoot(index: number): number {
     let root = index;
-    while (this.bodyRoots[root] !== root) {
-      root = this.bodyRoots[root] ?? -1;
+    let parent = expectDefined(this.bodyRoots[root], `body parent at index ${root}`);
+    if (parent < 0) {
+      throw new Error(`Cannot find body root for empty index ${index}`);
+    }
+    while (parent !== root) {
+      root = parent;
+      parent = expectDefined(this.bodyRoots[root], `body parent at index ${root}`);
+      if (parent < 0) {
+        throw new Error(`Body root chain from index ${index} reached empty index ${root}`);
+      }
     }
 
     while (index !== root) {
-      const parent = this.bodyRoots[index] ?? root;
+      const parentIndex = expectDefined(this.bodyRoots[index], `body parent at index ${index}`);
+      if (parentIndex < 0) {
+        throw new Error(`Body root chain reached empty index ${index}`);
+      }
       this.bodyRoots[index] = root;
-      index = parent;
+      index = parentIndex;
     }
     return root;
   }

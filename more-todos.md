@@ -14,9 +14,11 @@ Game flow:
 * Edit format for scenes and puzzles: make the fields `orientations`, `charges`, `crossingCharges`, `furnaces` all optional, with default value of `[]`. When exporting, don't specify those fields if they're the empty list, which is often the case. This will reduce incompatibility when we add new block types and de-bloats the format.
 * Similarly, remove the "standard" test case with no overrides - treat that as a given and only list additional test cases in the file.
 * Further compact orientations and charges in the export/import format, possibly storing charges per network instead of per tile. More complex per-tile state (e.g. furnace stored ticks or target/delivery-block configuration) can remain verbose. Only include full ASCII grids for fields that aren't the default value.
+* Add collapsible sections (default collapsed) on the main menu: a "credits" section (art/music credits, links to similar video games like Roody:2D, Zachtronics, Infinifactory), and a "technical info" section that explains what stack we're using, architecture, etc.
 
 General:
 * Allow interacting with some components using a modal box. Modal is opened when placing the block (for some of them, depending on a flag) and by pressing E while mouse is over them. Show control prompt in the tile inspector panel.
+* Try to do some fuzzing to find crashes or undesirable behaviors. There may be edge cases involving things like pistons welded to other pistons and magnets, etc. Could also check for cases of machines that can fly/levitate, or produce blocks endlessly, though those should not be considered bugs until we've looked at them manually to decide whether they should be considered bugs or features.
 
 Components useful for designing puzzles in-world:
 * DEFER(tile interaction panel) Add a charge counter component - counts up from zero every tick it receives a charge on the back, and outputs a charge once it reaches a configured threshold. Requires some kind of UI for setting the threshold - maybe open a modal input box once the block is placed, and when pressing the E key with mouse over the block. (We'll need similar modals for some other configurable components, like ROMs.) Render the current count on the block.
@@ -98,6 +100,7 @@ UI:
 * Modify the inspector to show description for a tile instance on the board, on mouseover.
 * Display truth tables on inspector, for the tooltips.
 * Move the inspector panel to near top-left, just right of the palette.
+* On the puzzle results screen, add a button to go directly to the next puzzle's briefing screen - if the solution succeeded, and there's a defined next puzzle, and it's unlocked. Display the next puzzle's name. This is meant to help reduce menu navigation needed when we have several easy tutorial puzzles in rapid succession.
 
 Visuals:
 * Re-theme the entire game's UI. The current palette (black, dark blue, cyan, yellow) doesn't really fit the theme. Prefer colors like earth brown, stone gray, bronze, gold. Maybe: 312312 (brown), 4B5052 (grey), F1CC38 (gold), 5C718C (blue).

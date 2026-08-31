@@ -6,6 +6,24 @@ Yes. One small correctness refactor is urgent; one structural extraction is wort
 
 The file is large—1,780 lines, 64 KB, 49 typed-array scratch buffers—but much of that is justified by deterministic, allocation-free resolution. The problem is not size alone. It is that several buffers change meaning between phases, and those phase invariants exist only in call order.
 
+## Implementation status
+
+Completed:
+
+- Body-root lookup now uses `expectDefined` for every typed-array access and throws descriptive errors when a root chain reaches an empty index. The silent fallbacks in `collectWeldedBodies()` and `collectBodyMembers()` are gone.
+- Circuit resolution now lives in `src/simulation/circuit-resolver.ts`. `CircuitResolver` owns persistent typed-array scratch storage, commits charges to `World`, exposes furnace-disabled state, and consumes the delivery-intent buffer plus the current tick.
+- Delivery intent collection/commit and furnace resolution now live in `src/simulation/delivery-resolver.ts` and `src/simulation/furnace-resolver.ts`. Both retain their scratch buffers for their lifetimes.
+- `Simulation.step()` remains the explicit phase coordinator; the load-bearing phase order is unchanged. `simulation.ts` is now 1,435 lines, down from 1,780.
+- Focused resolver/simulation coverage passes (222 tests), the full unit suite passes (402 tests), and the production TypeScript/Vite build passes.
+
+Still left:
+
+- Introduce a `MotionWorkspace` that encodes the changing body-topology, movement-vector, dependency, destination, and magnetic-constraint invariants.
+- Move ordinary and piston motion code out of `simulation.ts` after that workspace boundary exists.
+- Reconsider a separate `PistonResolver` only after motion extraction exposes a small named API.
+- Add explicit timing coverage for ordinary movement and piston movement affecting one another in the same tick before changing their orchestration.
+- Optionally consolidate the small duplicated neighbor-index helpers. Victory-block resolution should remain in `Simulation` unless it grows.
+
 ## Priority 0: make body-root failures loud
 
 `findBodyRoot()` can loop forever if it receives an empty or corrupted index:
@@ -206,11 +224,11 @@ Useful, but not reasons to refactor immediately:
 
 ## Recommended sequence
 
-1. Harden `findBodyRoot()` and remove the silent typed-array fallbacks.
-2. Extract `CircuitResolver`.
-3. Extract `DeliveryResolver` and `FurnaceResolver`.
-4. Introduce `MotionWorkspace` to encode topology and movement-buffer invariants.
-5. Move motion code out of `simulation.ts`.
-6. Reconsider a separate `PistonResolver`; do not force a generic movement algorithm.
+1. **Done:** Harden `findBodyRoot()` and remove the silent typed-array fallbacks.
+2. **Done:** Extract `CircuitResolver`.
+3. **Done:** Extract `DeliveryResolver` and `FurnaceResolver`.
+4. **Remaining:** Introduce `MotionWorkspace` to encode topology and movement-buffer invariants.
+5. **Remaining:** Move motion code out of `simulation.ts`.
+6. **Remaining:** Reconsider a separate `PistonResolver`; do not force a generic movement algorithm.
 
-No current TypeScript/LSP diagnostics were reported for the file. The recommendation is therefore driven by invariant safety and change risk, not an existing type failure.
+No TypeScript/LSP diagnostics remain after the completed extractions. The remaining recommendation is driven by phase-invariant safety and change risk, not an existing type failure.
