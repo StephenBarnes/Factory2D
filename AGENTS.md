@@ -2,61 +2,49 @@
 
 ## Concept
 
-This is planned to be a game similar to a 2D Infinifactory. The game is a series of one-screen puzzles, where the player places square 2D tiles/blocks on a grid to accomplish some goal.
+This is a game similar to Infinifactory but 2D. We have a series of one-screen puzzles where the player places square 2D tiles/blocks on a grid to accomplish some goal.
 
-At each line between two non-empty blocks, they can be either welded together, or separate. Welded groups of blocks always move as one group. The simulation runs in discrete time steps, and blocks move in discrete one-block increments. Blocks can only rotate in 90-degree increments. Some blocks have internal state. Blocks have different types, like stone or sand or pistons or conveyor belts or wires. This is a side view, so unsupported blocks fall down one space every one time step. No continuous-time or continuous-space physics.
+At each line between two non-empty blocks, they can be either welded together, or separate. Welded groups move as one rigid body. The simulation runs in discrete time steps and blocks move in discrete one-block increments; no continuous physics. Blocks can rotate in 90-degree increments. Blocks have different types, like stone or sand or pistons or conveyor belts or wires. This is a side view, so unsupported blocks fall down one space every one time step. Some blocks have internal state.
 
-Planned game flow: We show a main menu. The player selects a puzzle, which defines the initial screen and constraints, e.g. inputs and outputs, fixed terrain, player-modifiable region. Player can select components; left click places, right click removes. They can also select a weld tool or a selection tool. With the weld tool, left click welds, right click unwelds. When placing, they can rotate the component in 90-degree increments. Later additional conveniences like placing lines/rectangles, bulk weld/unweld, selection and moving. Each puzzle defines fixed terrain, and which components are available, and prices for those components which are used to score solutions. The player presses a button to run/play the simulation and check behavior, with options to pause, step once, control speed, or reset to the state before running.
+Game flow: On the main menu, the player selects a puzzle to view a briefing and create a new solution. The puzzle defines the initial screen state, which includes a region for the player to place blocks. Outside that region, the puzzle has in-world machinery like dispensers to supply inputs, delivery boxes to consume outputs, and a victory block which marks the puzzle solved when triggered by circuitry. The player selects and places blocks in the allowed region, building a machine to solve the puzzle, then presses play to see if their solution succeeds. They can also weld or unweld blocks. We also have a sandbox. The game starts on the sandbox screen currently for fast testing during development.
 
 Implemented components:
-* Solid blocks - can have downward gravity, diagonal gravity (sand), can be weldable on some sides, can be magnetic.
-* Magnets attract a magnetic block in the direction they're facing. Magnetic contacts hold connected bodies together against gravity, couple conveyor movement along the contact normal, and allow conveyor-driven sliding tangent to the contact.
+* Solid blocks like sand, stone, and iron, with gravity downward or diagonally (sand).
 * Conduits instantly share signed-ternary charge across welded circuit connections; wire crossings keep horizontal and vertical networks separate.
+* Directional sensor runes emit +1 when forward neighbor is occupied.
+* Spark runes emit +1 across their welded circuit network on the first simulation tick, then remain neutral until reset. Fixed charge runes emit +1 on every tick.
+* Several runes combine up to 3 inputs to produce an output: inverter, combiner, subtractor, rectifier, multiplier, and selector.
+* Magnets attract a magnetic block in the direction they're facing. Magnetic contacts hold connected bodies together against gravity, couple conveyor movement along the contact normal, and allow conveyor-driven sliding tangent to the contact.
 * Conveyor belts use one all-side circuit network: +1 rolls clockwise, -1 counterclockwise, and 0 stops. Each active belt applies tangential force to every unwelded occupied neighbor and the opposite reaction force to its own body.
-* Directional sensor runes emit +1 when the neighboring cell on their pointed side is occupied.
-* Spark runes emit +1 across their welded circuit network on the first simulation tick, then remain neutral until reset.
-* Directional inverter runes negate the sum of up to three isolated input networks onto their pointed output network one tick later.
-* Directional combiner runes sum up to three isolated input networks and drive the sign of their sum onto a pointed output network one tick later.
-* Furnace blocks that transform one neighbor cell into a different one after a delay: sand to glass, ore to metal.
-* Directional delivery boxes absorb a front block when its tile kind matches the reference block behind the box, then emit a one-tick +1 pulse on both side ports.
+* Furnace blocks transform one neighbor cell into a different one after a delay: sand to glass, ore to metal.
+* Directional delivery boxes absorb a front block when its tile kind matches the reference block behind the box, then emit a one-tick +1 pulse.
 * Directional pistons use one retracted tile and separate welded base/arm tiles while extended. +1 prefers extending the arm and pushing complete obstruction chains forward; when that is blocked, it instead recoils the base and pushes the rear obstruction chain. The solid world boundary can brace the same recoil. -1 retracts and pulls a head-welded body; 0 holds state. The head weld follows the arm, while the base retains its other three welds and circuit connections.
 
 Planned components:
-* Conveyor belts apply a clockwise or counterclockwise force to their 4 neighbor blocks. A conveyor placed on a floor will try to roll in one direction, and try to push the platform in the other direction, unless it's welded onto the platform.
-* Welders and splitters - weld or unweld all sides of the block they're facing. Laser splitters. Riveters that weld 2 blocks in a straight line.
-* Sensors that detect pushing force from a direction.
-* Electrical components like logic gates, delays, fixed inputs, and brush connectors.
-* Assemblers that convert a group of blocks welded in a specific way into one block. For example iron and copper blocks welded in a specific way are converted to a piston block.
-* Flipper: attaches to one block, then flips the entire connected/welded group of blocks around that line horizontally or vertically, if it would not collide/overlap other blocks.
-* Laser splitter: splits everything in a line.
-* Configurable components where the player can enter a number in a text box, e.g. a configurable-delay repeater.
-* Component that rotates a neighboring block or body around itself.
-* Circuit-board components with internal grids where mini-components can be placed to program their behavior.
-
-More concepts:
-* Furnaces could have special behavior if said neighbor is surrounded by certain other neighbors. Or they could trigger a block to weld to neighbors after cooking it. There could be stages, e.g. cookie dough -> cookie -> burnt cookie, creating timing challenges.
-* Each puzzle could have several test cases, with different timing of inputs.
-* Puzzles could include terrain that makes it harder to fit a solution, or pre-placed components like teleporters. The solution might require welding blocks together, but there's only one welder present on the map, so it must be reused in different ways.
-* Puzzles could include a wire input that switches on/off, and the solution must sort blocks into left vs right outputs dependent on the wire's charge.
-* We'll introduce components gradually, as puzzles are completed. Each puzzle has a limited set of components available.
-* Puzzle inputs and outputs will be physically present on the map. A dispenser block dispenses ore, which must be smelted to iron, which is then delivered to a delivery block; level is beaten when the delivery block has received enough iron blocks. We wire up the dispenser to a timer circuit physically present in the level, or to a button that the player can press.
-* We'll show a sidebar with all interactions relevant for a given puzzle.
-* Shareable puzzles and solutions. Sandbox and puzzle editor. Exporting solutions as GIFs. Histogram screen to compare performance on each metric with other players.
+* Welders and splitters - weld or unweld all sides of the block they're facing. Laser splitters, riveters.
+* More circuit components like delays, miniaturized rune arrays, ROMs.
+* Mechanical belts and gears - similar to the circuit system, ternary (clockwise/counterclockwise/still) but with more difficult mechanics.
+* Assemblers that convert a group of blocks welded in a specific way into one block.
+* Flippers and rotators that flip or rotate welded groups of blocks.
 
 Example puzzles:
 * Given inputs, weld them together and use an assembler to make intermediates; then weld together those intermediates and use an assembler to make a final product.
-* Sort blocks into bins based on physical properties.
-* Build a 4-bit adder using wires and logic gates.
-* Build a 4-bit adder without wires and logic gates, by pushing around blocks mechanically.
-* Mob farms - mobs are dispensed by a hive and move around according to rules, must be herded to a destination.
-* Depalletizing - dispenser gives a 5x5 group of welded iron blocks, which must be split up and transported to the delivery block.
-* Tree farms - trees grow in irregular patterns; once grown high enough, their leaves must be burned off and their wood blocks unwelded and packaged for delivery.
-* Build a vehicle that drives back and forth to evade the arms of a giant crusher.
-* The player is given an impossible task. The only way to win is instead build a machine that drills into the ground to reach the in-world puzzle infrastructure, and manually trigger the victory block.
+* Sort blocks into bins based on a circuit signal.
+* Build a 4-bit adder using circuit components.
+* Build a 4-bit adder without circuit components, by pushing around blocks mechanically.
+* Minecraft-style mob farming.
+* Depalletizing - unweld a 5x5 chunk of iron blocks and transported them down a chute.
+* Tree farms - trees grow in irregular patterns; once grown high enough, their leaves must be burned off and their wood blocks unwelded and delivered.
+* Build a vehicle that drives back and forth to evade the arms of a giant crushing contraption.
+* Build a corridor that allows dwarves to walk through, but traps elves.
+* The player must weld several different things, but they can't place welders and there's only one pre-placed welder that must be multiplexed.
+* The player is given an impossible task. The only way to win is by building a machine that drills into the ground to reach the in-world puzzle infrastructure and triggers the victory block directly.
 
 While the simulation has movement in discrete time steps and one-tile steps, we animate the tiles moving from one state to the next.
 
-We'll give the game a "dwarven engineering" theme. So replace magnets with lodestones, electrical components with glowing runes. Puzzles range from heavy industry based on moving around big chunks of stone/metal, bottling beer, circuit puzzles (runes and conduits), minecart control systems, bar challenges (remove this block without spilling the mug of ale on top), destroying elven defenses by building missiles or dwarven mechs. Solutions will be rated by percentile as coal, iron, silver, gold, mithril, etc.
+We'll make puzzles and solutions shareable, exportable as images, GIFs, and JSON files. The sandbox allows creating and sharing puzzles. Histogram screen to compare performance on each metric with other players.
+
+The game has a dwarven engineering theme. Magnets are lodestones, electrical components are glowing runes. Puzzles range from heavy industry based on moving around big chunks of stone/metal, bottling beer, circuit puzzles (runes and conduits), minecart control systems, bar challenges (remove this block without spilling the mug of ale on top), destroying elven defenses by building missiles or dwarven mechs.
 
 ## Stack
 
@@ -72,9 +60,7 @@ Tiles are drawn procedurally using Canvas 2D functions and colors defined on `TI
 
 ### Simulation conventions
 
-We want simulation rules to be deterministic, consistent, and understandable/predictable.
-We'll write many small tests that simulate scenarios and check behavior.
-As a general rule, a component can only observe the state at the beginning of a cycle, and react to it by making a change that becomes visible at the end of the cycle. Nothing reacts instantly to something that happened in the same tick.
+Simulation rules should be deterministic, consistent, and understandable/predictable. Write tests to check behavior. A component can only observe the state at the beginning of a cycle, and react to it by making a change that becomes visible at the end of the cycle. Nothing reacts instantly to something that happened in the same tick.
 
 * A world stores compact tile kinds separately from stable, nonzero tile IDs. Empty cells have ID 0.
 * Each tick has observation, intent resolution, and commit phases. Components only observe the start-of-tick state.
@@ -159,24 +145,22 @@ The game is in early development. Currently implemented:
 
 ## Current TODOs
 
-Game flow:
-* Specify puzzles as JSON files in a folder; a puzzle registry can import and parse those files, similar to current import/export format with some additional fields like name and description. Move the existing 3 puzzles there, or create 3 arbitrary puzzles in that folder (since our current 3 puzzles are arbitrary placeholders). We want to work towards an easy way to export a puzzle from the sandbox, move it to that folder, and have the puzzle appear in the main menu.
-* Add a way to specify multiple test cases for each puzzle, in the puzzle or export format. These will be modifications to the puzzle definition, usually small, e.g. changing the values stored in one ROM component. The player builds one solution which must work for all test cases. For now, allow this in the JSON puzzle file format; later we'll add UI to create test cases in the sandbox.
+Refactoring:
+* Split `src/main.ts` into focused workshop-session, navigation, and saved-solution controller modules. Keep `main.ts` as browser event wiring and the animation loop. Do not introduce a framework, event bus, dependency-injection system, or generic store.
+* Add URL-backed application routing for the main menu, sandbox, puzzle briefing, and saved-solution workshop. Support browser Back/Forward, validate puzzle and solution IDs, enforce puzzle locking on direct routes, and preserve dirty solution edits during navigation.
+* Add a minimal Playwright browser suite covering puzzle-info routing, solution creation, board persistence, duplication, deletion, reload restoration, and narrow-screen overflow. Seed local storage deterministically and prefer accessible selectors over broad `data-testid` coverage.
+* Add a development-only, read-only browser diagnostic snapshot exposing the current screen, active puzzle and solution, simulation state, selected tool, hovered cell, world revision, and serialized board. Do not expose mutation commands or include the API in production builds.
+* Add an “Application lifecycle invariants” section to this file `AGENTS.md` documenting ownership and transitions for `AppScreen`, saved solutions, workshop sessions, `world`, `baseline`, `previousWorld`, simulation locking, dirty persistence, reset, and puzzle completion.
+
+Game/puzzle flow:
+* Specify puzzles as JSON files in a folder; a puzzle registry can import and parse those files, similar to current import/export format with some additional fields like name and description. Move the existing 3 puzzles there, or create 3 arbitrary puzzles in that folder (since our current 3 puzzles are arbitrary placeholders). We want to work towards an easy authoring pipeline - export a puzzle from the sandbox, move it to that folder, and then the puzzle appears in the main menu. Define a versioned, strictly validated puzzle JSON schema containing metadata, feature labels, prerequisites, component prices, editable regions, and initial board state. Load every shipped puzzle through the production parser in tests, with file- and field-specific validation errors.
+* Add a way to specify multiple test cases for each puzzle, in the puzzle or export format. These will be modifications to the puzzle definition, usually small, e.g. changing the values stored in one ROM component, so potentially store as a dictionary of only the changed fields of the puzzle definition. The player builds one solution which must work for all test cases. Implement this first for the JSON puzzle file format; later we'll add UI to create test cases in the sandbox.
 * Add a button to test the current solution - runs all test cases in series, with some time limit (defined per puzzle or test case), then checks if all resulted in victory, and displays a report with the puzzle's success/failure, with buttons to continue editing or go back to puzzle info screen. As a follow-up, also compute and display score: price, cycles, footprint.
 
 UI:
 * Rework overall UI structure. Anchor the floating palette panel (on the left) and floating control panel (bottom) to the screen borders, instead of floating on top of the visible grid. Limit the `#game-canvas` to the rectangular region not covered by those two panels, instead of occupying the entire background.
-* Add shift + mousewheel to scroll through palette entries.
-* Bug: the tile inspector/detail panel should show info on the palette entries while the mouse is over them, and info on the tile under the mouse when the mouse is over a placed tile instance. Currently after clicking on a palette entry, if the mouse then moves away and moves over placed tiles, it still shows the palette entry's info instead of the moused-over tile instance's info, unless the player clicks on empty space.
-* Middle-click on palette should act like left-click on palette.
-* The charge sensor rune should not allow circuit connections on the side it's facing, because that connection doesn't do anything. It should allow welds, but not connect to circuits on that side.
 
-Visuals:
-* For the piston base block, don't show the small rectangle that's meant to represent the head/arm of the piston. Only show it on the combined / retracted base+arm block, and on the extended arm block.
-* Mark the wire crossing in a way that makes it apparent it's a wire-crossing block regardless of how many circuit connections it has. Currently with one wire, or two opposite-side wires connected, it looks like a conduit block except for the background color. Maybe draw the central cross regardless of how many sides are wired.
-* Add animation for the delivery box - animate tiles moving into it, and shrinking, as they're absorbed.
-
-More items in `deferred-todos.md`.
+More items in `more-todos.md`.
 
 ## Development guidelines
 
