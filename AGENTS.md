@@ -178,6 +178,9 @@ The game is in early development. Currently implemented:
 
 Game/puzzle flow:
 * After the solution has been tested, if it succeeds, compute and display scores: price, cycles until victory (sum over test cases), footprint (size of AABB containing all nonempty blocks inside modifiable regions), and combined score (just sum the cost, footprint tiles, and cycles). Later this will also show a histogram of other players' scores.
+* On the puzzle briefing page, show the 4 scores, and show next to each solution whether it's confirmed successful.
+* Add a sandbox-only tool for specifying the player-modifiable regions. Put it next to the weld tool, as a new selectable tool. With the tool selected, left-click drag should add a rectangle, and right-click should remove all current rectangles that overlap the clicked point. These regions should not constrain tile placement in the sandbox. The "download puzzle file" button should include these rectangles in the exported puzzle definition file. This is for authoring puzzles.
+* Specify board size in the scene and puzzle JSON formats. Currently assumes every board is 20x14. Validate that size is at least 1x1 and at most 400x300. When entering the puzzle screen or importing a file, choose zoom and position so the entire board is visible.
 
 UI:
 * Rework overall UI structure. Anchor the floating palette panel (on the left) and floating control panel (bottom) to the screen borders, instead of floating on top of the visible grid. Limit the `#game-canvas` to the rectangular region not covered by those two panels, instead of occupying the entire background.

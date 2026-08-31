@@ -1,17 +1,15 @@
 {
   "format": "factory2d-puzzle",
   "version": 2,
-  "id": "first-shift",
-  "order": 0,
-  "name": "First Shift",
-  "description": "Tutorial puzzle teaching block placement",
-  "goal": "Drop one iron block into the delivery box",
+  "id": "sand-fall",
+  "order": 1,
+  "name": "Sand fall",
+  "description": "Tutorial puzzle teaching diagonal gravity and welding",
+  "goal": "Guide one sand block to the goal",
   "features": [],
   "prerequisites": [],
-  "components": [
-    { "code": "#", "price": 1 }
-  ],
-  "editableRegions": [ { "x": 8, "y": 3, "width": 4, "height": 4 } ],
+  "components": [ { "code": "#", "price": 1 } ],
+  "editableRegions": [ { "x": 1, "y": 2, "width": 18, "height": 9 } ],
   "initialBoard": {
     "format": "factory2d-board",
     "version": 8,
@@ -19,6 +17,7 @@
     "result": "in-progress",
     "grid": [
       "====================",
+      "=........:.........=",
       "=..................=",
       "=..................=",
       "=..................=",
@@ -28,9 +27,8 @@
       "=..................=",
       "=..................=",
       "=..................=",
-      "=.......=..=.......=",
-      "=.......=DV=.......=",
-      "=.......=#==.......=",
+      "=..............=DV==",
+      "=..............=:.==",
       "===================="
     ],
     "orientations": [],
@@ -48,9 +46,9 @@
       "|..................|",
       "|..................|",
       "|..................|",
-      "|.......|..|.......|",
-      "|.......+-+|.......|",
-      "|.......|.+|.......|",
+      "|..................|",
+      "|..............+--+|",
+      "|..............|..+|",
       "-------------------."
     ]
   },
