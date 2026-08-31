@@ -482,6 +482,32 @@ function drawDecoration(
       context.fill();
       context.restore();
       break;
+    case TileDecorationStyle.ChargeSensor: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.lineWidth = Math.max(1.5, size * 0.055);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.beginPath();
+      context.moveTo(0, -size * 0.18);
+      context.lineTo(size * 0.18, 0);
+      context.lineTo(0, size * 0.18);
+      context.lineTo(-size * 0.18, 0);
+      context.closePath();
+      context.stroke();
+      context.beginPath();
+      context.moveTo(-size * 0.1, -size * 0.27);
+      context.lineTo(0, -size * 0.18);
+      context.lineTo(size * 0.1, -size * 0.27);
+      context.stroke();
+      context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
+      context.beginPath();
+      drawDot(context, 0, 0, Math.max(1.5, size * 0.07));
+      context.fill();
+      context.restore();
+      break;
+    }
     case TileDecorationStyle.Inverter: {
       context.save();
       context.translate(left + size / 2, top + size / 2);

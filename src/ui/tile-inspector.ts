@@ -155,8 +155,10 @@ export class TileInspector {
     }
 
     const cellIndex = position.y * this.world.width + position.x;
-    const gateInputSides = orientedSides(definition.circuitInputPorts, orientation);
-    let gateInputStates = "";
+    const circuitInputSides = orientedSides(definition.circuitInputPorts, orientation);
+    const circuitOutputSides = orientedSides(definition.circuitOutputPorts, orientation);
+    let circuitInputStates = "";
+    let circuitOutputStates = "";
     let weldableDirections = "";
     let weldableSideCount = 0;
     let weldedDirections = "";
@@ -182,22 +184,30 @@ export class TileInspector {
       if (circuitConnected) {
         circuitDirections = appendDirection(circuitDirections, direction);
       }
-      if ((gateInputSides & (1 << direction)) !== 0) {
-        const separator = gateInputStates.length === 0 ? "" : " / ";
+      if (
+        kind !== TileKind.ChargeSensor &&
+        (circuitInputSides & (1 << direction)) !== 0
+      ) {
+        const separator = circuitInputStates.length === 0 ? "" : " / ";
         const state = circuitConnected ? "CONNECTED" : "ISOLATED";
-        gateInputStates += `${separator}${DIRECTION_NAMES[direction]} ${state}`;
+        circuitInputStates += `${separator}${DIRECTION_NAMES[direction]} ${state}`;
+      }
+      if ((circuitOutputSides & (1 << direction)) !== 0) {
+        const separator = circuitOutputStates.length === 0 ? "" : " / ";
+        const state = circuitConnected ? "CONNECTED" : "ISOLATED";
+        circuitOutputStates += `${separator}${DIRECTION_NAMES[direction]} ${state}`;
       }
     }
     this.weldable.textContent = weldableSideCount === DIRECTIONS.length
       ? "ALL"
       : weldableDirections || "NONE";
     this.welds.textContent = weldedDirections || "NONE";
-    if (definition.circuitInputPorts !== 0) {
-      const outputState = this.world.hasCircuitConnectionAtIndex(cellIndex, orientation)
-        ? "CONNECTED"
-        : "ISOLATED";
+    if (kind === TileKind.ChargeSensor) {
       this.circuit.textContent =
-        `IN ${gateInputStates} · OUT ${DIRECTION_NAMES[orientation]} ${outputState}`;
+        `SENSE ${DIRECTION_NAMES[orientation]} (NO WELD) · OUT ${circuitOutputStates}`;
+    } else if (definition.circuitInputPorts !== 0) {
+      this.circuit.textContent =
+        `IN ${circuitInputStates} · OUT ${circuitOutputStates}`;
     } else {
       this.circuit.textContent = circuitDirections || "ISOLATED";
     }

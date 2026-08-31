@@ -12,6 +12,7 @@ export const enum TileKind {
   Rectifier = 10,
   Multiplier = 11,
   Subtractor = 12,
+  ChargeSensor = 13,
 }
 
 export const enum Direction {
@@ -43,6 +44,7 @@ export const enum TileDecorationStyle {
   Rectifier = 9,
   Multiplier = 10,
   Subtractor = 11,
+  ChargeSensor = 12,
 }
 
 export interface TileDefinition {
@@ -63,8 +65,10 @@ export interface TileDefinition {
   readonly excludesFacingWeld: boolean;
   readonly usesOrientation: boolean;
   readonly circuitPorts: WeldSide;
-  /** Gate input ports relative to an upward-facing tile; each remains an isolated network. */
+  /** Isolated input or sensing ports relative to an upward-facing tile. */
   readonly circuitInputPorts: WeldSide;
+  /** Isolated output ports relative to an upward-facing tile. */
+  readonly circuitOutputPorts: WeldSide;
   readonly slidesDiagonally: boolean;
   readonly magnetic: boolean;
   readonly attractionRange: number;
@@ -98,6 +102,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     usesOrientation: false,
     circuitPorts: WeldSide.None,
     circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
     fill: "transparent",
@@ -120,6 +125,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     usesOrientation: false,
     circuitPorts: WeldSide.None,
     circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
     fill: "#66717d",
@@ -142,6 +148,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     usesOrientation: false,
     circuitPorts: WeldSide.None,
     circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
     fill: "#e7ad4f",
@@ -164,6 +171,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     usesOrientation: false,
     circuitPorts: WeldSide.None,
     circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
     fill: "#56736b",
@@ -186,6 +194,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     usesOrientation: true,
     circuitPorts: WeldSide.None,
     circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 1,
     fill: "#b94b52",
@@ -208,6 +217,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     usesOrientation: false,
     circuitPorts: WeldSide.None,
     circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
     magnetic: true,
     attractionRange: 0,
     fill: "#718a9b",
@@ -230,6 +240,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     usesOrientation: false,
     circuitPorts: WeldSide.All,
     circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
     fill: "#69727b",
@@ -252,6 +263,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     usesOrientation: true,
     circuitPorts: WeldSide.Right | WeldSide.Down | WeldSide.Left,
     circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
     fill: "#675d77",
@@ -274,6 +286,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     usesOrientation: true,
     circuitPorts: WeldSide.All,
     circuitInputPorts: WeldSide.Right | WeldSide.Down | WeldSide.Left,
+    circuitOutputPorts: WeldSide.Up,
     magnetic: false,
     attractionRange: 0,
     fill: "#765878",
@@ -296,6 +309,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     usesOrientation: true,
     circuitPorts: WeldSide.All,
     circuitInputPorts: WeldSide.Right | WeldSide.Down | WeldSide.Left,
+    circuitOutputPorts: WeldSide.Up,
     magnetic: false,
     attractionRange: 0,
     fill: "#526f69",
@@ -318,6 +332,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     usesOrientation: true,
     circuitPorts: WeldSide.All,
     circuitInputPorts: WeldSide.Right | WeldSide.Down | WeldSide.Left,
+    circuitOutputPorts: WeldSide.Up,
     magnetic: false,
     attractionRange: 0,
     fill: "#786448",
@@ -340,6 +355,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     usesOrientation: true,
     circuitPorts: WeldSide.All,
     circuitInputPorts: WeldSide.Right | WeldSide.Down | WeldSide.Left,
+    circuitOutputPorts: WeldSide.Up,
     magnetic: false,
     attractionRange: 0,
     fill: "#51657b",
@@ -362,12 +378,36 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     usesOrientation: true,
     circuitPorts: WeldSide.All,
     circuitInputPorts: WeldSide.Right | WeldSide.Down | WeldSide.Left,
+    circuitOutputPorts: WeldSide.Up,
     magnetic: false,
     attractionRange: 0,
     fill: "#745b50",
     shadow: "#44332c",
     decorationStyle: TileDecorationStyle.Subtractor,
     decorationColor: "#f0d7ca",
+  },
+  [TileKind.ChargeSensor]: {
+    name: "Charge Sensor Rune",
+    boardCode: "Q",
+    palette: {
+      order: 12,
+      description: "Copies an adjacent tile's charge to three outputs without an input weld",
+      shortcut: null,
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.All,
+    circuitInputPorts: WeldSide.Up,
+    circuitOutputPorts: WeldSide.Right | WeldSide.Down | WeldSide.Left,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#4f6f78",
+    shadow: "#2b4047",
+    decorationStyle: TileDecorationStyle.ChargeSensor,
+    decorationColor: "#d3eff4",
   },
 };
 

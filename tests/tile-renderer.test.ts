@@ -277,6 +277,52 @@ describe("circuit rendering", () => {
     expect(context.fillStyles).not.toContain(CIRCUIT_CHARGE_COLORS[-1]);
   });
 
+  it("keeps a charge sensor's front input and three outputs isolated", () => {
+    const context = new RecordingCanvasContext();
+    let portCharges = setCircuitPortCharge(0, Direction.Up, -1);
+    portCharges = setCircuitPortCharge(portCharges, Direction.Right, 1);
+    portCharges = setCircuitPortCharge(portCharges, Direction.Down, 1);
+    portCharges = setCircuitPortCharge(portCharges, Direction.Left, 1);
+    const chargeSensor: BodyCell = {
+      x: 0,
+      y: 0,
+      kind: TileKind.ChargeSensor,
+      orientation: Direction.Up,
+      outputCharge: 1,
+      circuitConnections: WeldSide.All,
+      circuitPortCharges: portCharges,
+      seamRight: false,
+      seamDown: false,
+    };
+
+    drawBody(
+      context as unknown as CanvasRenderingContext2D,
+      0,
+      0,
+      32,
+      [chargeSensor],
+      1,
+      new RecordingPath2D() as unknown as Path2D,
+    );
+
+    const inputTrace = context.strokes.find(
+      (stroke) => stroke.strokeStyle === CIRCUIT_CHARGE_COLORS[-1],
+    );
+    expect(inputTrace?.segments).toHaveLength(1);
+    expect(inputTrace?.segments[0]).toMatchObject({
+      fromX: 16,
+      fromY: 0,
+      toX: 16,
+    });
+    expect(inputTrace?.segments[0]?.toY).toBeCloseTo(7.68);
+
+    const outputTrace = context.strokes.find(
+      (stroke) => stroke.strokeStyle === CIRCUIT_CHARGE_COLORS[1],
+    );
+    expect(outputTrace?.segments).toHaveLength(3);
+    expect(context.fillStyles).toContain(CIRCUIT_CHARGE_COLORS[1]);
+  });
+
   it.each([
     { kind: TileKind.Inverter, inputDirection: Direction.Right },
     { kind: TileKind.Inverter, inputDirection: Direction.Down },

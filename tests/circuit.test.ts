@@ -98,6 +98,34 @@ describe("circuit networks", () => {
     expect(world.isWelded(0, 1, 0, 2)).toBe(true);
   });
 
+  it.each([-1, 0, 1] as const)(
+    "copies an unwelded rotated front input charge of %s to three isolated outputs",
+    (input) => {
+      const world = new World(3, 3);
+      world.place(1, 0, TileKind.Conduit);
+      world.place(0, 1, TileKind.Conduit);
+      world.place(1, 1, TileKind.ChargeSensor, Direction.Right);
+      world.place(2, 1, TileKind.Conduit);
+      world.place(1, 2, TileKind.Conduit);
+      world.place(2, 2, TileKind.Platform);
+      world.setWeld(1, 0, 1, 1, true);
+      world.setWeld(0, 1, 1, 1, true);
+      world.setWeld(1, 1, 1, 2, true);
+      world.setCharge(2, 1, input);
+      const sensorIndex = 1 * world.width + 1;
+      expect(world.hasCircuitConnectionAtIndex(sensorIndex, Direction.Right)).toBe(false);
+      const simulation = new Simulation(world);
+
+      simulation.step();
+
+      expect(world.chargeAt(2, 1)).toBe(0);
+      expect(world.chargeAt(1, 1)).toBe(input);
+      expect(world.chargeAt(1, 0)).toBe(input);
+      expect(world.chargeAt(0, 1)).toBe(input);
+      expect(world.chargeAt(1, 2)).toBe(input);
+    },
+  );
+
   it("connects an inverter through its rotated isolated inputs and pointed output", () => {
     const world = new World(3, 3);
     world.place(1, 1, TileKind.Inverter, Direction.Right);

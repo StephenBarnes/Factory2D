@@ -6,6 +6,7 @@ import {
   orientedSides,
   TILE_DEFINITIONS,
   TileKind,
+  WeldSide,
 } from "./tile";
 import { World } from "./world";
 import { expectDefined } from "../util/assert";
@@ -128,6 +129,16 @@ export class Simulation {
       }
 
       const orientation = this.world.orientationAtIndex(index);
+      if (kind === TileKind.ChargeSensor) {
+        const inputIndex = this.neighborIndex(index, orientation);
+        const outputCharge = inputIndex < 0 ? 0 : this.world.chargeAtIndex(inputIndex);
+        this.driveCircuitOutputs(
+          index,
+          orientedSides(definition.circuitOutputPorts, orientation),
+          outputCharge,
+        );
+        continue;
+      }
       const inputSides = orientedSides(definition.circuitInputPorts, orientation);
       let inputSum = 0;
       let inputProduct = 1;
@@ -178,7 +189,11 @@ export class Simulation {
         default:
           throw new Error(`Tile kind ${kind} defines circuit inputs without a gate behavior`);
       }
-      this.driveGateOutput(index, orientation, outputCharge);
+      this.driveCircuitOutputs(
+        index,
+        orientedSides(definition.circuitOutputPorts, orientation),
+        outputCharge,
+      );
     }
 
     for (let index = 0; index < this.world.cellCount; index += 1) {
@@ -193,23 +208,29 @@ export class Simulation {
     this.world.applyCircuitCharges(this.nextCircuitCharges);
   }
 
-  private driveGateOutput(
+  private driveCircuitOutputs(
     index: number,
-    outputDirection: Direction,
+    outputSides: WeldSide,
     outputCharge: Charge,
   ): void {
     this.nextCircuitCharges[index] = outputCharge;
-    const outputIndex = this.neighborIndex(index, outputDirection);
-    if (
-      outputIndex < 0 ||
-      !this.world.hasCircuitConnectionAtIndex(index, outputDirection) ||
-      expectDefined(this.circuitRoots[outputIndex], "output circuit root marker") < 0
-    ) {
-      return;
+    for (let value = Direction.Up; value <= Direction.Left; value += 1) {
+      const outputDirection = value as Direction;
+      if ((outputSides & (1 << outputDirection)) === 0) {
+        continue;
+      }
+      const outputIndex = this.neighborIndex(index, outputDirection);
+      if (
+        outputIndex < 0 ||
+        !this.world.hasCircuitConnectionAtIndex(index, outputDirection) ||
+        expectDefined(this.circuitRoots[outputIndex], "output circuit root marker") < 0
+      ) {
+        continue;
+      }
+      const outputRoot = this.findCircuitRoot(outputIndex);
+      this.circuitDriveSums[outputRoot] =
+        expectDefined(this.circuitDriveSums[outputRoot], "circuit drive sum") + outputCharge;
     }
-    const outputRoot = this.findCircuitRoot(outputIndex);
-    this.circuitDriveSums[outputRoot] =
-      expectDefined(this.circuitDriveSums[outputRoot], "circuit drive sum") + outputCharge;
   }
 
   private unionCircuitTiles(first: number, second: number): void {

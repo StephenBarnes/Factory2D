@@ -15,6 +15,7 @@ describe("tile orientation", () => {
     TileKind.Rectifier,
     TileKind.Multiplier,
     TileKind.Subtractor,
+    TileKind.ChargeSensor,
   ])(
     "preserves the selected orientation for directional kind %s",
     (kind) => {
