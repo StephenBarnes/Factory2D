@@ -115,6 +115,30 @@ describe("pistons", () => {
     expect(world.idAt(3, 2)).toBe(targetId);
     expect(world.isWelded(3, 3, 3, 2)).toBe(true);
   });
+
+  it("keeps an inactive piston head weld rigid while retracting it", () => {
+    const world = new World(7, 6);
+    placeNegativelyPoweredFixedBase(world, 3, 4);
+    const targetId = world.place(3, 2, TileKind.Piston, Direction.Up);
+    const headId = world.place(3, 1, TileKind.Stone);
+    world.setWeld(3, 3, 3, 2, true);
+    world.setWeld(3, 2, 3, 1, true);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+    simulation.step();
+
+    expect(world.kindAt(3, 4)).toBe(TileKind.Piston);
+    expect(world.idAt(3, 3)).toBe(targetId);
+    expect(world.idAt(3, 2)).toBe(headId);
+    expect(world.kindAt(3, 1)).toBe(TileKind.Empty);
+    expect(world.isWelded(3, 4, 3, 3)).toBe(true);
+    expect(world.isWelded(3, 3, 3, 2)).toBe(true);
+    simulation.step();
+    expect(world.idAt(3, 3)).toBe(targetId);
+    expect(world.idAt(3, 2)).toBe(headId);
+  });
+
   it("stays extended when a welded target cannot move into the arm cell", () => {
     const world = new World(7, 7);
     placeNegativelyPoweredFixedBase(world, 3, 4);

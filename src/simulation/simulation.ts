@@ -177,8 +177,8 @@ export class Simulation {
   }
 
   /**
-   * Piston kinematics temporarily split the retractable head connection from
-   * the base. Ordinary simulation phases still see every stored weld.
+   * Active piston kinematics temporarily split the retractable head
+   * connection from the base. Inactive pistons retain ordinary rigid welds.
    */
   private collectPistonBodies(): void {
     this.bodyRoots.fill(-1);
@@ -214,15 +214,42 @@ export class Simulation {
   private isPistonKinematicEdge(first: number, second: number): boolean {
     const firstKind = this.world.kindAtIndex(first);
     const secondKind = this.world.kindAtIndex(second);
-    if (firstKind === TileKind.PistonArm || secondKind === TileKind.PistonArm) {
+    if (
+      firstKind === TileKind.PistonArm && this.isRetractingPistonArm(first) ||
+      secondKind === TileKind.PistonArm && this.isRetractingPistonArm(second)
+    ) {
       return true;
     }
     return (
       firstKind === TileKind.Piston &&
+        this.pistonActionAt(first) === 1 &&
         this.neighborIndex(first, this.world.orientationAtIndex(first)) === second ||
       secondKind === TileKind.Piston &&
+        this.pistonActionAt(second) === 1 &&
         this.neighborIndex(second, this.world.orientationAtIndex(second)) === first
     );
+  }
+
+  private isRetractingPistonArm(arm: number): boolean {
+    const orientation = this.world.orientationAtIndex(arm);
+    const base = this.neighborIndex(arm, oppositeDirection(orientation));
+    return (
+      base >= 0 &&
+      this.world.kindAtIndex(base) === TileKind.PistonBase &&
+      this.world.orientationAtIndex(base) === orientation &&
+      this.world.hasWeldAtIndex(base, orientation) &&
+      this.pistonActionAt(base) === -1
+    );
+  }
+
+  private pistonActionAt(index: number): -1 | 0 | 1 {
+    const kind = this.world.kindAtIndex(index);
+    const charge = this.world.chargeAtPortIndex(index, Direction.Up);
+    return kind === TileKind.Piston && charge === 1
+      ? 1
+      : kind === TileKind.PistonBase && charge === -1
+        ? -1
+        : 0;
   }
 
   private collectPistonActions(): void {
@@ -239,13 +266,7 @@ export class Simulation {
     this.destinationOwners.fill(-1);
 
     for (let base = 0; base < this.world.cellCount; base += 1) {
-      const kind = this.world.kindAtIndex(base);
-      const charge = this.world.chargeAtPortIndex(base, Direction.Up);
-      const action = kind === TileKind.Piston && charge === 1
-        ? 1
-        : kind === TileKind.PistonBase && charge === -1
-          ? -1
-          : 0;
+      const action = this.pistonActionAt(base);
       if (action === 0) {
         continue;
       }
@@ -1597,6 +1618,12 @@ export class Simulation {
   }
 
   private unionBodies(first: number, second: number): void {
+    if (
+      expectDefined(this.bodyRoots[first], "first body root marker") < 0 ||
+      expectDefined(this.bodyRoots[second], "second body root marker") < 0
+    ) {
+      throw new Error(`Cannot union bodies at indices ${first} and ${second}: one is empty`);
+    }
     const firstRoot = this.findBodyRoot(first);
     const secondRoot = this.findBodyRoot(second);
     if (firstRoot === secondRoot) {

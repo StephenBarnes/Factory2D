@@ -156,18 +156,6 @@ The game is in early development. Currently implemented:
 
 ## Current TODOs
 
-Physics bug: Infinite loop bug while testing circuits and columns of welded pistons. Reproduced by exported file at `~/Downloads/factory2d-board(49).json`. Seems to occur when pistons retract. Browser console:
-
-```
-Script terminated by timeout at:
-findBodyRoot@http://localhost:8000/src/simulation/simulation.ts?t=1788196942560:1196:10
-unionBodies@http://localhost:8000/src/simulation/simulation.ts?t=1788196942560:1184:27
-collectWeldedBodies@http://localhost:8000/src/simulation/simulation.ts?t=1788196942560:695:10
-step@http://localhost:8000/src/simulation/simulation.ts?t=1788196942560:116:8
-advanceSimulation@http://localhost:8000/src/main.ts?t=1788196942562:261:13
-frame@http://localhost:8000/src/main.ts?t=1788196942562:834:21
-```
-
 Game flow:
 * When selecting a puzzle, before jumping straight into the puzzle's game screen, add a puzzle info screen. It should show a description of the puzzle, with space for features below.
 * On the puzzle info screen, show a list of saved solutions and their scores (placeholder scores for now), and have buttons to create a new solution, duplicate an existing solution, edit selected solution, and delete solutions.
