@@ -156,6 +156,18 @@ The game is in early development. Currently implemented:
 
 ## Current TODOs
 
+Physics bug: Infinite loop bug while testing circuits and columns of welded pistons. Reproduced by exported file at `~/Downloads/factory2d-board(49).json`. Seems to occur when pistons retract. Browser console:
+
+```
+Script terminated by timeout at:
+findBodyRoot@http://localhost:8000/src/simulation/simulation.ts?t=1788196942560:1196:10
+unionBodies@http://localhost:8000/src/simulation/simulation.ts?t=1788196942560:1184:27
+collectWeldedBodies@http://localhost:8000/src/simulation/simulation.ts?t=1788196942560:695:10
+step@http://localhost:8000/src/simulation/simulation.ts?t=1788196942560:116:8
+advanceSimulation@http://localhost:8000/src/main.ts?t=1788196942562:261:13
+frame@http://localhost:8000/src/main.ts?t=1788196942562:834:21
+```
+
 Game flow:
 * When selecting a puzzle, before jumping straight into the puzzle's game screen, add a puzzle info screen. It should show a description of the puzzle, with space for features below.
 * On the puzzle info screen, show a list of saved solutions and their scores (placeholder scores for now), and have buttons to create a new solution, duplicate an existing solution, edit selected solution, and delete solutions.
@@ -165,6 +177,12 @@ Game flow:
 UI:
 * Rework overall UI structure. Anchor the floating palette panel (on the left) and floating control panel (bottom) to the screen borders, instead of floating on top of the visible grid. Limit the `#game-canvas` to the rectangular region not covered by those two panels, instead of occupying the entire background.
 * Add shift + mousewheel to scroll through palette entries.
+* Bug: the tile inspector/detail panel should show info on the palette entries while the mouse is over them, and info on the tile under the mouse when the mouse is over a placed tile instance. Currently after clicking on a palette entry, if the mouse then moves away and moves over placed tiles, it still shows the palette entry's info instead of the moused-over tile instance's info, unless the player clicks on empty space.
+
+Visuals:
+* For the piston base block, don't show the small rectangle that's meant to represent the head/arm of the piston. Only show it on the combined / retracted base+arm block, and on the extended arm block.
+* Mark the wire crossing in a way that makes it apparent it's a wire-crossing block regardless of how many circuit connections it has. Currently with one wire, or two opposite-side wires connected, it looks like a conduit block except for the background color. Maybe draw the central cross regardless of how many sides are wired.
+* Add animation for the delivery box - animate tiles moving into it, and shrinking, as they're absorbed.
 
 More items in `deferred-todos.md`.
 

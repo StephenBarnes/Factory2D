@@ -51,10 +51,6 @@ Don't add, for circuit network, because they can be built from a few existing co
 * Latches: can be done by connecting a combiner's output to its input.
 * Block that writes alternating red/blue charges every tick. Because we can create this with a spark plus inverter feeding itself.
 
-Visuals:
-* Mark the wire crossing in a way that makes it apparent it's a wire-crossing block when exactly one side is connected to a wire. Currently that's not visually distinct. Maybe draw the central cross regardless of how many sides are wired.
-* Add animation for the delivery box - animate tiles moving into it, and shrinking, as they're absorbed.
-
 Game feel:
 * Try out alternate easing for movements. Maybe define per-block easing.
 * Add sounds. On block placement/removal, welding/unwelding. On victory block triggering.
@@ -72,3 +68,4 @@ UI:
 * Add step-forward and step-back to the control panel at the bottom.
 * Add hotkeys for game controls: step-forward, step-back, reset, clear, and speed controls.
 * Show current price in the control panel. Animate text like "+T2" jumping off it as components are placed.
+* Improve piston extension/retraction animation.
