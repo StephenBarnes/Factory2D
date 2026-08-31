@@ -10,6 +10,7 @@ export interface PuzzleDefinition {
   readonly id: PuzzleId;
   readonly name: string;
   readonly description: string;
+  readonly features: readonly string[];
   readonly goal: string;
   readonly editableRegion: GridRegion;
   readonly availableComponents: PuzzleComponents;
@@ -80,6 +81,7 @@ export const PUZZLES: readonly PuzzleDefinition[] = [
     id: "first-shift",
     name: "First Shift",
     description: "A small gravity workshop for the first puzzle flow.",
+    features: ["Gravity", "Restricted build zone"],
     goal: "Move both loads of sand below the raised platform.",
     editableRegion: new GridRegion([{ x: 8, y: 2, width: 10, height: 11 }]),
     availableComponents: new PuzzleComponents([
@@ -94,6 +96,7 @@ export const PUZZLES: readonly PuzzleDefinition[] = [
     name: "Beltworks",
     description: "A conveyor workshop unlocked after the first shift.",
     goal: "Carry the stone to the far side of the platform.",
+    features: ["Conveyor belts", "Powered mechanisms"],
     editableRegion: new GridRegion([{ x: 9, y: 3, width: 9, height: 10 }]),
     availableComponents: new PuzzleComponents([
       { kind: TileKind.Stone, price: 1 },
@@ -110,6 +113,7 @@ export const PUZZLES: readonly PuzzleDefinition[] = [
     name: "Runic Relay",
     description: "A signal-routing workshop unlocked after Beltworks.",
     goal: "Route and invert the sensor signal.",
+    features: ["Runic circuits", "Signal inversion", "Split build zones"],
     editableRegion: new GridRegion([
       { x: 2, y: 2, width: 4, height: 10 },
       { x: 13, y: 2, width: 5, height: 10 },

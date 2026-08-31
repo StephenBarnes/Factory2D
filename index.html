@@ -24,7 +24,47 @@
             <span class="puzzle-status">ALWAYS AVAILABLE</span>
           </button>
           <nav class="puzzle-map" id="puzzle-map" aria-label="Puzzle map"></nav>
-          <p class="main-menu-note">Puzzle goals and completion detection are not active yet.</p>
+          <p class="main-menu-note">Select an available puzzle to review its briefing and saved solutions.</p>
+        </div>
+      </section>
+
+      <section class="puzzle-info-screen" id="puzzle-info-screen" aria-labelledby="puzzle-info-title" hidden>
+        <div class="puzzle-info-content">
+          <button class="info-back-button" id="puzzle-info-back-button" type="button">← PUZZLE MAP</button>
+          <header class="puzzle-info-header">
+            <p class="eyebrow">WORKSHOP BRIEFING</p>
+            <h1 id="puzzle-info-title"></h1>
+          </header>
+          <div class="puzzle-info-layout">
+            <section class="puzzle-brief" aria-labelledby="puzzle-brief-title">
+              <h2 id="puzzle-brief-title">BRIEFING</h2>
+              <p class="puzzle-info-description" id="puzzle-info-description"></p>
+              <div class="puzzle-goal">
+                <span>OBJECTIVE</span>
+                <strong id="puzzle-info-goal"></strong>
+              </div>
+              <div class="puzzle-features">
+                <h2>FEATURES</h2>
+                <ul id="puzzle-info-features"></ul>
+              </div>
+            </section>
+            <section class="solutions-panel" aria-labelledby="solutions-title">
+              <div class="solutions-heading">
+                <div>
+                  <p class="eyebrow">SAVED DESIGNS</p>
+                  <h2 id="solutions-title">SOLUTIONS</h2>
+                </div>
+                <button class="solution-primary-action" id="new-solution-button" type="button">+ NEW SOLUTION</button>
+              </div>
+              <div class="solution-list" id="solution-list" role="listbox" aria-label="Saved solutions"></div>
+              <p class="empty-solutions" id="empty-solutions">No saved solutions. Create one to enter the workshop.</p>
+              <div class="solution-actions">
+                <button id="duplicate-solution-button" type="button">DUPLICATE</button>
+                <button class="solution-primary-action" id="edit-solution-button" type="button">EDIT SELECTED</button>
+                <button class="solution-delete-action" id="delete-solution-button" type="button">DELETE</button>
+              </div>
+            </section>
+          </div>
         </div>
       </section>
 

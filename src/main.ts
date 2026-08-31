@@ -8,6 +8,12 @@ import {
   saveCompletedPuzzleIds,
 } from "./game/puzzle-progress";
 import {
+  loadPuzzleSolutions,
+  type SavedPuzzleSolution,
+  PuzzleSolutions,
+  savePuzzleSolutions,
+} from "./game/puzzle-solutions";
+import {
   createSandboxWorld,
   PUZZLES,
   puzzleById,
@@ -44,6 +50,7 @@ import { expectDefined } from "./util/assert";
 import { TileInspector } from "./ui/tile-inspector";
 import { populateComponentPalette } from "./ui/component-palette";
 import { populatePuzzleMap } from "./ui/main-menu";
+import { PuzzleInfoView } from "./ui/puzzle-info";
 
 const MAX_AUTOMATIC_ANIMATION_MS = 250;
 const MANUAL_STEP_ANIMATION_MS = 200;
@@ -87,7 +94,7 @@ function createGameSession(
 }
 
 const sandboxSession = createGameSession(createSandboxWorld());
-const puzzleSessions = new Map<PuzzleId, GameSession>();
+const puzzleSessions = new Map<string, GameSession>();
 let activeSession = sandboxSession;
 let world = activeSession.world;
 
@@ -98,6 +105,8 @@ const canvas = requiredElement<HTMLCanvasElement>("game-canvas");
 let renderer = new CanvasRenderer(canvas, world, activeSession.editableRegion);
 const gameScreen = requiredElement<HTMLElement>("game-screen");
 const mainMenuScreen = requiredElement<HTMLElement>("main-menu-screen");
+const puzzleInfoScreen = requiredElement<HTMLElement>("puzzle-info-screen");
+const puzzleInfoView = new PuzzleInfoView(puzzleInfoScreen);
 const puzzleMap = requiredElement<HTMLElement>("puzzle-map");
 const sandboxButton = requiredElement<HTMLButtonElement>("sandbox-button");
 const menuButton = requiredElement<HTMLButtonElement>("menu-button");
@@ -151,6 +160,9 @@ let renderedPaletteDevicePixelRatio = 0;
 let tileKindsByShortcut: Readonly<Record<string, TileKind | undefined>> =
   Object.create(null);
 const completedPuzzleIds = loadStoredCompletedPuzzleIds();
+const puzzleSolutions = loadStoredPuzzleSolutions();
+const selectedSolutionIds = new Map<PuzzleId, string>();
+let activeSolutionDirty = false;
 let activeScreen: AppScreen = INITIAL_SCREEN;
 function loadStoredCompletedPuzzleIds(): Set<PuzzleId> {
   try {
@@ -159,6 +171,32 @@ function loadStoredCompletedPuzzleIds(): Set<PuzzleId> {
     console.error("Could not load puzzle progress:", error);
     return new Set();
   }
+}
+
+function loadStoredPuzzleSolutions(): PuzzleSolutions {
+  try {
+    return loadPuzzleSolutions(window.localStorage);
+  } catch (error) {
+    console.error("Could not load puzzle solutions:", error);
+    return PuzzleSolutions.empty();
+  }
+}
+
+function persistPuzzleSolutions(): void {
+  try {
+    savePuzzleSolutions(window.localStorage, puzzleSolutions);
+  } catch (error) {
+    console.error("Could not save puzzle solutions:", error);
+  }
+}
+
+function persistActiveSolutionBoard(): void {
+  if (activeScreen.kind !== "puzzle" || !activeSolutionDirty) {
+    return;
+  }
+  puzzleSolutions.updateBoard(activeScreen.solutionId, serializeBoard(baseline, 0));
+  persistPuzzleSolutions();
+  activeSolutionDirty = false;
 }
 
 function persistCompletedPuzzleIds(): void {
@@ -260,47 +298,122 @@ function activateGameSession(session: GameSession): void {
   loadGameSession(session);
 }
 
-function sessionForPuzzle(id: PuzzleId): GameSession {
-  const existing = puzzleSessions.get(id);
+function sessionForSolution(solution: SavedPuzzleSolution): GameSession {
+  const existing = puzzleSessions.get(solution.id);
   if (existing !== undefined) {
     return existing;
   }
-  const puzzle = puzzleById(id);
+  const puzzle = puzzleById(solution.puzzleId);
+  const imported = deserializeBoard(solution.board);
   const session = createGameSession(
-    puzzle.createInitialWorld(),
+    imported.world,
     puzzle.editableRegion,
     puzzle.availableComponents,
   );
-  puzzleSessions.set(id, session);
+  puzzleSessions.set(solution.id, session);
   return session;
+}
+
+function openSolution(puzzleId: PuzzleId, solutionId: string): void {
+  const solution = puzzleSolutions.byId(solutionId);
+  if (solution.puzzleId !== puzzleId) {
+    throw new Error(`Solution ${solutionId} does not belong to puzzle ${puzzleId}`);
+  }
+  selectedSolutionIds.set(puzzleId, solutionId);
+  showScreen({ kind: "puzzle", puzzleId, solutionId });
+}
+
+function renderPuzzleInfo(puzzleId: PuzzleId): void {
+  const puzzle = puzzleById(puzzleId);
+  const solutions = puzzleSolutions.forPuzzle(puzzleId);
+  let selectedSolutionId = selectedSolutionIds.get(puzzleId) ?? null;
+  if (
+    selectedSolutionId !== null &&
+    !solutions.some((solution) => solution.id === selectedSolutionId)
+  ) {
+    selectedSolutionId = null;
+  }
+  if (selectedSolutionId === null && solutions.length !== 0) {
+    selectedSolutionId = expectDefined(solutions[0], "Missing first puzzle solution").id;
+    selectedSolutionIds.set(puzzleId, selectedSolutionId);
+  }
+
+  puzzleInfoView.render({
+    puzzle,
+    solutions,
+    selectedSolutionId,
+    onBack: () => showScreen({ kind: "main-menu" }),
+    onCreate: () => {
+      const board = serializeBoard(puzzle.createInitialWorld(), 0);
+      const solution = puzzleSolutions.create(puzzleId, board);
+      persistPuzzleSolutions();
+      openSolution(puzzleId, solution.id);
+    },
+    onSelect: (solutionId) => {
+      selectedSolutionIds.set(puzzleId, solutionId);
+      renderPuzzleInfo(puzzleId);
+    },
+    onDuplicate: (solutionId) => {
+      const duplicate = puzzleSolutions.duplicate(solutionId);
+      selectedSolutionIds.set(puzzleId, duplicate.id);
+      persistPuzzleSolutions();
+      renderPuzzleInfo(puzzleId);
+    },
+    onEdit: (solutionId) => openSolution(puzzleId, solutionId),
+    onDelete: (solutionId) => {
+      const solution = puzzleSolutions.byId(solutionId);
+      if (!window.confirm(`Delete ${solution.name}? This cannot be undone.`)) {
+        return;
+      }
+      puzzleSolutions.delete(solutionId);
+      puzzleSessions.delete(solutionId);
+      selectedSolutionIds.delete(puzzleId);
+      persistPuzzleSolutions();
+      renderPuzzleInfo(puzzleId);
+    },
+  });
 }
 
 function showScreen(screen: AppScreen): void {
   setRunning(false);
+  persistActiveSolutionBoard();
   activeScreen = screen;
   const showingMainMenu = screen.kind === "main-menu";
+  const showingPuzzleInfo = screen.kind === "puzzle-info";
   mainMenuScreen.hidden = !showingMainMenu;
-  gameScreen.hidden = showingMainMenu;
+  puzzleInfoScreen.hidden = !showingPuzzleInfo;
+  gameScreen.hidden = showingMainMenu || showingPuzzleInfo;
 
   if (showingMainMenu) {
     populatePuzzleMap(puzzleMap, {
       puzzles: PUZZLES,
       completedPuzzleIds,
-      onSelectPuzzle: (puzzleId) => showScreen({ kind: "puzzle", puzzleId }),
+      onSelectPuzzle: (puzzleId) => showScreen({ kind: "puzzle-info", puzzleId }),
     });
+    return;
+  }
+
+  if (showingPuzzleInfo) {
+    renderPuzzleInfo(screen.puzzleId);
     return;
   }
 
   if (screen.kind === "sandbox") {
     activateGameSession(sandboxSession);
+    menuButton.textContent = "← MENU";
     screenTitle.textContent = "SANDBOX";
     screenDescription.textContent = "Free construction workshop";
     gameScreen.setAttribute("aria-label", "Sandbox workshop");
   } else {
     const puzzle = puzzleById(screen.puzzleId);
-    activateGameSession(sessionForPuzzle(screen.puzzleId));
+    const solution = puzzleSolutions.byId(screen.solutionId);
+    if (solution.puzzleId !== puzzle.id) {
+      throw new Error(`Solution ${solution.id} does not belong to puzzle ${puzzle.id}`);
+    }
+    activateGameSession(sessionForSolution(solution));
+    menuButton.textContent = "← PUZZLE";
     screenTitle.textContent = puzzle.name.toUpperCase();
-    screenDescription.textContent = `Goal: ${puzzle.goal}`;
+    screenDescription.textContent = `${solution.name} · Goal: ${puzzle.goal}`;
     gameScreen.setAttribute("aria-label", `${puzzle.name} puzzle workshop`);
   }
   configureComponentPalette();
@@ -520,6 +633,9 @@ function saveEditedBaseline(): void {
   baseline.copyFrom(world);
   simulation.tick = 0;
   finishAnimation();
+  if (activeScreen.kind === "puzzle") {
+    activeSolutionDirty = true;
+  }
 }
 
 function componentIsAvailable(kind: TileKind): boolean {
@@ -657,7 +773,11 @@ function editWeldSegment(
 }
 
 menuButton.addEventListener("click", () => {
-  showScreen({ kind: "main-menu" });
+  if (activeScreen.kind === "puzzle") {
+    showScreen({ kind: "puzzle-info", puzzleId: activeScreen.puzzleId });
+  } else {
+    showScreen({ kind: "main-menu" });
+  }
 });
 
 sandboxButton.addEventListener("click", () => {
@@ -743,9 +863,8 @@ clearButton.addEventListener("click", () => {
       }
     }
   }
-  baseline.copyFrom(world);
-  simulation.tick = 0;
-  finishAnimation();
+  saveEditedBaseline();
+  persistActiveSolutionBoard();
 });
 
 function downloadBlob(blob: Blob, filename: string): void {
@@ -933,6 +1052,7 @@ function finishPointerGesture(event: PointerEvent): void {
   lastEditedCell = null;
   lastPointerGridPoint = null;
   canvas.classList.remove("panning");
+  persistActiveSolutionBoard();
 }
 
 canvas.addEventListener("pointerup", finishPointerGesture);
@@ -958,7 +1078,7 @@ canvas.addEventListener("wheel", (event) => {
 }, { passive: false });
 
 document.addEventListener("keydown", (event) => {
-  if (activeScreen.kind === "main-menu") {
+  if (activeScreen.kind === "main-menu" || activeScreen.kind === "puzzle-info") {
     return;
   }
   if (event.key === "Control") {
@@ -1056,6 +1176,7 @@ window.addEventListener("blur", () => {
     selectTile(selectedKind);
   }
 });
+window.addEventListener("pagehide", persistActiveSolutionBoard);
 window.addEventListener("resize", () => {
   renderPalettePreviews();
   updateViewportInsets();
@@ -1064,7 +1185,7 @@ window.addEventListener("resize", () => {
 function frame(currentTime: number): void {
   const elapsed = Math.min(currentTime - previousFrameTime, 250);
   previousFrameTime = currentTime;
-  if (activeScreen.kind === "main-menu") {
+  if (activeScreen.kind === "main-menu" || activeScreen.kind === "puzzle-info") {
     requestAnimationFrame(frame);
     return;
   }
