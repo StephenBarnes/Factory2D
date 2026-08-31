@@ -472,7 +472,7 @@ function weldEligibleEditableNeighbors(x: number, y: number): boolean {
       neighborX < world.width &&
       neighborY >= 0 &&
       neighborY < world.height &&
-      canEditCell(neighborX, neighborY)
+      canEditEdge(x, y, neighborX, neighborY)
     ) {
       changed = world.setWeld(x, y, neighborX, neighborY, true) || changed;
     }

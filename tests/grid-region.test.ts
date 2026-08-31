@@ -20,12 +20,15 @@ describe("grid regions", () => {
     expect(region.contains(7, 5)).toBe(false);
   });
 
-  it("contains an editable edge only when both adjacent cells are editable", () => {
+  it("contains edges inside or on the perimeter of the editable region", () => {
     const region = new GridRegion([{ x: 2, y: 2, width: 2, height: 1 }]);
 
     expect(region.containsEdge(2, 2, 3, 2)).toBe(true);
-    expect(region.containsEdge(1, 2, 2, 2)).toBe(false);
-    expect(region.containsEdge(3, 2, 4, 2)).toBe(false);
+    expect(region.containsEdge(1, 2, 2, 2)).toBe(true);
+    expect(region.containsEdge(3, 2, 4, 2)).toBe(true);
+    expect(region.containsEdge(2, 1, 2, 2)).toBe(true);
+    expect(region.containsEdge(2, 2, 2, 3)).toBe(true);
+    expect(region.containsEdge(0, 0, 1, 0)).toBe(false);
   });
 
   it("traces only the outer boundary of overlapping rectangle unions", () => {

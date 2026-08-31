@@ -51,7 +51,7 @@ export class GridRegion {
   }
 
   containsEdge(x1: number, y1: number, x2: number, y2: number): boolean {
-    return this.contains(x1, y1) && this.contains(x2, y2);
+    return this.contains(x1, y1) || this.contains(x2, y2);
   }
 
   fitsWithin(width: number, height: number): boolean {
