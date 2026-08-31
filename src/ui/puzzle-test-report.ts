@@ -1,4 +1,5 @@
 import type { PuzzleTestReport } from "../game/puzzle-test-runner";
+import { expectDefined } from "../util/assert";
 
 export interface PuzzleTestReportCallbacks {
   readonly onContinueEditing: () => void;
@@ -9,6 +10,11 @@ export class PuzzleTestReportView {
   private readonly title: HTMLElement;
   private readonly summary: HTMLElement;
   private readonly results: HTMLElement;
+  private readonly scores: HTMLElement;
+  private readonly price: HTMLElement;
+  private readonly cycles: HTMLElement;
+  private readonly footprint: HTMLElement;
+  private readonly combined: HTMLElement;
 
   constructor(
     private readonly dialog: HTMLDialogElement,
@@ -17,6 +23,11 @@ export class PuzzleTestReportView {
     this.title = requiredDescendant(dialog, "[data-test-report-title]");
     this.summary = requiredDescendant(dialog, "[data-test-report-summary]");
     this.results = requiredDescendant(dialog, "[data-test-report-results]");
+    this.scores = requiredDescendant(dialog, "[data-test-report-scores]");
+    this.price = requiredDescendant(dialog, "[data-test-report-price]");
+    this.cycles = requiredDescendant(dialog, "[data-test-report-cycles]");
+    this.footprint = requiredDescendant(dialog, "[data-test-report-footprint]");
+    this.combined = requiredDescendant(dialog, "[data-test-report-combined]");
     requiredDescendant<HTMLButtonElement>(dialog, "[data-test-report-continue]")
       .addEventListener("click", () => {
         this.close();
@@ -39,6 +50,18 @@ export class PuzzleTestReportView {
     this.summary.textContent = report.succeeded
       ? `All ${report.results.length} test cases reached victory.`
       : `${passed} of ${report.results.length} test cases reached victory.`;
+
+    this.scores.hidden = !report.succeeded;
+    if (report.succeeded) {
+      const scores = expectDefined(
+        report.scores ?? undefined,
+        "Successful puzzle test report is missing scores",
+      );
+      this.price.textContent = String(scores.price);
+      this.cycles.textContent = String(scores.cycles);
+      this.footprint.textContent = String(scores.footprint);
+      this.combined.textContent = String(scores.combined);
+    }
 
     const items = report.results.map((result) => {
       const item = document.createElement("li");

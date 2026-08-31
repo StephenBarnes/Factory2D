@@ -65,6 +65,12 @@ describe("puzzle test runner", () => {
     expect(report.succeeded).toBe(true);
     expect(report.results.map((result) => result.outcome)).toEqual(["won", "won"]);
     expect(report.results.map((result) => result.cycles)).toEqual([2, 2]);
+    expect(report.scores).toEqual({
+      price: 1,
+      cycles: 4,
+      footprint: 1,
+      combined: 6,
+    });
     expect(solution.puzzleResult).toBe(PuzzleResult.InProgress);
     expect(solution.kindAt(0, 0)).toBe(TileKind.FixedCharge);
   });
@@ -79,6 +85,7 @@ describe("puzzle test runner", () => {
     const report = runPuzzleTests(puzzle, solution);
 
     expect(report.succeeded).toBe(false);
+    expect(report.scores).toBeNull();
     expect(report.results.map((result) => [result.id, result.outcome])).toEqual([
       ["loss", "lost"],
       ["win", "won"],

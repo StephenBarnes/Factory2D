@@ -1,9 +1,10 @@
 import { puzzleById, PUZZLES, type PuzzleId } from "./puzzles";
 import { deserializeBoard } from "../simulation/board-export";
 import { PuzzleResult } from "../simulation/puzzle-result";
+import { parsePuzzleScores, type PuzzleScores } from "./puzzle-scores";
 
 export const PUZZLE_SOLUTIONS_STORAGE_KEY = "factory2d.puzzle-solutions";
-const PUZZLE_SOLUTIONS_VERSION = 1;
+const PUZZLE_SOLUTIONS_VERSION = 2;
 
 type PuzzleSolutionsStorage = Pick<Storage, "getItem" | "setItem">;
 
@@ -12,6 +13,7 @@ export interface SavedPuzzleSolution {
   readonly puzzleId: PuzzleId;
   readonly name: string;
   readonly board: string;
+  readonly scores: PuzzleScores | null;
 }
 
 interface StoredPuzzleSolutions {
@@ -86,11 +88,16 @@ export class PuzzleSolutions {
         throw new Error(`Stored puzzle solution at index ${index} is not an editable baseline`);
       }
 
+      const scores = solution.scores === null
+        ? null
+        : parsePuzzleScores(solution.scores, `Stored puzzle solution at index ${index}`);
+
       return {
         id: solution.id,
         puzzleId: puzzle.id,
         name: solution.name,
         board: solution.board,
+        scores,
       };
     });
 
@@ -133,6 +140,7 @@ export class PuzzleSolutions {
       puzzleId,
       name: `Solution ${nameNumber}`,
       board,
+      scores: null,
     };
     this.solutions.push(solution);
     return solution;
@@ -150,14 +158,24 @@ export class PuzzleSolutions {
     }
 
     const duplicate = this.create(source.puzzleId, source.board);
-    const renamedDuplicate = { ...duplicate, name };
+    const renamedDuplicate = { ...duplicate, name, scores: source.scores };
     this.solutions[this.solutions.indexOf(duplicate)] = renamedDuplicate;
     return renamedDuplicate;
   }
 
   updateBoard(id: string, board: string): void {
     const solution = this.byId(id);
-    this.solutions[this.solutions.indexOf(solution)] = { ...solution, board };
+    this.solutions[this.solutions.indexOf(solution)] = { ...solution, board, scores: null };
+  }
+
+  recordTestResult(id: string, board: string, scores: PuzzleScores | null): void {
+    const solution = this.byId(id);
+    const storedScores = scores === null ? null : parsePuzzleScores(scores, "Puzzle solution");
+    this.solutions[this.solutions.indexOf(solution)] = {
+      ...solution,
+      board,
+      scores: storedScores,
+    };
   }
 
   delete(id: string): void {

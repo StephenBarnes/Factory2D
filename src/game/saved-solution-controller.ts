@@ -5,6 +5,7 @@ import {
   PuzzleSolutions,
   savePuzzleSolutions,
 } from "./puzzle-solutions";
+import type { PuzzleScores } from "./puzzle-scores";
 import { serializeBoard } from "../simulation/board-export";
 import type { World } from "../simulation/world";
 import { expectDefined } from "../util/assert";
@@ -100,6 +101,20 @@ export class SavedSolutionController {
       return;
     }
     this.puzzleSolutions.updateBoard(solutionId, serializeBoard(baseline, 0));
+    this.persist();
+    this.dirtySolutionIds.delete(solutionId);
+  }
+
+  recordTestResult(
+    solutionId: string,
+    baseline: World,
+    scores: PuzzleScores | null,
+  ): void {
+    this.puzzleSolutions.recordTestResult(
+      solutionId,
+      serializeBoard(baseline, 0),
+      scores,
+    );
     this.persist();
     this.dirtySolutionIds.delete(solutionId);
   }

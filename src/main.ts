@@ -703,9 +703,7 @@ async function testCurrentPuzzleSolution(): Promise<void> {
       puzzleById(currentScreen.puzzleId),
       activeSession.baseline,
     );
-    if (report.succeeded) {
-      navigation.recordActivePuzzleTestSuccess();
-    }
+    navigation.recordActivePuzzleTestResult(report.scores);
     testReportView.show(report);
   } finally {
     testingPuzzleSolution = false;

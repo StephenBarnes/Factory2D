@@ -69,7 +69,7 @@ export function browserStorageFixture(
   if (name === "unlocked") {
     return {
       values: {
-        [PUZZLE_PROGRESS_STORAGE_KEY]: progressValue(new Set<PuzzleId>(["first-shift"])),
+        [PUZZLE_PROGRESS_STORAGE_KEY]: progressValue(new Set<PuzzleId>(["sand-fall"])),
       },
       solutionIds: [],
       editedBoard: null,
@@ -79,7 +79,7 @@ export function browserStorageFixture(
   if (name === "edited-board") {
     const puzzle = puzzleById("first-shift");
     const world = puzzle.createInitialWorld();
-    world.place(8, 2, TileKind.Stone);
+    world.place(8, 3, TileKind.Stone);
     const board = serializeBoard(world, 0);
     const solutions = PuzzleSolutions.empty();
     const solution = solutions.create(puzzle.id, board);

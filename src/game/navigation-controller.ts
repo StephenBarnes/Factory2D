@@ -12,6 +12,7 @@ import {
 import { PUZZLES, puzzleById, type PuzzleId } from "./puzzles";
 import type { AppScreen } from "./screen";
 import { SavedSolutionController } from "./saved-solution-controller";
+import type { PuzzleScores } from "./puzzle-scores";
 import { WorkshopSessionController } from "./workshop-session";
 import { populatePuzzleMap } from "../ui/main-menu";
 import { PuzzleInfoView } from "../ui/puzzle-info";
@@ -162,11 +163,17 @@ export class NavigationController {
     }
   }
 
-  recordActivePuzzleTestSuccess(): void {
+  recordActivePuzzleTestResult(scores: PuzzleScores | null): void {
     if (this.currentScreen.kind !== "puzzle") {
-      throw new Error("Cannot record puzzle test success outside a puzzle workshop");
+      throw new Error("Cannot record a puzzle test result outside a puzzle workshop");
     }
+    this.solutions.recordTestResult(
+      this.currentScreen.solutionId,
+      this.sessions.active.baseline,
+      scores,
+    );
     if (
+      scores === null ||
       !recordPuzzleResult(
         this.completedPuzzleIds,
         this.currentScreen.puzzleId,

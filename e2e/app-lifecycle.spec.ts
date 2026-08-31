@@ -82,10 +82,10 @@ test("routes only to accessible canonical screens", async ({ page }) => {
 test("unlocked fixture opens the dependent puzzle", async ({ page }) => {
   await seedBrowserStorage(page, "unlocked");
   await page.goto("/");
-  const beltworks = page.getByRole("button", { name: /^02 Beltworks/ });
-  await expect(beltworks).toBeEnabled();
-  await beltworks.click();
-  await expect(page).toHaveURL(/\/puzzles\/beltworks$/);
+  const conduits = page.getByRole("button", { name: /^03 Conduits/ });
+  await expect(conduits).toBeEnabled();
+  await conduits.click();
+  await expect(page).toHaveURL(/\/puzzles\/conduits$/);
 });
 
 test("creates, edits, persists, and restores a solution on reload", async ({ page }) => {
@@ -96,7 +96,7 @@ test("creates, edits, persists, and restores a solution on reload", async ({ pag
 
   const initial = await diagnosticSnapshot(page);
   expect(initial.activeSolutionId).toBe("solution-1");
-  await placeStone(page, 8, 2);
+  await placeStone(page, 8, 3);
   const edited = await diagnosticSnapshot(page);
   expect(edited.worldRevision).toBeGreaterThan(initial.worldRevision);
   expect(edited.serializedBoard).not.toBe(initial.serializedBoard);
@@ -130,8 +130,8 @@ test("tests puzzle cases in a report while sandbox keeps run controls", async ({
   const report = page.getByRole("dialog");
   await expect(report).toBeVisible();
   await expect(report.getByRole("heading", { name: "TESTS FAILED" })).toBeVisible();
-  await expect(report.locator(".test-report-result")).toHaveCount(2);
-  await expect(report.getByText("CYCLE LIMIT", { exact: true })).toHaveCount(2);
+  await expect(report.locator(".test-report-result")).toHaveCount(1);
+  await expect(report.getByText("CYCLE LIMIT", { exact: true })).toHaveCount(1);
 
   await report.getByRole("button", { name: "CONTINUE EDITING" }).click();
   await expect(report).not.toBeVisible();
@@ -142,6 +142,28 @@ test("tests puzzle cases in a report while sandbox keeps run controls", async ({
   await page.goto("/sandbox");
   await expect(page.getByRole("button", { name: "▶ RUN" })).toBeVisible();
   await expect(report).not.toBeVisible();
+});
+
+test("persists successful solution scores on the puzzle briefing", async ({ page }) => {
+  await seedBrowserStorage(page, "populated");
+  await page.goto("/puzzles/first-shift/solutions/solution-1");
+  await placeStone(page, 9, 3);
+  await page.getByRole("button", { name: "◆ TEST" }).click();
+
+  const report = page.getByRole("dialog");
+  await expect(report.getByRole("heading", { name: "ALL TESTS PASSED" })).toBeVisible();
+  await expect(report.locator("[data-test-report-price]")).toHaveText("1");
+  await expect(report.locator("[data-test-report-cycles]")).toHaveText("9");
+  await expect(report.locator("[data-test-report-footprint]")).toHaveText("1");
+  await expect(report.locator("[data-test-report-combined]")).toHaveText("11");
+
+  await report.getByRole("button", { name: "BACK TO PUZZLE" }).click();
+  const scoredSolution = page.getByRole("option", {
+    name: "Solution 1 Confirmed successful PRICE 1 CYCLES 9 FOOTPRINT 1 COMBINED 11",
+  });
+  await expect(scoredSolution).toBeVisible();
+  await page.reload();
+  await expect(scoredSolution).toBeVisible();
 });
 
 

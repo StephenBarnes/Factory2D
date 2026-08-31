@@ -106,15 +106,19 @@ export class PuzzleInfoView {
     const name = document.createElement("strong");
     name.textContent = solution.name;
     const status = document.createElement("small");
-    status.textContent = "Saved workshop design";
+    status.className = solution.scores === null ? "unconfirmed" : "confirmed";
+    status.textContent = solution.scores === null
+      ? "Not yet confirmed"
+      : "Confirmed successful";
     identity.append(name, status);
 
     const scores = document.createElement("span");
     scores.className = "solution-scores";
     scores.append(
-      this.createPlaceholderScore("PRICE"),
-      this.createPlaceholderScore("CYCLES"),
-      this.createPlaceholderScore("FOOTPRINT"),
+      this.createScore("PRICE", solution.scores?.price),
+      this.createScore("CYCLES", solution.scores?.cycles),
+      this.createScore("FOOTPRINT", solution.scores?.footprint),
+      this.createScore("COMBINED", solution.scores?.combined),
     );
 
     row.append(identity, scores);
@@ -123,12 +127,12 @@ export class PuzzleInfoView {
     return row;
   }
 
-  private createPlaceholderScore(label: string): HTMLElement {
+  private createScore(label: string, scoreValue: number | undefined): HTMLElement {
     const score = document.createElement("span");
     const heading = document.createElement("small");
     heading.textContent = label;
     const value = document.createElement("strong");
-    value.textContent = "—";
+    value.textContent = scoreValue === undefined ? "—" : String(scoreValue);
     score.append(heading, value);
     return score;
   }

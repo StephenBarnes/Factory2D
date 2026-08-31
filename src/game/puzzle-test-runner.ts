@@ -3,6 +3,7 @@ import {
   MAX_PUZZLE_CYCLE_LIMIT,
 } from "./puzzle-format";
 import type { PuzzleDefinition, PuzzleTestCaseDefinition } from "./puzzles";
+import { computePuzzleScores, type PuzzleScores } from "./puzzle-scores";
 import { PuzzleResult } from "../simulation/puzzle-result";
 import { Simulation } from "../simulation/simulation";
 import type { World } from "../simulation/world";
@@ -20,6 +21,7 @@ export interface PuzzleTestCaseResult {
 export interface PuzzleTestReport {
   readonly succeeded: boolean;
   readonly results: readonly PuzzleTestCaseResult[];
+  readonly scores: PuzzleScores | null;
 }
 
 /** Runs every puzzle case against an isolated copy of the editable solution. */
@@ -38,7 +40,14 @@ export function runPuzzleTests(
     results.push(result);
     succeeded = result.outcome === "won" && succeeded;
   }
-  return Object.freeze({ succeeded, results: Object.freeze(results) });
+  const scores = succeeded
+    ? computePuzzleScores(
+      puzzle,
+      solution,
+      results.reduce((cycles, result) => cycles + result.cycles, 0),
+    )
+    : null;
+  return Object.freeze({ succeeded, results: Object.freeze(results), scores });
 }
 
 function runPuzzleTestCase(

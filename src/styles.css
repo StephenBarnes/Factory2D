@@ -447,9 +447,13 @@ canvas:focus-visible {
   font-size: 0.64rem;
 }
 
+.solution-identity small.confirmed {
+  color: #78dcca;
+}
+
 .solution-scores {
   display: grid;
-  grid-template-columns: repeat(3, minmax(54px, auto));
+  grid-template-columns: repeat(4, minmax(54px, auto));
   gap: 13px;
 }
 
@@ -1069,6 +1073,49 @@ kbd {
   list-style: none;
 }
 
+.test-report-scores {
+  margin: 0 24px 24px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid #34564f;
+  background: #0d1819;
+}
+
+.test-report-scores[hidden] {
+  display: none;
+}
+
+.test-report-scores > div {
+  padding: 11px 8px;
+  border-right: 1px solid #29413d;
+  text-align: center;
+}
+
+.test-report-scores > div:last-child {
+  border-right: 0;
+  background: rgb(120 220 202 / 7%);
+}
+
+.test-report-scores dt,
+.test-report-scores dd {
+  margin: 0;
+  font-family: "SFMono-Regular", Consolas, monospace;
+}
+
+.test-report-scores dt {
+  color: #668078;
+  font-size: 0.52rem;
+  letter-spacing: 0.08em;
+}
+
+.test-report-scores dd {
+  margin-top: 6px;
+  color: #a7d8cf;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
 .test-report-result {
   min-height: 52px;
   padding: 9px 12px;
@@ -1351,7 +1398,7 @@ kbd {
   }
 
   .solution-scores {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 
   .solution-scores > span {

@@ -24,6 +24,7 @@ describe("workshop session controller", () => {
       puzzleId: puzzle.id,
       name: "Solution 1",
       board: serializeBoard(initialWorld, 0),
+      scores: null,
     } as const;
     const sessions = new WorkshopSessionController(createSandboxWorld());
     const sandbox = sessions.active;
