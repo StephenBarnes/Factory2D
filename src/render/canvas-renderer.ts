@@ -1,3 +1,4 @@
+import type { GridRegion } from "../game/grid-region";
 import {
   Direction,
   directionX,
@@ -23,6 +24,7 @@ import {
 const MAX_TILE_SIZE = 64;
 const MIN_TILE_SIZE = 2;
 const GRID_EDGE_EPSILON = 1e-6;
+const EDITABLE_REGION_DASH_PATTERN = [4, 4];
 
 export interface ViewportInsets {
   readonly top: number;
@@ -40,6 +42,7 @@ export class CanvasRenderer {
   private readonly canvas: HTMLCanvasElement;
   private readonly context: CanvasRenderingContext2D;
   private readonly world: World;
+  private readonly editableRegion: GridRegion | null;
 
   private cellSize = MAX_TILE_SIZE;
   private originX = 0;
@@ -64,7 +67,11 @@ export class CanvasRenderer {
   private hoverKind = TileKind.Empty;
   private hoverOrientation = Direction.Up;
 
-  constructor(canvas: HTMLCanvasElement, world: World) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    world: World,
+    editableRegion: GridRegion | null = null,
+  ) {
     const context = canvas.getContext("2d");
     if (context === null) {
       throw new Error("Canvas 2D is not supported by this browser");
@@ -73,6 +80,7 @@ export class CanvasRenderer {
     this.canvas = canvas;
     this.context = context;
     this.world = world;
+    this.editableRegion = editableRegion;
     this.viewCenterX = world.width / 2;
     this.viewCenterY = world.height / 2;
   }
@@ -135,6 +143,7 @@ export class CanvasRenderer {
 
     this.drawGrid();
     this.drawTiles(previousWorld, Math.max(0, Math.min(1, progress)), animationTime);
+    this.drawEditableRegion();
     this.drawHover(animationTime);
   }
 
@@ -305,6 +314,32 @@ export class CanvasRenderer {
 
     context.strokeStyle = "#354250";
     context.strokeRect(this.originX + 0.5, this.originY + 0.5, boardWidth, boardHeight);
+  }
+
+  private drawEditableRegion(): void {
+    if (this.editableRegion === null) {
+      return;
+    }
+
+    const { context } = this;
+    context.save();
+    context.strokeStyle = "#d6ad61";
+    context.lineWidth = Math.max(1.5, Math.min(3, this.cellSize * 0.08));
+    context.lineCap = "round";
+    context.setLineDash(EDITABLE_REGION_DASH_PATTERN);
+    context.beginPath();
+    for (const edge of this.editableRegion.boundaryEdges) {
+      context.moveTo(
+        this.originX + edge.x1 * this.cellSize + 0.5,
+        this.originY + edge.y1 * this.cellSize + 0.5,
+      );
+      context.lineTo(
+        this.originX + edge.x2 * this.cellSize + 0.5,
+        this.originY + edge.y2 * this.cellSize + 0.5,
+      );
+    }
+    context.stroke();
+    context.restore();
   }
 
   private drawTiles(previousWorld: World | null, progress: number, animationTime: number): void {
@@ -500,7 +535,11 @@ export class CanvasRenderer {
   private drawHover(animationTime: number): void {
     if (this.hoverEdge !== null) {
       const { x1, y1, x2, y2 } = this.hoverEdge;
-      this.context.strokeStyle = this.world.canWeld(x1, y1, x2, y2) ? "#78dcca" : "#e15a4f";
+      const editable = this.editableRegion === null ||
+        this.editableRegion.containsEdge(x1, y1, x2, y2);
+      this.context.strokeStyle = editable && this.world.canWeld(x1, y1, x2, y2)
+        ? "#78dcca"
+        : "#e15a4f";
       this.context.lineWidth = 3;
       this.context.beginPath();
       if (y1 === y2) {
@@ -519,8 +558,11 @@ export class CanvasRenderer {
     if (this.hoverX < 0 || this.hoverY < 0) {
       return;
     }
+    const editable = this.editableRegion === null ||
+      this.editableRegion.contains(this.hoverX, this.hoverY);
 
     if (
+      editable &&
       this.hoverKind !== TileKind.Empty &&
       this.world.kindAt(this.hoverX, this.hoverY) === TileKind.Empty
     ) {
@@ -538,7 +580,7 @@ export class CanvasRenderer {
       this.context.restore();
     }
 
-    this.context.strokeStyle = "#78dcca";
+    this.context.strokeStyle = editable ? "#78dcca" : "#e15a4f";
     this.context.lineWidth = 2;
     this.context.strokeRect(
       this.originX + this.hoverX * this.cellSize + 1,

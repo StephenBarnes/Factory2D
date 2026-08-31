@@ -1,3 +1,13 @@
+Game flow:
+* Once we have a selection tool, allow converting selection to the allowed placement region with a button, only in the sandbox. For designing shareable puzzles.
+* Implement a text-box tool that places and edits text boxes on the game screen. Useful for tutorial puzzles, and also for players that want to label/annotate their designs. Model them separate from the component grid - they're not grid-aligned and don't occupy tiles.
+
+Components useful for designing puzzles in-world:
+* Add a charge counter component - counts up from zero every tick it receives a charge on the back, and outputs a charge once it reaches a configured threshold. Requires some kind of UI for setting the threshold - maybe open a modal input box once the block is placed, and when pressing the F key with mouse over the block. (We'll need similar modals for some other configurable components, like ROMs.) Render the current count on the block.
+* Add a dispenser component that dispenses a copy of the block behind it, creating the duplicate in front of it, when it receives a charge on the side.
+* Add ROM component: +1/-1 on one side moves cursor, other sides output the stored value, modal allows setting ROM size and value in each cell.
+* Add a signal-monitor component, and ROM-grapher component. In the puzzle screen, add an additional panel on the right that shows a readout of the signal received by the signal monitor every tick, and also shows a graph of the values in any ROM adjacent to the ROM-monitor. This is for puzzles - we can show the signals that the player will receive, the signals we expect them to output, and the actual signal they emit, similar to a Zachtronics game.
+
 Components:
 * Add a piston block. It should be one block showing the arm and base of the piston overlapping. When it receives a charge, it should extend the arm, making it two separate blocks (considered welded together). When no charge is received, it should try to retract. This is a special case because we have effectively 2 blocks that can overlap, which is not usually allowed; but we could model it without overlaps, as 3 separate block types (arm, base, and combined arm+base), though we would still need to modify animation to show the arm extending.
 * A sensor that detects when the sensor's own tile moves, and outputs +1 on that side, -1 on the other side.
@@ -52,3 +62,5 @@ UI:
 * Add a way to copy selection to a clipboard, for transferring machines between puzzles.
 * When saving an image using the image button, crop out parts of the screen that are over the background, outside the grid, if this can be implemented easily.
 * Further compact orientations and charges in the export/import format, possibly storing charges per network instead of per tile. More complex per-tile state (e.g. furnace stored ticks or target/delivery-block configuration) can remain verbose.
+* Implement undo and redo when editing.
+* Check for any potential bugs caused by listening only to mouse-up and mouse-down events, and assuming the mouse button is held down until a mouse-up is received. Can cause accidental deletion or placing of tiles if the mouse-up event is hidden by other window events.

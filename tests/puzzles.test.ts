@@ -39,6 +39,14 @@ describe("puzzle definitions", () => {
     expect(second.kindAt(0, 0)).toBe(TileKind.Empty);
   });
 
+  it("keeps every editable region inside its puzzle board", () => {
+    for (const puzzle of PUZZLES) {
+      const world = puzzle.createInitialWorld();
+
+      expect(puzzle.editableRegion.fitsWithin(world.width, world.height)).toBe(true);
+    }
+  });
+
   it("creates the sandbox through the shared world factory", () => {
     const sandbox = createSandboxWorld();
 

@@ -1,4 +1,5 @@
 import "./styles.css";
+import type { GridRegion } from "./game/grid-region";
 import {
   loadCompletedPuzzleIds,
   recordPuzzleResult,
@@ -28,6 +29,8 @@ import type { PointerGesture } from "./render/pointer-gesture";
 import { deserializeBoard, serializeBoard } from "./simulation/board-export";
 import { Simulation } from "./simulation/simulation";
 import {
+  directionX,
+  directionY,
   Direction,
   orientationForKind,
   TILE_DEFINITIONS,
@@ -59,14 +62,19 @@ interface GameSession {
   simulation: Simulation;
   baseline: World;
   previousWorld: World;
+  readonly editableRegion: GridRegion | null;
 }
 
-function createGameSession(world: World): GameSession {
+function createGameSession(
+  world: World,
+  editableRegion: GridRegion | null = null,
+): GameSession {
   return {
     world,
     simulation: new Simulation(world),
     baseline: world.clone(),
     previousWorld: world.clone(),
+    editableRegion,
   };
 }
 
@@ -79,7 +87,7 @@ let simulation = activeSession.simulation;
 let baseline = activeSession.baseline;
 let previousWorld = activeSession.previousWorld;
 const canvas = requiredElement<HTMLCanvasElement>("game-canvas");
-let renderer = new CanvasRenderer(canvas, world);
+let renderer = new CanvasRenderer(canvas, world, activeSession.editableRegion);
 const gameScreen = requiredElement<HTMLElement>("game-screen");
 const mainMenuScreen = requiredElement<HTMLElement>("main-menu-screen");
 const puzzleMap = requiredElement<HTMLElement>("puzzle-map");
@@ -203,7 +211,7 @@ function loadGameSession(session: GameSession): void {
   simulation = session.simulation;
   baseline = session.baseline;
   previousWorld = session.previousWorld;
-  renderer = new CanvasRenderer(canvas, world);
+  renderer = new CanvasRenderer(canvas, world, session.editableRegion);
   tileInspector = new TileInspector(inspectorPanel, world);
   hoveredCell = null;
   hoveredEdge = null;
@@ -226,7 +234,8 @@ function sessionForPuzzle(id: PuzzleId): GameSession {
   if (existing !== undefined) {
     return existing;
   }
-  const session = createGameSession(puzzleById(id).createInitialWorld());
+  const puzzle = puzzleById(id);
+  const session = createGameSession(puzzle.createInitialWorld(), puzzle.editableRegion);
   puzzleSessions.set(id, session);
   return session;
 }
@@ -259,6 +268,7 @@ function showScreen(screen: AppScreen): void {
     screenDescription.textContent = `Goal: ${puzzle.goal}`;
     gameScreen.setAttribute("aria-label", `${puzzle.name} puzzle workshop`);
   }
+  importButton.disabled = activeSession.editableRegion !== null;
 
   updateViewportInsets();
   refreshPointerHover();
@@ -400,6 +410,37 @@ function saveEditedBaseline(): void {
   finishAnimation();
 }
 
+function canEditCell(x: number, y: number): boolean {
+  return activeSession.editableRegion?.contains(x, y) ?? true;
+}
+
+function canEditEdge(x1: number, y1: number, x2: number, y2: number): boolean {
+  return activeSession.editableRegion?.containsEdge(x1, y1, x2, y2) ?? true;
+}
+
+function weldEligibleEditableNeighbors(x: number, y: number): boolean {
+  if (activeSession.editableRegion === null) {
+    return world.weldEligibleNeighbors(x, y);
+  }
+
+  let changed = false;
+  for (let value = Direction.Up; value <= Direction.Left; value += 1) {
+    const direction = value as Direction;
+    const neighborX = x + directionX(direction);
+    const neighborY = y + directionY(direction);
+    if (
+      neighborX >= 0 &&
+      neighborX < world.width &&
+      neighborY >= 0 &&
+      neighborY < world.height &&
+      canEditCell(neighborX, neighborY)
+    ) {
+      changed = world.setWeld(x, y, neighborX, neighborY, true) || changed;
+    }
+  }
+  return changed;
+}
+
 function editCellLine(
   from: GridCell,
   to: GridCell,
@@ -422,18 +463,20 @@ function editCellLine(
   const orientation = orientationForKind(selectedKind, selectedOrientation);
 
   while (true) {
-    if (
-      world.kindAt(x, y) !== kind ||
-      (
-        kind !== TileKind.Empty &&
-        world.orientationAt(x, y) !== orientation
-      )
-    ) {
-      world.place(x, y, kind, orientation);
-      changed = true;
-    }
-    if (weldPlacedTiles && kind !== TileKind.Empty) {
-      changed = world.weldEligibleNeighbors(x, y) || changed;
+    if (canEditCell(x, y)) {
+      if (
+        world.kindAt(x, y) !== kind ||
+        (
+          kind !== TileKind.Empty &&
+          world.orientationAt(x, y) !== orientation
+        )
+      ) {
+        world.place(x, y, kind, orientation);
+        changed = true;
+      }
+      if (weldPlacedTiles && kind !== TileKind.Empty) {
+        changed = weldEligibleEditableNeighbors(x, y) || changed;
+      }
     }
     if (x === to.x && y === to.y) {
       break;
@@ -455,7 +498,11 @@ function editCellLine(
 }
 
 function editWeld(edge: GridEdge, erase: boolean): void {
-  if (!running && world.setWeld(edge.x1, edge.y1, edge.x2, edge.y2, !erase)) {
+  if (
+    !running &&
+    canEditEdge(edge.x1, edge.y1, edge.x2, edge.y2) &&
+    world.setWeld(edge.x1, edge.y1, edge.x2, edge.y2, !erase)
+  ) {
     saveEditedBaseline();
   }
 }
@@ -472,9 +519,14 @@ function editWeldSegment(
 
   let changed = false;
   visitCrossedGridEdges(from, to, world.width, world.height, (x1, y1, x2, y2) => {
-    changed = world.setWeld(x1, y1, x2, y2, !erase) || changed;
+    if (canEditEdge(x1, y1, x2, y2)) {
+      changed = world.setWeld(x1, y1, x2, y2, !erase) || changed;
+    }
   });
-  if (endpointEdge !== null) {
+  if (
+    endpointEdge !== null &&
+    canEditEdge(endpointEdge.x1, endpointEdge.y1, endpointEdge.x2, endpointEdge.y2)
+  ) {
     changed = world.setWeld(
       endpointEdge.x1,
       endpointEdge.y1,
@@ -535,7 +587,17 @@ clearButton.addEventListener("click", () => {
   if (running) {
     return;
   }
-  world.clear();
+  if (activeSession.editableRegion === null) {
+    world.clear();
+  } else {
+    for (let y = 0; y < world.height; y += 1) {
+      for (let x = 0; x < world.width; x += 1) {
+        if (canEditCell(x, y) && world.kindAt(x, y) !== TileKind.Empty) {
+          world.place(x, y, TileKind.Empty);
+        }
+      }
+    }
+  }
   baseline.copyFrom(world);
   simulation.tick = 0;
   finishAnimation();
@@ -573,7 +635,9 @@ imageButton.addEventListener("click", () => {
 });
 
 importButton.addEventListener("click", () => {
-  importFile.click();
+  if (activeSession.editableRegion === null) {
+    importFile.click();
+  }
 });
 
 importFile.addEventListener("change", async () => {
@@ -582,6 +646,10 @@ importFile.addEventListener("change", async () => {
   if (file === undefined) {
     return;
   }
+  if (activeSession.editableRegion !== null) {
+    return;
+  }
+
 
   importButton.disabled = true;
   try {
@@ -600,7 +668,7 @@ importFile.addEventListener("change", async () => {
     const message = error instanceof Error ? error.message : String(error);
     window.alert(`Could not import board: ${message}`);
   } finally {
-    importButton.disabled = false;
+    importButton.disabled = activeSession.editableRegion !== null;
   }
 });
 

@@ -1,3 +1,4 @@
+import { GridRegion } from "./grid-region";
 import { Direction, TileKind } from "../simulation/tile";
 import { World } from "../simulation/world";
 import { expectDefined } from "../util/assert";
@@ -9,6 +10,7 @@ export interface PuzzleDefinition {
   readonly name: string;
   readonly description: string;
   readonly goal: string;
+  readonly editableRegion: GridRegion;
   readonly prerequisitePuzzleIds: readonly PuzzleId[];
   readonly createInitialWorld: () => World;
 }
@@ -77,6 +79,7 @@ export const PUZZLES: readonly PuzzleDefinition[] = [
     name: "First Shift",
     description: "A small gravity workshop for the first puzzle flow.",
     goal: "Move both loads of sand below the raised platform.",
+    editableRegion: new GridRegion([{ x: 8, y: 2, width: 10, height: 11 }]),
     prerequisitePuzzleIds: [],
     createInitialWorld: createFirstShiftWorld,
   },
@@ -85,6 +88,7 @@ export const PUZZLES: readonly PuzzleDefinition[] = [
     name: "Beltworks",
     description: "A conveyor workshop unlocked after the first shift.",
     goal: "Carry the stone to the far side of the platform.",
+    editableRegion: new GridRegion([{ x: 9, y: 3, width: 9, height: 10 }]),
     prerequisitePuzzleIds: ["first-shift"],
     createInitialWorld: createBeltworksWorld,
   },
@@ -93,6 +97,10 @@ export const PUZZLES: readonly PuzzleDefinition[] = [
     name: "Runic Relay",
     description: "A signal-routing workshop unlocked after Beltworks.",
     goal: "Route and invert the sensor signal.",
+    editableRegion: new GridRegion([
+      { x: 2, y: 2, width: 4, height: 10 },
+      { x: 13, y: 2, width: 5, height: 10 },
+    ]),
     prerequisitePuzzleIds: ["beltworks"],
     createInitialWorld: createRunicRelayWorld,
   },
