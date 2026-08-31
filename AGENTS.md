@@ -92,6 +92,7 @@ The game is in early development. Currently implemented:
 * URL-backed tagged screen routing supports the main menu, sandbox, per-puzzle briefing, and saved-solution workshops. Browser Back/Forward transitions use the same persistence boundary as in-app navigation; invalid, locked, or stale direct routes are replaced with the nearest permitted canonical route. Focused navigation, saved-solution, and workshop-session controllers own screen transitions and persistence while the browser entry point retains event wiring and animation. The responsive main menu presents the sandbox and prerequisite-gated puzzle routes. Each puzzle briefing shows its description, objective, feature list, and locally persisted solutions with placeholder price, cycle, and footprint scores. Players can create, duplicate, select, edit, and delete solutions; each solution retains an independent workshop design across reloads. A puzzle's latched victory result marks it complete after a simulation step, persists completed puzzle IDs in versioned local storage, and unlocks dependent puzzles on the menu and direct routes.
 * Puzzle definitions provide reusable unions of rectangular editable regions. Puzzle workshops render their boundaries as dotted gold outlines, restrict cell edits to the region, allow weld edits on internal and perimeter edges, and keep the outer grid boundary non-interactive. Starting or stepping a puzzle simulation locks board editing until reset, while sandbox editing remains available during simulation. Clearing and board imports preserve fixed terrain outside the region.
 * Each puzzle owns a validated, priced component catalog. Puzzle workshops show only those components and their costs, reject unavailable palette shortcuts and picks, and enforce availability again at placement; the sandbox retains the complete unpriced palette.
+* A development-only read-only diagnostic API exposes current routing, simulation, tool, hover, revision, and serialized-board state for browser automation; Vite removes it from production builds. A Playwright suite uses deterministic production-format local-storage fixtures to cover route access, solution creation/edit persistence, duplication, deletion, reload restoration, malformed storage recovery, and narrow puzzle-info overflow.
 
 ## Code map
 
@@ -99,6 +100,7 @@ The game is in early development. Currently implemented:
 * `src/main.ts` — Browser entry point, DOM event wiring, build tools, bounded pan/zoom controls, overlay-aware viewport insets, inspector coordination, and animation loop.
 * `src/styles.css` — Responsive main menu, puzzle briefing and solution list, application, palette, inspector, board, and control styling.
 * `src/vite-env.d.ts` — Vite client type declarations.
+* `src/dev/diagnostic-snapshot.ts` — Development-only read-only browser diagnostic snapshot contract and installer.
 * `src/game/puzzles.ts` — Ordered puzzle definitions, prerequisite-based unlock checks, and fresh sandbox and puzzle world factories.
 * `src/game/puzzle-components.ts` — Validated priced puzzle-component catalogs with constant-time availability and price lookup.
 * `src/game/grid-region.ts` — Validated unions of axis-aligned grid rectangles with cell, edge, board-bounds, and deduplicated boundary queries.
@@ -146,7 +148,10 @@ The game is in early development. Currently implemented:
 * `tests/puzzle-solutions.test.ts` — Saved-solution creation, duplication, board updates, deletion, deterministic persistence, ID allocation, and malformed-data validation tests.
 * `tests/workshop-editing-state.test.ts` — Puzzle lock/reset and unrestricted sandbox editing-policy tests.
 * `tests/controllers.test.ts` — Workshop-session isolation/import and saved-solution selection, dirty persistence, duplication, and deletion tests.
+* `e2e/browser-fixtures.ts` — Deterministic empty, populated, unlocked, edited-board, and malformed-storage browser fixtures using production persistence serializers.
+* `e2e/app-lifecycle.spec.ts` — Playwright lifecycle coverage for routing, solution persistence/actions, reloads, malformed storage, and narrow-screen overflow.
 * `vite.config.ts` — Vite configuration with Vitest's Node test environment.
+* `playwright.config.ts` — Chromium browser-suite and Vite web-server configuration.
 * `tsconfig.json` — Strict browser TypeScript and project build configuration.
 
 ## Application lifecycle invariants
@@ -161,11 +166,6 @@ The game is in early development. Currently implemented:
 * Puzzle completion is consumed only after a committed simulation step. A latched win records the active puzzle ID in versioned progress storage; a loss or an already-recorded win makes no progress change. Newly recorded progress changes menu and direct-route prerequisite checks without replacing the active workshop.
 
 ## Current TODOs
-
-App lifecycle / environment improvements:
-* Add a minimal Playwright browser suite covering puzzle-info routing, solution creation, board persistence, duplication, deletion, reload restoration, and narrow-screen overflow. Seed local storage deterministically and prefer accessible selectors over broad `data-testid` coverage.
-* Add a development-only, read-only browser diagnostic snapshot exposing the current screen, active puzzle and solution, simulation state, selected tool, hovered cell, world revision, and serialized board. Do not expose mutation commands or include the API in production builds.
-* Add deterministic browser fixtures for puzzle progress and saved solutions, including empty, populated, unlocked, edited-board, and malformed-storage states. Seed the real versioned local-storage formats used by production.
 
 Game/puzzle flow:
 * Specify puzzles as JSON files in a folder; a puzzle registry can import and parse those files, similar to current import/export format with some additional fields like name and description. Move the existing 3 puzzles there, or create 3 arbitrary puzzles in that folder (since our current 3 puzzles are arbitrary placeholders). We want to work towards an easy authoring pipeline - export a puzzle from the sandbox, move it to that folder, and then the puzzle appears in the main menu. Define a versioned, strictly validated puzzle JSON schema containing metadata, feature labels, prerequisites, component prices, editable regions, and initial board state. Load every shipped puzzle through the production parser in tests, with file- and field-specific validation errors.
@@ -194,7 +194,9 @@ After completing changes, commit them to `master` or the current worktree. Self-
 ## Build and verification
 
 * `npm install` installs dependencies.
+* `npx playwright install chromium` installs the browser binary used by the Playwright suite when no system Chromium path is configured.
 * `npm run dev` starts the Vite development server.
 * `npm run build` type-checks TypeScript and creates the production bundle in `dist/`.
 * `npm test` runs the deterministic simulation tests once.
+* `npm run test:browser` runs the Playwright lifecycle suite once.
 * `npm run test:watch` runs tests in watch mode.

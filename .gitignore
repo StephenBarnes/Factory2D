@@ -2,6 +2,9 @@ node_modules/
 dist/
 .vite/
 coverage/
+test-results/
+playwright-report/
+blob-report/
 *.local
 .DS_Store
 *.tsbuildinfo

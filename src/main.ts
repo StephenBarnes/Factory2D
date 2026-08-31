@@ -1,4 +1,8 @@
 import "./styles.css";
+import type {
+  DevelopmentDiagnosticSnapshot,
+  DiagnosticDirection,
+} from "./dev/diagnostic-snapshot";
 import { NavigationController } from "./game/navigation-controller";
 import { SavedSolutionController } from "./game/saved-solution-controller";
 import { createSandboxWorld } from "./game/puzzles";
@@ -21,6 +25,7 @@ import {
 } from "./render/pointer-gesture";
 import type { PointerGesture } from "./render/pointer-gesture";
 import { deserializeBoard, serializeBoard } from "./simulation/board-export";
+import { PuzzleResult } from "./simulation/puzzle-result";
 import {
   directionX,
   directionY,
@@ -40,6 +45,12 @@ const HIGH_SPEED_TICKS_PER_SECOND = 60;
 const PALETTE_PREVIEW_SUPERSAMPLING = 2;
 const KEYBOARD_PAN_PIXELS = 64;
 const MAX_CLIPBOARD_EXPORT_CHARACTERS = 1_000_000;
+const DIAGNOSTIC_DIRECTIONS: Readonly<Record<Direction, DiagnosticDirection>> = {
+  [Direction.Up]: "up",
+  [Direction.Right]: "right",
+  [Direction.Down]: "down",
+  [Direction.Left]: "left",
+};
 
 function requiredElement<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -547,6 +558,41 @@ const navigation = new NavigationController(
   window.localStorage,
   window.history,
 );
+
+if (import.meta.env.DEV) {
+  const getDiagnosticSnapshot = (): DevelopmentDiagnosticSnapshot => {
+    const screen = navigation.screen;
+    const puzzleResult = world.puzzleResult === PuzzleResult.InProgress
+      ? "in-progress"
+      : world.puzzleResult === PuzzleResult.Won ? "won" : "lost";
+    return {
+      screen: { ...screen },
+      activePuzzleId: screen.kind === "puzzle-info" || screen.kind === "puzzle"
+        ? screen.puzzleId
+        : null,
+      activeSolutionId: screen.kind === "puzzle" ? screen.solutionId : null,
+      simulation: {
+        running,
+        tick: simulation.tick,
+        editable: activeSession.editingState.editable,
+        puzzleResult,
+      },
+      selectedTool: selectedTool === "weld"
+        ? { kind: "weld" }
+        : {
+          kind: "tile",
+          tileKind: TILE_DEFINITIONS[selectedKind].name,
+          orientation: DIAGNOSTIC_DIRECTIONS[selectedOrientation],
+        },
+      hoveredCell: hoveredCell === null ? null : { ...hoveredCell },
+      worldRevision: world.revision,
+      serializedBoard: serializeBoard(world, simulation.tick),
+    };
+  };
+  void import("./dev/diagnostic-snapshot").then(({ installDevelopmentDiagnostics }) => {
+    installDevelopmentDiagnostics(getDiagnosticSnapshot);
+  });
+}
 
 
 menuButton.addEventListener("click", () => {
