@@ -1,24 +1,30 @@
+import type { PuzzleComponents } from "../game/puzzle-components";
 import { TILE_DEFINITIONS, TILE_KINDS, TileKind } from "../simulation/tile";
 
 export function populateComponentPalette(
   container: HTMLElement,
-  selectedKind: TileKind,
+  selectedKind: TileKind | null,
+  availableComponents: PuzzleComponents | null = null,
 ): Readonly<Record<string, TileKind | undefined>> {
-  const paletteKinds = TILE_KINDS
-    .filter((kind) => TILE_DEFINITIONS[kind].palette !== null)
-    .sort((left, right) => {
-      const leftPalette = TILE_DEFINITIONS[left].palette;
-      const rightPalette = TILE_DEFINITIONS[right].palette;
-      if (leftPalette === null || rightPalette === null) {
-        throw new Error("Palette kind is missing palette metadata");
-      }
-      return leftPalette.order - rightPalette.order;
-    });
+  const paletteComponents = availableComponents === null
+    ? TILE_KINDS
+      .filter((kind) => TILE_DEFINITIONS[kind].palette !== null)
+      .map((kind) => ({ kind, price: null }))
+    : [...availableComponents.entries];
+  paletteComponents.sort((left, right) => {
+    const leftPalette = TILE_DEFINITIONS[left.kind].palette;
+    const rightPalette = TILE_DEFINITIONS[right.kind].palette;
+    if (leftPalette === null || rightPalette === null) {
+      throw new Error("Palette kind is missing palette metadata");
+    }
+    return leftPalette.order - rightPalette.order;
+  });
   const shortcutKinds = Object.create(null) as Record<string, TileKind | undefined>;
   let previousOrder: number | null = null;
 
   container.replaceChildren();
-  for (const kind of paletteKinds) {
+  for (const component of paletteComponents) {
+    const kind = component.kind;
     const definition = TILE_DEFINITIONS[kind];
     const palette = definition.palette;
     if (palette === null) {
@@ -48,7 +54,9 @@ export function populateComponentPalette(
     const name = document.createElement("strong");
     name.textContent = definition.name;
     const detail = document.createElement("small");
-    detail.textContent = palette.description;
+    detail.textContent = component.price === null
+      ? palette.description
+      : `${palette.description} · Cost ${component.price}`;
     description.append(name, detail);
     button.append(preview, description);
 

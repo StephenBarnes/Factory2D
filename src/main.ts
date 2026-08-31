@@ -1,5 +1,6 @@
 import "./styles.css";
 import type { GridRegion } from "./game/grid-region";
+import type { PuzzleComponents } from "./game/puzzle-components";
 import {
   loadCompletedPuzzleIds,
   recordPuzzleResult,
@@ -38,6 +39,7 @@ import {
   TileKind,
 } from "./simulation/tile";
 import { World } from "./simulation/world";
+import { expectDefined } from "./util/assert";
 import { TileInspector } from "./ui/tile-inspector";
 import { populateComponentPalette } from "./ui/component-palette";
 import { populatePuzzleMap } from "./ui/main-menu";
@@ -63,11 +65,13 @@ interface GameSession {
   baseline: World;
   previousWorld: World;
   readonly editableRegion: GridRegion | null;
+  readonly availableComponents: PuzzleComponents | null;
 }
 
 function createGameSession(
   world: World,
   editableRegion: GridRegion | null = null,
+  availableComponents: PuzzleComponents | null = null,
 ): GameSession {
   return {
     world,
@@ -75,6 +79,7 @@ function createGameSession(
     baseline: world.clone(),
     previousWorld: world.clone(),
     editableRegion,
+    availableComponents,
   };
 }
 
@@ -137,7 +142,8 @@ let animationStartedAt = 0;
 let animationDuration = 0;
 let renderedTick = -1;
 let renderedPaletteDevicePixelRatio = 0;
-const tileKindsByShortcut = populateComponentPalette(componentPalette, selectedKind);
+let tileKindsByShortcut: Readonly<Record<string, TileKind | undefined>> =
+  Object.create(null);
 const completedPuzzleIds = loadStoredCompletedPuzzleIds();
 let activeScreen: AppScreen = INITIAL_SCREEN;
 function loadStoredCompletedPuzzleIds(): Set<PuzzleId> {
@@ -235,7 +241,11 @@ function sessionForPuzzle(id: PuzzleId): GameSession {
     return existing;
   }
   const puzzle = puzzleById(id);
-  const session = createGameSession(puzzle.createInitialWorld(), puzzle.editableRegion);
+  const session = createGameSession(
+    puzzle.createInitialWorld(),
+    puzzle.editableRegion,
+    puzzle.availableComponents,
+  );
   puzzleSessions.set(id, session);
   return session;
 }
@@ -268,6 +278,7 @@ function showScreen(screen: AppScreen): void {
     screenDescription.textContent = `Goal: ${puzzle.goal}`;
     gameScreen.setAttribute("aria-label", `${puzzle.name} puzzle workshop`);
   }
+  configureComponentPalette();
   importButton.disabled = activeSession.editableRegion !== null;
 
   updateViewportInsets();
@@ -330,7 +341,31 @@ function refreshPointerHover(): void {
   tileInspector.update(hoveredCell);
 }
 
+function configureComponentPalette(): void {
+  const availableComponents = activeSession.availableComponents;
+  if (availableComponents !== null && !availableComponents.has(selectedKind)) {
+    selectedKind = expectDefined(
+      availableComponents.entries[0],
+      "Puzzle component list is unexpectedly empty",
+    ).kind;
+  }
+  tileKindsByShortcut = populateComponentPalette(
+    componentPalette,
+    selectedTool === "tile" ? selectedKind : null,
+    availableComponents,
+  );
+  const weldButton = sidebarControls.querySelector<HTMLButtonElement>("[data-tool=\"weld\"]");
+  if (weldButton === null) {
+    throw new Error("Weld palette button is missing");
+  }
+  weldButton.classList.toggle("selected", selectedTool === "weld");
+  renderPalettePreviews();
+}
+
 function selectTile(kind: TileKind): void {
+  if (!componentIsAvailable(kind)) {
+    return;
+  }
   selectedKind = kind;
   if (temporaryWeldActive) {
     selectWeldTool();
@@ -410,6 +445,10 @@ function saveEditedBaseline(): void {
   finishAnimation();
 }
 
+function componentIsAvailable(kind: TileKind): boolean {
+  return activeSession.availableComponents?.has(kind) ?? true;
+}
+
 function canEditCell(x: number, y: number): boolean {
   return activeSession.editableRegion?.contains(x, y) ?? true;
 }
@@ -447,7 +486,7 @@ function editCellLine(
   erase: boolean,
   weldPlacedTiles: boolean,
 ): void {
-  if (running) {
+  if (running || (!erase && !componentIsAvailable(selectedKind))) {
     return;
   }
 
@@ -959,6 +998,5 @@ function frame(currentTime: number): void {
 
 updateTransportState();
 updateAnimationControlState();
-renderPalettePreviews();
 showScreen(INITIAL_SCREEN);
 requestAnimationFrame(frame);

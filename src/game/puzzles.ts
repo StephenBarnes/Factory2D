@@ -1,4 +1,5 @@
 import { GridRegion } from "./grid-region";
+import { PuzzleComponents } from "./puzzle-components";
 import { Direction, TileKind } from "../simulation/tile";
 import { World } from "../simulation/world";
 import { expectDefined } from "../util/assert";
@@ -11,6 +12,7 @@ export interface PuzzleDefinition {
   readonly description: string;
   readonly goal: string;
   readonly editableRegion: GridRegion;
+  readonly availableComponents: PuzzleComponents;
   readonly prerequisitePuzzleIds: readonly PuzzleId[];
   readonly createInitialWorld: () => World;
 }
@@ -80,6 +82,10 @@ export const PUZZLES: readonly PuzzleDefinition[] = [
     description: "A small gravity workshop for the first puzzle flow.",
     goal: "Move both loads of sand below the raised platform.",
     editableRegion: new GridRegion([{ x: 8, y: 2, width: 10, height: 11 }]),
+    availableComponents: new PuzzleComponents([
+      { kind: TileKind.Stone, price: 1 },
+      { kind: TileKind.Platform, price: 3 },
+    ]),
     prerequisitePuzzleIds: [],
     createInitialWorld: createFirstShiftWorld,
   },
@@ -89,6 +95,13 @@ export const PUZZLES: readonly PuzzleDefinition[] = [
     description: "A conveyor workshop unlocked after the first shift.",
     goal: "Carry the stone to the far side of the platform.",
     editableRegion: new GridRegion([{ x: 9, y: 3, width: 9, height: 10 }]),
+    availableComponents: new PuzzleComponents([
+      { kind: TileKind.Stone, price: 1 },
+      { kind: TileKind.Platform, price: 3 },
+      { kind: TileKind.Conveyor, price: 5 },
+      { kind: TileKind.Conduit, price: 1 },
+      { kind: TileKind.FixedCharge, price: 2 },
+    ]),
     prerequisitePuzzleIds: ["first-shift"],
     createInitialWorld: createBeltworksWorld,
   },
@@ -100,6 +113,14 @@ export const PUZZLES: readonly PuzzleDefinition[] = [
     editableRegion: new GridRegion([
       { x: 2, y: 2, width: 4, height: 10 },
       { x: 13, y: 2, width: 5, height: 10 },
+    ]),
+    availableComponents: new PuzzleComponents([
+      { kind: TileKind.Conduit, price: 1 },
+      { kind: TileKind.FixedCharge, price: 2 },
+      { kind: TileKind.Spark, price: 3 },
+      { kind: TileKind.Inverter, price: 4 },
+      { kind: TileKind.Combiner, price: 4 },
+      { kind: TileKind.WireCrossing, price: 3 },
     ]),
     prerequisitePuzzleIds: ["beltworks"],
     createInitialWorld: createRunicRelayWorld,

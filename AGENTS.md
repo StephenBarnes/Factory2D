@@ -50,8 +50,9 @@ Example puzzles:
 * Build a 4-bit adder without wires and logic gates, by pushing around blocks mechanically.
 * Mob farms - mobs are dispensed by a hive and move around according to rules, must be herded to a destination.
 * Depalletizing - dispenser gives a 5x5 group of welded iron blocks, which must be split up and transported to the delivery block.
-* Build a vehicle that picks up a block in one location and moves it to the target.
 * Tree farms - trees grow in irregular patterns; once grown high enough, their leaves must be burned off and their wood blocks unwelded and packaged for delivery.
+* Build a vehicle that drives back and forth to evade the arms of a giant crusher.
+* The player is given an impossible task. The only way to win is instead build a machine that drills into the ground to reach the in-world puzzle infrastructure, and manually trigger the victory block.
 
 While the simulation has movement in discrete time steps and one-tile steps, we animate the tiles moving from one state to the next.
 
@@ -103,6 +104,7 @@ The game is in early development. Currently implemented:
 * Board export and import controls round-trip deterministic, versioned JSON with compact fixed-code ASCII tile and weld grids plus the latched puzzle result, sparse non-up orientations, nonzero circuit charges, independent wire-crossing axis charges, and in-progress furnace state. Weld cells use `.`, `-`, `|`, or `+` for no forward weld, right, down, or both. Exports up to one million characters are also copied to the clipboard. Imports derive dimensions from the tile grid, validate both grids and all sparse state before replacing the live board, support board sizes up to 400x300, and reconstruct fresh runtime tile IDs because IDs are intentionally excluded from the file.
 * Tagged screen routing supports the main menu, sandbox, and per-definition puzzle workshops. Development still boots directly into the sandbox through a single `INITIAL_SCREEN` setting. The responsive main menu presents the sandbox and a prerequisite-gated puzzle route; puzzle definitions own names, goals, unlock prerequisites, and fresh initial-world factories, while each visited workshop retains an independent session. A puzzle's latched victory result marks it complete after a simulation step, persists completed puzzle IDs in versioned local storage, and unlocks dependent puzzles on the menu.
 * Puzzle definitions provide reusable unions of rectangular editable regions. Puzzle workshops render their boundaries as dotted gold outlines and restrict placement, removal, welding, clearing, and board imports so fixed terrain outside the region remains unchanged; sandbox editing remains unrestricted.
+* Each puzzle owns a validated, priced component catalog. Puzzle workshops show only those components and their costs, reject unavailable palette shortcuts and picks, and enforce availability again at placement; the sandbox retains the complete unpriced palette.
 
 ## Code map
 
@@ -111,6 +113,7 @@ The game is in early development. Currently implemented:
 * `src/styles.css` — Responsive main menu, application, palette, inspector, board, and control styling.
 * `src/vite-env.d.ts` — Vite client type declarations.
 * `src/game/puzzles.ts` — Ordered puzzle definitions, prerequisite-based unlock checks, and fresh sandbox and puzzle world factories.
+* `src/game/puzzle-components.ts` — Validated priced puzzle-component catalogs with constant-time availability and price lookup.
 * `src/game/grid-region.ts` — Validated unions of axis-aligned grid rectangles with cell, edge, board-bounds, and deduplicated boundary queries.
 * `src/game/puzzle-progress.ts` — Versioned local-storage serialization, validation, and victory recording for completed puzzle IDs.
 * `src/game/screen.ts` — Tagged application-screen contract and the single development initial-screen setting.
@@ -126,7 +129,7 @@ The game is in early development. Currently implemented:
 * `src/simulation/world.ts` — Typed-array tile, orientation, charge, wire-crossing axis charge, furnace progress/target, puzzle-result, and weld storage; stable IDs; render revisions; snapshots; editing; transformations; and body movement commits.
 * `src/simulation/simulation.ts` — Allocation-free circuit-network, delayed gate, furnace, delivery-box, and victory-block resolution; phase-specific welded and magnetic body collection; gravity support; tangential magnetic sliding; conveyor force/reaction and pushing-chain resolution; conflict resolution; and tick advancement.
 * `src/ui/tile-inspector.ts` — Revision-aware hovered-cell property presentation, including effective directional weldability, current welds, and furnace bake progress.
-* `src/ui/component-palette.ts` — Definition-driven sandbox component palette construction and keyboard-shortcut lookup.
+* `src/ui/component-palette.ts` — Definition-driven sandbox and priced puzzle component-palette construction and keyboard-shortcut lookup.
 * `src/ui/main-menu.ts` — Definition-driven puzzle-map buttons with available, locked, and completed presentation.
 * `src/util/assert.ts` — `expectDefined` assertion that crashes loudly on violated lookups instead of falling back silently.
 * `tests/board-export.test.ts` — Compact board format ordering, round-trip, state, and malformed-input validation tests.
@@ -141,7 +144,7 @@ The game is in early development. Currently implemented:
 * `tests/pointer-gesture.test.ts` — Pointer button, modifier, and drag-threshold regression tests.
 * `tests/tile-renderer.test.ts` — Rounded body-outline and mixed-kind fill stability regression tests.
 * `tests/tile.test.ts` — Directional and non-directional tile orientation resolution regression tests.
-* `tests/puzzles.test.ts` — Puzzle ordering, prerequisite unlocking, and independent initial-world factory tests.
+* `tests/puzzles.test.ts` — Puzzle ordering, prerequisite unlocking, priced component-catalog validation, and independent initial-world factory tests.
 * `tests/puzzle-progress.test.ts` — Puzzle victory recording, deterministic persistence, initial state, and malformed stored-progress tests.
 * `vite.config.ts` — Vite configuration with Vitest's Node test environment.
 * `tsconfig.json` — Strict browser TypeScript and project build configuration.
@@ -149,12 +152,12 @@ The game is in early development. Currently implemented:
 ## Current TODOs
 
 Game flow:
-* Extend puzzle definitions with a list of available components and their prices, then enforce those constraints in puzzle workshops.
+* When selecting a puzzle, before jumping straight into the puzzle's game screen, add a puzzle info screen. It should show a description of the puzzle, with space for features below.
+* On the puzzle info screen, show a list of saved solutions and their scores (placeholder scores for now), and have buttons to create a new solution, duplicate an existing solution, edit selected solution, and delete solutions.
 * Change the editing model when solving puzzles: the player edits the initial board state, but as soon as they've played/run the simulation, they can no longer edit, they have to reset. Because puzzles won't allow modifying the board halfway through running a solution. We can still allow mid-run edits in the sandbox.
-* When selecting a puzzle, before jumping straight into the puzzle's game screen, add a puzzle info screen. It should show a description of the puzzle, a list of saved solutions and their scores (or placeholders), and have buttons to create a new solution, duplicate an existing solution, edit selected solution, and delete solutions.
-* Minor: allow welding/unwelding on edges that are right on the boundary of the editable region.
-* Add a way to specify multiple test cases for each puzzle. These will likely take the form of slight modifications to the puzzle definition, e.g. changing the values stored in one ROM component. The player builds one solution inside their allowed modification region; this must work for all test cases, where each test case modifies the in-world puzzle machinery outside that region, e.g. changing the delays on inputs.
-* Add a button to test the current solution - runs all test cases in series, then checks if all resulted in victory, and displays a report with the puzzle's success/failure, score (price, cycles, footprint) with buttons to continue editing or go back to the puzzle info screen.
+* Small fix: allow welding/unwelding on edges that are right on the boundary of the puzzle's allowed editable region. (But not the boundary of the entire grid.)
+* Add a way to specify multiple test cases for each puzzle. These will be modifications to the puzzle definition, usually small, e.g. changing the values stored in one ROM component. The player builds one solution which must work for all test cases.
+* Add a button to test the current solution - runs all test cases in series, with some time limit (defined per puzzle or test case), then checks if all resulted in victory, and displays a report with the puzzle's success/failure, with buttons to continue editing or go back to puzzle info screen. As a follow-up, also compute and display score: price, cycles, footprint.
 
 UI:
 * Make the left palette more compact. For tiles, show only the tile image, price, and hotkey, not name or description. On mouseover of palette tiles, show the tile inspector/detail panel with more info: the palette entry's name and description.
