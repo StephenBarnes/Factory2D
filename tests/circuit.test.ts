@@ -328,65 +328,100 @@ describe("circuit networks", () => {
 
   it.each(
     ([-1, 0, 1] as const).flatMap((left) =>
-      ([-1, 0, 1] as const).map((right) => ({
-        left,
-        right,
-        output: left === 0 || right === 0 ? 0 : left * right,
-      })),
+      ([-1, 0, 1] as const).flatMap((rear) =>
+        ([-1, 0, 1] as const).map((right) => {
+          const product = left * rear * right;
+          return {
+            left,
+            rear,
+            right,
+            output: product < 0 ? -1 : product > 0 ? 1 : 0,
+          };
+        }),
+      ),
     ),
   )(
-    "multiplies isolated inputs $left × $right to $output",
-    ({ left, right, output }) => {
-      const world = new World(3, 2);
+    "multiplies three isolated inputs $left × $rear × $right to $output",
+    ({ left, rear, right, output }) => {
+      const world = new World(3, 3);
       world.place(1, 0, TileKind.Conduit);
       world.place(0, 1, TileKind.Conduit);
       world.place(1, 1, TileKind.Multiplier, Direction.Up);
       world.place(2, 1, TileKind.Conduit);
+      world.place(1, 2, TileKind.Conduit);
       world.setWeld(1, 0, 1, 1, true);
       world.setWeld(0, 1, 1, 1, true);
       world.setWeld(1, 1, 2, 1, true);
+      world.setWeld(1, 1, 1, 2, true);
       world.setCharge(0, 1, left);
+      world.setCharge(1, 2, rear);
       world.setCharge(2, 1, right);
       const simulation = new Simulation(world);
 
       simulation.step();
 
       expect(world.chargeAt(0, 1)).toBe(0);
+      expect(world.chargeAt(1, 2)).toBe(0);
       expect(world.chargeAt(2, 1)).toBe(0);
       expect(world.chargeAt(1, 1)).toBe(output);
       expect(world.chargeAt(1, 0)).toBe(output);
     },
   );
 
+  it("multiplies only inputs with circuit connections", () => {
+    const world = new World(3, 2);
+    world.place(1, 0, TileKind.Conduit);
+    world.place(0, 1, TileKind.Conduit);
+    world.place(1, 1, TileKind.Multiplier, Direction.Up);
+    world.place(2, 1, TileKind.Stone);
+    world.setWeld(1, 0, 1, 1, true);
+    world.setWeld(0, 1, 1, 1, true);
+    world.setWeld(1, 1, 2, 1, true);
+    world.setCharge(0, 1, -1);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+
+    expect(world.chargeAt(1, 1)).toBe(-1);
+    expect(world.chargeAt(1, 0)).toBe(-1);
+  });
+
   it.each(
     ([-1, 0, 1] as const).flatMap((left) =>
-      ([-1, 0, 1] as const).map((right) => {
-        const difference = left - right;
-        return {
-          left,
-          right,
-          output: difference < 0 ? -1 : difference > 0 ? 1 : 0,
-        };
-      }),
+      ([-1, 0, 1] as const).flatMap((rear) =>
+        ([-1, 0, 1] as const).map((right) => {
+          const difference = rear - left - right;
+          return {
+            left,
+            rear,
+            right,
+            output: difference < 0 ? -1 : difference > 0 ? 1 : 0,
+          };
+        }),
+      ),
     ),
   )(
-    "subtracts isolated inputs sign($left − $right) to $output",
-    ({ left, right, output }) => {
-      const world = new World(3, 2);
+    "subtracts isolated inputs sign($rear − $left − $right) to $output",
+    ({ left, rear, right, output }) => {
+      const world = new World(3, 3);
       world.place(1, 0, TileKind.Conduit);
       world.place(0, 1, TileKind.Conduit);
       world.place(1, 1, TileKind.Subtractor, Direction.Up);
       world.place(2, 1, TileKind.Conduit);
+      world.place(1, 2, TileKind.Conduit);
       world.setWeld(1, 0, 1, 1, true);
       world.setWeld(0, 1, 1, 1, true);
       world.setWeld(1, 1, 2, 1, true);
+      world.setWeld(1, 1, 1, 2, true);
       world.setCharge(0, 1, left);
+      world.setCharge(1, 2, rear);
       world.setCharge(2, 1, right);
       const simulation = new Simulation(world);
 
       simulation.step();
 
       expect(world.chargeAt(0, 1)).toBe(0);
+      expect(world.chargeAt(1, 2)).toBe(0);
       expect(world.chargeAt(2, 1)).toBe(0);
       expect(world.chargeAt(1, 1)).toBe(output);
       expect(world.chargeAt(1, 0)).toBe(output);

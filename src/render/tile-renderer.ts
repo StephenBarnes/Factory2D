@@ -456,12 +456,10 @@ function drawDecoration(
       break;
     }
     case TileDecorationStyle.Conduit:
+      context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
       context.beginPath();
-      drawDot(context, left + size / 2, top + size / 2, Math.max(2, size * 0.19));
+      drawDot(context, left + size / 2, top + size / 2, Math.max(2, size * 0.13));
       context.fill();
-      context.strokeStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
-      context.lineWidth = Math.max(1, size * 0.045);
-      context.stroke();
       break;
     case TileDecorationStyle.Sensor:
       context.save();

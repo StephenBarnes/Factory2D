@@ -47,6 +47,12 @@ interface FillRectCommand {
   readonly fillStyle: string | CanvasGradient | CanvasPattern;
 }
 
+interface CircleCommand {
+  readonly centerX: number;
+  readonly centerY: number;
+  readonly radius: number;
+}
+
 interface LineSegment {
   readonly fromX: number;
   readonly fromY: number;
@@ -69,6 +75,7 @@ class RecordingCanvasContext {
   readonly fillStyles: Array<string | CanvasGradient | CanvasPattern> = [];
   readonly strokeStyles: Array<string | CanvasGradient | CanvasPattern> = [];
   readonly strokes: StrokeCommand[] = [];
+  readonly circles: CircleCommand[] = [];
   private currentX = 0;
   private currentY = 0;
   private currentSegments: LineSegment[] = [];
@@ -107,12 +114,14 @@ class RecordingCanvasContext {
     });
   }
   arc(
-    _x: number,
-    _y: number,
-    _radius: number,
+    centerX: number,
+    centerY: number,
+    radius: number,
     _startAngle: number,
     _endAngle: number,
-  ): void {}
+  ): void {
+    this.circles.push({ centerX, centerY, radius });
+  }
 
   fillRect(x: number, y: number, width: number, height: number): void {
     this.fillRects.push({ x, y, width, height, fillStyle: this.fillStyle });
@@ -207,6 +216,38 @@ describe("body drawing", () => {
 });
 
 describe("circuit rendering", () => {
+  it("colors the conduit socket by charge and uses a compact radius", () => {
+    const context = new RecordingCanvasContext();
+    const conduit: BodyCell = {
+      x: 0,
+      y: 0,
+      kind: TileKind.Conduit,
+      orientation: Direction.Up,
+      outputCharge: -1,
+      circuitConnections: WeldSide.Right,
+      circuitPortCharges: setCircuitPortCharge(0, Direction.Right, -1),
+      seamRight: false,
+      seamDown: false,
+    };
+
+    drawBody(
+      context as unknown as CanvasRenderingContext2D,
+      0,
+      0,
+      32,
+      [conduit],
+      1,
+      new RecordingPath2D() as unknown as Path2D,
+    );
+
+    expect(context.fillStyles.at(-1)).toBe(CIRCUIT_CHARGE_COLORS[-1]);
+    expect(context.circles).toContainEqual({
+      centerX: 16,
+      centerY: 16,
+      radius: 32 * 0.13,
+    });
+  });
+
   it("colors sensor wires by network charge and its arrow by sensed output", () => {
     const context = new RecordingCanvasContext();
     const sensor: BodyCell = {
@@ -244,7 +285,9 @@ describe("circuit rendering", () => {
     { kind: TileKind.Rectifier, inputDirection: Direction.Right },
     { kind: TileKind.Rectifier, inputDirection: Direction.Down },
     { kind: TileKind.Rectifier, inputDirection: Direction.Left },
+    { kind: TileKind.Multiplier, inputDirection: Direction.Down },
     { kind: TileKind.Multiplier, inputDirection: Direction.Left },
+    { kind: TileKind.Subtractor, inputDirection: Direction.Down },
     { kind: TileKind.Subtractor, inputDirection: Direction.Left },
   ])(
     "keeps $kind input $inputDirection and output traces separate and individually colored",
