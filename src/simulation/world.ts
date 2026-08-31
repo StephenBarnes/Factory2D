@@ -1,5 +1,6 @@
 import { isCharge, type Charge } from "./circuit";
 import { furnaceRecipeFor } from "./furnace";
+import { PuzzleResult } from "./puzzle-result";
 import {
   Direction,
   directionX,
@@ -41,6 +42,7 @@ export class World {
   private readonly movedRightWelds: Uint8Array;
   private readonly movedDownWelds: Uint8Array;
   private revisionValue = 0;
+  private puzzleResultValue = PuzzleResult.InProgress;
 
   constructor(width: number, height: number) {
     if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
@@ -73,6 +75,20 @@ export class World {
   /** Monotonically increases whenever this world's renderable state may have changed. */
   get revision(): number {
     return this.revisionValue;
+  }
+
+  get puzzleResult(): PuzzleResult {
+    return this.puzzleResultValue;
+  }
+
+  markPuzzleResult(result: PuzzleResult.Won | PuzzleResult.Lost): void {
+    if (this.puzzleResultValue === PuzzleResult.InProgress) {
+      this.puzzleResultValue = result;
+    }
+  }
+
+  resetPuzzleResult(): void {
+    this.puzzleResultValue = PuzzleResult.InProgress;
   }
 
   kindAt(x: number, y: number): TileKind {
@@ -523,6 +539,7 @@ export class World {
     this.furnaceTargetIds.fill(0);
     this.rightWelds.fill(0);
     this.downWelds.fill(0);
+    this.puzzleResultValue = PuzzleResult.InProgress;
     this.revisionValue += 1;
   }
 
@@ -546,6 +563,7 @@ export class World {
     this.furnaceTargetIds.set(source.furnaceTargetIds);
     this.rightWelds.set(source.rightWelds);
     this.downWelds.set(source.downWelds);
+    this.puzzleResultValue = source.puzzleResultValue;
     this.nextTileId = source.nextTileId;
     this.revisionValue += 1;
   }

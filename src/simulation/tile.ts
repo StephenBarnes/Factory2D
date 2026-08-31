@@ -20,6 +20,7 @@ export const enum TileKind {
   Furnace = 18,
   Conveyor = 19,
   Delivery = 20,
+  Victory = 21,
 }
 
 export const enum Direction {
@@ -57,6 +58,7 @@ export const enum TileDecorationStyle {
   Furnace = 15,
   Conveyor = 16,
   Delivery = 17,
+  Victory = 18,
 }
 
 export interface TileDefinition {
@@ -581,6 +583,29 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     shadow: "#392b20",
     decorationStyle: TileDecorationStyle.Delivery,
     decorationColor: "#e8c987",
+  },
+  [TileKind.Victory]: {
+    name: "Victory Block",
+    boardCode: "V",
+    palette: {
+      order: 20,
+      description: "Wins on +1 input or loses on -1 input; opposing inputs jam",
+      shortcut: null,
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.All,
+    circuitInputPorts: WeldSide.All,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#5c4f78",
+    shadow: "#342b49",
+    decorationStyle: TileDecorationStyle.Victory,
+    decorationColor: "#eadb88",
   },
 };
 

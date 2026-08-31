@@ -531,6 +531,30 @@ function drawDecoration(
       context.restore();
       break;
     }
+    case TileDecorationStyle.Victory: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.lineWidth = Math.max(1.5, size * 0.055);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.beginPath();
+      context.moveTo(-size * 0.18, -size * 0.2);
+      context.lineTo(size * 0.18, -size * 0.2);
+      context.lineTo(size * 0.12, size * 0.02);
+      context.quadraticCurveTo(0, size * 0.17, -size * 0.12, size * 0.02);
+      context.closePath();
+      context.moveTo(-size * 0.18, -size * 0.14);
+      context.quadraticCurveTo(-size * 0.31, -size * 0.1, -size * 0.2, size * 0.01);
+      context.moveTo(size * 0.18, -size * 0.14);
+      context.quadraticCurveTo(size * 0.31, -size * 0.1, size * 0.2, size * 0.01);
+      context.moveTo(0, size * 0.13);
+      context.lineTo(0, size * 0.25);
+      context.moveTo(-size * 0.13, size * 0.25);
+      context.lineTo(size * 0.13, size * 0.25);
+      context.stroke();
+      context.restore();
+      break;
+    }
     case TileDecorationStyle.Conveyor: {
       const inset = size * 0.2;
       context.save();

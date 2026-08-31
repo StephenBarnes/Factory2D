@@ -283,7 +283,7 @@ describe("conveyor belt metadata", () => {
     world.setCharge(0, 0, -1);
     const serialized = serializeBoard(world, 12);
     expect(JSON.parse(serialized)).toMatchObject({
-      version: 7,
+      version: 8,
       tick: 12,
       grid: ["B"],
       charges: [{ x: 0, y: 0, charge: -1 }],

@@ -1,5 +1,6 @@
 import { chargeFromSum, type Charge } from "./circuit";
 import { furnaceRecipeFor } from "./furnace";
+import { PuzzleResult } from "./puzzle-result";
 import {
   Direction,
   directionX,
@@ -104,6 +105,7 @@ export class Simulation {
   }
 
   step(): number {
+    this.resolveVictoryBlocks();
     this.collectDeliveryAbsorptions();
     this.resolveCircuits();
     this.resolveFurnaces();
@@ -120,6 +122,41 @@ export class Simulation {
     );
     this.tick += 1;
     return movementCount;
+  }
+
+  private resolveVictoryBlocks(): void {
+    if (this.world.puzzleResult !== PuzzleResult.InProgress) {
+      return;
+    }
+
+    let hasWinIntent = false;
+    let hasLossIntent = false;
+    for (let index = 0; index < this.world.cellCount; index += 1) {
+      if (this.world.kindAtIndex(index) !== TileKind.Victory) {
+        continue;
+      }
+
+      for (let value = Direction.Up; value <= Direction.Left; value += 1) {
+        const direction = value as Direction;
+        if (!this.world.hasCircuitConnectionAtIndex(index, direction)) {
+          continue;
+        }
+        const inputIndex = this.neighborIndex(index, direction);
+        if (inputIndex < 0) {
+          throw new Error(`Connected victory input at index ${index} has no neighbor`);
+        }
+        const inputCharge = this.world.chargeAtPortIndex(
+          inputIndex,
+          oppositeDirection(direction),
+        );
+        hasWinIntent ||= inputCharge === 1;
+        hasLossIntent ||= inputCharge === -1;
+      }
+    }
+
+    if (hasWinIntent !== hasLossIntent) {
+      this.world.markPuzzleResult(hasWinIntent ? PuzzleResult.Won : PuzzleResult.Lost);
+    }
   }
 
   resetTo(snapshot: World): void {
@@ -193,7 +230,7 @@ export class Simulation {
     for (let index = 0; index < this.world.cellCount; index += 1) {
       const kind = this.world.kindAtIndex(index);
       const definition = TILE_DEFINITIONS[kind];
-      if (definition.circuitInputPorts === 0) {
+      if (definition.circuitInputPorts === 0 || kind === TileKind.Victory) {
         continue;
       }
 

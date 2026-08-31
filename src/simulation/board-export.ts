@@ -1,5 +1,6 @@
 import { furnaceRecipeFor } from "./furnace";
 import type { Charge } from "./circuit";
+import { PuzzleResult } from "./puzzle-result";
 import {
   Direction,
   directionX,
@@ -12,7 +13,7 @@ import { World } from "./world";
 import { expectDefined } from "../util/assert";
 
 const FORMAT_NAME = "factory2d-board";
-const FORMAT_VERSION = 7;
+const FORMAT_VERSION = 8;
 const MAX_BOARD_WIDTH = 400;
 const MAX_BOARD_HEIGHT = 300;
 
@@ -47,6 +48,18 @@ const DIRECTIONS_BY_NAME: Readonly<Record<string, Direction | undefined>> = {
   left: Direction.Left,
 };
 
+const PUZZLE_RESULT_NAMES: Readonly<Record<PuzzleResult, string>> = {
+  [PuzzleResult.Lost]: "lost",
+  [PuzzleResult.InProgress]: "in-progress",
+  [PuzzleResult.Won]: "won",
+};
+
+const PUZZLE_RESULTS_BY_NAME: Readonly<Record<string, PuzzleResult | undefined>> = {
+  lost: PuzzleResult.Lost,
+  "in-progress": PuzzleResult.InProgress,
+  won: PuzzleResult.Won,
+};
+
 interface ExportedOrientation {
   readonly x: number;
   readonly y: number;
@@ -76,6 +89,7 @@ interface ExportedBoard {
   readonly format: typeof FORMAT_NAME;
   readonly version: typeof FORMAT_VERSION;
   readonly tick: number;
+  readonly result: string;
   readonly grid: readonly string[];
   readonly orientations: readonly ExportedOrientation[];
   readonly charges: readonly ExportedCharge[];
@@ -157,6 +171,7 @@ export function serializeBoard(world: World, tick: number): string {
     format: FORMAT_NAME,
     version: FORMAT_VERSION,
     tick,
+    result: PUZZLE_RESULT_NAMES[world.puzzleResult],
     grid,
     orientations,
     charges,
@@ -184,6 +199,11 @@ export function deserializeBoard(source: string): ImportedBoard {
   }
 
   const tick = requireInteger(board.tick, "Board tick", 0, Number.MAX_SAFE_INTEGER);
+  const resultName = requireString(board.result, "Board result");
+  const result = PUZZLE_RESULTS_BY_NAME[resultName];
+  if (result === undefined) {
+    throw new Error(`Board result must be \"in-progress\", \"won\", or \"lost\"`);
+  }
   const grid = requireArray(board.grid, "Board grid");
   requireInteger(grid.length, "Board grid height", 1, MAX_BOARD_HEIGHT);
 
@@ -434,6 +454,10 @@ export function deserializeBoard(source: string): ImportedBoard {
         throw new Error(`Board weld grid cell (${x}, ${y}) cannot weld down`);
       }
     }
+  }
+
+  if (result !== PuzzleResult.InProgress) {
+    world.markPuzzleResult(result);
   }
 
   return { world, tick };

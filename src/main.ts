@@ -363,6 +363,7 @@ function selectWeldTool(): void {
 }
 
 function saveEditedBaseline(): void {
+  world.resetPuzzleResult();
   baseline.copyFrom(world);
   simulation.tick = 0;
   finishAnimation();
