@@ -1,6 +1,19 @@
 import type { PuzzleComponents } from "../game/puzzle-components";
 import { TILE_DEFINITIONS, TILE_KINDS, TileKind } from "../simulation/tile";
 
+const PALETTE_SHORTCUTS = [
+  { code: "Digit1", label: "1" },
+  { code: "Digit2", label: "2" },
+  { code: "Digit3", label: "3" },
+  { code: "Digit4", label: "4" },
+  { code: "Digit5", label: "5" },
+  { code: "Digit6", label: "6" },
+  { code: "Digit7", label: "7" },
+  { code: "Digit8", label: "8" },
+  { code: "Digit9", label: "9" },
+  { code: "Digit0", label: "0" },
+] as const;
+
 export function populateComponentPalette(
   container: HTMLElement,
   selectedKind: TileKind | null,
@@ -23,7 +36,7 @@ export function populateComponentPalette(
   let previousOrder: number | null = null;
 
   container.replaceChildren();
-  for (const component of paletteComponents) {
+  for (const [index, component] of paletteComponents.entries()) {
     const kind = component.kind;
     const definition = TILE_DEFINITIONS[kind];
     const palette = definition.palette;
@@ -60,13 +73,11 @@ export function populateComponentPalette(
     description.append(name, detail);
     button.append(preview, description);
 
-    if (palette.shortcut !== null) {
-      if (Object.hasOwn(shortcutKinds, palette.shortcut.code)) {
-        throw new Error(`Duplicate component shortcut ${palette.shortcut.code}`);
-      }
-      shortcutKinds[palette.shortcut.code] = kind;
+    const shortcutDefinition = PALETTE_SHORTCUTS[index];
+    if (shortcutDefinition !== undefined) {
+      shortcutKinds[shortcutDefinition.code] = kind;
       const shortcut = document.createElement("kbd");
-      shortcut.textContent = palette.shortcut.label;
+      shortcut.textContent = shortcutDefinition.label;
       button.append(shortcut);
     }
     container.append(button);

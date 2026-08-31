@@ -73,10 +73,6 @@ export interface TileDefinition {
   readonly palette: {
     readonly order: number;
     readonly description: string;
-    readonly shortcut: {
-      readonly code: string;
-      readonly label: string;
-    } | null;
   } | null;
   readonly affectedByGravity: boolean;
   readonly weldableSides: WeldSide;
@@ -134,7 +130,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 1,
       description: "Solid block affected by gravity",
-      shortcut: { code: "Digit2", label: "2" },
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -157,7 +152,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 0,
       description: "Falls and slides around obstacles",
-      shortcut: { code: "Digit1", label: "1" },
     },
     affectedByGravity: true,
     slidesDiagonally: true,
@@ -180,7 +174,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 2,
       description: "Fixed structural block",
-      shortcut: { code: "Digit3", label: "3" },
     },
     affectedByGravity: false,
     slidesDiagonally: false,
@@ -203,7 +196,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 3,
       description: "Holds magnetic blocks on its pointed side",
-      shortcut: { code: "Digit4", label: "4" },
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -226,7 +218,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 4,
       description: "Magnetic structural block smelted from iron ore",
-      shortcut: { code: "Digit5", label: "5" },
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -249,7 +240,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 9,
       description: "Shares charge across welded circuit blocks",
-      shortcut: { code: "Digit6", label: "6" },
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -272,7 +262,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 10,
       description: "Emits +1 when its pointed side is occupied",
-      shortcut: { code: "Digit7", label: "7" },
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -295,7 +284,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 11,
       description: "Emits +1 constantly into its welded circuit network",
-      shortcut: null,
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -318,7 +306,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 12,
       description: "Emits +1 for the first simulation tick, then goes dark",
-      shortcut: null,
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -341,7 +328,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 13,
       description: "Negates the sum of up to three isolated inputs",
-      shortcut: { code: "Digit8", label: "8" },
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -364,7 +350,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 14,
       description: "Sums up to three isolated inputs toward its output",
-      shortcut: { code: "Digit9", label: "9" },
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -387,7 +372,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 15,
       description: "Passes positive sums from up to three isolated inputs",
-      shortcut: { code: "Digit0", label: "0" },
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -410,7 +394,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 16,
       description: "Multiplies up to three connected isolated inputs",
-      shortcut: { code: "KeyX", label: "X" },
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -433,7 +416,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 17,
       description: "Subtracts left and right inputs from the rear input",
-      shortcut: { code: "Minus", label: "−" },
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -456,7 +438,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 18,
       description: "Copies an adjacent tile's charge to three outputs without an input weld",
-      shortcut: null,
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -479,7 +460,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 19,
       description: "Selects the left or right input from the rear charge",
-      shortcut: null,
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -502,7 +482,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 20,
       description: "Keeps horizontal and vertical circuit networks separate",
-      shortcut: null,
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -525,7 +504,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 5,
       description: "Solid block baked from sand",
-      shortcut: null,
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -548,7 +526,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 6,
       description: "Solid ore that a furnace smelts into iron",
-      shortcut: null,
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -571,7 +548,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 7,
       description: "Bakes the block on its pointed side; rear charge disables it",
-      shortcut: null,
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -594,7 +570,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 8,
       description: "Charged roller: +1 clockwise, -1 counterclockwise, 0 stopped",
-      shortcut: null,
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -617,7 +592,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 21,
       description: "Absorbs a front block matching the block behind it and pulses +1 sideways",
-      shortcut: null,
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -640,7 +614,6 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 22,
       description: "Wins on +1 input or loses on -1 input; opposing inputs jam",
-      shortcut: null,
     },
     affectedByGravity: true,
     slidesDiagonally: false,
