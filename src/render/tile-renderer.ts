@@ -26,6 +26,9 @@ export interface BodyCell {
   seamRight: boolean;
   /** The down neighbor belongs to the same body but this edge is not welded. */
   seamDown: boolean;
+  /** Active piston transition: +1 extension, -1 retraction. */
+  pistonTransition?: -1 | 0 | 1;
+  pistonTransitionProgress?: number;
 }
 
 export function setCircuitPortCharge(
@@ -140,6 +143,8 @@ export function drawBody(
       cell.circuitConnections,
       cell.circuitPortCharges,
       animationTime,
+      cell.pistonTransition ?? 0,
+      cell.pistonTransitionProgress ?? 1,
     );
   }
 
@@ -395,6 +400,8 @@ function drawDecoration(
   circuitConnections: WeldSide,
   circuitPortCharges: number,
   animationTime: number,
+  pistonTransition: -1 | 0 | 1,
+  pistonTransitionProgress: number,
 ): void {
   if (circuitConnections !== WeldSide.None) {
     drawCircuitConnections(
@@ -867,6 +874,52 @@ function drawDecoration(
         context.lineTo(centerX, centerY + innerOffset);
         context.stroke();
       }
+      break;
+    }
+    case TileDecorationStyle.Piston:
+    case TileDecorationStyle.PistonBase:
+    case TileDecorationStyle.PistonArm: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      const isCombined = definition.decorationStyle === TileDecorationStyle.Piston;
+      const isBase = definition.decorationStyle === TileDecorationStyle.PistonBase;
+      const headOffset = isCombined && pistonTransition === -1
+        ? -size * (1 - pistonTransitionProgress)
+        : definition.decorationStyle === TileDecorationStyle.PistonArm &&
+            pistonTransition === 1
+          ? size * (1 - pistonTransitionProgress)
+          : 0;
+      if (isCombined || isBase) {
+        context.fillStyle = "#3a3028";
+        context.fillRect(-size * 0.3, -size * 0.02, size * 0.6, size * 0.32);
+        context.strokeStyle = definition.decorationColor;
+        context.lineWidth = Math.max(1.5, size * 0.055);
+        context.strokeRect(-size * 0.3, -size * 0.02, size * 0.6, size * 0.32);
+      }
+      context.strokeStyle = definition.decorationColor;
+      context.lineCap = "round";
+      context.lineWidth = Math.max(2, size * 0.12);
+      context.beginPath();
+      if (isBase) {
+        const extension = pistonTransition === 1 ? pistonTransitionProgress : 1;
+        context.moveTo(0, size * 0.03);
+        context.lineTo(0, -size * (0.43 * extension));
+      } else if (isCombined) {
+        context.moveTo(0, size * 0.03);
+        context.lineTo(0, -size * 0.2 + headOffset);
+      } else {
+        context.moveTo(0, size * 0.43 + headOffset);
+        context.lineTo(0, -size * 0.25 + headOffset);
+      }
+      context.stroke();
+      context.translate(0, headOffset);
+      context.fillStyle = "#d1aa6b";
+      context.fillRect(-size * 0.25, -size * 0.32, size * 0.5, size * 0.14);
+      context.strokeStyle = "#4b3828";
+      context.lineWidth = Math.max(1, size * 0.035);
+      context.strokeRect(-size * 0.25, -size * 0.32, size * 0.5, size * 0.14);
+      context.restore();
       break;
     }
     case TileDecorationStyle.None:

@@ -443,12 +443,15 @@ function pickTileAt(cell: GridCell): void {
     selectTile(previousSelectedKind);
     return;
   }
-  if (!componentIsAvailable(kind)) {
+  const pickedKind = kind === TileKind.PistonBase || kind === TileKind.PistonArm
+    ? TileKind.Piston
+    : kind;
+  if (!componentIsAvailable(pickedKind)) {
     return;
   }
 
-  selectTile(kind);
-  if (TILE_DEFINITIONS[kind].usesOrientation) {
+  selectTile(pickedKind);
+  if (TILE_DEFINITIONS[pickedKind].usesOrientation) {
     setSelectedOrientation(world.orientationAt(cell.x, cell.y));
   }
 }

@@ -84,9 +84,9 @@ describe("component palette shortcuts", () => {
       TileKind.Glass,
       TileKind.IronOre,
       TileKind.Conveyor,
+      TileKind.Piston,
       TileKind.Conduit,
       TileKind.Sensor,
-      TileKind.FixedCharge,
     ]);
     expect(shortcutLabels(palette)).toEqual([
       "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
@@ -95,7 +95,8 @@ describe("component palette shortcuts", () => {
     expect(shortcuts).toMatchObject({
       Digit1: TileKind.Sand,
       Digit6: TileKind.IronOre,
-      Digit0: TileKind.FixedCharge,
+      Digit8: TileKind.Piston,
+      Digit0: TileKind.Sensor,
     });
   });
 

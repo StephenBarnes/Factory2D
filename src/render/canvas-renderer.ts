@@ -349,7 +349,49 @@ export class CanvasRenderer {
       let offsetX = 0;
       let offsetY = 0;
       const remainingProgress = 1 - progress;
-      if (previousWorld !== null && remainingProgress > 0) {
+      let hasPistonTransition = false;
+      for (const cell of body.cells) {
+        cell.pistonTransition = 0;
+        cell.pistonTransitionProgress = 1;
+        if (previousWorld === null || remainingProgress <= 0) {
+          continue;
+        }
+        const stepX = directionX(cell.orientation);
+        const stepY = directionY(cell.orientation);
+        const rearX = cell.x - stepX;
+        const rearY = cell.y - stepY;
+        const frontX = cell.x + stepX;
+        const frontY = cell.y + stepY;
+        const rearIsInside = rearX >= 0 && rearX < this.world.width &&
+          rearY >= 0 && rearY < this.world.height;
+        const frontIsInside = frontX >= 0 && frontX < this.world.width &&
+          frontY >= 0 && frontY < this.world.height;
+        if (
+          cell.kind === TileKind.PistonArm &&
+          rearIsInside &&
+          previousWorld.kindAt(rearX, rearY) === TileKind.Piston &&
+          previousWorld.idAt(rearX, rearY) === this.world.idAt(cell.x, cell.y)
+        ) {
+          cell.pistonTransition = 1;
+          cell.pistonTransitionProgress = progress;
+        } else if (
+          cell.kind === TileKind.PistonBase &&
+          previousWorld.kindAt(cell.x, cell.y) === TileKind.Piston
+        ) {
+          cell.pistonTransition = 1;
+          cell.pistonTransitionProgress = progress;
+        } else if (
+          cell.kind === TileKind.Piston &&
+          frontIsInside &&
+          previousWorld.kindAt(frontX, frontY) === TileKind.PistonArm &&
+          previousWorld.idAt(frontX, frontY) === this.world.idAt(cell.x, cell.y)
+        ) {
+          cell.pistonTransition = -1;
+          cell.pistonTransitionProgress = progress;
+        }
+        hasPistonTransition ||= cell.pistonTransition !== 0;
+      }
+      if (previousWorld !== null && remainingProgress > 0 && !hasPistonTransition) {
         const firstCell = expectDefined(body.cells[0], "first animated body cell");
         const tileId = this.world.idAt(firstCell.x, firstCell.y);
         if (previousWorld.idAt(firstCell.x, firstCell.y) !== tileId) {

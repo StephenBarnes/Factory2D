@@ -243,6 +243,7 @@ export class TileInspector {
     const cellIndex = position.y * this.world.width + position.x;
     const circuitInputSides = orientedSides(definition.circuitInputPorts, orientation);
     const circuitOutputSides = orientedSides(definition.circuitOutputPorts, orientation);
+    const weldableSides = orientedSides(definition.weldableSides, orientation);
     let circuitInputStates = "";
     let circuitOutputStates = "";
     let weldableDirections = "";
@@ -250,7 +251,7 @@ export class TileInspector {
     let weldedDirections = "";
     let circuitDirections = "";
     for (const direction of DIRECTIONS) {
-      const sideIsWeldable = (definition.weldableSides & (1 << direction)) !== 0 &&
+      const sideIsWeldable = (weldableSides & (1 << direction)) !== 0 &&
         (!definition.excludesFacingWeld || direction !== orientation);
       if (sideIsWeldable) {
         weldableSideCount += 1;

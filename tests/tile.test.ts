@@ -18,6 +18,9 @@ describe("tile orientation", () => {
     TileKind.ChargeSensor,
     TileKind.Selector,
     TileKind.Furnace,
+    TileKind.Piston,
+    TileKind.PistonBase,
+    TileKind.PistonArm,
   ])(
     "preserves the selected orientation for directional kind %s",
     (kind) => {

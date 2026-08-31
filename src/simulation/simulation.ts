@@ -61,6 +61,14 @@ export class Simulation {
   private readonly furnaceTransformKinds: Uint8Array;
   private readonly deliveryTargetOwners: Int32Array;
   private readonly deliveryAbsorbTargetIndices: Int32Array;
+  private readonly pistonActions: Int8Array;
+  private readonly pistonHeadWelds: Uint8Array;
+  private readonly pistonArmIds: Uint32Array;
+  private readonly pistonTargetRoots: Int32Array;
+  private readonly pistonBaseRoots: Int32Array;
+  private readonly pistonCanPush: Uint8Array;
+  private readonly pistonAnchoredBodies: Uint8Array;
+  private readonly pistonVacatedOwners: Int32Array;
 
   constructor(world: World) {
     this.world = world;
@@ -102,6 +110,14 @@ export class Simulation {
     this.furnaceTransformKinds = new Uint8Array(world.cellCount);
     this.deliveryTargetOwners = new Int32Array(world.cellCount);
     this.deliveryAbsorbTargetIndices = new Int32Array(world.cellCount);
+    this.pistonActions = new Int8Array(world.cellCount);
+    this.pistonHeadWelds = new Uint8Array(world.cellCount);
+    this.pistonArmIds = new Uint32Array(world.cellCount);
+    this.pistonTargetRoots = new Int32Array(world.cellCount);
+    this.pistonBaseRoots = new Int32Array(world.cellCount);
+    this.pistonCanPush = new Uint8Array(world.cellCount);
+    this.pistonAnchoredBodies = new Uint8Array(world.cellCount);
+    this.pistonVacatedOwners = new Int32Array(world.cellCount);
   }
 
   step(): number {
@@ -120,9 +136,352 @@ export class Simulation {
       this.horizontalMoves,
       this.verticalMoves,
     );
+    const pistonMovementCount = this.resolvePistons();
     this.tick += 1;
-    return movementCount;
+    return movementCount + pistonMovementCount;
   }
+  private resolvePistons(): number {
+    this.collectPistonBodies();
+    this.collectBodyMembers();
+    this.collectPistonActions();
+    this.resolvePistonMovements();
+
+    for (let base = 0; base < this.world.cellCount; base += 1) {
+      const action = expectDefined(this.pistonActions[base], "piston action");
+      const targetRoot = expectDefined(this.pistonTargetRoots[base], "piston target root");
+      if (action === 0 || targetRoot < 0) {
+        continue;
+      }
+      const orientation = this.world.orientationAtIndex(base);
+      const expectedX = action === 1 ? directionX(orientation) : -directionX(orientation);
+      const expectedY = action === 1 ? directionY(orientation) : -directionY(orientation);
+      if (
+        expectDefined(this.horizontalMoves[targetRoot], "piston target horizontal movement") !==
+          expectedX ||
+        expectDefined(this.verticalMoves[targetRoot], "piston target vertical movement") !== expectedY
+      ) {
+        this.pistonActions[base] = 0;
+      }
+    }
+
+    const movementCount = this.world.moveBodies(
+      this.bodyRoots,
+      this.horizontalMoves,
+      this.verticalMoves,
+    );
+    return movementCount + this.world.applyPistonTransitions(
+      this.pistonActions,
+      this.pistonHeadWelds,
+      this.pistonArmIds,
+    );
+  }
+
+  /**
+   * Piston kinematics temporarily split the retractable head connection from
+   * the base. Ordinary simulation phases still see every stored weld.
+   */
+  private collectPistonBodies(): void {
+    this.bodyRoots.fill(-1);
+    for (let index = 0; index < this.world.cellCount; index += 1) {
+      if (this.world.kindAtIndex(index) !== TileKind.Empty) {
+        this.bodyRoots[index] = index;
+      }
+    }
+    for (let index = 0; index < this.world.cellCount; index += 1) {
+      if (expectDefined(this.bodyRoots[index], "piston body root marker") < 0) {
+        continue;
+      }
+      if (
+        this.world.hasRightWeldAtIndex(index) &&
+        !this.isPistonKinematicEdge(index, index + 1)
+      ) {
+        this.unionBodies(index, index + 1);
+      }
+      if (
+        this.world.hasDownWeldAtIndex(index) &&
+        !this.isPistonKinematicEdge(index, index + this.world.width)
+      ) {
+        this.unionBodies(index, index + this.world.width);
+      }
+    }
+    for (let index = 0; index < this.world.cellCount; index += 1) {
+      if (expectDefined(this.bodyRoots[index], "piston body root marker") >= 0) {
+        this.bodyRoots[index] = this.findBodyRoot(index);
+      }
+    }
+  }
+
+  private isPistonKinematicEdge(first: number, second: number): boolean {
+    const firstKind = this.world.kindAtIndex(first);
+    const secondKind = this.world.kindAtIndex(second);
+    if (firstKind === TileKind.PistonArm || secondKind === TileKind.PistonArm) {
+      return true;
+    }
+    return (
+      firstKind === TileKind.Piston &&
+        this.neighborIndex(first, this.world.orientationAtIndex(first)) === second ||
+      secondKind === TileKind.Piston &&
+        this.neighborIndex(second, this.world.orientationAtIndex(second)) === first
+    );
+  }
+
+  private collectPistonActions(): void {
+    this.pistonActions.fill(0);
+    this.pistonHeadWelds.fill(0);
+    this.pistonArmIds.fill(0);
+    this.pistonTargetRoots.fill(-1);
+    this.pistonBaseRoots.fill(-1);
+    this.pistonCanPush.fill(0);
+    this.pistonAnchoredBodies.fill(0);
+    this.pistonVacatedOwners.fill(-1);
+    this.bodyForceX.fill(0);
+    this.bodyForceY.fill(0);
+    this.destinationOwners.fill(-1);
+
+    for (let base = 0; base < this.world.cellCount; base += 1) {
+      const kind = this.world.kindAtIndex(base);
+      const charge = this.world.chargeAtPortIndex(base, Direction.Up);
+      const action = kind === TileKind.Piston && charge === 1
+        ? 1
+        : kind === TileKind.PistonBase && charge === -1
+          ? -1
+          : 0;
+      if (action === 0) {
+        continue;
+      }
+      const orientation = this.world.orientationAtIndex(base);
+      const arm = this.neighborIndex(base, orientation);
+      if (arm < 0) {
+        continue;
+      }
+      if (
+        action === -1 &&
+        (
+          this.world.kindAtIndex(arm) !== TileKind.PistonArm ||
+          this.world.orientationAtIndex(arm) !== orientation ||
+          !this.world.hasWeldAtIndex(base, orientation)
+        )
+      ) {
+        continue;
+      }
+
+      const existingOwner = expectDefined(
+        this.destinationOwners[arm],
+        "piston transition destination owner",
+      );
+      if (existingOwner >= 0) {
+        this.pistonActions[existingOwner] = 0;
+        this.pistonActions[base] = 0;
+        this.destinationOwners[arm] = -2;
+        continue;
+      }
+      if (existingOwner === -2) {
+        continue;
+      }
+      this.destinationOwners[arm] = base;
+      this.pistonActions[base] = action;
+      this.pistonBaseRoots[base] = expectDefined(this.bodyRoots[base], "piston base body");
+      if (action === 1) {
+        this.pistonHeadWelds[base] = this.world.hasWeldAtIndex(base, orientation) ? 1 : 0;
+        if (this.world.kindAtIndex(arm) !== TileKind.Empty) {
+          this.pistonTargetRoots[base] = expectDefined(
+            this.bodyRoots[arm],
+            "piston extension target body",
+          );
+        }
+      } else {
+        this.pistonArmIds[base] = this.world.idAtIndex(arm);
+        const head = this.neighborIndex(arm, orientation);
+        if (
+          head >= 0 &&
+          this.world.kindAtIndex(head) !== TileKind.Empty &&
+          this.world.hasWeldAtIndex(arm, orientation)
+        ) {
+          this.pistonHeadWelds[base] = 1;
+          this.pistonTargetRoots[base] = expectDefined(
+            this.bodyRoots[head],
+            "piston retraction target body",
+          );
+        }
+      }
+    }
+
+    for (let base = 0; base < this.world.cellCount; base += 1) {
+      const action = expectDefined(this.pistonActions[base], "piston action");
+      if (action === 0) {
+        continue;
+      }
+      const baseRoot = expectDefined(this.pistonBaseRoots[base], "piston base root");
+      this.pistonAnchoredBodies[baseRoot] = 1;
+      if (action === -1) {
+        const arm = this.neighborIndex(base, this.world.orientationAtIndex(base));
+        const armRoot = expectDefined(this.bodyRoots[arm], "piston arm body");
+        this.pistonAnchoredBodies[armRoot] = 1;
+      }
+    }
+
+    for (let base = 0; base < this.world.cellCount; base += 1) {
+      const action = expectDefined(this.pistonActions[base], "piston action");
+      if (action === 0) {
+        continue;
+      }
+      const targetRoot = expectDefined(this.pistonTargetRoots[base], "piston target root");
+      if (targetRoot < 0) {
+        continue;
+      }
+      const baseRoot = expectDefined(this.pistonBaseRoots[base], "piston base root");
+      if (targetRoot === baseRoot || this.pistonAnchoredBodies[targetRoot] === 1) {
+        this.pistonActions[base] = 0;
+        continue;
+      }
+      const orientation = this.world.orientationAtIndex(base);
+      const moveDirection = action === 1 ? orientation : oppositeDirection(orientation);
+      this.addBodyForce(targetRoot, moveDirection);
+      if (action === 1) {
+        this.pistonCanPush[targetRoot] = 1;
+      } else {
+        const arm = this.neighborIndex(base, orientation);
+        const existingOwner = expectDefined(
+          this.pistonVacatedOwners[arm],
+          "retracting piston vacancy owner",
+        );
+        if (existingOwner >= 0 && existingOwner !== targetRoot) {
+          this.pistonActions[base] = 0;
+          continue;
+        }
+        this.pistonVacatedOwners[arm] = targetRoot;
+      }
+    }
+  }
+
+  private resolvePistonMovements(): void {
+    this.horizontalMoves.fill(0);
+    this.verticalMoves.fill(0);
+    this.drivenBodies.fill(0);
+    this.movementGroupRoots.fill(-1);
+    this.blockedMovementGroups.fill(0);
+    let queueLength = 0;
+
+    for (let root = 0; root < this.world.cellCount; root += 1) {
+      if (expectDefined(this.bodyHeads[root], "piston body head") >= 0) {
+        this.movementGroupRoots[root] = root;
+      }
+    }
+    for (let root = 0; root < this.world.cellCount; root += 1) {
+      if (expectDefined(this.bodyHeads[root], "piston body head") < 0) {
+        continue;
+      }
+      const forceX = expectDefined(this.bodyForceX[root], "piston horizontal force");
+      const forceY = expectDefined(this.bodyForceY[root], "piston vertical force");
+      if ((forceX === 0) === (forceY === 0)) {
+        continue;
+      }
+      this.horizontalMoves[root] = forceX < 0 ? -1 : forceX > 0 ? 1 : 0;
+      this.verticalMoves[root] = forceY < 0 ? -1 : forceY > 0 ? 1 : 0;
+      this.drivenBodies[root] = 1;
+      this.movementQueue[queueLength] = root;
+      queueLength += 1;
+      if (this.bodyFalls[root] === 0 || this.pistonAnchoredBodies[root] === 1) {
+        this.blockMovementGroup(root);
+      }
+    }
+
+    let queueHead = 0;
+    while (queueHead < queueLength) {
+      const root = expectDefined(this.movementQueue[queueHead], "piston movement queue entry");
+      queueHead += 1;
+      const moveX = expectDefined(this.horizontalMoves[root], "piston horizontal movement");
+      const moveY = expectDefined(this.verticalMoves[root], "piston vertical movement");
+      for (
+        let member = expectDefined(this.bodyHeads[root], "piston body head");
+        member >= 0;
+        member = expectDefined(this.nextBodyMember[member], "next piston body member")
+      ) {
+        const x = member % this.world.width;
+        const y = (member - x) / this.world.width;
+        const destinationX = x + moveX;
+        const destinationY = y + moveY;
+        if (
+          destinationX < 0 ||
+          destinationX >= this.world.width ||
+          destinationY < 0 ||
+          destinationY >= this.world.height
+        ) {
+          this.blockMovementGroup(root);
+          continue;
+        }
+        const destination = destinationY * this.world.width + destinationX;
+        const blocker = expectDefined(this.bodyRoots[destination], "piston movement blocker");
+        if (
+          blocker < 0 ||
+          blocker === root ||
+          expectDefined(this.pistonVacatedOwners[destination], "piston vacancy owner") === root
+        ) {
+          continue;
+        }
+        if (
+          this.pistonCanPush[root] === 0 ||
+          this.bodyFalls[blocker] === 0 ||
+          this.pistonAnchoredBodies[blocker] === 1
+        ) {
+          this.blockMovementGroup(root);
+          continue;
+        }
+        if (this.drivenBodies[blocker] === 0) {
+          this.drivenBodies[blocker] = 1;
+          this.pistonCanPush[blocker] = 1;
+          this.horizontalMoves[blocker] = moveX;
+          this.verticalMoves[blocker] = moveY;
+          this.movementQueue[queueLength] = blocker;
+          queueLength += 1;
+          this.unionMovementGroups(root, blocker);
+          continue;
+        }
+        if (
+          this.horizontalMoves[blocker] !== moveX ||
+          this.verticalMoves[blocker] !== moveY
+        ) {
+          this.blockMovementGroup(root);
+          this.blockMovementGroup(blocker);
+          continue;
+        }
+        this.unionMovementGroups(root, blocker);
+      }
+    }
+
+    this.destinationOwners.fill(-1);
+    for (let root = 0; root < this.world.cellCount; root += 1) {
+      if (this.drivenBodies[root] === 0 || this.isMovementGroupBlocked(root)) {
+        continue;
+      }
+      const moveX = expectDefined(this.horizontalMoves[root], "piston horizontal movement");
+      const moveY = expectDefined(this.verticalMoves[root], "piston vertical movement");
+      for (
+        let member = expectDefined(this.bodyHeads[root], "piston body head");
+        member >= 0;
+        member = expectDefined(this.nextBodyMember[member], "next piston body member")
+      ) {
+        const destination = member + moveX + moveY * this.world.width;
+        const owner = expectDefined(this.destinationOwners[destination], "piston destination owner");
+        if (
+          owner >= 0 &&
+          this.findMovementGroup(owner) !== this.findMovementGroup(root)
+        ) {
+          this.blockMovementGroup(root);
+          this.blockMovementGroup(owner);
+        } else {
+          this.destinationOwners[destination] = root;
+        }
+      }
+    }
+    for (let root = 0; root < this.world.cellCount; root += 1) {
+      if (this.drivenBodies[root] === 1 && this.isMovementGroupBlocked(root)) {
+        this.horizontalMoves[root] = 0;
+        this.verticalMoves[root] = 0;
+      }
+    }
+  }
+
 
   private resolveVictoryBlocks(): void {
     if (this.world.puzzleResult !== PuzzleResult.InProgress) {

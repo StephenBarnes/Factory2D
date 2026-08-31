@@ -625,6 +625,100 @@ export class World {
     this.assertIndex(index);
     return index < this.cellCount - this.width && this.downWelds[index] === 1;
   }
+  hasWeldAtIndex(index: number, direction: Direction): boolean {
+    this.assertIndex(index);
+    const x = index % this.width;
+    switch (direction) {
+      case Direction.Up:
+        return index >= this.width && this.downWelds[index - this.width] === 1;
+      case Direction.Right:
+        return x < this.width - 1 && this.rightWelds[index] === 1;
+      case Direction.Down:
+        return index < this.cellCount - this.width && this.downWelds[index] === 1;
+      case Direction.Left:
+        return x > 0 && this.rightWelds[index - 1] === 1;
+      default:
+        throw new RangeError(`Invalid weld direction ${direction as number}`);
+    }
+  }
+
+  applyPistonTransitions(
+    actions: Int8Array,
+    headWelds: Uint8Array,
+    armIds: Uint32Array,
+  ): number {
+    if (
+      actions.length !== this.cellCount ||
+      headWelds.length !== this.cellCount ||
+      armIds.length !== this.cellCount
+    ) {
+      throw new RangeError("Piston transition buffers must match the world cell count");
+    }
+
+    let transitionCount = 0;
+    for (let base = 0; base < this.cellCount; base += 1) {
+      const action = expectDefined(actions[base], "piston action");
+      if (action === 0) {
+        continue;
+      }
+      const orientation = this.orientations[base] as Direction;
+      const arm = this.neighborIndex(base, orientation);
+      if (arm < 0) {
+        throw new Error(`Piston transition at index ${base} leaves the world`);
+      }
+      const head = this.neighborIndex(arm, orientation);
+      const headWelded = expectDefined(headWelds[base], "piston head weld") === 1;
+
+      if (action === 1) {
+        if (this.kinds[base] !== TileKind.Piston || this.kinds[arm] !== TileKind.Empty) {
+          throw new Error(`Invalid piston extension at index ${base}`);
+        }
+        const movingArmId = expectDefined(this.ids[base], "retracted piston ID");
+        this.kinds[base] = TileKind.PistonBase;
+        this.ids[base] = this.nextTileId;
+        this.nextTileId += 1;
+        this.kinds[arm] = TileKind.PistonArm;
+        this.ids[arm] = movingArmId;
+        this.orientations[arm] = orientation;
+        this.charges[arm] = 0;
+        this.crossingVerticalCharges[arm] = 0;
+        this.furnaceProgress[arm] = 0;
+        this.furnaceTargetIds[arm] = 0;
+        this.setWeldAtIndices(base, arm, 1);
+        if (head >= 0) {
+          this.setWeldAtIndices(arm, head, headWelded ? 1 : 0);
+        }
+        this.clearDisallowedWeldsAtIndex(arm);
+      } else if (action === -1) {
+        if (this.kinds[base] !== TileKind.PistonBase) {
+          throw new Error(`Invalid piston retraction at index ${base}`);
+        }
+        const movingArmId = expectDefined(armIds[base], "extended piston arm ID");
+        if (movingArmId === 0) {
+          throw new Error(`Piston retraction at index ${base} has no arm ID`);
+        }
+        this.kinds[base] = TileKind.Piston;
+        this.ids[base] = movingArmId;
+        if (headWelded) {
+          if (this.kinds[arm] === TileKind.Empty) {
+            throw new Error(`Retracting piston at index ${base} lost its welded target`);
+          }
+          this.setWeldAtIndices(base, arm, 1);
+        } else {
+          this.clearIndex(arm);
+        }
+        this.clearDisallowedWeldsAtIndex(base);
+      } else {
+        throw new RangeError(`Invalid piston action ${action}`);
+      }
+      transitionCount += 1;
+    }
+    if (transitionCount > 0) {
+      this.revisionValue += 1;
+    }
+    return transitionCount;
+  }
+
 
   moveBodies(
     bodyRoots: Int32Array,
@@ -770,6 +864,19 @@ export class World {
     }
   }
 
+  private neighborIndex(index: number, direction: Direction): number {
+    const x = index % this.width;
+    if (
+      (direction === Direction.Up && index < this.width) ||
+      (direction === Direction.Right && x >= this.width - 1) ||
+      (direction === Direction.Down && index >= this.cellCount - this.width) ||
+      (direction === Direction.Left && x === 0)
+    ) {
+      return -1;
+    }
+    return index + directionX(direction) + directionY(direction) * this.width;
+  }
+
   private directionalNeighborIndex(index: number): number {
     const direction = this.orientations[index] as Direction;
     const x = index % this.width;
@@ -782,6 +889,21 @@ export class World {
       return -1;
     }
     return index + directionX(direction) + directionY(direction) * this.width;
+  }
+
+  private setWeldAtIndices(first: number, second: number, value: 0 | 1): void {
+    const difference = second - first;
+    if (difference === 1 && first % this.width < this.width - 1) {
+      this.rightWelds[first] = value;
+    } else if (difference === -1 && second % this.width < this.width - 1) {
+      this.rightWelds[second] = value;
+    } else if (difference === this.width) {
+      this.downWelds[first] = value;
+    } else if (difference === -this.width) {
+      this.downWelds[second] = value;
+    } else {
+      throw new RangeError("A weld requires two orthogonally adjacent cells");
+    }
   }
 
   private weldStorage(first: number, second: number): { readonly welds: Uint8Array; readonly index: number } {
@@ -819,9 +941,17 @@ export class World {
     const firstDefinition = TILE_DEFINITIONS[this.kinds[first] as TileKind];
     const secondDefinition = TILE_DEFINITIONS[this.kinds[second] as TileKind];
     const secondSide = oppositeDirection(firstSide);
+    const firstWeldableSides = orientedSides(
+      firstDefinition.weldableSides,
+      this.orientations[first] as Direction,
+    );
+    const secondWeldableSides = orientedSides(
+      secondDefinition.weldableSides,
+      this.orientations[second] as Direction,
+    );
     return (
-      (firstDefinition.weldableSides & (1 << firstSide)) !== 0 &&
-      (secondDefinition.weldableSides & (1 << secondSide)) !== 0 &&
+      (firstWeldableSides & (1 << firstSide)) !== 0 &&
+      (secondWeldableSides & (1 << secondSide)) !== 0 &&
       (!firstDefinition.excludesFacingWeld || this.orientations[first] !== firstSide) &&
       (!secondDefinition.excludesFacingWeld || this.orientations[second] !== secondSide)
     );
