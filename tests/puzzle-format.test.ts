@@ -138,6 +138,27 @@ describe("puzzle JSON format", () => {
     );
   });
 
+  it("requires a victory block in the base board and every test case", () => {
+    const baseWithoutVictory = puzzleFile();
+    const baseBoard = objectField(baseWithoutVictory, "initialBoard");
+    arrayField(baseBoard, "grid")[0] = "....................";
+    expect(() => parsePuzzleFile(baseWithoutVictory, "puzzles/no-victory.json")).toThrow(
+      "puzzles/no-victory.json: Puzzle initialBoard must contain at least one victory block",
+    );
+
+    const testCaseWithoutVictory = puzzleFile();
+    const offsetTestCase = expectDefined(
+      arrayField(testCaseWithoutVictory, "testCases")[1],
+      "Missing offset test case",
+    ) as JsonObject;
+    const overrides = objectField(offsetTestCase, "overrides");
+    const overrideBoard = objectField(overrides, "initialBoard");
+    arrayField(overrideBoard, "grid")[0] = "....................";
+    expect(() => parsePuzzleFile(testCaseWithoutVictory, "puzzles/no-test-victory.json")).toThrow(
+      "puzzles/no-test-victory.json: Puzzle testCases[1] initialBoard must contain at least one victory block",
+    );
+  });
+
   it("reports the source file and exact invalid field", () => {
     const file = puzzleFile();
     file.order = -1;

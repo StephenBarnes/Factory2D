@@ -156,8 +156,18 @@ function parseInitialWorld(board: Record<string, unknown>, label: string): World
   if (importedBoard.world.puzzleResult !== PuzzleResult.InProgress) {
     throw new Error(`${label} result must be "in-progress"`);
   }
+  requireVictoryBlock(importedBoard.world, label);
   return importedBoard.world;
 }
+function requireVictoryBlock(world: World, label: string): void {
+  for (let index = 0; index < world.cellCount; index += 1) {
+    if (world.kindAtIndex(index) === TileKind.Victory) {
+      return;
+    }
+  }
+  throw new Error(`${label} must contain at least one victory block`);
+}
+
 
 function parseTestCases(
   value: unknown,

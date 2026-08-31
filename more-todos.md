@@ -7,6 +7,8 @@ Game flow:
 * DEFER Use `crypto.randomUUID()` to assign each install an ID. Allow voting community-created puzzles up and down. We can assume users aren't malicious, this is a zero-stakes indie game; expect under 10 players per day. We want to avoid setting up a whole auth system or requiring email addresses, etc. Using a simple unique ID allows exploits (e.g. clear browser data and double-vote) but we'll assume nobody does that. Version the database and roll back manually if needed. If the game becomes popular enough to need more than that, upgrade to a more robust system.
 * Make puzzle share/save options open a modal to enter the name and description. We'll use this both for authoring puzzles easily, and for later allowing users to share puzzles to a public list of community puzzles.
 * For community puzzles, organize them automatically by their set of allowed components - they should be unlocked after the first built-in puzzle which includes all of those components among its recursive prerequisites. Construct the set of "components that have been introduced so far" for each built-in puzzle by taking union of those sets for each prereq.
+* Remove the "import" button on puzzles; it should only be displayed in the sandbox. It's already disabled in puzzles, but still visible.
+* On puzzle and sandbox screens, move the puzzle title and the back button to the bottom-left, on the bottom bar. Currently they're at the top of the palette panel.
 
 General:
 * Allow interacting with some components using a modal box. Modal is opened when placing the block (for some of them, depending on a flag) and by pressing E while mouse is over them. Show control prompt in the tile inspector panel.
