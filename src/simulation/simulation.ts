@@ -22,12 +22,15 @@ export class Simulation {
   tick = 0;
 
   private readonly bodyRoots: Int32Array;
+  private readonly weldedBodyRoots: Int32Array;
   private readonly bodyHeads: Int32Array;
   private readonly nextBodyMember: Int32Array;
   private readonly bodyFalls: Uint8Array;
   private readonly bodySlidesDiagonally: Uint8Array;
   private readonly horizontalMoves: Int8Array;
   private readonly verticalMoves: Int8Array;
+  private readonly gravityHorizontalMoves: Int8Array;
+  private readonly gravityVerticalMoves: Int8Array;
   private readonly bodyForceX: Int32Array;
   private readonly bodyForceY: Int32Array;
   private readonly drivenBodies: Uint8Array;
@@ -41,6 +44,11 @@ export class Simulation {
   private readonly dependencyDependents: Int32Array;
   private readonly nextDependency: Int32Array;
   private readonly blockedBodyQueue: Int32Array;
+  private readonly magneticConstraintHeads: Int32Array;
+  private readonly magneticConstraintOtherBodies: Int32Array;
+  private readonly magneticConstraintIsVertical: Uint8Array;
+  private readonly nextMagneticConstraint: Int32Array;
+  private magneticConstraintCount = 0;
   private readonly circuitRoots: Int32Array;
   private readonly circuitDriveSums: Int32Array;
   private readonly nextCircuitCharges: Int8Array;
@@ -54,12 +62,15 @@ export class Simulation {
   constructor(world: World) {
     this.world = world;
     this.bodyRoots = new Int32Array(world.cellCount);
+    this.weldedBodyRoots = new Int32Array(world.cellCount);
     this.bodyHeads = new Int32Array(world.cellCount);
     this.nextBodyMember = new Int32Array(world.cellCount);
     this.bodyFalls = new Uint8Array(world.cellCount);
     this.bodySlidesDiagonally = new Uint8Array(world.cellCount);
     this.horizontalMoves = new Int8Array(world.cellCount);
     this.verticalMoves = new Int8Array(world.cellCount);
+    this.gravityHorizontalMoves = new Int8Array(world.cellCount);
+    this.gravityVerticalMoves = new Int8Array(world.cellCount);
     this.bodyForceX = new Int32Array(world.cellCount);
     this.bodyForceY = new Int32Array(world.cellCount);
     this.drivenBodies = new Uint8Array(world.cellCount);
@@ -73,6 +84,10 @@ export class Simulation {
     this.dependencyDependents = new Int32Array(world.cellCount);
     this.nextDependency = new Int32Array(world.cellCount);
     this.blockedBodyQueue = new Int32Array(world.cellCount);
+    this.magneticConstraintHeads = new Int32Array(world.cellCount);
+    this.magneticConstraintOtherBodies = new Int32Array(world.cellCount * 2);
+    this.magneticConstraintIsVertical = new Uint8Array(world.cellCount * 2);
+    this.nextMagneticConstraint = new Int32Array(world.cellCount * 2);
     this.circuitRoots = new Int32Array(world.cellCount * 2);
     this.circuitDriveSums = new Int32Array(world.cellCount * 2);
     this.nextCircuitCharges = new Int8Array(world.cellCount);
@@ -412,6 +427,7 @@ export class Simulation {
 
   private collectWeldedBodies(): void {
     this.bodyRoots.fill(-1);
+    this.weldedBodyRoots.fill(-1);
     for (let index = 0; index < this.world.cellCount; index += 1) {
       if (this.world.kindAtIndex(index) !== TileKind.Empty) {
         this.bodyRoots[index] = index;
@@ -429,14 +445,25 @@ export class Simulation {
         this.unionBodies(index, index + this.world.width);
       }
     }
+
+    for (let index = 0; index < this.world.cellCount; index += 1) {
+      if (expectDefined(this.bodyRoots[index], "welded body root") < 0) {
+        continue;
+      }
+      const root = this.findBodyRoot(index);
+      this.bodyRoots[index] = root;
+      this.weldedBodyRoots[index] = root;
+    }
   }
 
   /**
-   * Magnetic contact constrains two bodies against separating; it does not
-   * override gravity. Treating each connected set as one movement group lets
-   * an unsupported set fall while support under any member holds the set.
+   * Magnetic contacts group bodies for gravity, preserving their existing
+   * ability to hold one another up. Conveyor movement later uses the recorded
+   * contact axis so tangential movement can slide without moving the target.
    */
   private connectMagneticallyAttractedBodies(): void {
+    this.magneticConstraintHeads.fill(-1);
+    this.magneticConstraintCount = 0;
     for (let magnet = 0; magnet < this.world.cellCount; magnet += 1) {
       const magnetDefinition = TILE_DEFINITIONS[this.world.kindAtIndex(magnet)];
       if (magnetDefinition.attractionRange === 0) {
@@ -466,11 +493,47 @@ export class Simulation {
           continue;
         }
         if (TILE_DEFINITIONS[targetKind].magnetic) {
+          const magnetBody = expectDefined(
+            this.weldedBodyRoots[magnet],
+            "magnet welded body root",
+          );
+          const targetBody = expectDefined(
+            this.weldedBodyRoots[target],
+            "magnetic target welded body root",
+          );
+          if (magnetBody !== targetBody) {
+            this.addMagneticConstraint(
+              magnetBody,
+              targetBody,
+              stepY !== 0,
+            );
+            this.addMagneticConstraint(
+              targetBody,
+              magnetBody,
+              stepY !== 0,
+            );
+          }
           this.unionBodies(magnet, target);
         }
         break;
       }
     }
+  }
+
+  private addMagneticConstraint(
+    body: number,
+    otherBody: number,
+    isVertical: boolean,
+  ): void {
+    const constraint = this.magneticConstraintCount;
+    this.magneticConstraintCount += 1;
+    this.magneticConstraintOtherBodies[constraint] = otherBody;
+    this.magneticConstraintIsVertical[constraint] = isVertical ? 1 : 0;
+    this.nextMagneticConstraint[constraint] = expectDefined(
+      this.magneticConstraintHeads[body],
+      "magnetic constraint head",
+    );
+    this.magneticConstraintHeads[body] = constraint;
   }
 
   private collectBodyMembers(): void {
@@ -496,6 +559,31 @@ export class Simulation {
     }
   }
 
+  private restoreWeldedBodiesAfterGravity(): void {
+    this.gravityHorizontalMoves.fill(0);
+    this.gravityVerticalMoves.fill(0);
+    for (let index = 0; index < this.world.cellCount; index += 1) {
+      const weldedRoot = expectDefined(this.weldedBodyRoots[index], "welded body root");
+      if (weldedRoot < 0) {
+        continue;
+      }
+      const gravityRoot = expectDefined(this.bodyRoots[index], "gravity body root");
+      this.gravityHorizontalMoves[weldedRoot] = expectDefined(
+        this.horizontalMoves[gravityRoot],
+        "horizontal gravity movement",
+      );
+      this.gravityVerticalMoves[weldedRoot] = expectDefined(
+        this.verticalMoves[gravityRoot],
+        "vertical gravity movement",
+      );
+    }
+
+    this.bodyRoots.set(this.weldedBodyRoots);
+    this.horizontalMoves.set(this.gravityHorizontalMoves);
+    this.verticalMoves.set(this.gravityVerticalMoves);
+    this.collectBodyMembers();
+  }
+
   /**
    * Gravity resolves before lower-priority conveyor movement. A conveyor can
    * move a supported body, but cannot redirect a falling body or claim its
@@ -507,6 +595,7 @@ export class Simulation {
     this.drivenBodies.fill(0);
     this.chooseGravityMovements();
     this.resolveDestinationConflicts();
+    this.restoreWeldedBodiesAfterGravity();
     this.collectConveyorForces();
     this.resolveDrivenMovements();
   }
@@ -596,6 +685,58 @@ export class Simulation {
       queueHead += 1;
       const moveX = expectDefined(this.horizontalMoves[root], "horizontal driven movement");
       const moveY = expectDefined(this.verticalMoves[root], "vertical driven movement");
+      for (
+        let constraint = expectDefined(
+          this.magneticConstraintHeads[root],
+          "magnetic constraint head",
+        );
+        constraint >= 0;
+        constraint = expectDefined(
+          this.nextMagneticConstraint[constraint],
+          "next magnetic constraint",
+        )
+      ) {
+        const isVertical =
+          expectDefined(
+            this.magneticConstraintIsVertical[constraint],
+            "magnetic constraint axis",
+          ) === 1;
+        if (isVertical ? moveY === 0 : moveX === 0) {
+          continue;
+        }
+
+        const otherBody = expectDefined(
+          this.magneticConstraintOtherBodies[constraint],
+          "magnetically constrained body",
+        );
+        if (this.drivenBodies[otherBody] === 0) {
+          if (this.verticalMoves[otherBody] === 1) {
+            throw new Error(
+              `Magnetic bodies ${root} and ${otherBody} disagree on gravity movement`,
+            );
+          }
+          this.drivenBodies[otherBody] = 1;
+          this.horizontalMoves[otherBody] = moveX;
+          this.verticalMoves[otherBody] = moveY;
+          this.movementQueue[queueLength] = otherBody;
+          queueLength += 1;
+          if (this.bodyFalls[otherBody] === 0) {
+            this.blockMovementGroup(otherBody);
+          }
+          this.unionMovementGroups(root, otherBody);
+          continue;
+        }
+        if (
+          this.horizontalMoves[otherBody] !== moveX ||
+          this.verticalMoves[otherBody] !== moveY
+        ) {
+          this.blockMovementGroup(root);
+          this.blockMovementGroup(otherBody);
+          continue;
+        }
+        this.unionMovementGroups(root, otherBody);
+      }
+
       for (
         let member = expectDefined(this.bodyHeads[root], "body head");
         member >= 0;

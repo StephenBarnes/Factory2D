@@ -57,6 +57,26 @@ function placeFixedPoweredConveyor(
   world.setWeld(inputX, inputY, inputX + lockX, inputY + lockY, true);
 }
 
+function placeFixedMagneticCeiling(world: World, startX: number, endX: number): void {
+  for (let x = startX; x <= endX; x += 1) {
+    world.place(x, 0, TileKind.Platform);
+    world.place(x, 1, TileKind.Iron);
+    world.setWeld(x, 0, x, 1, true);
+  }
+}
+
+function placeCeilingCrawler(
+  world: World,
+  magnetX: number,
+): { readonly magnetId: number; readonly sensorId: number; readonly conveyorId: number } {
+  const magnetId = world.place(magnetX, 2, TileKind.Magnet, Direction.Up);
+  const sensorId = world.place(magnetX + 1, 2, TileKind.Sensor, Direction.Up);
+  const conveyorId = world.place(magnetX + 2, 2, TileKind.Conveyor);
+  world.setWeld(magnetX, 2, magnetX + 1, 2, true);
+  world.setWeld(magnetX + 1, 2, magnetX + 2, 2, true);
+  return { magnetId, sensorId, conveyorId };
+}
+
 const ACTIVE_DIRECTIONS = [
   { charge: 1 as const, side: Direction.Up },
   { charge: 1 as const, side: Direction.Right },
@@ -157,6 +177,66 @@ describe("conveyor belt forces", () => {
     expect(new Simulation(world).step()).toBe(2);
     expect(world.idAt(3, 3)).toBe(sensorId);
     expect(world.idAt(4, 3)).toBe(conveyorId);
+  });
+
+  it("slides a magnetically supported assembly along a fixed ceiling", () => {
+    const world = new World(8, 7);
+    placeFixedMagneticCeiling(world, 0, 6);
+    const { magnetId, sensorId, conveyorId } = placeCeilingCrawler(world, 2);
+
+    expect(new Simulation(world).step()).toBe(3);
+    expect(world.idAt(1, 2)).toBe(magnetId);
+    expect(world.idAt(2, 2)).toBe(sensorId);
+    expect(world.idAt(3, 2)).toBe(conveyorId);
+  });
+
+  it("falls on the tick after sliding beyond a magnetic ceiling", () => {
+    const world = new World(8, 7);
+    placeFixedMagneticCeiling(world, 1, 4);
+    const { magnetId, sensorId, conveyorId } = placeCeilingCrawler(world, 2);
+    const simulation = new Simulation(world);
+
+    expect(simulation.step()).toBe(3);
+    expect(simulation.step()).toBe(3);
+    expect(world.idAt(0, 2)).toBe(magnetId);
+    expect(simulation.step()).toBe(3);
+    expect(world.idAt(0, 3)).toBe(magnetId);
+    expect(world.idAt(1, 3)).toBe(sensorId);
+    expect(world.idAt(2, 3)).toBe(conveyorId);
+  });
+
+  it("remains magnetically supported when tangential movement hits a wall", () => {
+    const world = new World(8, 7);
+    placeFixedMagneticCeiling(world, 0, 6);
+    const { magnetId, sensorId, conveyorId } = placeCeilingCrawler(world, 0);
+
+    expect(new Simulation(world).step()).toBe(0);
+    expect(world.idAt(0, 2)).toBe(magnetId);
+    expect(world.idAt(1, 2)).toBe(sensorId);
+    expect(world.idAt(2, 2)).toBe(conveyorId);
+  });
+
+  it("moves a free magnetic target with normal conveyor movement", () => {
+    const world = new World(9, 9);
+    placeFixedPoweredConveyor(world, 4, 4, -1, Direction.Down);
+    const magnetId = world.place(4, 3, TileKind.Magnet, Direction.Right);
+    const ironId = world.place(5, 3, TileKind.Iron);
+
+    expect(new Simulation(world).step()).toBe(2);
+    expect(world.idAt(3, 3)).toBe(magnetId);
+    expect(world.idAt(4, 3)).toBe(ironId);
+  });
+
+  it("blocks conveyor movement normal to a fixed magnetic contact", () => {
+    const world = new World(9, 9);
+    placeFixedPoweredConveyor(world, 4, 4, -1, Direction.Down);
+    const magnetId = world.place(4, 3, TileKind.Magnet, Direction.Right);
+    world.place(5, 3, TileKind.Iron);
+    world.place(6, 3, TileKind.Platform);
+    world.setWeld(5, 3, 6, 3, true);
+
+    expect(new Simulation(world).step()).toBe(0);
+    expect(world.idAt(4, 3)).toBe(magnetId);
   });
 
   it("does not lift a gravity-affected block from fixed support", () => {
