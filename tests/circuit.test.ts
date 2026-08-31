@@ -98,7 +98,7 @@ describe("circuit networks", () => {
     expect(world.isWelded(0, 1, 0, 2)).toBe(true);
   });
 
-  it("connects an inverter only through its rotated input and output ports", () => {
+  it("connects an inverter through its rotated isolated inputs and pointed output", () => {
     const world = new World(3, 3);
     world.place(1, 1, TileKind.Inverter, Direction.Right);
     world.place(1, 0, TileKind.Conduit);
@@ -111,10 +111,11 @@ describe("circuit networks", () => {
     world.setWeld(1, 1, 0, 1, true);
     const inverterIndex = 1 * world.width + 1;
 
-    expect(world.hasCircuitConnectionAtIndex(inverterIndex, Direction.Up)).toBe(false);
-    expect(world.hasCircuitConnectionAtIndex(inverterIndex, Direction.Right)).toBe(true);
-    expect(world.hasCircuitConnectionAtIndex(inverterIndex, Direction.Down)).toBe(false);
-    expect(world.hasCircuitConnectionAtIndex(inverterIndex, Direction.Left)).toBe(true);
+    for (let value = Direction.Up; value <= Direction.Left; value += 1) {
+      expect(
+        world.hasCircuitConnectionAtIndex(inverterIndex, value as Direction),
+      ).toBe(true);
+    }
   });
 
   it.each([
@@ -140,6 +141,48 @@ describe("circuit networks", () => {
     expect(world.chargeAt(2, 0)).toBe(output);
     expect(world.chargeAt(3, 0)).toBe(output);
   });
+
+  it.each(
+    ([-1, 0, 1] as const).flatMap((left) =>
+      ([-1, 0, 1] as const).flatMap((rear) =>
+        ([-1, 0, 1] as const).map((right) => {
+          const negatedSum = -(left + rear + right);
+          return {
+            left,
+            rear,
+            right,
+            output: negatedSum < 0 ? -1 : negatedSum > 0 ? 1 : 0,
+          };
+        }),
+      ),
+    ),
+  )(
+    "negates three isolated inputs −($left + $rear + $right) to $output",
+    ({ left, rear, right, output }) => {
+      const world = new World(3, 3);
+      world.place(1, 0, TileKind.Conduit);
+      world.place(0, 1, TileKind.Conduit);
+      world.place(1, 1, TileKind.Inverter, Direction.Up);
+      world.place(2, 1, TileKind.Conduit);
+      world.place(1, 2, TileKind.Conduit);
+      world.setWeld(1, 0, 1, 1, true);
+      world.setWeld(0, 1, 1, 1, true);
+      world.setWeld(1, 1, 2, 1, true);
+      world.setWeld(1, 1, 1, 2, true);
+      world.setCharge(0, 1, left);
+      world.setCharge(1, 2, rear);
+      world.setCharge(2, 1, right);
+      const simulation = new Simulation(world);
+
+      simulation.step();
+
+      expect(world.chargeAt(0, 1)).toBe(0);
+      expect(world.chargeAt(1, 2)).toBe(0);
+      expect(world.chargeAt(2, 1)).toBe(0);
+      expect(world.chargeAt(1, 1)).toBe(output);
+      expect(world.chargeAt(1, 0)).toBe(output);
+    },
+  );
 
   it.each([
     { input: -1 as const, output: 0 as const },

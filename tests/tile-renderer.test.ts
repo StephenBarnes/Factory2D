@@ -237,13 +237,15 @@ describe("circuit rendering", () => {
   });
 
   it.each([
+    { kind: TileKind.Inverter, inputDirection: Direction.Right },
     { kind: TileKind.Inverter, inputDirection: Direction.Down },
+    { kind: TileKind.Inverter, inputDirection: Direction.Left },
     { kind: TileKind.Combiner, inputDirection: Direction.Down },
     { kind: TileKind.Rectifier, inputDirection: Direction.Down },
     { kind: TileKind.Multiplier, inputDirection: Direction.Left },
     { kind: TileKind.Subtractor, inputDirection: Direction.Left },
   ])(
-    "keeps $kind input and output traces separate and individually colored",
+    "keeps $kind input $inputDirection and output traces separate and individually colored",
     ({ kind, inputDirection }) => {
       const context = new RecordingCanvasContext();
       let portCharges = setCircuitPortCharge(0, Direction.Up, 1);
@@ -281,9 +283,17 @@ describe("circuit rendering", () => {
       const inputSegment = context.strokes.find(
         (stroke) => stroke.strokeStyle === CIRCUIT_CHARGE_COLORS[-1],
       )?.segments[0];
-      expect(inputSegment?.fromX).toBe(inputDirection === Direction.Left ? 0 : 16);
+      expect(inputSegment?.fromX).toBe(
+        inputDirection === Direction.Left ? 0 : inputDirection === Direction.Right ? 32 : 16,
+      );
       expect(inputSegment?.fromY).toBe(inputDirection === Direction.Down ? 32 : 16);
-      expect(inputSegment?.toX).toBeCloseTo(inputDirection === Direction.Left ? 7.68 : 16);
+      expect(inputSegment?.toX).toBeCloseTo(
+        inputDirection === Direction.Left
+          ? 7.68
+          : inputDirection === Direction.Right
+            ? 24.32
+            : 16,
+      );
       expect(inputSegment?.toY).toBeCloseTo(inputDirection === Direction.Down ? 24.32 : 16);
     },
   );
