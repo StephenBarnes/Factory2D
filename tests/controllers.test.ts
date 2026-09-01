@@ -36,12 +36,12 @@ describe("workshop session controller", () => {
     expect(puzzleSession.availableComponents).toBe(puzzle.availableComponents);
     expect(puzzleSession.editableRegionAuthoring).toBeNull();
 
-    puzzleSession.world.place(8, 2, TileKind.Stone);
+    puzzleSession.world.place(8, 3, TileKind.Stone);
     sessions.saveEditedBaseline();
     expect(sessions.beginSimulation()).toBe(true);
-    puzzleSession.world.place(8, 2, TileKind.Empty);
+    puzzleSession.world.place(8, 3, TileKind.Empty);
     sessions.resetSimulation();
-    expect(puzzleSession.world.kindAt(8, 2)).toBe(TileKind.Stone);
+    expect(puzzleSession.world.kindAt(8, 3)).toBe(TileKind.Stone);
     expect(puzzleSession.editingState.editable).toBe(true);
 
     expect(sessions.activateSandbox()).toBe(true);

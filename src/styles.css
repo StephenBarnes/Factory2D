@@ -977,6 +977,32 @@ kbd {
   text-align: right;
 }
 
+.test-status-toast {
+  position: absolute;
+  z-index: 5;
+  left: calc(var(--sidebar-width) + (100% - var(--sidebar-width)) / 2);
+  bottom: 92px;
+  max-width: min(640px, calc(100% - var(--sidebar-width) - 32px));
+  padding: 10px 14px;
+  transform: translateX(-50%);
+  border: 1px solid #a84f58;
+  background: rgb(38 14 18 / 96%);
+  box-shadow: 0 8px 22px rgb(0 0 0 / 48%);
+  color: #f0a4aa;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.test-status-toast[hidden],
+.controls button[hidden],
+.test-case-dropup[hidden],
+.test-case-options[hidden] {
+  display: none;
+}
+
 .controls {
   grid-column: 2;
   grid-row: 2;
@@ -994,12 +1020,14 @@ kbd {
   gap: 7px;
 }
 
-.export-dropup {
+.export-dropup,
+.test-case-dropup {
   position: relative;
   display: flex;
 }
 
-.export-options {
+.export-options,
+.test-case-options {
   position: absolute;
   z-index: 4;
   right: 0;
@@ -1015,16 +1043,30 @@ kbd {
 }
 
 .export-options[hidden],
-.export-options button[hidden] {
+.export-options button[hidden],
+.test-case-options[hidden] {
   display: none;
 }
 
-.controls .export-options button {
+.controls .export-options button,
+.controls .test-case-options button {
   flex: none;
   width: 100%;
   min-height: 34px;
   padding: 0 10px;
   text-align: left;
+  white-space: nowrap;
+}
+
+.controls .test-case-options button[aria-pressed="true"] {
+  border-color: #d6993c;
+  color: #e7ad4f;
+}
+
+#test-case-button {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -1097,6 +1139,11 @@ kbd {
 .state-light.running {
   background: #78dcca;
   box-shadow: 0 0 12px rgb(120 220 202 / 60%);
+}
+
+.state-light.failed {
+  background: #e3858a;
+  box-shadow: 0 0 12px rgb(227 133 138 / 60%);
 }
 
 .tick-counter {
@@ -1527,12 +1574,25 @@ kbd {
     width: 100%;
   }
 
+  .controls > .test-case-dropup {
+    flex: 1;
+  }
+
+  .test-case-dropup > #test-case-button {
+    width: 100%;
+  }
+
   .transport button {
     flex: 1;
   }
 
   .animation-control {
     margin-left: 0;
+  }
+
+  .test-status-toast {
+    left: 50%;
+    max-width: calc(100% - 32px);
   }
 }
 

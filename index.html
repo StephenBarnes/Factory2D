@@ -186,11 +186,19 @@
           </div>
         </dl>
       </aside>
+      <div
+        class="test-status-toast"
+        id="test-status-toast"
+        role="status"
+        aria-live="assertive"
+        hidden
+      ></div>
 
       <footer class="controls edge-panel" id="bottom-controls">
         <div class="transport">
           <button class="primary-control" id="play-button" type="button">▶ RUN</button>
           <button id="step-button" type="button">STEP</button>
+          <button id="fast-forward-button" type="button" hidden>≫ FAST</button>
           <button id="reset-button" type="button">RESET</button>
           <button id="clear-button" type="button">CLEAR</button>
           <div class="export-dropup" id="export-dropup">
@@ -217,6 +225,21 @@
           </div>
           <button id="import-button" type="button" title="Load a previously exported board">IMPORT</button>
           <input id="import-file" type="file" accept="application/json,.json" hidden />
+        </div>
+        <div class="test-case-dropup" id="test-case-dropup" hidden>
+          <button
+            id="test-case-button"
+            type="button"
+            aria-expanded="false"
+            aria-controls="test-case-options"
+            title="Choose the test case shown on the board"
+          >CASE</button>
+          <div
+            class="test-case-options"
+            id="test-case-options"
+            aria-label="Test cases"
+            hidden
+          ></div>
         </div>
         <div class="simulation-state" aria-live="polite">
           <span class="state-light" id="state-light"></span>

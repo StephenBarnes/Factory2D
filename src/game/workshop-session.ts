@@ -1,4 +1,5 @@
 import type { PuzzleDefinition } from "./puzzles";
+import { applyEditableSolution } from "./editable-solution";
 import type { SavedPuzzleSolution } from "./puzzle-solutions";
 import type { GridRegion } from "./grid-region";
 import { EditableRegionAuthoringState } from "./editable-region-authoring";
@@ -86,6 +87,21 @@ export class WorkshopSessionController {
     this.currentSession.editableRegionAuthoring?.resetForBoard(world.width, world.height);
   }
 
+  showActiveRuntime(world: World, simulation = new Simulation(world)): void {
+    if (
+      world.width !== this.currentSession.baseline.width ||
+      world.height !== this.currentSession.baseline.height
+    ) {
+      throw new RangeError("Runtime world dimensions must match the workshop baseline");
+    }
+    if (simulation.world !== world) {
+      throw new Error("Runtime simulation must own the displayed world");
+    }
+    this.currentSession.world = world;
+    this.currentSession.simulation = simulation;
+    this.currentSession.previousWorld = world.clone();
+  }
+
   beginSimulation(): boolean {
     const wasEditable = this.currentSession.editingState.editable;
     this.currentSession.editingState.beginSimulation();
@@ -99,7 +115,16 @@ export class WorkshopSessionController {
 
   saveEditedBaseline(): void {
     this.currentSession.world.resetPuzzleResult();
-    this.currentSession.baseline.copyFrom(this.currentSession.world);
+    if (this.currentSession.editableRegion === null) {
+      this.currentSession.baseline.copyFrom(this.currentSession.world);
+    } else {
+      applyEditableSolution(
+        this.currentSession.baseline,
+        this.currentSession.world,
+        this.currentSession.editableRegion,
+      );
+      this.currentSession.baseline.resetPuzzleResult();
+    }
     this.currentSession.simulation.tick = 0;
   }
 

@@ -1,3 +1,4 @@
+import { applyEditableSolution } from "./editable-solution";
 import type { GridRegion } from "./grid-region";
 import {
   MAX_PUZZLE_CYCLE_LIMIT,
@@ -7,6 +8,7 @@ import { computePuzzleScores, type PuzzleScores } from "./puzzle-scores";
 import { PuzzleResult } from "../simulation/puzzle-result";
 import { Simulation } from "../simulation/simulation";
 import type { World } from "../simulation/world";
+import { expectDefined } from "../util/assert";
 
 export type PuzzleTestOutcome = "won" | "lost" | "cycle-limit";
 
@@ -24,37 +26,152 @@ export interface PuzzleTestReport {
   readonly scores: PuzzleScores | null;
 }
 
-/** Runs every puzzle case against an isolated copy of the editable solution. */
+export type PuzzleTestRunStatus =
+  | "running"
+  | "between-cases"
+  | "failed"
+  | "succeeded";
+
+/** Incremental puzzle verification whose live world can be rendered by the workshop. */
+export class PuzzleTestRun {
+  private readonly solution: World;
+  private readonly results: PuzzleTestCaseResult[] = [];
+  private caseIndex = 0;
+  private currentSimulationValue: Simulation;
+  private statusValue: PuzzleTestRunStatus = "running";
+  private reportValue: PuzzleTestReport | null = null;
+
+  constructor(
+    private readonly puzzle: PuzzleDefinition,
+    solution: World,
+  ) {
+    if (puzzle.testCases.length === 0) {
+      throw new Error(`Puzzle "${puzzle.id}" has no test cases`);
+    }
+    this.solution = solution.clone();
+    this.currentSimulationValue = this.createCurrentSimulation();
+  }
+
+  get status(): PuzzleTestRunStatus {
+    return this.statusValue;
+  }
+
+  get currentCase(): PuzzleTestCaseDefinition {
+    return expectDefined(
+      this.puzzle.testCases[this.caseIndex],
+      `Puzzle "${this.puzzle.id}" test case ${this.caseIndex}`,
+    );
+  }
+
+  get world(): World {
+    return this.currentSimulationValue.world;
+  }
+
+  get simulation(): Simulation {
+    return this.currentSimulationValue;
+  }
+
+  get report(): PuzzleTestReport | null {
+    return this.reportValue;
+  }
+
+  step(): PuzzleTestRunStatus {
+    if (this.statusValue !== "running") {
+      throw new Error(`Cannot step puzzle tests while ${this.statusValue}`);
+    }
+
+    this.currentSimulationValue.step();
+    const testCase = this.currentCase;
+    if (
+      this.world.puzzleResult === PuzzleResult.InProgress &&
+      this.currentSimulationValue.tick < testCase.cycleLimit
+    ) {
+      return this.statusValue;
+    }
+
+    const outcome = this.world.puzzleResult === PuzzleResult.Won
+      ? "won"
+      : this.world.puzzleResult === PuzzleResult.Lost ? "lost" : "cycle-limit";
+    this.results.push(Object.freeze({
+      id: testCase.id,
+      name: testCase.name,
+      outcome,
+      cycles: this.currentSimulationValue.tick,
+      cycleLimit: testCase.cycleLimit,
+    }));
+
+    if (outcome !== "won") {
+      this.finish(false);
+    } else if (this.caseIndex === this.puzzle.testCases.length - 1) {
+      this.finish(true);
+    } else {
+      this.statusValue = "between-cases";
+    }
+    return this.statusValue;
+  }
+
+  continueToNextCase(): void {
+    if (this.statusValue !== "between-cases") {
+      throw new Error(`Cannot continue puzzle tests while ${this.statusValue}`);
+    }
+    this.caseIndex += 1;
+    this.currentSimulationValue = this.createCurrentSimulation();
+    this.statusValue = "running";
+  }
+
+  runRemaining(): PuzzleTestReport {
+    while (this.statusValue === "running" || this.statusValue === "between-cases") {
+      if (this.statusValue === "between-cases") {
+        this.continueToNextCase();
+      } else {
+        this.step();
+      }
+    }
+    return expectDefined(this.reportValue ?? undefined, "Completed puzzle test report");
+  }
+
+  private createCurrentSimulation(): Simulation {
+    return new Simulation(createPuzzleTestCaseWorld(
+      this.currentCase,
+      this.puzzle.editableRegion,
+      this.solution,
+    ));
+  }
+
+  private finish(succeeded: boolean): void {
+    this.statusValue = succeeded ? "succeeded" : "failed";
+    const frozenResults = Object.freeze(this.results.slice());
+    const scores = succeeded
+      ? computePuzzleScores(
+        this.puzzle,
+        this.solution,
+        frozenResults.reduce((cycles, result) => cycles + result.cycles, 0),
+      )
+      : null;
+    this.reportValue = Object.freeze({ succeeded, results: frozenResults, scores });
+  }
+}
+
+/** Runs puzzle cases without rendering, stopping at the first failed case. */
 export function runPuzzleTests(
   puzzle: PuzzleDefinition,
   solution: World,
 ): PuzzleTestReport {
-  if (puzzle.testCases.length === 0) {
-    throw new Error(`Puzzle "${puzzle.id}" has no test cases`);
-  }
-
-  const results: PuzzleTestCaseResult[] = [];
-  let succeeded = true;
-  for (const testCase of puzzle.testCases) {
-    const result = runPuzzleTestCase(testCase, puzzle.editableRegion, solution);
-    results.push(result);
-    succeeded = result.outcome === "won" && succeeded;
-  }
-  const scores = succeeded
-    ? computePuzzleScores(
-      puzzle,
-      solution,
-      results.reduce((cycles, result) => cycles + result.cycles, 0),
-    )
-    : null;
-  return Object.freeze({ succeeded, results: Object.freeze(results), scores });
+  return new PuzzleTestRun(puzzle, solution).runRemaining();
 }
 
-function runPuzzleTestCase(
+export function createPuzzleTestCaseWorld(
   testCase: PuzzleTestCaseDefinition,
   editableRegion: GridRegion,
   solution: World,
-): PuzzleTestCaseResult {
+): World {
+  validateCycleLimit(testCase);
+  const world = testCase.createInitialWorld();
+  applyEditableSolution(world, solution, editableRegion);
+  return world;
+}
+
+function validateCycleLimit(testCase: PuzzleTestCaseDefinition): void {
   if (
     !Number.isSafeInteger(testCase.cycleLimit) ||
     testCase.cycleLimit < 1 ||
@@ -63,59 +180,5 @@ function runPuzzleTestCase(
     throw new RangeError(
       `Puzzle test case "${testCase.id}" cycle limit must be from 1 through ${MAX_PUZZLE_CYCLE_LIMIT}`,
     );
-  }
-
-  const world = testCase.createInitialWorld();
-  applyEditableSolution(world, solution, editableRegion);
-  const simulation = new Simulation(world);
-  while (
-    simulation.tick < testCase.cycleLimit &&
-    world.puzzleResult === PuzzleResult.InProgress
-  ) {
-    simulation.step();
-  }
-
-  const outcome = world.puzzleResult === PuzzleResult.Won
-    ? "won"
-    : world.puzzleResult === PuzzleResult.Lost ? "lost" : "cycle-limit";
-  return Object.freeze({
-    id: testCase.id,
-    name: testCase.name,
-    outcome,
-    cycles: simulation.tick,
-    cycleLimit: testCase.cycleLimit,
-  });
-}
-
-function applyEditableSolution(
-  target: World,
-  solution: World,
-  editableRegion: GridRegion,
-): void {
-  if (target.width !== solution.width || target.height !== solution.height) {
-    throw new RangeError("Puzzle test world dimensions must match the solution");
-  }
-
-  for (let y = 0; y < target.height; y += 1) {
-    for (let x = 0; x < target.width; x += 1) {
-      if (editableRegion.contains(x, y)) {
-        target.place(x, y, solution.kindAt(x, y), solution.orientationAt(x, y));
-      }
-    }
-  }
-
-  for (let y = 0; y < target.height; y += 1) {
-    for (let x = 0; x < target.width - 1; x += 1) {
-      if (editableRegion.containsEdge(x, y, x + 1, y)) {
-        target.setWeld(x, y, x + 1, y, solution.isWelded(x, y, x + 1, y));
-      }
-    }
-  }
-  for (let y = 0; y < target.height - 1; y += 1) {
-    for (let x = 0; x < target.width; x += 1) {
-      if (editableRegion.containsEdge(x, y, x, y + 1)) {
-        target.setWeld(x, y, x, y + 1, solution.isWelded(x, y, x, y + 1));
-      }
-    }
   }
 }

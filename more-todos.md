@@ -1,16 +1,20 @@
-Tasks that are NOT actionable yet, or have prereqs, are marked as DEFER below.
+Tasks that are NOT actionable yet due to prereqs, or are lower priority, are marked as DEFER below.
 
 Game flow:
-* Allow converting selection to the allowed placement region with a button, only in the sandbox. For designing shareable puzzles.
 * Implement a text-box tool that places and edits text boxes on the game screen. Useful for tutorial puzzles, and also for players that want to label/annotate their designs. Model them separate from the component grid - they're not grid-aligned, don't occupy tiles, and have no prices. Include them the puzzle JSON format and scene JSON format.
 * Remove the "import" button on puzzles; it should only be displayed in the sandbox. It's already disabled in puzzles, but still visible.
-* For running test cases, some conveniences: Show the test cases running. Increase tick rate gradually so it doesn't take too long. Add a fast-forward button that runs them as fast as possible with no rendering. When a test case fails, immediately pause and show the failed state, instead of showing the results modal; show a message somewhere (maybe a toast?) saying something like `Failed: test case "name" cycle 123` (or `reached cycle limit`).
 * Add tick speeds above 60 ticks per second; for those, step the simulation multiple times between renders. This is useful for testing solutions fast while still showing what's going on.
-* Edit format for scenes and puzzles: make the fields `orientations`, `charges`, `crossingCharges`, `furnaces`, `components` all optional, with default value of `[]`. When exporting, don't specify those fields if they're the empty list, which is often the case. This will reduce incompatibility when we add new block types and de-bloats the format.
-* Similarly, remove the "standard" test case with no overrides - treat that as a given and only list additional test cases in the file.
-* Further compact orientations and charges in the export/import format, possibly storing charges per network instead of per tile. More complex per-tile state (e.g. furnace stored ticks or target/delivery-block configuration) can remain verbose. Only include full ASCII grids for fields that aren't the default value.
-* Add collapsible sections (default collapsed) on the main menu: a "credits" section (art/music credits, links to similar video games like Roody:2D, Zachtronics, Infinifactory), and a "technical info" section that explains what stack we're using, architecture, etc.
+* Add collapsible sections (default collapsed) on the main menu: a credits section, and a technical info section to explain the video game architecture and link to GitHub repo.
 * DEFER After the last set of puzzles is unlocked, also unlock a "full toolbelt" equivalent of every puzzle - a variant where all components are available, with the same list of prices for each. This adds some content, lets players compete on more histograms.
+* Add a mechanism to detect if previous state is exactly equal to current state. Can have false negatives. The goal is to detect loops, and interrupt execution when testing puzzle solutions. (For example: the puzzle is to drop one stone block on a delivery block. The player drops it in some other location, where it sits indefinitely. We don't want to make them sit through N ticks or have to press fast-forward button.) We could combine this with the "active/asleep regions" optimization pointed out elsewhere in this file.
+* DEFER Add support for a new puzzle type, where the player starts with a machine that doesn't work. They have to modify as few tiles as possible to make it work. Same scoring rules but we only count modified tiles. Add some way to view what tiles have been modified - maybe color grid cells yellow if their contained cell is modified. Could auto-generate some of these puzzles from reference solutions.
+* Modify the delivery box: it should consume an entire welded body in front of it, if it matches the entire welded body behind it. When consuming, delete the entire body at once. (Later, overlay an animation of it shrinking and moving into the block.) This allows more complex puzzles where the output is a group welded in a specific way.
+
+Storage format, import/export:
+* Allow importing puzzle files in the sandbox. Should be almost the same as importing a scene, but also create the player modifiable regions, and later (once sandbox has tools for setting name/descripton and test cases) import those from the test file as well.
+* Edit format for scenes and puzzles: make the fields `orientations`, `charges`, `crossingCharges`, `furnaces`, `components` all optional, with default value of `[]`. When exporting, don't specify those fields if they're the empty list, which is often the case. This will reduce incompatibility when we add new block types and de-bloats the format.
+* Similarly, remove the "standard" test case with no overrides, from the stored format - treat that as a given and only list additional test cases in the file.
+* Further compact orientations and charges in the export/import format, possibly storing charges per network instead of per tile. More complex per-tile state (e.g. furnace stored ticks or target/delivery-block configuration) can remain verbose. Only include full ASCII grids for fields that aren't the default value.
 
 Player-created puzzles, histograms, and authoring tools:
 * Make puzzle share/save options open a modal to enter the name, description, and goal. We'll use this both for authoring puzzles easily, and for later allowing users to share puzzles to a public list of community puzzles.
@@ -32,10 +36,11 @@ Components:
 * A sensor that detects when the sensor's own tile moves, and outputs +1 on that side, -1 on the other side.
 * Comparers: compare front neighbor to back neighbor, and output +1 on sides if they're equal, else output 0.
 * Assemblers that convert a group of blocks welded in a specific way into one block. For example iron and copper blocks welded in a specific way are converted to a piston block. We also want this to be able to convert one block to multiple (unwelded) blocks - so need to store a queue of blocks to emit, emit them one-by-one when the output tile is empty, and prevent the assembler from running when the queue is non-empty or over some limit.
+* Assembler should match output rotation to input rotation.
 * Flipper: attaches to one block, then flips the entire connected/welded group of blocks around that line horizontally or vertically, if it would not collide/overlap other blocks.
 * Laser splitter: splits everything in a line.
 * Component that rotates a neighboring block or body around itself.
-* Add a fragility flag to tile kinds, and set it to true for glass blocks. A fragile block with no welds that drops and then stops falling should be deleted, animated with a shatter effect. Maybe don't break if it fell only one tile before stopping; would require storing I think two bits per fragile block, for whether it fell in the previous tick and whether it'll shatter on stopping. Could create interesting puzzles like lowering them one block at a time with pistons, or welding before dropping and then unwelding.
+* Add a fragility flag to tile kinds, and set it to true for glass blocks. A fragile block with no welds that drops and then stops falling should be deleted (later animated with a shatter effect). Maybe don't break if it fell only one tile before stopping; would require storing I think two bits per fragile block, for whether it fell in the previous tick and whether it'll shatter on stopping. Could create interesting puzzles like lowering them one block at a time with pistons, or welding before dropping and then unwelding.
 * Add a press/stamper/crusher. Behaves similarly to the piston, but (1) if piston extension is blocked by another tile, and that tile can't be moved, it instead unwelds and destroys that tile; and (2) we have a list of recipes for transforming the tile that the extended arm touches, on extension.
 * Grinder blocks that process a block in front into a product block - exactly like the furnace, but with a distinct table of recipes and different appearance (and later animation and sound).
 * A drill/destroyer block that destroys the block in front of it.
@@ -105,30 +110,41 @@ UI:
 * On puzzle and sandbox screens, move the puzzle title and the back button to the bottom-left, on the bottom bar. Currently they're at the top of the palette panel.
 * Add info button, next to the game control region (with the puzzle name, goal text, and button to go back to menu / puzzle briefing). When clicked, this should open a modal that shows the puzzle name, description, and goal, and later maybe an extended description and some art, etc. Remove the goal text currently in that region. Also we'll move that game control region to bottom-left - it's a separate todo above.
 * When solving a puzzle, in the game control region, show the current total price and footprint, e.g. "5⚙ | 4×5". When the mouse is held over the price, modify the palette to show prices over each component. Update when a block is placed or removed. Don't show in the sandbox.
-* For the ROM's configuration modal, allow click and drag to set multiple cells.
+* For the ROM's configuration modal, allow click and drag to set multiple cells. Add three buttons to fill with red, blue, or black.
 * Allow mirroring components with some hotkey. Because we want to allow mirroring selections, and components like flippers. But this probably currently breaks things like ROMs which do not have mirror symmetry. Also check all components for any that have rotational asymmetry that may cause a rotated machine to behave differently, e.g. ROM cursor's wrapping behavior may break rotational symmetry.
+* If the player tries to place a block, or weld, and we don't allow it, indicate the reason. (1) If it's because they're testing a puzzle, flash the reset button. (2) If it's a weld or tile edit outside the allowed region, flash the region red. (3) If they're trying to weld a block that can't be 
 
 Selection tool:
 * Render the selection with its welds. Currently it shows all the blocks as fully unwelded. (Committing it correctly welds already, so it's just the rendering that's not reflecting the welds.)
-* Left-clicking should unselect. Currently it creates a 1x1 selection.
+* Left-clicking on the grid, while something is selected, should unselect. Currently it creates a 1x1 selection.
 * Add button to flip selection vertically. (We already have horizontal flip.)
-* Later maybe support selections that are a union of rectangles, created by shift-LMB-drag.
-* Add a way to save a selected region in a list of saved snippets/machines, and import from that. Make it usable for transferring partial machines from one puzzle solution to another. Requires a snippet manager button and collapsible panel.
+* Modify the control-A shortcut: instead of selecting the entire board or region, rather select the AABB of nonempty tiles in that region.
+* DEFER Maybe support selections that are a union of rectangles, created by shift-LMB-drag.
+* Add a way to save a selected region in a list of saved snippets/machines, and import from that. Make it usable for transferring partial machines from one puzzle solution to another. Requires a snippet manager button and collapsible panel. Store snippets globally per user, not per puzzle.
+* DEFER In the snippets panel, add buttons to delete a snippet, and import/export (maybe the same as the scene format, or a different format).
 
 Visuals:
 * Re-theme the entire game's UI. The current palette (black, dark blue, cyan, yellow) doesn't really fit the theme. Prefer colors like earth brown, stone gray, bronze, gold. Maybe: 312312 (brown), 4B5052 (grey), F1CC38 (gold), 5C718C (blue).
 * Make nice panel outlines with corner decorations, gilded Art Deco style.
-* Add a dark mode toggle. Turn it on by default.
+* Add a dark/light mode toggle. Set to dark by default, or browser default.
 * Add backgrounds for puzzles, maybe with parallax as the player pans.
 * For the piston base block, don't show the small rectangle that's meant to represent the head/arm of the piston. Only show it on the combined / retracted base+arm block, and on the extended arm block.
-* Mark the wire crossing in a way that makes it apparent it's a wire-crossing block regardless of how many circuit connections it has. Currently with one wire, or two opposite-side wires connected, it looks like a conduit block except for the background color. Maybe draw the central cross regardless of how many sides are wired.
-* Add animation for the delivery box - animate tiles moving into it, and shrinking, as they're absorbed.
-* Replace the current icon set with more intuitive or pretty symbols, matching the rune theme. Make stone/glass/platform have two parallel lines instead of the Z-lightning-bolt. Block sensor should have angular rune-like eye symbol (hollow diamond with center diamond for the pupil); charge sensor should be the same eye with lighting bolt replacing pupil. Fixed charge should have 3 lighting bolts, not plus symbol and circle. Inverter should be "hagalaz" N/H symbol. Subtractor should mark back with a small plus. Rectifier should be "thurisaz" `|>` instead of current `>|`. Victory block should have "jera" rune symbol. Magnet should be reworked, but defer until we change its mechanics. Also give them sensible background colors, e.g. shades of purple for all sensors, teal/blue for all 3-input mathematical transforms.
-* Improve piston extension/retraction animation.
+* Mark the "wire crossing" tile in a way that makes it apparent it's a wire-crossing block regardless of how many circuit connections it has. Currently with one wire, or two opposite-side wires connected, it looks like a conduit block except for the background color. Maybe draw the central cross regardless of how many sides are wired.
+* Replace the current rune icon set with more intuitive or pretty symbols, matching the rune theme. Make stone/glass/platform have two parallel lines instead of the Z-lightning-bolt. Block sensor should have angular rune-like eye symbol (hollow diamond with center diamond for the pupil); charge sensor should be the same eye with lighting bolt replacing pupil. Fixed charge should have 3 lighting bolts, not plus symbol and circle. Inverter should be "hagalaz" N/H symbol. Subtractor should mark back with a small plus. Rectifier should be "thurisaz" `|>` instead of current `>|`. Victory block should have "jera" rune symbol. Magnet should be reworked, but defer until we change its mechanics. Also give them sensible background colors, e.g. shades of purple for all sensors, teal/blue for all 3-input mathematical transforms.
 * Rename runes; prefer metaphorical, arcane, or Anglish-style names. ROM rune -> rune of wisdom, sensor rune -> watchful rune, inverter -> gainsayer rune, delay rune -> recall rune, rectifier -> rightener, etc. Maybe rename +1, -1, and 0 to right, left, and center, or some other natural ternary system, if we can find a way to explain sum, multiply, and subtraction concisely in that system.
 * When placing welders/splitters, show additional bars for where the welds/splits will happen.
+
+Animations:
 * Animate when joints are welded or split, including by the welder/splitter components.
+* Improve piston extension/retraction animation.
+* Add animation for the delivery box - animate tiles moving into it, and shrinking, as they're absorbed.
+* Animate fragile blocks shattering.
 
 Larger projects, DEFER to later or never, and break up into tasks:
 * DEFER Add a hexagonal variant. All tiles become hexagons. Most of our code probably still works, though using 6 neighbors instead of 4.
 * DEFER Add a system of mechanical devices, a bit like our current ternary circuit system (conduits, inverter, etc.) but with different visuals and different mechanics. Since the game is 2D, we're restricted to motion that's legible in 2D - so use chain drives rather than driveshafts. Add chain drives that can rotate clockwise (+1), counterclockwise (-1), or stay still. Add gears (closer to one edge of the cell) that rotate in the inverse direction from that cell. Tint rotating components blue/red to make charges more visually distinct. Add equivalents for our runes: sensor rune becomes pressure plate, inverter is just a gear, wire-crossing is crossed chains. Others I'm not sure about: combiner, rectifier, multiplier, subtractor, sensor, selector. Also motors and generators to convert between runes/conduits and these clockwork components. We may add this as a later alternative to runes and conduits, for additional challenge.
+
+Puzzle ideas:
+* DEFER Blocks that set specific rules, e.g. what can be smelted to what. Allows puzzles in the vein of Baba Is You, or just more freedom in puzzle design. Advanced puzzles could involve changing the rules physically on the game board. Maybe have a "rule" block that looks like an arrow. Can be configured to set furnace recipes, grinder recipes, assembler recipes.
+* Count up to N pulses from two separate sources and decide which source gave more pulses in total. One solution idea: use a counter block, with an inverter on one of the two inputs, and then check whether final value is positive or negative? But wrap-arounds are possible, so maybe use spark blocks to initialize it to N. Also we can't read the value of the counter block directly, would need to decrement it until it reaches zero and compare number of decrements to initial value; but that seems like almost the same problem we started with?
+* DEFER Copy any puzzles from The Witness that we can recreate in this game. Add components if necessary.

@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { GridRegion } from "../src/game/grid-region";
 import { PuzzleComponents } from "../src/game/puzzle-components";
-import { runPuzzleTests } from "../src/game/puzzle-test-runner";
+import {
+  createPuzzleTestCaseWorld,
+  PuzzleTestRun,
+  runPuzzleTests,
+} from "../src/game/puzzle-test-runner";
 import type {
   PuzzleDefinition,
   PuzzleTestCaseDefinition,
@@ -75,7 +79,26 @@ describe("puzzle test runner", () => {
     expect(solution.kindAt(0, 0)).toBe(TileKind.FixedCharge);
   });
 
-  it("runs later cases after a failure and requires every case to win", () => {
+  it("preserves editable configurable-component settings in a case world", () => {
+    const solution = emptyVictoryWorld();
+    solution.place(0, 0, TileKind.Delay);
+    solution.configureNumericComponent(0, 0, 7);
+    const testCase = caseDefinition("configured", 5, emptyVictoryWorld);
+    const puzzle = puzzleWith([testCase]);
+
+    const testWorld = createPuzzleTestCaseWorld(
+      testCase,
+      puzzle.editableRegion,
+      solution,
+    );
+
+    expect(testWorld.componentStateSnapshotAt(0, 0)).toMatchObject({
+      type: "delay",
+      length: 7,
+    });
+  });
+
+  it("stops immediately on the first failed case", () => {
     const solution = new World(3, 1);
     const puzzle = puzzleWith([
       caseDefinition("loss", 5, () => chargedVictoryWorld(-1)),
@@ -88,8 +111,31 @@ describe("puzzle test runner", () => {
     expect(report.scores).toBeNull();
     expect(report.results.map((result) => [result.id, result.outcome])).toEqual([
       ["loss", "lost"],
-      ["win", "won"],
     ]);
+  });
+
+  it("exposes each live case world and pauses between successful cases", () => {
+    const solution = emptyVictoryWorld();
+    solution.place(0, 0, TileKind.FixedCharge);
+    solution.setWeld(0, 0, 1, 0, true);
+    const run = new PuzzleTestRun(puzzleWith([
+      caseDefinition("first", 5, emptyVictoryWorld),
+      caseDefinition("second", 5, emptyVictoryWorld),
+    ]), solution);
+
+    expect(run.currentCase.id).toBe("first");
+    expect(run.status).toBe("running");
+    expect(run.step()).toBe("running");
+    expect(run.step()).toBe("between-cases");
+    expect(run.world.puzzleResult).toBe(PuzzleResult.Won);
+
+    run.continueToNextCase();
+    expect(run.currentCase.id).toBe("second");
+    expect(run.simulation.tick).toBe(0);
+    expect(run.runRemaining()).toMatchObject({
+      succeeded: true,
+      results: [{ id: "first" }, { id: "second" }],
+    });
   });
 
   it("reports the exact cycle limit when a case never reaches victory", () => {

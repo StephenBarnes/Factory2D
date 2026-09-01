@@ -5,7 +5,11 @@ import type {
 } from "./dev/diagnostic-snapshot";
 import { NavigationController } from "./game/navigation-controller";
 import { SavedSolutionController } from "./game/saved-solution-controller";
-import { runPuzzleTests } from "./game/puzzle-test-runner";
+import {
+  createPuzzleTestCaseWorld,
+  PuzzleTestRun,
+  type PuzzleTestReport,
+} from "./game/puzzle-test-runner";
 import { serializePuzzleTemplate } from "./game/puzzle-export";
 import { createSandboxWorld, puzzleById } from "./game/puzzles";
 import {
@@ -55,6 +59,10 @@ import { PuzzleTestReportView } from "./ui/puzzle-test-report";
 const MAX_AUTOMATIC_ANIMATION_MS = 250;
 const MANUAL_STEP_ANIMATION_MS = 200;
 const HIGH_SPEED_TICKS_PER_SECOND = 60;
+const INITIAL_TEST_TICKS_PER_SECOND = 5;
+const MAX_TEST_TICKS_PER_SECOND = 60;
+const TEST_SPEED_DOUBLING_MS = 3_000;
+const TEST_CASE_TRANSITION_MS = 600;
 const PALETTE_PREVIEW_SUPERSAMPLING = 2;
 const KEYBOARD_PAN_PIXELS = 64;
 const MAX_CLIPBOARD_EXPORT_CHARACTERS = 1_000_000;
@@ -95,6 +103,11 @@ let tileInspector = new TileInspector(inspectorPanel, world);
 const playButton = requiredElement<HTMLButtonElement>("play-button");
 const transportShortcutLabel = requiredElement<HTMLElement>("transport-shortcut-label");
 const testReportDialog = requiredElement<HTMLDialogElement>("test-report-dialog");
+const fastForwardButton = requiredElement<HTMLButtonElement>("fast-forward-button");
+const testCaseDropup = requiredElement<HTMLElement>("test-case-dropup");
+const testCaseButton = requiredElement<HTMLButtonElement>("test-case-button");
+const testCaseOptions = requiredElement<HTMLElement>("test-case-options");
+const testStatusToast = requiredElement<HTMLElement>("test-status-toast");
 const componentConfigurationDialogElement = requiredElement<HTMLDialogElement>(
   "component-configuration-dialog",
 );
@@ -156,6 +169,10 @@ function isInspectorTool(value: string | undefined): value is InspectorTool {
 
 
 let testingPuzzleSolution = false;
+let activePuzzleTestRun: PuzzleTestRun | null = null;
+let viewedPuzzleTestCaseId: string | null = null;
+let puzzleTestCaseStartedAt = 0;
+let nextPuzzleTestCaseAt = 0;
 let selectedKind = TileKind.Sand;
 let previousSelectedKind: TileKind = selectedKind;
 let selectedOrientation = Direction.Up;
@@ -191,14 +208,20 @@ let componentInspectorReferences: readonly (InspectorComponentReference | undefi
 function updateTransportState(): void {
   const editingEnabled = activeSession.editingState.editable;
   const puzzleWorkshop = navigation.screen.kind === "puzzle";
+  const testFailed = activePuzzleTestRun?.status === "failed";
   playButton.textContent = puzzleWorkshop
     ? testingPuzzleSolution ? "TESTING…" : "◆ TEST"
     : running ? "Ⅱ PAUSE" : "▶ RUN";
   playButton.disabled = testingPuzzleSolution;
   playButton.classList.toggle("running", !puzzleWorkshop && running);
+  fastForwardButton.hidden = !testingPuzzleSolution;
+  fastForwardButton.disabled = !testingPuzzleSolution;
+  testCaseButton.disabled = testingPuzzleSolution;
   stateLight.classList.toggle("running", running || testingPuzzleSolution);
+  stateLight.classList.toggle("failed", testFailed);
   stateLabel.textContent = testingPuzzleSolution
-    ? "TESTING CASES"
+    ? activePuzzleTestRun?.status === "between-cases" ? "CASE PASSED" : "TESTING CASE"
+    : testFailed ? "TEST FAILED"
     : running ? "SIMULATING" : editingEnabled ? "BUILD MODE" : "RESET TO EDIT";
   stepButton.disabled = running || testingPuzzleSolution;
   clearButton.disabled = !editingEnabled || testingPuzzleSolution;
@@ -261,14 +284,103 @@ function loadActiveWorkshopSession(): void {
   animationDuration = 0;
 }
 
+function setTestCaseOptionsOpen(open: boolean): void {
+  testCaseOptions.hidden = !open;
+  testCaseButton.setAttribute("aria-expanded", String(open));
+}
+
+function hideTestStatus(): void {
+  testStatusToast.hidden = true;
+  testStatusToast.textContent = "";
+}
+
+function syncViewedTestCaseControl(): void {
+  const screen = navigation.screen;
+  if (screen.kind !== "puzzle") {
+    testCaseDropup.hidden = true;
+    setTestCaseOptionsOpen(false);
+    return;
+  }
+  const puzzle = puzzleById(screen.puzzleId);
+  const testCase = expectDefined(
+    puzzle.testCases.find((candidate) => candidate.id === viewedPuzzleTestCaseId),
+    `Viewed test case "${viewedPuzzleTestCaseId ?? ""}"`,
+  );
+  testCaseDropup.hidden = false;
+  testCaseButton.textContent = `CASE: ${testCase.name}`;
+  for (const option of testCaseOptions.querySelectorAll<HTMLButtonElement>("button")) {
+    option.setAttribute("aria-pressed", String(option.dataset.testCaseId === testCase.id));
+  }
+}
+
+function configureTestCaseControls(): void {
+  const screen = navigation.screen;
+  testCaseOptions.replaceChildren();
+  setTestCaseOptionsOpen(false);
+  if (screen.kind !== "puzzle") {
+    viewedPuzzleTestCaseId = null;
+    syncViewedTestCaseControl();
+    return;
+  }
+
+  const puzzle = puzzleById(screen.puzzleId);
+  viewedPuzzleTestCaseId = expectDefined(
+    puzzle.testCases[0],
+    `Puzzle "${puzzle.id}" first test case`,
+  ).id;
+  for (const testCase of puzzle.testCases) {
+    const option = document.createElement("button");
+    option.type = "button";
+    option.textContent = testCase.name;
+    option.dataset.testCaseId = testCase.id;
+    option.setAttribute("aria-pressed", "false");
+    option.addEventListener("click", () => {
+      setTestCaseOptionsOpen(false);
+      showPuzzleTestCase(testCase.id);
+    });
+    testCaseOptions.append(option);
+  }
+  syncViewedTestCaseControl();
+}
+
+function showPuzzleTestCase(testCaseId: string): void {
+  const screen = navigation.screen;
+  if (screen.kind !== "puzzle" || testingPuzzleSolution) {
+    return;
+  }
+  if (tileSelection.active) {
+    commitTileSelection();
+  }
+  const puzzle = puzzleById(screen.puzzleId);
+  const testCase = expectDefined(
+    puzzle.testCases.find((candidate) => candidate.id === testCaseId),
+    `Puzzle "${puzzle.id}" test case "${testCaseId}"`,
+  );
+  sessions.resetSimulation();
+  const testWorld = createPuzzleTestCaseWorld(
+    testCase,
+    puzzle.editableRegion,
+    activeSession.baseline,
+  );
+  sessions.showActiveRuntime(testWorld);
+  activePuzzleTestRun = null;
+  viewedPuzzleTestCaseId = testCase.id;
+  hideTestStatus();
+  testReportView.close();
+  loadActiveWorkshopSession();
+  renderer.fitBoardToViewport();
+  syncViewedTestCaseControl();
+  updateTransportState();
+  refreshPointerHover();
+}
+
 
 function finishAnimation(): void {
   previousWorld.copyFrom(world);
   animationDuration = 0;
 }
-function animationsEnabled(): boolean {
-  return animationToggle.checked &&
-    Number(speedSelect.value) !== HIGH_SPEED_TICKS_PER_SECOND;
+function animationsEnabled(ticksPerSecond = Number(speedSelect.value)): boolean {
+  return animationToggle.checked && ticksPerSecond !== HIGH_SPEED_TICKS_PER_SECOND;
 }
 
 function finishAnimationIfDisabled(): void {
@@ -831,6 +943,10 @@ function stopWorkshopActivity(): void {
     commitTileSelection();
   }
   testingPuzzleSolution = false;
+  activePuzzleTestRun = null;
+  viewedPuzzleTestCaseId = null;
+  hideTestStatus();
+  setTestCaseOptionsOpen(false);
   testReportView.close();
   componentConfigurationView.close();
   closeExportOptions();
@@ -853,6 +969,7 @@ const navigation = new NavigationController(
     onWorkshopSessionChanged: loadActiveWorkshopSession,
     onWorkshopShown: () => {
       configureComponentPalette();
+      configureTestCaseControls();
       updateTransportState();
       importButton.disabled = activeSession.editableRegion !== null;
       updateExportOptionsForSession();
@@ -879,7 +996,7 @@ if (import.meta.env.DEV) {
         : null,
       activeSolutionId: screen.kind === "puzzle" ? screen.solutionId : null,
       simulation: {
-        running,
+        running: running || testingPuzzleSolution,
         tick: simulation.tick,
         editable: activeSession.editingState.editable,
         puzzleResult,
@@ -995,43 +1112,82 @@ sidebarControls.addEventListener("pointerout", (event) => {
 
 playButton.addEventListener("click", () => {
   if (navigation.screen.kind === "puzzle") {
-    void testCurrentPuzzleSolution();
+    testCurrentPuzzleSolution();
   } else {
     setRunning(!running);
   }
 });
 
-async function testCurrentPuzzleSolution(): Promise<void> {
-  const requestedScreen = navigation.screen;
-  if (requestedScreen.kind !== "puzzle" || testingPuzzleSolution) {
+function mountCurrentPuzzleTestCase(run: PuzzleTestRun, startedAt: number): void {
+  sessions.showActiveRuntime(run.world, run.simulation);
+  viewedPuzzleTestCaseId = run.currentCase.id;
+  puzzleTestCaseStartedAt = startedAt;
+  nextPuzzleTestCaseAt = 0;
+  accumulatedTime = 0;
+  loadActiveWorkshopSession();
+  renderer.fitBoardToViewport();
+  syncViewedTestCaseControl();
+}
+
+function testCurrentPuzzleSolution(): void {
+  const screen = navigation.screen;
+  if (screen.kind !== "puzzle" || testingPuzzleSolution) {
     return;
   }
 
   resetSimulation();
+  hideTestStatus();
+  testReportView.close();
+  activePuzzleTestRun = new PuzzleTestRun(
+    puzzleById(screen.puzzleId),
+    activeSession.baseline,
+  );
   testingPuzzleSolution = true;
+  sessions.beginSimulation();
+  mountCurrentPuzzleTestCase(activePuzzleTestRun, performance.now());
   updateTransportState();
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-  const currentScreen = navigation.screen;
-  if (
-    currentScreen.kind !== "puzzle" ||
-    currentScreen.puzzleId !== requestedScreen.puzzleId ||
-    currentScreen.solutionId !== requestedScreen.solutionId
-  ) {
+  refreshPointerHover();
+}
+
+function finishPuzzleTestRun(report: PuzzleTestReport): void {
+  testingPuzzleSolution = false;
+  finishAnimation();
+  navigation.recordActivePuzzleTestResult(report.scores);
+  if (report.succeeded) {
+    hideTestStatus();
+    testReportView.show(report);
+  } else {
+    const failed = expectDefined(
+      report.results[report.results.length - 1],
+      "Failed puzzle test result",
+    );
+    testStatusToast.textContent = failed.outcome === "cycle-limit"
+      ? `Failed: test case "${failed.name}" reached cycle limit ${failed.cycleLimit}`
+      : `Failed: test case "${failed.name}" cycle ${failed.cycles}`;
+    testStatusToast.hidden = false;
+  }
+  updateTransportState();
+  refreshPointerHover();
+}
+
+fastForwardButton.addEventListener("click", () => {
+  const run = activePuzzleTestRun;
+  if (!testingPuzzleSolution || run === null) {
     return;
   }
+  finishAnimation();
+  const report = run.runRemaining();
+  sessions.showActiveRuntime(run.world, run.simulation);
+  viewedPuzzleTestCaseId = run.currentCase.id;
+  loadActiveWorkshopSession();
+  renderer.fitBoardToViewport();
+  syncViewedTestCaseControl();
+  finishPuzzleTestRun(report);
+});
 
-  try {
-    const report = runPuzzleTests(
-      puzzleById(currentScreen.puzzleId),
-      activeSession.baseline,
-    );
-    navigation.recordActivePuzzleTestResult(report.scores);
-    testReportView.show(report);
-  } finally {
-    testingPuzzleSolution = false;
-    updateTransportState();
-  }
-}
+testCaseButton.addEventListener("click", () => {
+  setTestCaseOptionsOpen(testCaseOptions.hidden !== false);
+});
 
 stepButton.addEventListener("click", () => {
   advanceSimulation(animationsEnabled() ? MANUAL_STEP_ANIMATION_MS : 0);
@@ -1048,8 +1204,29 @@ function resetSimulation(): void {
   if (tileSelection.active) {
     commitTileSelection();
   }
+  testingPuzzleSolution = false;
+  activePuzzleTestRun = null;
+  hideTestStatus();
   setRunning(false);
   sessions.resetSimulation();
+
+  const screen = navigation.screen;
+  if (screen.kind === "puzzle") {
+    const puzzle = puzzleById(screen.puzzleId);
+    const testCase = expectDefined(
+      puzzle.testCases.find((candidate) => candidate.id === viewedPuzzleTestCaseId),
+      `Viewed test case "${viewedPuzzleTestCaseId ?? ""}"`,
+    );
+    const testWorld = createPuzzleTestCaseWorld(
+      testCase,
+      puzzle.editableRegion,
+      activeSession.baseline,
+    );
+    sessions.showActiveRuntime(testWorld);
+    loadActiveWorkshopSession();
+    renderer.fitBoardToViewport();
+    syncViewedTestCaseControl();
+  }
   finishAnimation();
   updateTransportState();
   refreshPointerHover();
@@ -1159,6 +1336,9 @@ downloadPuzzleButton.addEventListener("click", () => {
 document.addEventListener("click", (event) => {
   if (event.target instanceof Node && !exportDropup.contains(event.target)) {
     closeExportOptions();
+  }
+  if (event.target instanceof Node && !testCaseDropup.contains(event.target)) {
+    setTestCaseOptionsOpen(false);
   }
 });
 
@@ -1613,6 +1793,53 @@ window.addEventListener("popstate", () => {
 window.addEventListener("pagehide", () => navigation.persistActiveSolutionBoard());
 window.addEventListener("resize", renderPalettePreviews);
 
+function testTicksPerSecond(currentTime: number): number {
+  const elapsed = Math.max(0, currentTime - puzzleTestCaseStartedAt);
+  return Math.min(
+    MAX_TEST_TICKS_PER_SECOND,
+    INITIAL_TEST_TICKS_PER_SECOND * 2 ** (elapsed / TEST_SPEED_DOUBLING_MS),
+  );
+}
+
+function advanceVisiblePuzzleTests(currentTime: number, elapsed: number): void {
+  const run = activePuzzleTestRun;
+  if (!testingPuzzleSolution || run === null) {
+    return;
+  }
+  if (run.status === "between-cases") {
+    if (nextPuzzleTestCaseAt === 0) {
+      nextPuzzleTestCaseAt = currentTime + TEST_CASE_TRANSITION_MS;
+      updateTransportState();
+    }
+    if (currentTime >= nextPuzzleTestCaseAt) {
+      run.continueToNextCase();
+      mountCurrentPuzzleTestCase(run, currentTime);
+      updateTransportState();
+      refreshPointerHover();
+    }
+    return;
+  }
+
+  accumulatedTime += elapsed;
+  const ticksPerSecond = testTicksPerSecond(currentTime);
+  const tickDuration = 1000 / ticksPerSecond;
+  while (accumulatedTime >= tickDuration && run.status === "running") {
+    accumulatedTime -= tickDuration;
+    previousWorld.copyFrom(world);
+    const status = run.step();
+    animationStartedAt = currentTime - accumulatedTime;
+    animationDuration = animationsEnabled(ticksPerSecond)
+      ? Math.min(tickDuration, MAX_AUTOMATIC_ANIMATION_MS)
+      : 0;
+    if (status === "between-cases") {
+      nextPuzzleTestCaseAt = currentTime + TEST_CASE_TRANSITION_MS;
+      updateTransportState();
+    } else if (status === "failed" || status === "succeeded") {
+      finishPuzzleTestRun(expectDefined(run.report ?? undefined, "Completed puzzle test report"));
+    }
+  }
+}
+
 function frame(currentTime: number): void {
   const elapsed = Math.min(currentTime - previousFrameTime, 250);
   previousFrameTime = currentTime;
@@ -1620,6 +1847,8 @@ function frame(currentTime: number): void {
     requestAnimationFrame(frame);
     return;
   }
+  advanceVisiblePuzzleTests(currentTime, elapsed);
+
 
   if (running) {
     accumulatedTime += elapsed;

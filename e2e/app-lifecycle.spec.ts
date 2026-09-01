@@ -286,25 +286,39 @@ test("creates, edits, persists, and restores a solution on reload", async ({ pag
   }, PUZZLE_SOLUTIONS_STORAGE_KEY);
   expect(storedBoard).toBe(edited.serializedBoard);
 });
-test("tests puzzle cases in a report while sandbox keeps run controls", async ({ page }) => {
+test("renders puzzle cases and leaves the failed case paused on the board", async ({ page }) => {
   await seedBrowserStorage(page, "populated");
   await page.goto("/puzzles/first-shift/solutions/solution-1");
 
   const testButton = page.getByRole("button", { name: "◆ TEST" });
+  const fastForwardButton = page.getByRole("button", { name: "≫ FAST" });
+  const report = page.getByRole("dialog");
   await expect(testButton).toBeVisible();
   await expect(page.getByRole("button", { name: /RUN/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "CASE: Standard case" })).toBeVisible();
+  await page.getByRole("button", { name: "CASE: Standard case" }).click();
+  await expect(page.getByRole("button", { name: "Standard case", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Standard case", exact: true }).click();
   await testButton.click();
 
-  const report = page.getByRole("dialog");
-  await expect(report).toBeVisible();
-  await expect(report.getByRole("heading", { name: "TESTS FAILED" })).toBeVisible();
-  await expect(report.locator(".test-report-result")).toHaveCount(1);
-  await expect(report.getByText("CYCLE LIMIT", { exact: true })).toHaveCount(1);
+  await expect(fastForwardButton).toBeVisible();
+  await expect.poll(async () => (await diagnosticSnapshot(page)).simulation.tick).toBeGreaterThan(0);
+  await fastForwardButton.click();
 
-  await report.getByRole("button", { name: "CONTINUE EDITING" }).click();
   await expect(report).not.toBeVisible();
-  await testButton.click();
-  await report.getByRole("button", { name: "BACK TO PUZZLE" }).click();
+  await expect(page.getByRole("status")).toHaveText(
+    "Failed: test case \"Standard case\" reached cycle limit 1000",
+  );
+  await expect(page.locator("#tick-counter")).toHaveText("TICK 1000");
+  await expect(page.locator("#state-label")).toHaveText("TEST FAILED");
+  await expect(fastForwardButton).not.toBeVisible();
+
+  await page.getByRole("button", { name: "RESET" }).click();
+  await expect(page.getByRole("status")).not.toBeVisible();
+  await expect(page.locator("#tick-counter")).toHaveText("TICK 0000");
+  await expect(page.locator("#state-label")).toHaveText("BUILD MODE");
+
+  await page.locator("#menu-button").click();
   await expect(page).toHaveURL(/\/puzzles\/first-shift$/);
 
   await page.goto("/sandbox");
@@ -317,6 +331,7 @@ test("persists successful solution scores on the puzzle briefing", async ({ page
   await page.goto("/puzzles/first-shift/solutions/solution-1");
   await placeStone(page, 9, 3);
   await page.getByRole("button", { name: "◆ TEST" }).click();
+  await page.getByRole("button", { name: "≫ FAST" }).click();
 
   const report = page.getByRole("dialog");
   await expect(report.getByRole("heading", { name: "ALL TESTS PASSED" })).toBeVisible();
