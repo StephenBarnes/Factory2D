@@ -84,13 +84,6 @@
       </section>
 
       <aside class="sidebar edge-panel" id="sidebar-controls" aria-label="Build tools and components">
-        <div class="screen-heading">
-          <button class="menu-button" id="menu-button" type="button">← MENU</button>
-          <div>
-            <strong id="screen-title">SANDBOX</strong>
-            <small id="screen-description">Free construction workshop</small>
-          </div>
-        </div>
         <div class="panel-heading">
           <span>TOOLS</span>
           <span class="panel-number">01</span>
@@ -196,73 +189,114 @@
       ></div>
 
       <footer class="controls edge-panel" id="bottom-controls">
-        <div class="transport">
-          <button class="primary-control" id="play-button" type="button">▶ RUN</button>
-          <button id="step-button" type="button">STEP</button>
-          <button id="fast-forward-button" type="button" hidden>≫ FAST</button>
-          <button id="reset-button" type="button">RESET</button>
-          <button id="clear-button" type="button">CLEAR</button>
-          <div class="export-dropup" id="export-dropup">
-            <button
-              id="export-button"
-              type="button"
-              aria-expanded="false"
-              aria-controls="export-options"
-              title="Show export options"
-            >EXPORT</button>
-            <div class="export-options" id="export-options" aria-label="Export options" hidden>
-              <button id="download-scene-button" type="button">DOWNLOAD SCENE FILE</button>
-              <button id="copy-scene-button" type="button">COPY SCENE TO CLIPBOARD</button>
-              <button id="download-image-button" type="button">DOWNLOAD IMAGE</button>
-              <button id="download-puzzle-button" type="button" hidden>DOWNLOAD PUZZLE FILE</button>
-              <button
-                id="share-puzzle-button"
-                type="button"
-                title="Puzzle sharing is not available yet"
-                disabled
-                hidden
-              >SHARE PUZZLE</button>
+        <div class="workshop-identity">
+          <button class="menu-button" id="menu-button" type="button">← MENU</button>
+          <div class="workshop-identity-details">
+            <strong id="screen-title">SANDBOX</strong>
+            <div class="puzzle-metrics" id="puzzle-metrics" hidden>
+              <span class="puzzle-price" id="puzzle-price">0⚙</span>
+              <span aria-hidden="true">|</span>
+              <span id="puzzle-footprint">0×0</span>
             </div>
           </div>
-          <button id="import-button" type="button" title="Load a previously exported board">IMPORT</button>
-          <input id="import-file" type="file" accept="application/json,.json" hidden />
-        </div>
-        <div class="test-case-dropup" id="test-case-dropup" hidden>
           <button
-            id="test-case-button"
+            class="workshop-info-button"
+            id="workshop-info-button"
             type="button"
-            aria-expanded="false"
-            aria-controls="test-case-options"
-            title="Choose the test case shown on the board"
-          >CASE</button>
-          <div
-            class="test-case-options"
-            id="test-case-options"
-            aria-label="Test cases"
-            hidden
-          ></div>
+            aria-label="Workshop information"
+            aria-haspopup="dialog"
+            aria-controls="workshop-info-dialog"
+            title="Workshop information"
+          >i</button>
         </div>
-        <div class="simulation-state" aria-live="polite">
-          <span class="state-light" id="state-light"></span>
-          <span id="state-label">BUILD MODE</span>
-          <span class="tick-counter" id="tick-counter">TICK 0000</span>
+        <div class="workshop-controls">
+          <div class="transport">
+            <button class="primary-control" id="play-button" type="button">▶ RUN</button>
+            <button id="step-button" type="button">STEP</button>
+            <button id="fast-forward-button" type="button" hidden>≫ FAST</button>
+            <button id="reset-button" type="button">RESET</button>
+            <button id="clear-button" type="button">CLEAR</button>
+            <div class="export-dropup" id="export-dropup">
+              <button
+                id="export-button"
+                type="button"
+                aria-expanded="false"
+                aria-controls="export-options"
+                title="Show export options"
+              >EXPORT</button>
+              <div class="export-options" id="export-options" aria-label="Export options" hidden>
+                <button id="download-scene-button" type="button">DOWNLOAD SCENE FILE</button>
+                <button id="copy-scene-button" type="button">COPY SCENE TO CLIPBOARD</button>
+                <button id="download-image-button" type="button">DOWNLOAD IMAGE</button>
+                <button id="download-puzzle-button" type="button" hidden>DOWNLOAD PUZZLE FILE</button>
+                <button
+                  id="share-puzzle-button"
+                  type="button"
+                  title="Puzzle sharing is not available yet"
+                  disabled
+                  hidden
+                >SHARE PUZZLE</button>
+              </div>
+            </div>
+            <button id="import-button" type="button" title="Load a previously exported board">IMPORT</button>
+            <input id="import-file" type="file" accept="application/json,.json" hidden />
+          </div>
+          <div class="test-case-dropup" id="test-case-dropup" hidden>
+            <button
+              id="test-case-button"
+              type="button"
+              aria-expanded="false"
+              aria-controls="test-case-options"
+              title="Choose the test case shown on the board"
+            >CASE</button>
+            <div
+              class="test-case-options"
+              id="test-case-options"
+              aria-label="Test cases"
+              hidden
+            ></div>
+          </div>
+          <div class="simulation-state" aria-live="polite">
+            <span class="state-light" id="state-light"></span>
+            <span id="state-label">BUILD MODE</span>
+            <span class="tick-counter" id="tick-counter">TICK 0000</span>
+          </div>
+          <label class="animation-control">
+            <input id="animation-toggle" type="checkbox" checked />
+            ANIMATE
+          </label>
+          <label class="speed-control">
+            SPEED
+            <select id="speed-select">
+              <option value="1">1 tick / sec</option>
+              <option value="2">2 ticks / sec</option>
+              <option value="5" selected>5 ticks / sec</option>
+              <option value="10">10 ticks / sec</option>
+              <option value="60">60 ticks / sec</option>
+            </select>
+          </label>
         </div>
-        <label class="animation-control">
-          <input id="animation-toggle" type="checkbox" checked />
-          ANIMATE
-        </label>
-        <label class="speed-control">
-          SPEED
-          <select id="speed-select">
-            <option value="1">1 tick / sec</option>
-            <option value="2">2 ticks / sec</option>
-            <option value="5" selected>5 ticks / sec</option>
-            <option value="10">10 ticks / sec</option>
-            <option value="60">60 ticks / sec</option>
-          </select>
-        </label>
       </footer>
       </section>
+      <dialog
+        class="workshop-info-dialog"
+        id="workshop-info-dialog"
+        aria-labelledby="workshop-info-title"
+        aria-describedby="workshop-info-description"
+      >
+        <div class="workshop-info-status">WORKSHOP INFORMATION</div>
+        <div class="workshop-info-content">
+          <h2 id="workshop-info-title" data-workshop-info-title></h2>
+          <p id="workshop-info-description" data-workshop-info-description></p>
+          <div class="workshop-info-goal" data-workshop-info-goal-panel>
+            <span>OBJECTIVE</span>
+            <strong data-workshop-info-goal></strong>
+          </div>
+        </div>
+        <form class="workshop-info-actions" method="dialog">
+          <button type="submit">CLOSE</button>
+        </form>
+      </dialog>
       <dialog
         class="component-configuration-dialog"
         id="component-configuration-dialog"

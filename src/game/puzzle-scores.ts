@@ -9,16 +9,17 @@ export interface PuzzleScores {
   readonly footprint: number;
   readonly combined: number;
 }
+export interface PuzzleDesignMetrics {
+  readonly price: number;
+  readonly footprintWidth: number;
+  readonly footprintHeight: number;
+}
 
-export function computePuzzleScores(
+
+export function computePuzzleDesignMetrics(
   puzzle: PuzzleDefinition,
   solution: World,
-  cycles: number,
-): PuzzleScores {
-  if (!Number.isSafeInteger(cycles) || cycles < 0) {
-    throw new RangeError("Puzzle score cycles must be a non-negative safe integer");
-  }
-
+): PuzzleDesignMetrics {
   let price = 0;
   let left = solution.width;
   let top = solution.height;
@@ -50,13 +51,30 @@ export function computePuzzleScores(
     }
   }
 
-  const footprint = right < left ? 0 : (right - left + 1) * (bottom - top + 1);
-  const combined = price + cycles + footprint;
+  return Object.freeze({
+    price,
+    footprintWidth: right < left ? 0 : right - left + 1,
+    footprintHeight: bottom < top ? 0 : bottom - top + 1,
+  });
+}
+
+export function computePuzzleScores(
+  puzzle: PuzzleDefinition,
+  solution: World,
+  cycles: number,
+): PuzzleScores {
+  if (!Number.isSafeInteger(cycles) || cycles < 0) {
+    throw new RangeError("Puzzle score cycles must be a non-negative safe integer");
+  }
+
+  const metrics = computePuzzleDesignMetrics(puzzle, solution);
+  const footprint = metrics.footprintWidth * metrics.footprintHeight;
+  const combined = metrics.price + cycles + footprint;
   if (!Number.isSafeInteger(combined)) {
     throw new RangeError("Combined puzzle score exceeds the safe integer range");
   }
 
-  return Object.freeze({ price, cycles, footprint, combined });
+  return Object.freeze({ price: metrics.price, cycles, footprint, combined });
 }
 
 export function parsePuzzleScores(value: unknown, context: string): PuzzleScores {

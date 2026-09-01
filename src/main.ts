@@ -7,6 +7,7 @@ import { NavigationController } from "./game/navigation-controller";
 import { SavedSolutionController } from "./game/saved-solution-controller";
 import { PuzzleTestController } from "./game/puzzle-test-controller";
 import { serializePuzzleTemplate } from "./game/puzzle-export";
+import { computePuzzleDesignMetrics } from "./game/puzzle-scores";
 import { createSandboxWorld, puzzleById } from "./game/puzzles";
 import { WorkshopSessionController } from "./game/workshop-session";
 import { WorkshopSurfaceController } from "./game/workshop-surface-controller";
@@ -68,7 +69,11 @@ const puzzleMap = requiredElement<HTMLElement>("puzzle-map");
 const sandboxButton = requiredElement<HTMLButtonElement>("sandbox-button");
 const menuButton = requiredElement<HTMLButtonElement>("menu-button");
 const screenTitle = requiredElement<HTMLElement>("screen-title");
-const screenDescription = requiredElement<HTMLElement>("screen-description");
+const workshopInfoButton = requiredElement<HTMLButtonElement>("workshop-info-button");
+const workshopInfoDialog = requiredElement<HTMLDialogElement>("workshop-info-dialog");
+const puzzleMetrics = requiredElement<HTMLElement>("puzzle-metrics");
+const puzzlePrice = requiredElement<HTMLElement>("puzzle-price");
+const puzzleFootprint = requiredElement<HTMLElement>("puzzle-footprint");
 const sidebarControls = requiredElement<HTMLElement>("sidebar-controls");
 const componentPalette = requiredElement<HTMLElement>("component-palette");
 const inspectorPanel = requiredElement<HTMLElement>("tile-inspector");
@@ -193,6 +198,23 @@ function updateTransportState(): void {
 function markSimulationStarted(): boolean {
   return sessions.beginSimulation();
 }
+function refreshPuzzleMetrics(): void {
+  const screen = navigation.screen;
+  const puzzleWorkshop = screen.kind === "puzzle";
+  puzzleMetrics.hidden = !puzzleWorkshop;
+  if (!puzzleWorkshop) {
+    componentPalette.classList.remove("show-prices");
+    return;
+  }
+
+  const metrics = computePuzzleDesignMetrics(
+    puzzleById(screen.puzzleId),
+    surface.session.baseline,
+  );
+  puzzlePrice.textContent = `${metrics.price}⚙`;
+  puzzleFootprint.textContent = `${metrics.footprintWidth}×${metrics.footprintHeight}`;
+}
+
 
 function commitTileSelection(): void {
   const result = surface.selection.commit(
@@ -576,6 +598,7 @@ function commitEditedWorld(): void {
   finishAnimation();
   navigation.markActiveSolutionDirty();
   navigation.persistActiveSolutionBoard();
+  refreshPuzzleMetrics();
 }
 
 function componentIsAvailable(kind: TileKind): boolean {
@@ -863,8 +886,9 @@ const navigation = new NavigationController(
     puzzleInfoScreen,
     puzzleMap,
     screenTitle,
-    screenDescription,
     menuButton,
+    workshopInfoButton,
+    workshopInfoDialog,
   },
   {
     stopSimulation: stopWorkshopActivity,
@@ -873,6 +897,7 @@ const navigation = new NavigationController(
     },
     onWorkshopShown: () => {
       configureComponentPalette();
+      refreshPuzzleMetrics();
       const screen = navigation.screen;
       puzzleTests.configure(screen.kind === "puzzle" ? puzzleById(screen.puzzleId) : null);
       updateTransportState();
@@ -928,6 +953,12 @@ if (import.meta.env.DEV) {
 
 menuButton.addEventListener("click", () => {
   navigation.leaveWorkshop();
+});
+puzzlePrice.addEventListener("pointerenter", () => {
+  componentPalette.classList.add("show-prices");
+});
+puzzlePrice.addEventListener("pointerleave", () => {
+  componentPalette.classList.remove("show-prices");
 });
 
 sandboxButton.addEventListener("click", () => {

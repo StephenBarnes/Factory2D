@@ -16,6 +16,7 @@ import type { PuzzleScores } from "./puzzle-scores";
 import { WorkshopSessionController } from "./workshop-session";
 import { populatePuzzleMap } from "../ui/main-menu";
 import { PuzzleInfoView } from "../ui/puzzle-info";
+import { WorkshopInfoDialog } from "../ui/workshop-info-dialog";
 import { PuzzleResult } from "../simulation/puzzle-result";
 
 type PuzzleProgressStorage = Pick<Storage, "getItem" | "setItem">;
@@ -28,8 +29,9 @@ export interface NavigationElements {
   readonly puzzleInfoScreen: HTMLElement;
   readonly puzzleMap: HTMLElement;
   readonly screenTitle: HTMLElement;
-  readonly screenDescription: HTMLElement;
   readonly menuButton: HTMLButtonElement;
+  readonly workshopInfoButton: HTMLButtonElement;
+  readonly workshopInfoDialog: HTMLDialogElement;
 }
 
 export interface NavigationCallbacks {
@@ -40,6 +42,7 @@ export interface NavigationCallbacks {
 
 export class NavigationController {
   private readonly puzzleInfoView: PuzzleInfoView;
+  private readonly workshopInfoDialog: WorkshopInfoDialog;
   private readonly completedPuzzleIds: Set<PuzzleId>;
   private currentScreen: AppScreen = { kind: "main-menu" };
   private readonly routeAccess: AppRouteAccess;
@@ -54,6 +57,7 @@ export class NavigationController {
     private readonly history: NavigationHistory,
   ) {
     this.puzzleInfoView = new PuzzleInfoView(elements.puzzleInfoScreen);
+    this.workshopInfoDialog = new WorkshopInfoDialog(elements.workshopInfoDialog);
     try {
       this.completedPuzzleIds = loadCompletedPuzzleIds(storage);
     } catch (error) {
@@ -87,6 +91,7 @@ export class NavigationController {
   }
 
   private showScreen(screen: AppScreen): void {
+    this.workshopInfoDialog.close();
     this.callbacks.stopSimulation();
     this.persistActiveSolutionBoard();
     this.currentScreen = screen;
@@ -118,7 +123,13 @@ export class NavigationController {
       sessionChanged = this.sessions.activateSandbox();
       this.elements.menuButton.textContent = "← MENU";
       this.elements.screenTitle.textContent = "SANDBOX";
-      this.elements.screenDescription.textContent = "Free construction workshop";
+      this.elements.workshopInfoButton.onclick = () => {
+        this.workshopInfoDialog.show({
+          name: "Sandbox",
+          description: "Build freely with every available component.",
+          goal: null,
+        });
+      };
       this.elements.gameScreen.setAttribute("aria-label", "Sandbox workshop");
     } else {
       const puzzle = puzzleById(screen.puzzleId);
@@ -127,7 +138,13 @@ export class NavigationController {
       this.solutions.select(screen.puzzleId, screen.solutionId);
       this.elements.menuButton.textContent = "← PUZZLE";
       this.elements.screenTitle.textContent = puzzle.name.toUpperCase();
-      this.elements.screenDescription.textContent = `${solution.name} · Goal: ${puzzle.goal}`;
+      this.elements.workshopInfoButton.onclick = () => {
+        this.workshopInfoDialog.show({
+          name: puzzle.name,
+          description: puzzle.description,
+          goal: puzzle.goal,
+        });
+      };
       this.elements.gameScreen.setAttribute("aria-label", `${puzzle.name} puzzle workshop`);
     }
 

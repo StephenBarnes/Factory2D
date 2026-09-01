@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { GridRegion } from "../src/game/grid-region";
 import { PuzzleComponents } from "../src/game/puzzle-components";
-import { computePuzzleScores } from "../src/game/puzzle-scores";
+import {
+  computePuzzleDesignMetrics,
+  computePuzzleScores,
+} from "../src/game/puzzle-scores";
 import type { PuzzleDefinition } from "../src/game/puzzles";
 import { TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
@@ -38,6 +41,12 @@ describe("puzzle scores", () => {
     solution.place(4, 3, TileKind.Stone);
     solution.place(0, 0, TileKind.Stone);
 
+    expect(computePuzzleDesignMetrics(puzzle, solution)).toEqual({
+      price: 10,
+      footprintWidth: 4,
+      footprintHeight: 3,
+    });
+
     expect(computePuzzleScores(puzzle, solution, 8)).toEqual({
       price: 10,
       cycles: 8,
@@ -47,6 +56,12 @@ describe("puzzle scores", () => {
   });
 
   it("gives an empty editable design zero price and footprint", () => {
+    expect(computePuzzleDesignMetrics(scoringPuzzle(), new World(6, 5))).toEqual({
+      price: 0,
+      footprintWidth: 0,
+      footprintHeight: 0,
+    });
+
     expect(computePuzzleScores(scoringPuzzle(), new World(6, 5), 2)).toEqual({
       price: 0,
       cycles: 2,

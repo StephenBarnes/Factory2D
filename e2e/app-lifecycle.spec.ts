@@ -134,21 +134,23 @@ test("edge panels reserve a non-overlapping canvas region", async ({ page }) => 
   await page.goto("/sandbox");
 
   for (const viewport of [
-    { width: 1280, height: 800, compact: false },
-    { width: 390, height: 640, compact: true },
+    { width: 1280, height: 800 },
+    { width: 390, height: 640 },
   ]) {
     await page.setViewportSize(viewport);
     const layout = await page.evaluate(() => {
       const canvas = document.querySelector<HTMLCanvasElement>("#game-canvas");
       const sidebar = document.querySelector<HTMLElement>("#sidebar-controls");
       const controls = document.querySelector<HTMLElement>("#bottom-controls");
-      if (canvas === null || sidebar === null || controls === null) {
+      const identity = document.querySelector<HTMLElement>(".workshop-identity");
+      if (canvas === null || sidebar === null || controls === null || identity === null) {
         throw new Error("Workshop layout is incomplete");
       }
 
       const canvasBounds = canvas.getBoundingClientRect();
       const sidebarBounds = sidebar.getBoundingClientRect();
       const controlsBounds = controls.getBoundingClientRect();
+      const identityBounds = identity.getBoundingClientRect();
       return {
         canvasWidth: canvasBounds.width,
         canvasHeight: canvasBounds.height,
@@ -158,11 +160,11 @@ test("edge panels reserve a non-overlapping canvas region", async ({ page }) => 
         canvasRightGap: window.innerWidth - canvasBounds.right,
         controlsBottomGap: window.innerHeight - controlsBounds.bottom,
         controlsLeft: controlsBounds.left,
-        controlsLeftGap: controlsBounds.left - sidebarBounds.right,
         sidebarLeft: sidebarBounds.left,
         sidebarTop: sidebarBounds.top,
-        sidebarBottomGap: window.innerHeight - sidebarBounds.bottom,
-        compactSidebarBottomGap: controlsBounds.top - sidebarBounds.bottom,
+        sidebarBottomGap: controlsBounds.top - sidebarBounds.bottom,
+        identityLeftGap: identityBounds.left - controlsBounds.left,
+        identityBottomGap: controlsBounds.bottom - identityBounds.bottom,
       };
     });
 
@@ -175,14 +177,58 @@ test("edge panels reserve a non-overlapping canvas region", async ({ page }) => 
     expect(Math.abs(layout.controlsBottomGap)).toBeLessThanOrEqual(1);
     expect(Math.abs(layout.sidebarLeft)).toBeLessThanOrEqual(1);
     expect(Math.abs(layout.sidebarTop)).toBeLessThanOrEqual(1);
-    if (viewport.compact) {
-      expect(Math.abs(layout.controlsLeft)).toBeLessThanOrEqual(1);
-      expect(Math.abs(layout.compactSidebarBottomGap)).toBeLessThanOrEqual(1);
-    } else {
-      expect(Math.abs(layout.controlsLeftGap)).toBeLessThanOrEqual(1);
-      expect(Math.abs(layout.sidebarBottomGap)).toBeLessThanOrEqual(1);
-    }
+    expect(Math.abs(layout.controlsLeft)).toBeLessThanOrEqual(1);
+    expect(Math.abs(layout.sidebarBottomGap)).toBeLessThanOrEqual(1);
+    expect(Math.abs(layout.identityLeftGap)).toBeLessThanOrEqual(1);
+    expect(Math.abs(layout.identityBottomGap)).toBeLessThanOrEqual(1);
   }
+});
+
+test("workshop identity exposes information and live puzzle metrics", async ({ page }) => {
+  await seedBrowserStorage(page, "populated");
+  await page.goto("/puzzles/first-shift/solutions/solution-1");
+
+  const controls = page.locator("#bottom-controls");
+  const identity = controls.locator(".workshop-identity");
+  const metrics = identity.locator("#puzzle-metrics");
+  const price = identity.locator("#puzzle-price");
+  const palette = page.locator("#component-palette");
+  await expect(identity.locator("#screen-title")).toHaveText("FIRST SHIFT");
+  await expect(metrics).toHaveText("0⚙ | 0×0");
+  await expect(page.locator("#screen-description")).toHaveCount(0);
+
+  await identity.getByRole("button", { name: "Workshop information" }).click();
+  const dialog = page.locator("#workshop-info-dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("heading", { name: "First Shift" })).toBeVisible();
+  await expect(dialog.locator("[data-workshop-info-description]")).toHaveText(
+    "Tutorial puzzle teaching block placement",
+  );
+  await expect(dialog.locator("[data-workshop-info-goal]")).toHaveText(
+    "Drop one iron block into the delivery box",
+  );
+  await dialog.getByRole("button", { name: "CLOSE" }).click();
+
+  await price.hover();
+  await expect(palette).toHaveClass(/show-prices/);
+  const stoneButton = page.getByRole("button", { name: /^Stone/ });
+  await expect.poll(async () =>
+    stoneButton.evaluate((element) => getComputedStyle(element, "::after").content)
+  ).toContain("1⚙");
+
+  await placeStone(page, 8, 3);
+  await expect(metrics).toHaveText("1⚙ | 1×1");
+  await expect(palette).not.toHaveClass(/show-prices/);
+
+  await page.goto("/sandbox");
+  await expect(page.locator("#puzzle-metrics")).toBeHidden();
+  await expect(page.locator("#screen-title")).toHaveText("SANDBOX");
+  await page.getByRole("button", { name: "Workshop information" }).click();
+  await expect(dialog.getByRole("heading", { name: "Sandbox" })).toBeVisible();
+  await expect(dialog.locator("[data-workshop-info-description]")).toHaveText(
+    "Build freely with every available component.",
+  );
+  await expect(dialog.locator("[data-workshop-info-goal-panel]")).toBeHidden();
 });
 
 test("tile inspector follows palette, tool, and occupied-board hover", async ({ page }) => {
