@@ -51,6 +51,7 @@ describe("duplicators", () => {
       expect(world.idAt(4, 3)).not.toBe(sourceId);
       expect(world.componentStateSnapshotAt(4, 3)).toEqual(sourceState);
       expect(world.kindAt(anchorX, 3)).toBe(TileKind.Platform);
+      expect(world.orientationAt(anchorX, 3)).toBe(Direction.Up);
       expect(world.isWelded(4, 3, anchorX, 3)).toBe(true);
     },
   );

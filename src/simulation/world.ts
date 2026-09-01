@@ -21,6 +21,7 @@ import {
   flipDirectionHorizontally,
   flipDirectionVertically,
   oppositeDirection,
+  orientationForKind,
   orientedSides,
   TILE_DEFINITIONS,
   TileKind,
@@ -709,10 +710,12 @@ export class World {
       this.nextTileId += 1;
       this.kinds[destination] = kind;
       this.ids[destination] = id;
-      this.orientations[destination] = ownerOrientation === Direction.Up ||
-          ownerOrientation === Direction.Down
-        ? flipDirectionVertically(sourceOrientation)
-        : flipDirectionHorizontally(sourceOrientation);
+      this.orientations[destination] = orientationForKind(
+        kind,
+        ownerOrientation === Direction.Up || ownerOrientation === Direction.Down
+          ? flipDirectionVertically(sourceOrientation)
+          : flipDirectionHorizontally(sourceOrientation),
+      );
       this.charges[destination] = expectDefined(
         this.charges[source],
         "duplicated tile charge",

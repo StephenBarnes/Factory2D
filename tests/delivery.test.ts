@@ -88,6 +88,23 @@ describe("delivery boxes", () => {
     expect(world.chargeAt(1, 1)).toBe(0);
   });
 
+  it("ignores stored orientations for non-directional tile kinds", () => {
+    const world = new World(4, 3);
+    world.place(0, 1, TileKind.Stone, Direction.Right);
+    world.place(1, 1, TileKind.Delivery, Direction.Right);
+    const targetId = world.place(2, 1, TileKind.Stone, Direction.Left);
+    placeFloor(world, 2);
+
+    expect(world.orientationAt(0, 1)).toBe(Direction.Right);
+    expect(world.orientationAt(2, 1)).toBe(Direction.Left);
+
+    new Simulation(world).step();
+
+    expect(world.idAt(2, 1)).not.toBe(targetId);
+    expect(world.kindAt(2, 1)).toBe(TileKind.Empty);
+    expect(world.chargeAt(1, 1)).toBe(1);
+  });
+
   it("requires the internal weld topology to match", () => {
     const world = new World(8, 8);
     world.place(4, 4, TileKind.Delivery, Direction.Up);

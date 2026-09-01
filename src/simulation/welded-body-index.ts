@@ -1,5 +1,5 @@
 import { expectDefined } from "../util/assert";
-import { TileKind } from "./tile";
+import { TILE_DEFINITIONS, TileKind } from "./tile";
 import type { World } from "./world";
 
 /**
@@ -126,10 +126,14 @@ export class WeldedBodyIndex {
         return false;
       }
       const secondMember = secondY * this.world.width + secondX;
+      const firstKind = this.world.kindAtIndex(firstMember);
+      const secondKind = this.world.kindAtIndex(secondMember);
       if (
         this.bodyRoots[secondMember] !== secondRoot ||
-        this.world.kindAtIndex(firstMember) !== this.world.kindAtIndex(secondMember) ||
-        this.world.orientationAtIndex(firstMember) !== this.world.orientationAtIndex(secondMember) ||
+        firstKind !== secondKind ||
+        (TILE_DEFINITIONS[firstKind].usesOrientation &&
+          this.world.orientationAtIndex(firstMember) !==
+            this.world.orientationAtIndex(secondMember)) ||
         this.world.hasRightWeldAtIndex(firstMember) !==
           this.world.hasRightWeldAtIndex(secondMember) ||
         this.world.hasDownWeldAtIndex(firstMember) !==
