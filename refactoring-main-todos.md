@@ -2,26 +2,15 @@ Looking through `src/main.ts` for refactoring opportunities.
 
 ## Recommended TODOs
 
-### 1. Commit drag edits once per pointer gesture
+### 1. Commit drag edits once per pointer gesture — Completed
 
-**TODO:** Refactor tile and weld drags into edit transactions that update the live world continuously but save the baseline and persist the solution only once when the gesture finishes.
+Tile and weld edit helpers now return whether they changed the live world. Pointer gesture state
+accumulates that result, and `pointerup`, `pointercancel`, simulation starts, navigation, imports,
+and runtime replacements finalize the active transaction through one `commitEditedWorld()` call.
+Configuration, clear, delete, and selection commits remain immediate transactions.
 
-**Why this is highest value:**
-
-- `pointermove` repeatedly calls `editCellLine` and `editWeldSegment` (`src/main.ts:1494-1512`).
-- Those functions call `saveEditedBaseline()` after every changed segment (`src/main.ts:816-818`, `934-936`).
-- `saveEditedBaseline()` copies the world into the baseline and then calls `finishAnimation()`, which copies it again into `previousWorld` (`src/main.ts:383-385`, `724-728`; `src/game/workshop-session.ts:116-129`).
-- On a 400×300 board, a long drag can therefore perform multiple full-board copies per pointer event.
-
-**Suggested shape:**
-
-- Make `editCellLine`, `editWeld`, and `editWeldSegment` return whether they changed the world.
-- Accumulate that result in gesture state.
-- On both `pointerup` and `pointercancel`, call one shared `commitEditedWorld()` if anything changed.
-- Keep configuration, clear, delete, and selection commit as immediate one-operation transactions.
-- Ensure navigation/session changes finalize or cancel any active transaction explicitly.
-
-**Check:** A multi-event tile or weld drag should update every crossed cell/edge while invoking baseline synchronization and persistence exactly once.
+**Check:** `e2e/app-lifecycle.spec.ts` covers live multi-event drag updates and verifies that both
+pointer-up and pointer-cancel persistence happen exactly once per changed gesture.
 
 ---
 

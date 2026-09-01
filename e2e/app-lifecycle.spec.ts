@@ -321,6 +321,85 @@ test("creates, edits, persists, and restores a solution on reload", async ({ pag
   }, PUZZLE_SOLUTIONS_STORAGE_KEY);
   expect(storedBoard).toBe(edited.serializedBoard);
 });
+
+test("commits multi-event tile drags once on pointer up or cancellation", async ({ page }) => {
+  await seedBrowserStorage(page, "populated");
+  await page.goto("/puzzles/first-shift/solutions/solution-1");
+  await page.getByRole("button", { name: /^Stone/ }).click();
+
+  const canvas = page.locator("#game-canvas");
+  await page.evaluate((storageKey) => {
+    const canvasElement = document.querySelector<HTMLCanvasElement>("#game-canvas");
+    if (canvasElement === null) {
+      throw new Error("Game canvas is missing");
+    }
+    canvasElement.dataset.solutionStorageWrites = "0";
+    canvasElement.addEventListener("pointerdown", (event) => {
+      canvasElement.dataset.testPointerId = String(event.pointerId);
+    });
+    const originalSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key: string, value: string): void {
+      if (key === storageKey) {
+        const writes = Number(canvasElement.dataset.solutionStorageWrites);
+        canvasElement.dataset.solutionStorageWrites = String(writes + 1);
+      }
+      originalSetItem.call(this, key, value);
+    };
+  }, PUZZLE_SOLUTIONS_STORAGE_KEY);
+
+  const firstStart = await boardCellCenter(page, 8, 3);
+  const firstEnd = await boardCellCenter(page, 11, 3);
+  await page.mouse.move(firstStart.x, firstStart.y);
+  await page.mouse.down();
+  await page.mouse.move(firstEnd.x, firstEnd.y, { steps: 8 });
+  const liveFirstGrid = JSON.parse((await diagnosticSnapshot(page)).serializedBoard) as {
+    readonly grid: readonly string[];
+  };
+  expect(liveFirstGrid.grid[3]?.slice(8, 12)).toBe("####");
+  await expect(canvas).toHaveAttribute("data-solution-storage-writes", "0");
+
+  await page.mouse.up();
+  await expect(canvas).toHaveAttribute("data-solution-storage-writes", "1");
+
+  await canvas.evaluate((element) => {
+    element.dataset.solutionStorageWrites = "0";
+  });
+  const secondStart = await boardCellCenter(page, 8, 4);
+  const secondEnd = await boardCellCenter(page, 11, 4);
+  await page.mouse.move(secondStart.x, secondStart.y);
+  await page.mouse.down();
+  await page.mouse.move(secondEnd.x, secondEnd.y, { steps: 8 });
+  await canvas.evaluate((element) => {
+    const pointerId = Number(element.dataset.testPointerId);
+    element.dispatchEvent(new PointerEvent("pointercancel", {
+      bubbles: true,
+      pointerId,
+      pointerType: "mouse",
+    }));
+  });
+  await expect(canvas).toHaveAttribute("data-solution-storage-writes", "1");
+  await page.mouse.up();
+  await expect(canvas).toHaveAttribute("data-solution-storage-writes", "1");
+
+  const storedGrid = await page.evaluate((storageKey) => {
+    const serializedSolutions = window.localStorage.getItem(storageKey);
+    if (serializedSolutions === null) {
+      throw new Error("Saved-solution storage is missing");
+    }
+    const stored = JSON.parse(serializedSolutions) as {
+      readonly solutions: readonly { readonly id: string; readonly board: string }[];
+    };
+    const solution = stored.solutions.find((candidate) => candidate.id === "solution-1");
+    if (solution === undefined) {
+      throw new Error("Edited solution is missing");
+    }
+    const board: { readonly grid: readonly string[] } = JSON.parse(solution.board);
+    return board.grid;
+  }, PUZZLE_SOLUTIONS_STORAGE_KEY);
+  expect(storedGrid[3]?.slice(8, 12)).toBe("####");
+  expect(storedGrid[4]?.slice(8, 12)).toBe("####");
+});
+
 test("renders puzzle cases and leaves the failed case paused on the board", async ({ page }) => {
   await seedBrowserStorage(page, "populated");
   await page.goto("/puzzles/first-shift/solutions/solution-1");

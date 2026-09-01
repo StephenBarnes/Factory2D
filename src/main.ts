@@ -189,6 +189,7 @@ let activePointerMode: PointerGesture | null = null;
 let activeEditTool: BuildTool | null = null;
 let activeErase = false;
 let activeWeldPlacement = false;
+let activePointerWorldChanged = false;
 let lastPanClientX = 0;
 let lastPanClientY = 0;
 let pendingPickCell: GridCell | null = null;
@@ -253,12 +254,14 @@ function commitTileSelection(): void {
   );
   syncTileSelectionOverlay();
   if (result.changed) {
-    saveEditedBaseline();
-    navigation.persistActiveSolutionBoard();
+    commitEditedWorld();
   }
 }
 
 function setRunning(nextRunning: boolean): void {
+  if (nextRunning) {
+    finalizeActivePointerGesture();
+  }
   if (nextRunning && tileSelection.active) {
     commitTileSelection();
   }
@@ -271,6 +274,9 @@ function setRunning(nextRunning: boolean): void {
   }
 }
 function loadActiveWorkshopSession(): void {
+  if (activePointerId !== null || activePointerWorldChanged) {
+    throw new Error("Active pointer gesture must finish before mounting a workshop session");
+  }
   activeSession = sessions.active;
   world = activeSession.world;
   simulation = activeSession.simulation;
@@ -349,6 +355,7 @@ function configureTestCaseControls(): void {
 }
 
 function showPuzzleTestCase(testCaseId: string): void {
+  finalizeActivePointerGesture();
   const screen = navigation.screen;
   if (screen.kind !== "puzzle" || testingPuzzleSolution) {
     return;
@@ -396,6 +403,7 @@ function finishAnimationIfDisabled(): void {
 
 
 function advanceSimulation(duration: number, startedAt = performance.now()): void {
+  finalizeActivePointerGesture();
   if (tileSelection.active) {
     commitTileSelection();
   }
@@ -721,10 +729,11 @@ function selectEditableRegionTool(): void {
   refreshPointerHover();
 }
 
-function saveEditedBaseline(): void {
+function commitEditedWorld(): void {
   sessions.saveEditedBaseline();
   finishAnimation();
   navigation.markActiveSolutionDirty();
+  navigation.persistActiveSolutionBoard();
 }
 
 function componentIsAvailable(kind: TileKind): boolean {
@@ -767,9 +776,9 @@ function editCellLine(
   to: GridCell,
   erase: boolean,
   weldPlacedTiles: boolean,
-): void {
+): boolean {
   if (!activeSession.editingState.editable || (!erase && !componentIsAvailable(selectedKind))) {
-    return;
+    return false;
   }
 
   const kind = erase ? TileKind.Empty : selectedKind;
@@ -813,9 +822,7 @@ function editCellLine(
     }
   }
 
-  if (changed) {
-    saveEditedBaseline();
-  }
+  return changed;
 }
 function openComponentConfiguration(cell: GridCell): void {
   if (!activeSession.editingState.editable || !canEditCell(cell.x, cell.y)) {
@@ -851,8 +858,7 @@ function openComponentConfiguration(cell: GridCell): void {
             submission.values,
           );
       if (changed) {
-        saveEditedBaseline();
-        navigation.persistActiveSolutionBoard();
+        commitEditedWorld();
         refreshPointerHover();
       }
     },
@@ -886,21 +892,18 @@ function adjustHoveredNumericComponent(delta: number): boolean {
     return true;
   }
   world.configureNumericComponent(hoveredCell.x, hoveredCell.y, nextValue);
-  saveEditedBaseline();
-  navigation.persistActiveSolutionBoard();
+  commitEditedWorld();
   refreshPointerHover();
   return true;
 }
 
 
-function editWeld(edge: GridEdge, erase: boolean): void {
-  if (
+function editWeld(edge: GridEdge, erase: boolean): boolean {
+  return (
     activeSession.editingState.editable &&
     canEditEdge(edge.x1, edge.y1, edge.x2, edge.y2) &&
     world.setWeld(edge.x1, edge.y1, edge.x2, edge.y2, !erase)
-  ) {
-    saveEditedBaseline();
-  }
+  );
 }
 
 function editWeldSegment(
@@ -908,9 +911,9 @@ function editWeldSegment(
   to: GridPoint,
   endpointEdge: GridEdge | null,
   erase: boolean,
-): void {
+): boolean {
   if (!activeSession.editingState.editable) {
-    return;
+    return false;
   }
 
   let changed = false;
@@ -931,9 +934,7 @@ function editWeldSegment(
       !erase,
     ) || changed;
   }
-  if (changed) {
-    saveEditedBaseline();
-  }
+  return changed;
 }
 const componentConfigurationView = new ComponentConfigurationDialog(
   componentConfigurationDialogElement,
@@ -944,6 +945,7 @@ const testReportView = new PuzzleTestReportView(testReportDialog, {
 });
 
 function stopWorkshopActivity(): void {
+  finalizeActivePointerGesture();
   if (tileSelection.active) {
     commitTileSelection();
   }
@@ -1063,8 +1065,7 @@ function deleteTileSelection(): void {
   syncTileSelectionOverlay();
   refreshPointerHover();
   if (changed) {
-    saveEditedBaseline();
-    navigation.persistActiveSolutionBoard();
+    commitEditedWorld();
   }
 }
 
@@ -1210,6 +1211,7 @@ speedSelect.addEventListener("change", () => {
 
 
 function resetSimulation(): void {
+  finalizeActivePointerGesture();
   if (tileSelection.active) {
     commitTileSelection();
   }
@@ -1261,8 +1263,7 @@ clearButton.addEventListener("click", () => {
       }
     }
   }
-  saveEditedBaseline();
-  navigation.persistActiveSolutionBoard();
+  commitEditedWorld();
 });
 
 function downloadBlob(blob: Blob, filename: string): void {
@@ -1370,6 +1371,7 @@ importFile.addEventListener("change", async () => {
 
   importButton.disabled = true;
   try {
+    finalizeActivePointerGesture();
     const imported = deserializeBoard(await file.text());
     sessions.replaceActiveWorld(imported.world, imported.tick);
     loadActiveWorkshopSession();
@@ -1382,6 +1384,44 @@ importFile.addEventListener("change", async () => {
     importButton.disabled = activeSession.editableRegion !== null;
   }
 });
+
+function resetActivePointerState(): void {
+  const pointerId = activePointerId;
+  activePointerId = null;
+  activePointerMode = null;
+  activeEditTool = null;
+  activeErase = false;
+  activeWeldPlacement = false;
+  activePointerWorldChanged = false;
+  pendingPickCell = null;
+  pendingConfigurationCell = null;
+  lastEditedCell = null;
+  lastPointerGridPoint = null;
+  canvas.classList.remove("panning");
+  if (pointerId !== null && canvas.hasPointerCapture(pointerId)) {
+    canvas.releasePointerCapture(pointerId);
+  }
+}
+
+function finalizeActivePointerGesture(): boolean {
+  if (activePointerId === null) {
+    return false;
+  }
+  if (activeEditTool === "editable-region") {
+    sandboxEditableRegionAuthoring().cancelRectangle();
+    syncEditableRegionAuthoringOverlay();
+  } else if (activeEditTool === "selection") {
+    tileSelection.cancelDraft();
+    tileSelection.finishMove();
+    syncTileSelectionOverlay();
+  }
+  const changed = activePointerWorldChanged;
+  resetActivePointerState();
+  if (changed) {
+    commitEditedWorld();
+  }
+  return changed;
+}
 
 canvas.addEventListener("pointerdown", (event) => {
   const point = renderer.gridPointFromClientPoint(event.clientX, event.clientY);
@@ -1400,6 +1440,7 @@ canvas.addEventListener("pointerdown", (event) => {
   lastPanClientY = event.clientY;
   pendingPickCell = gesture === "pick-or-pan" ? cell : null;
   pendingConfigurationCell = null;
+  activePointerWorldChanged = false;
   canvas.setPointerCapture(event.pointerId);
 
   if (gesture === "pick-or-pan") {
@@ -1424,7 +1465,12 @@ canvas.addEventListener("pointerdown", (event) => {
     componentConfigurationForKind(selectedKind)?.configureOnPlacement === true;
   if (activeEditTool === "tile") {
     if (cell !== null) {
-      editCellLine(cell, cell, activeErase, activeWeldPlacement);
+      activePointerWorldChanged = editCellLine(
+        cell,
+        cell,
+        activeErase,
+        activeWeldPlacement,
+      );
       lastEditedCell = cell;
       if (shouldConfigurePlacement && world.kindAt(cell.x, cell.y) === selectedKind) {
         pendingConfigurationCell = cell;
@@ -1433,7 +1479,7 @@ canvas.addEventListener("pointerdown", (event) => {
   } else if (activeEditTool === "weld") {
     const edge = renderer.edgeFromGridPoint(point);
     if (edge !== null) {
-      editWeld(edge, activeErase);
+      activePointerWorldChanged = editWeld(edge, activeErase);
     }
   } else if (activeEditTool === "selection" && !activeErase) {
     if (cell === null) {
@@ -1499,16 +1545,21 @@ canvas.addEventListener("pointermove", (event) => {
       world.height,
     );
     if (segment !== null) {
-      editCellLine(
+      activePointerWorldChanged = editCellLine(
         lastEditedCell ?? segment.from,
         segment.to,
         activeErase,
         activeWeldPlacement,
-      );
+      ) || activePointerWorldChanged;
       lastEditedCell = segment.to;
     }
   } else if (activeEditTool === "weld") {
-    editWeldSegment(lastPointerGridPoint, point, hoveredEdge, activeErase);
+    activePointerWorldChanged = editWeldSegment(
+      lastPointerGridPoint,
+      point,
+      hoveredEdge,
+      activeErase,
+    ) || activePointerWorldChanged;
   } else if (activeEditTool === "selection" && !activeErase) {
     if (tileSelection.drafting) {
       const cell = clampedCellFromGridPoint(point, world.width, world.height);
@@ -1558,16 +1609,11 @@ function finishPointerGesture(event: PointerEvent): void {
   const configurationCell = event.type === "pointerup"
     ? pendingConfigurationCell
     : null;
-  activePointerId = null;
-  activePointerMode = null;
-  activeEditTool = null;
-  activeWeldPlacement = false;
-  pendingPickCell = null;
-  pendingConfigurationCell = null;
-  lastEditedCell = null;
-  lastPointerGridPoint = null;
-  canvas.classList.remove("panning");
-  navigation.persistActiveSolutionBoard();
+  const changed = activePointerWorldChanged;
+  resetActivePointerState();
+  if (changed) {
+    commitEditedWorld();
+  }
   if (configurationCell !== null) {
     openComponentConfiguration(configurationCell);
   }
@@ -1798,7 +1844,11 @@ window.addEventListener("blur", () => {
 window.addEventListener("popstate", () => {
   navigation.navigatePath(window.location.pathname);
 });
-window.addEventListener("pagehide", () => navigation.persistActiveSolutionBoard());
+window.addEventListener("pagehide", () => {
+  if (!finalizeActivePointerGesture()) {
+    navigation.persistActiveSolutionBoard();
+  }
+});
 window.addEventListener("resize", renderPalettePreviews);
 
 function testTicksPerSecond(currentTime: number): number {
