@@ -87,6 +87,7 @@ Game feel:
 * Add blocks that play a chime or other sound when charged.
 
 UI:
+* For each tile, in addition to the description, add an extended, potentially multi-paragraph description. Include things like details of how ROM rune's cursor movement works, and a color-coded truth table for the combiner rune, etc. Display these in the inspector, when the mouse is over the palette. When the mouse is over the tile grid, instead only show the short description.
 * UI for creating multiple test cases for a puzzle. Needed so that we can create and export puzzles efficiently.
 * When saving an image using the image button, crop out parts of the screen that are over the background, outside the grid, if this can be implemented easily.
 * Implement undo and redo when editing.
@@ -120,7 +121,7 @@ Selection tool:
 * DEFER In the snippets panel, add buttons to delete a snippet, and import/export (maybe the same as the scene format, or a different format).
 
 Visuals:
-* Re-theme the entire game's UI. The current palette (black, dark blue, cyan, yellow) doesn't really fit the theme. Prefer colors like earth brown, stone gray, bronze, gold. Maybe: 312312 (brown), 4B5052 (grey), F1CC38 (gold), 5C718C (blue).
+* Re-theme the entire game's UI. The current palette (black, dark blue, cyan, yellow) feels computer / electrical-engineering themed. Prefer colors like earth brown, stone gray, bronze, gold, lava orange? Although those may not work well, so maybe some subset of those, plus colors that work with those?
 * Make nice panel outlines with corner decorations, gilded Art Deco style.
 * Add a dark/light mode toggle. Set to dark by default, or browser default.
 * Add backgrounds for puzzles, maybe with parallax as the player pans.
