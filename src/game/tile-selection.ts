@@ -1,6 +1,11 @@
 import { GridRegion, type GridRectangle } from "./grid-region";
 import type { ConfigurableComponentSnapshot } from "../simulation/configurable-components";
-import { Direction, TileKind } from "../simulation/tile";
+import {
+  Direction,
+  flipDirectionHorizontally,
+  flipDirectionVertically,
+  TileKind,
+} from "../simulation/tile";
 import type { World } from "../simulation/world";
 
 export interface SelectionPreviewCell {
@@ -690,25 +695,6 @@ function rectangleBetween(first: GridCell, second: GridCell): GridRectangle {
   };
 }
 
-function flipDirectionHorizontally(direction: Direction): Direction {
-  if (direction === Direction.Right) {
-    return Direction.Left;
-  }
-  if (direction === Direction.Left) {
-    return Direction.Right;
-  }
-  return direction;
-}
-
-function flipDirectionVertically(direction: Direction): Direction {
-  if (direction === Direction.Up) {
-    return Direction.Down;
-  }
-  if (direction === Direction.Down) {
-    return Direction.Up;
-  }
-  return direction;
-}
 
 function cellKey(x: number, y: number): string {
   return `${x},${y}`;

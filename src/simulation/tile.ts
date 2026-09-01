@@ -130,6 +130,26 @@ export function oppositeDirection(direction: Direction): Direction {
   return ((direction + 2) & 3) as Direction;
 }
 
+export function flipDirectionHorizontally(direction: Direction): Direction {
+  if (direction === Direction.Right) {
+    return Direction.Left;
+  }
+  if (direction === Direction.Left) {
+    return Direction.Right;
+  }
+  return direction;
+}
+
+export function flipDirectionVertically(direction: Direction): Direction {
+  if (direction === Direction.Up) {
+    return Direction.Down;
+  }
+  if (direction === Direction.Down) {
+    return Direction.Up;
+  }
+  return direction;
+}
+
 export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Empty]: {
     name: "Empty",
@@ -800,7 +820,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 29,
       category: PaletteCategory.Mechanisms,
-      description: "Copies the welded body behind it to its pointed side on +1 side charge",
+      description: "Mirrors the welded body behind it across itself on +1 side charge",
     },
     affectedByGravity: true,
     slidesDiagonally: false,

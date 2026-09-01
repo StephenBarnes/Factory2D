@@ -18,6 +18,8 @@ import {
   Direction,
   directionX,
   directionY,
+  flipDirectionHorizontally,
+  flipDirectionVertically,
   oppositeDirection,
   orientedSides,
   TILE_DEFINITIONS,
@@ -605,9 +607,15 @@ export class World {
     this.revisionValue += 1;
   }
 
-  applyDuplications(sourceForDestination: Int32Array): void {
-    if (sourceForDestination.length !== this.cellCount) {
-      throw new RangeError("Duplicator source buffer must match the world cell count");
+  applyDuplications(
+    sourceForDestination: Int32Array,
+    destinationOwners: Int32Array,
+  ): void {
+    if (
+      sourceForDestination.length !== this.cellCount ||
+      destinationOwners.length !== this.cellCount
+    ) {
+      throw new RangeError("Duplicator buffers must match the world cell count");
     }
 
     let duplicateCount = 0;
@@ -619,14 +627,41 @@ export class World {
       if (source === -1) {
         continue;
       }
+      const owner = expectDefined(
+        destinationOwners[destination],
+        "duplicator destination owner",
+      );
       if (source < 0 || source >= this.cellCount) {
         throw new RangeError(`Invalid duplicator source index ${source}`);
+      }
+      if (
+        owner < 0 ||
+        owner >= this.cellCount ||
+        this.kinds[owner] !== TileKind.Duplicator
+      ) {
+        throw new Error(`Invalid duplicator owner ${owner} for destination ${destination}`);
       }
       if (this.kinds[source] === TileKind.Empty) {
         throw new Error(`Duplicator source at index ${source} is empty`);
       }
       if (this.kinds[destination] !== TileKind.Empty) {
         throw new Error(`Duplicator destination at index ${destination} is occupied`);
+      }
+      const sourceX = source % this.width;
+      const sourceY = (source - sourceX) / this.width;
+      const destinationX = destination % this.width;
+      const destinationY = (destination - destinationX) / this.width;
+      const ownerX = owner % this.width;
+      const ownerY = (owner - ownerX) / this.width;
+      const ownerOrientation = this.orientations[owner] as Direction;
+      const validReflection = ownerOrientation === Direction.Up ||
+          ownerOrientation === Direction.Down
+        ? sourceX === destinationX && sourceY + destinationY === ownerY * 2
+        : sourceY === destinationY && sourceX + destinationX === ownerX * 2;
+      if (!validReflection) {
+        throw new Error(
+          `Duplicator ${owner} does not mirror source ${source} to destination ${destination}`,
+        );
       }
       duplicateCount += 1;
     }
@@ -642,15 +677,21 @@ export class World {
       if (source < 0) {
         continue;
       }
+      const owner = expectDefined(
+        destinationOwners[destination],
+        "committed duplicator destination owner",
+      );
       const kind = this.kinds[source] as TileKind;
+      const sourceOrientation = this.orientations[source] as Direction;
+      const ownerOrientation = this.orientations[owner] as Direction;
       const id = this.nextTileId;
       this.nextTileId += 1;
       this.kinds[destination] = kind;
       this.ids[destination] = id;
-      this.orientations[destination] = expectDefined(
-        this.orientations[source],
-        "duplicated tile orientation",
-      );
+      this.orientations[destination] = ownerOrientation === Direction.Up ||
+          ownerOrientation === Direction.Down
+        ? flipDirectionVertically(sourceOrientation)
+        : flipDirectionHorizontally(sourceOrientation);
       this.charges[destination] = expectDefined(
         this.charges[source],
         "duplicated tile charge",
@@ -688,13 +729,30 @@ export class World {
       if (progress === 0) {
         continue;
       }
-      const orientation = this.orientations[source] as Direction;
-      const sourceTarget = this.neighborIndex(source, orientation);
-      const destinationTarget = this.neighborIndex(destination, orientation);
+      const sourceTarget = this.neighborIndex(
+        source,
+        this.orientations[source] as Direction,
+      );
+      const destinationTarget = this.neighborIndex(
+        destination,
+        this.orientations[destination] as Direction,
+      );
+      if (sourceTarget < 0 || destinationTarget < 0) {
+        continue;
+      }
+      const owner = expectDefined(
+        destinationOwners[destination],
+        "duplicated furnace destination owner",
+      );
       if (
-        sourceTarget >= 0 &&
-        destinationTarget >= 0 &&
-        sourceForDestination[destinationTarget] === sourceTarget &&
+        expectDefined(
+          sourceForDestination[destinationTarget],
+          "duplicated furnace target source",
+        ) === sourceTarget &&
+        expectDefined(
+          destinationOwners[destinationTarget],
+          "duplicated furnace target owner",
+        ) === owner &&
         this.furnaceTargetIds[source] === this.ids[sourceTarget]
       ) {
         this.furnaceProgress[destination] = progress;
@@ -713,21 +771,41 @@ export class World {
       if (source < 0) {
         continue;
       }
-      if (
-        destination % this.width < this.width - 1 &&
-        source % this.width < this.width - 1 &&
-        sourceForDestination[destination + 1] === source + 1 &&
-        this.rightWelds[source] === 1
-      ) {
-        this.rightWelds[destination] = 1;
+      const owner = expectDefined(
+        destinationOwners[destination],
+        "duplicated weld destination owner",
+      );
+      if (destination % this.width < this.width - 1) {
+        const rightSource = expectDefined(
+          sourceForDestination[destination + 1],
+          "right duplicated weld source index",
+        );
+        if (
+          rightSource >= 0 &&
+          expectDefined(
+            destinationOwners[destination + 1],
+            "right duplicated weld destination owner",
+          ) === owner &&
+          this.areWeldedAtIndices(source, rightSource)
+        ) {
+          this.rightWelds[destination] = 1;
+        }
       }
-      if (
-        destination < this.cellCount - this.width &&
-        source < this.cellCount - this.width &&
-        sourceForDestination[destination + this.width] === source + this.width &&
-        this.downWelds[source] === 1
-      ) {
-        this.downWelds[destination] = 1;
+      if (destination < this.cellCount - this.width) {
+        const downSource = expectDefined(
+          sourceForDestination[destination + this.width],
+          "down duplicated weld source index",
+        );
+        if (
+          downSource >= 0 &&
+          expectDefined(
+            destinationOwners[destination + this.width],
+            "down duplicated weld destination owner",
+          ) === owner &&
+          this.areWeldedAtIndices(source, downSource)
+        ) {
+          this.downWelds[destination] = 1;
+        }
       }
     }
     this.revisionValue += 1;
@@ -1306,6 +1384,23 @@ export class World {
       return -1;
     }
     return index + directionX(direction) + directionY(direction) * this.width;
+  }
+
+  private areWeldedAtIndices(first: number, second: number): boolean {
+    const difference = second - first;
+    if (difference === 1 && first % this.width < this.width - 1) {
+      return this.rightWelds[first] === 1;
+    }
+    if (difference === -1 && second % this.width < this.width - 1) {
+      return this.rightWelds[second] === 1;
+    }
+    if (difference === this.width) {
+      return this.downWelds[first] === 1;
+    }
+    if (difference === -this.width) {
+      return this.downWelds[second] === 1;
+    }
+    throw new RangeError("A weld requires two orthogonally adjacent cells");
   }
 
   private setWeldAtIndices(first: number, second: number, value: 0 | 1): void {

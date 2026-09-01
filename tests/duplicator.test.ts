@@ -32,7 +32,7 @@ describe("duplicators", () => {
     (inputSide) => {
       const world = new World(9, 7);
       placePoweredDuplicator(world, inputSide);
-      world.place(4, 5, TileKind.Rom, Direction.Right);
+      world.place(4, 5, TileKind.Rom, Direction.Up);
       const anchorX = inputSide === Direction.Left ? 5 : 3;
       world.place(anchorX, 5, TileKind.Platform);
       world.setWeld(4, 5, anchorX, 5, true);
@@ -47,13 +47,63 @@ describe("duplicators", () => {
       simulation.step();
 
       expect(world.kindAt(4, 3)).toBe(TileKind.Rom);
-      expect(world.orientationAt(4, 3)).toBe(Direction.Right);
+      expect(world.orientationAt(4, 3)).toBe(Direction.Down);
       expect(world.idAt(4, 3)).not.toBe(sourceId);
       expect(world.componentStateSnapshotAt(4, 3)).toEqual(sourceState);
       expect(world.kindAt(anchorX, 3)).toBe(TileKind.Platform);
       expect(world.isWelded(4, 3, anchorX, 3)).toBe(true);
     },
   );
+
+  it("vertically mirrors a 2x2 welded iron body without intersecting the duplicator", () => {
+    const world = new World(8, 8);
+    world.place(3, 3, TileKind.Duplicator, Direction.Down);
+    world.setCharge(3, 3, 1);
+    world.place(2, 3, TileKind.Platform);
+    world.setWeld(2, 3, 3, 3, true);
+    const upperLeftId = world.place(3, 1, TileKind.Iron);
+    world.place(4, 1, TileKind.Iron);
+    world.place(3, 2, TileKind.Iron);
+    world.place(4, 2, TileKind.Iron);
+    world.place(5, 1, TileKind.Platform);
+    world.setWeld(3, 1, 4, 1, true);
+    world.setWeld(3, 1, 3, 2, true);
+    world.setWeld(4, 1, 4, 2, true);
+    world.setWeld(3, 2, 4, 2, true);
+    world.setWeld(4, 1, 5, 1, true);
+
+    new Simulation(world).step();
+
+    expect(world.kindAt(3, 4)).toBe(TileKind.Iron);
+    expect(world.kindAt(4, 4)).toBe(TileKind.Iron);
+    expect(world.kindAt(3, 5)).toBe(TileKind.Iron);
+    expect(world.kindAt(4, 5)).toBe(TileKind.Iron);
+    expect(world.kindAt(5, 5)).toBe(TileKind.Platform);
+    expect(world.idAt(3, 5)).not.toBe(upperLeftId);
+    expect(world.isWelded(3, 4, 4, 4)).toBe(true);
+    expect(world.isWelded(3, 4, 3, 5)).toBe(true);
+    expect(world.isWelded(4, 4, 4, 5)).toBe(true);
+    expect(world.isWelded(3, 5, 4, 5)).toBe(true);
+    expect(world.isWelded(4, 5, 5, 5)).toBe(true);
+  });
+
+  it("horizontally mirrors geometry, orientation, and welds", () => {
+    const world = new World(7, 5);
+    world.place(3, 2, TileKind.Duplicator, Direction.Right);
+    world.setCharge(3, 2, 1);
+    world.place(3, 1, TileKind.Platform);
+    world.setWeld(3, 1, 3, 2, true);
+    world.place(2, 2, TileKind.Sensor, Direction.Left);
+    world.place(2, 3, TileKind.Platform);
+    world.setWeld(2, 2, 2, 3, true);
+
+    new Simulation(world).step();
+
+    expect(world.kindAt(4, 2)).toBe(TileKind.Sensor);
+    expect(world.orientationAt(4, 2)).toBe(Direction.Right);
+    expect(world.kindAt(4, 3)).toBe(TileKind.Platform);
+    expect(world.isWelded(4, 2, 4, 3)).toBe(true);
+  });
 
   it("copies only the source welded body and requires every destination cell to be empty", () => {
     const world = new World(7, 6);
@@ -72,20 +122,19 @@ describe("duplicators", () => {
     expect(world.kindAt(2, 2)).toBe(TileKind.Empty);
   });
 
-  it("does not partially copy a body that would cross the world boundary", () => {
+  it("does not partially copy a mirrored body that would cross the world boundary", () => {
     const world = new World(4, 4);
     world.place(1, 1, TileKind.Duplicator, Direction.Up);
     world.setCharge(1, 1, 1);
+    world.place(0, 1, TileKind.Platform);
+    world.setWeld(0, 1, 1, 1, true);
     world.place(1, 2, TileKind.Platform);
-    world.place(2, 2, TileKind.Platform);
-    world.place(2, 1, TileKind.Platform);
-    world.setWeld(1, 2, 2, 2, true);
-    world.setWeld(2, 2, 2, 1, true);
+    world.place(1, 3, TileKind.Platform);
+    world.setWeld(1, 2, 1, 3, true);
 
     new Simulation(world).step();
 
     expect(world.kindAt(1, 0)).toBe(TileKind.Empty);
-    expect(world.kindAt(2, 0)).toBe(TileKind.Empty);
   });
 
   it("does not trigger on negative charge", () => {

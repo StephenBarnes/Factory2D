@@ -1,8 +1,6 @@
 import { expectDefined } from "../util/assert";
 import {
   Direction,
-  directionX,
-  directionY,
   oppositeDirection,
   TileKind,
 } from "./tile";
@@ -48,7 +46,7 @@ export class DuplicatorResolver {
         continue;
       }
       const sourceRoot = expectDefined(this.bodyRoots[source], "duplicator source body root");
-      if (this.bodyFits(sourceRoot, orientation)) {
+      if (this.bodyFits(sourceRoot, duplicator, orientation)) {
         this.candidateDuplicators[duplicator] = 1;
       }
     }
@@ -62,7 +60,7 @@ export class DuplicatorResolver {
       const sourceRoot = expectDefined(this.bodyRoots[source], "candidate source body root");
       let member = expectDefined(this.bodyHeads[sourceRoot], "candidate body member head");
       while (member >= 0) {
-        const destination = this.destinationIndex(member, orientation);
+        const destination = this.destinationIndex(member, duplicator, orientation);
         const owner = expectDefined(this.destinationOwners[destination], "duplicator output owner");
         this.destinationOwners[destination] = owner === -1 || owner === duplicator
           ? duplicator
@@ -81,7 +79,7 @@ export class DuplicatorResolver {
       let accepted = true;
       let member = expectDefined(this.bodyHeads[sourceRoot], "accepted body member head");
       while (member >= 0) {
-        const destination = this.destinationIndex(member, orientation);
+        const destination = this.destinationIndex(member, duplicator, orientation);
         if (this.destinationOwners[destination] !== duplicator) {
           accepted = false;
         }
@@ -92,7 +90,7 @@ export class DuplicatorResolver {
       }
       member = expectDefined(this.bodyHeads[sourceRoot], "committed body member head");
       while (member >= 0) {
-        const destination = this.destinationIndex(member, orientation);
+        const destination = this.destinationIndex(member, duplicator, orientation);
         this.sourceForDestination[destination] = member;
         member = expectDefined(this.nextBodyMember[member], "next committed body member");
       }
@@ -100,7 +98,7 @@ export class DuplicatorResolver {
   }
 
   commit(): void {
-    this.world.applyDuplications(this.sourceForDestination);
+    this.world.applyDuplications(this.sourceForDestination, this.destinationOwners);
   }
 
   private isPoweredDuplicator(index: number): boolean {
@@ -114,10 +112,10 @@ export class DuplicatorResolver {
       this.world.chargeAtPortIndex(index, right) === 1;
   }
 
-  private bodyFits(root: number, orientation: Direction): boolean {
+  private bodyFits(root: number, duplicator: number, orientation: Direction): boolean {
     let member = expectDefined(this.bodyHeads[root], "fitted body member head");
     while (member >= 0) {
-      const destination = this.destinationIndex(member, orientation);
+      const destination = this.destinationIndex(member, duplicator, orientation);
       if (destination < 0 || this.world.kindAtIndex(destination) !== TileKind.Empty) {
         return false;
       }
@@ -126,11 +124,21 @@ export class DuplicatorResolver {
     return true;
   }
 
-  private destinationIndex(source: number, orientation: Direction): number {
+  private destinationIndex(
+    source: number,
+    duplicator: number,
+    orientation: Direction,
+  ): number {
     const sourceX = source % this.world.width;
     const sourceY = (source - sourceX) / this.world.width;
-    const destinationX = sourceX + directionX(orientation) * 2;
-    const destinationY = sourceY + directionY(orientation) * 2;
+    const duplicatorX = duplicator % this.world.width;
+    const duplicatorY = (duplicator - duplicatorX) / this.world.width;
+    const destinationX = orientation === Direction.Left || orientation === Direction.Right
+      ? duplicatorX * 2 - sourceX
+      : sourceX;
+    const destinationY = orientation === Direction.Up || orientation === Direction.Down
+      ? duplicatorY * 2 - sourceY
+      : sourceY;
     return destinationX >= 0 &&
         destinationX < this.world.width &&
         destinationY >= 0 &&
