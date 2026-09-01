@@ -35,7 +35,7 @@ export class Simulation {
     this.weldOperationResolver = new WeldOperationResolver(world);
   }
 
-  step(): number {
+  step(interpolationSource?: World): number {
     this.resolveVictoryBlocks();
     this.weldedBodies.collect();
     this.deliveryResolver.collect();
@@ -46,7 +46,7 @@ export class Simulation {
       this.deliveryResolver.absorptionTargetIndices,
       this.weldOperationResolver.successfulOperationIndices,
     );
-    this.duplicatorResolver.commit();
+    this.duplicatorResolver.commit(interpolationSource);
     this.weldOperationResolver.commit();
     this.furnaceResolver.resolve(this.circuitResolver.furnaceDisabled);
     this.deliveryResolver.commit();

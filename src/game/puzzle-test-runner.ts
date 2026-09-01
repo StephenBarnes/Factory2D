@@ -75,12 +75,12 @@ export class PuzzleTestRun {
     return this.reportValue;
   }
 
-  step(): PuzzleTestRunStatus {
+  step(interpolationSource?: World): PuzzleTestRunStatus {
     if (this.statusValue !== "running") {
       throw new Error(`Cannot step puzzle tests while ${this.statusValue}`);
     }
 
-    this.currentSimulationValue.step();
+    this.currentSimulationValue.step(interpolationSource);
     const testCase = this.currentCase;
     if (
       this.world.puzzleResult === PuzzleResult.InProgress &&

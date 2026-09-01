@@ -63,7 +63,7 @@ export interface PuzzleTestControllerDependencies {
   readonly resetSession: () => void;
   readonly beginSimulation: () => void;
   readonly mountRuntime: (world: World, simulation?: Simulation) => void;
-  readonly beforeStep: () => void;
+  readonly beforeStep: () => World;
   readonly setStepAnimation: (startedAt: number, duration: number) => void;
   readonly finishAnimation: () => void;
   readonly animationsEnabled: (ticksPerSecond: number) => boolean;
@@ -219,13 +219,14 @@ export class PuzzleTestController {
     const tickDuration = 1000 / ticksPerSecond;
     while (accumulatedMs >= tickDuration && state.run.status === "running") {
       accumulatedMs -= tickDuration;
-      this.dependencies.beforeStep();
-      const status = state.run.step();
+      const interpolationSource = this.dependencies.beforeStep();
+      const animationDuration = this.dependencies.animationsEnabled(ticksPerSecond)
+        ? Math.min(tickDuration, MAX_AUTOMATIC_ANIMATION_MS)
+        : 0;
+      const status = state.run.step(animationDuration > 0 ? interpolationSource : undefined);
       this.dependencies.setStepAnimation(
         currentTime - accumulatedMs,
-        this.dependencies.animationsEnabled(ticksPerSecond)
-          ? Math.min(tickDuration, MAX_AUTOMATIC_ANIMATION_MS)
-          : 0,
+        animationDuration,
       );
       if (status === "between-cases") {
         this.lifecycleValue = {

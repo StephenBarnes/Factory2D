@@ -16,7 +16,7 @@ Storage format, import/export:
 * Further compact orientations and charges in the export/import format, possibly storing charges per network instead of per tile. More complex per-tile state (e.g. furnace stored ticks or target/delivery-block configuration) can remain verbose. Only include full ASCII grids for fields that aren't the default value.
 
 Player-created puzzles, histograms, and authoring tools:
-* Make puzzle share/save options open a modal to enter the name, description, and goal. We'll use this both for authoring puzzles easily, and for later allowing users to share puzzles to a public list of community puzzles.
+* Make puzzle share/save options open a modal to enter the name, description, and goal. We'll use this both for authoring puzzles, and for later allowing users to share puzzles to a public list of community puzzles.
 * Add a properties button, visible only in the sandbox. Allow setting the grid size, a list of tiles with checkboxes for whether to enable player placement of them in this puzzle, and a number input for price. Later other things like the background image, gravity, etc.
 * DEFER Add back-end server and database. Probably Cloudflare Workers + D1 + R2. Then make the game request histogram data and shared puzzles, and allow submitting scores and shared puzzles.
 * DEFER Use `crypto.randomUUID()` to assign each install an ID. Allow voting community-created puzzles up and down. We can assume users aren't malicious, this is a zero-stakes indie game; expect under 10 players per day. We want to avoid setting up a whole auth system or requiring email addresses, etc. Using a simple unique ID allows exploits (e.g. clear browser data and double-vote) but we'll assume nobody does that. Version the database and roll back manually if needed. If the game becomes popular enough to need more than that, upgrade to a more robust system.
@@ -33,7 +33,7 @@ Components useful for designing puzzles in-world:
 Components:
 * A sensor that detects when the sensor's own tile moves, and outputs +1 on that side, -1 on the other side.
 * Assemblers that convert a group of blocks welded in a specific way into one block. For example iron and copper blocks welded in a specific way are converted to a piston block. We also want this to be able to convert one block to multiple (unwelded) blocks - so need to store a queue of blocks to emit, emit them one-by-one when the output tile is empty, and prevent the assembler from consuming more inputs when the queue is non-empty.
-* Assembler should match input rotation (relative to recipe's output) to input rotation (relative to recipe's defined input). For example if a recipe says that an "L" shape of welded blocks is assembled to a right-facing magnet, then a rotated "L" shape should produce a magnet with corresponding rotation relative to the recipe's "right-facing".
+* Assembler should match output rotation (relative to recipe's output) to input rotation (relative to recipe's defined input). For example if a recipe says that an "L" shape of welded blocks is assembled to a right-facing magnet, then a rotated "L" shape should produce a magnet with corresponding rotation relative to the recipe's "right-facing".
 * Flipper: attaches to one block, then flips the entire connected/welded group of blocks around that line horizontally or vertically, if it would not collide/overlap other blocks.
 * Laser splitter: splits everything in a line.
 * Component that rotates a neighboring block or body around itself.
@@ -50,10 +50,11 @@ Components:
 * Furnaces could have stages, e.g. cookie dough -> cookie -> burnt cookie, creating timing challenges.
 * Make the glass block look transparent. Add a transparent flag in the tile definition. Make the sensor not detect transparent blocks.
 * A rotator component. It has a circuit input on one back side. It faces in a specific direction, but stores an internal direction that's either forward, left, or right, indicated on the rendered block; cannot face back to the circuit input. Signals of +1 and -1 rotate that internal direction by 90 degrees at a time. Each time it rotates, it also attaches to the block in that direction, and then rotates that block's entire body to keep that edge against its new internal direction. If the body can't be moved like that due to collisions, instead block rotation.
+* Add blocks that play a chime or other sound when charged.
 
 Performance:
 * Profile to determine if there's any need to optimize, and if so, what to optimize.
-* Check if we're caching connected/welded bodies, or flood-filling every frame. Can easily cache it and update only on the infrequent weld/unweld operations.
+* Check if we're caching connected/welded bodies, or flood-filling every frame. Could cache it and update only on the infrequent weld/unweld operations. Also check if the simulation and rendering are tracking connected bodies separately - if so, consider adding a getter on simulation system to read information on multi-tile bodies, and call that from the renderer.
 * Mark some tiles or regions as asleep, if they have no updates. Wake up only regions where things are happening. E.g. a static structure made of only solid no-action blocks doesn't need to be processed every frame, doesn't need to re-check gravity every frame, etc.
 * Cache circuit networks instead of rebuilding every tick.
 * Maybe: Compute the next simulation step async, while the last update is still being animated. Would improve performance if simulation step time grows to exceed frame time.
@@ -83,7 +84,6 @@ Don't add, for circuit network, because they can be built from a few existing co
 Game feel:
 * Try out alternate easing for movements. Maybe define per-block easing.
 * Add sounds. On block placement/removal, welding/unwelding. On victory block triggering.
-* Add blocks that play a chime or other sound when charged.
 
 UI:
 * Modify the overall layout when solving a puzzle, and in the sandbox. Add a section at the top of the palette panel, always visible even when the palette is scrolled. Move the "back" button (back to puzzle or main menu), the puzzle title, and the info button to that top-left region - currently they're all in the bottom-left `workshop-identity` region. Keep the total price and the footprint readout in that workshop-identity region. Increase display size of the puzzle title (unless the name is long), and increase display size of the live puzzle metrics (cost and footprint readouts). Add the decorated border (`src/styles.css:178`) to the top-left region.
@@ -141,7 +141,7 @@ Styling:
 * Change color of the game-canvas region outside the game board - currently it's black, change it to a very dark brown (darker than game board and panels).
 
 Animations:
-* Animate when joints are welded or split, including by the welder/splitter components.
+* Animate when joints are welded or split, including by the welder/splitter components and by the player.
 * Improve piston extension/retraction animation.
 * Add animation for the delivery box - animate tiles moving into it, and shrinking, as they're absorbed.
 * Animate fragile blocks shattering.

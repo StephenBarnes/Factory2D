@@ -285,7 +285,7 @@ function advanceSimulation(duration: number, startedAt = performance.now()): voi
     refreshPointerHover();
   }
   surface.previousWorld.copyFrom(surface.world);
-  surface.simulation.step();
+  surface.simulation.step(duration > 0 ? surface.previousWorld : undefined);
 
   animationStartedAt = startedAt;
   animationDuration = duration;
@@ -856,7 +856,10 @@ const puzzleTests = new PuzzleTestController(
         },
       });
     },
-    beforeStep: () => surface.previousWorld.copyFrom(surface.world),
+    beforeStep: () => {
+      surface.previousWorld.copyFrom(surface.world);
+      return surface.previousWorld;
+    },
     setStepAnimation: (startedAt, duration) => {
       animationStartedAt = startedAt;
       animationDuration = duration;

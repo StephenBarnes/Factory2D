@@ -146,7 +146,7 @@ function controllerHarness(solution: World): ControllerHarness {
     mountRuntime: (world) => {
       mountedCaseKinds.push(world.kindAt(1, 0));
     },
-    beforeStep: () => undefined,
+    beforeStep: () => solution,
     setStepAnimation: () => undefined,
     finishAnimation: () => {
       counts.finishAnimation += 1;

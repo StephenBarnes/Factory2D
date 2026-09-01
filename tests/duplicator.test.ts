@@ -88,6 +88,24 @@ describe("duplicators", () => {
     expect(world.isWelded(4, 5, 5, 5)).toBe(true);
   });
 
+  it("retains a falling duplicate's creation cell for interpolation", () => {
+    const world = new World(3, 5);
+    world.place(1, 1, TileKind.Duplicator, Direction.Down);
+    world.setCharge(1, 1, 1);
+    world.place(0, 1, TileKind.Platform);
+    world.setWeld(0, 1, 1, 1, true);
+    world.place(1, 0, TileKind.Stone);
+    const interpolationSource = world.clone();
+
+    new Simulation(world).step(interpolationSource);
+
+    const duplicateId = world.idAt(1, 3);
+    expect(duplicateId).not.toBe(0);
+    expect(world.kindAt(1, 2)).toBe(TileKind.Empty);
+    expect(interpolationSource.idAt(1, 2)).toBe(duplicateId);
+    expect(interpolationSource.kindAt(1, 3)).toBe(TileKind.Empty);
+  });
+
   it("horizontally mirrors geometry, orientation, and welds", () => {
     const world = new World(7, 5);
     world.place(3, 2, TileKind.Duplicator, Direction.Right);

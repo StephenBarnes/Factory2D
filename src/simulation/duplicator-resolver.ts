@@ -18,6 +18,7 @@ export class DuplicatorResolver {
   private readonly candidateDuplicators: Uint8Array;
   private readonly destinationOwners: Int32Array;
   private readonly sourceForDestination: Int32Array;
+  private acceptedDestinationCount = 0;
 
   constructor(world: World, bodies: WeldedBodyIndex) {
     this.world = world;
@@ -31,6 +32,7 @@ export class DuplicatorResolver {
     this.candidateDuplicators.fill(0);
     this.destinationOwners.fill(-1);
     this.sourceForDestination.fill(-1);
+    this.acceptedDestinationCount = 0;
 
     for (let duplicator = 0; duplicator < this.world.cellCount; duplicator += 1) {
       if (!this.isPoweredDuplicator(duplicator)) {
@@ -88,12 +90,20 @@ export class DuplicatorResolver {
       while (member >= 0) {
         const destination = this.destinationIndex(member, duplicator, orientation);
         this.sourceForDestination[destination] = member;
+        this.acceptedDestinationCount += 1;
         member = this.bodies.nextMember(member);
       }
     }
   }
 
-  commit(): void {
+  commit(interpolationSource?: World): void {
+    if (this.acceptedDestinationCount === 0) {
+      return;
+    }
+    interpolationSource?.applyDuplications(
+      this.sourceForDestination,
+      this.destinationOwners,
+    );
     this.world.applyDuplications(this.sourceForDestination, this.destinationOwners);
   }
 
