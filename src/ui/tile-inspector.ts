@@ -2,7 +2,6 @@ import { componentConfigurationForKind } from "../simulation/configurable-compon
 import { furnaceRecipeFor } from "../simulation/furnace";
 import {
   Direction,
-  orientedSides,
   TILE_DEFINITIONS,
   TileKind,
 } from "../simulation/tile";
@@ -13,12 +12,11 @@ interface GridPosition {
   readonly y: number;
 }
 
-const DIRECTIONS = [
-  Direction.Up,
-  Direction.Right,
-  Direction.Down,
-  Direction.Left,
-] as const;
+export interface InspectorComponentReference {
+  readonly price: number | null;
+  readonly shortcut: string | null;
+}
+
 
 const DIRECTION_NAMES: Readonly<Record<Direction, string>> = {
   [Direction.Up]: "UP",
@@ -49,16 +47,6 @@ function requiredDescendant<T extends HTMLElement>(root: HTMLElement, selector: 
   return element;
 }
 
-function appendDirection(current: string, direction: Direction): string {
-  const separator = current.length === 0 ? "" : " / ";
-  return `${current}${separator}${DIRECTION_NAMES[direction]}`;
-}
-
-function formatCharge(charge: number): string {
-  return charge < 0
-    ? "-1 · NEGATIVE"
-    : charge > 0 ? "+1 · POSITIVE" : "0 · NEUTRAL";
-}
 function descriptionFor(kind: TileKind): string {
   const definition = TILE_DEFINITIONS[kind];
   if (definition.palette !== null) {
@@ -82,23 +70,18 @@ export class TileInspector {
   private readonly properties: HTMLElement;
   private readonly paletteDetails: HTMLElement;
   private readonly paletteDescription: HTMLElement;
-  private readonly palettePrice: HTMLElement;
-  private readonly paletteShortcut: HTMLElement;
+  private readonly componentReference: HTMLElement;
+  private readonly price: HTMLElement;
+  private readonly shortcut: HTMLElement;
   private readonly toolDetails: HTMLElement;
   private readonly toolDescription: HTMLElement;
   private readonly toolControls: HTMLElement;
-  private readonly orientationRow: HTMLElement;
-  private readonly orientation: HTMLElement;
   private readonly furnaceRow: HTMLElement;
   private readonly configurationRow: HTMLElement;
   private readonly configuration: HTMLElement;
   private readonly configurationControlsRow: HTMLElement;
   private readonly configurationControls: HTMLElement;
   private readonly furnace: HTMLElement;
-  private readonly circuitRow: HTMLElement;
-  private readonly circuit: HTMLElement;
-  private readonly chargeRow: HTMLElement;
-  private readonly charge: HTMLElement;
   private readonly attractionRow: HTMLElement;
   private readonly attraction: HTMLElement;
   private lastX = -2;
@@ -117,13 +100,12 @@ export class TileInspector {
     this.properties = requiredDescendant(root, "[data-inspector-properties]");
     this.paletteDetails = requiredDescendant(root, "[data-inspector-palette]");
     this.paletteDescription = requiredDescendant(root, "[data-inspector-palette-description]");
-    this.palettePrice = requiredDescendant(root, "[data-inspector-palette-price]");
-    this.paletteShortcut = requiredDescendant(root, "[data-inspector-palette-shortcut]");
+    this.componentReference = requiredDescendant(root, "[data-inspector-component-reference]");
+    this.price = requiredDescendant(root, "[data-inspector-price]");
+    this.shortcut = requiredDescendant(root, "[data-inspector-shortcut]");
     this.toolDetails = requiredDescendant(root, "[data-inspector-tool]");
     this.toolDescription = requiredDescendant(root, "[data-inspector-tool-description]");
     this.toolControls = requiredDescendant(root, "[data-inspector-tool-controls]");
-    this.orientationRow = requiredDescendant(root, "[data-inspector-orientation-row]");
-    this.orientation = requiredDescendant(root, "[data-inspector-orientation]");
     this.furnaceRow = requiredDescendant(root, "[data-inspector-furnace-row]");
     this.configurationRow = requiredDescendant(root, "[data-inspector-configuration-row]");
     this.configuration = requiredDescendant(root, "[data-inspector-configuration]");
@@ -136,15 +118,11 @@ export class TileInspector {
       "[data-inspector-configuration-controls]",
     );
     this.furnace = requiredDescendant(root, "[data-inspector-furnace]");
-    this.circuitRow = requiredDescendant(root, "[data-inspector-circuit-row]");
-    this.circuit = requiredDescendant(root, "[data-inspector-circuit]");
-    this.chargeRow = requiredDescendant(root, "[data-inspector-charge-row]");
-    this.charge = requiredDescendant(root, "[data-inspector-charge]");
     this.attractionRow = requiredDescendant(root, "[data-inspector-attraction-row]");
     this.attraction = requiredDescendant(root, "[data-inspector-attraction]");
   }
 
-  showPalette(kind: TileKind, price: number | null, shortcut: string | null): void {
+  showPalette(kind: TileKind, reference: InspectorComponentReference): void {
     const definition = TILE_DEFINITIONS[kind];
     const palette = definition.palette;
     if (palette === null) {
@@ -155,14 +133,13 @@ export class TileInspector {
     this.root.classList.remove("tile-inspector-hidden");
     this.root.setAttribute("aria-hidden", "false");
     this.name.textContent = definition.name.toUpperCase();
-    this.position.textContent = "PALETTE COMPONENT";
+    this.position.hidden = true;
+    this.showComponentReference(reference);
     this.hint.hidden = true;
     this.properties.hidden = true;
     this.toolDetails.hidden = true;
     this.paletteDetails.hidden = false;
     this.paletteDescription.textContent = palette.description;
-    this.palettePrice.textContent = price === null ? "UNPRICED" : String(price);
-    this.paletteShortcut.textContent = shortcut ?? "NONE";
   }
 
   showTool(name: string, description: string, controls: string): void {
@@ -170,7 +147,9 @@ export class TileInspector {
     this.root.classList.remove("tile-inspector-hidden");
     this.root.setAttribute("aria-hidden", "false");
     this.name.textContent = name.toUpperCase();
+    this.position.hidden = false;
     this.position.textContent = "PALETTE TOOL";
+    this.showComponentReference(null);
     this.hint.hidden = true;
     this.properties.hidden = true;
     this.paletteDetails.hidden = true;
@@ -179,11 +158,15 @@ export class TileInspector {
     this.toolControls.textContent = controls;
   }
 
-  update(position: GridPosition | null): void {
+  update(
+    position: GridPosition | null,
+    reference: InspectorComponentReference | null,
+  ): void {
     const wasShowingReference = this.showingReference;
     this.showingReference = false;
     this.paletteDetails.hidden = true;
     this.toolDetails.hidden = true;
+    this.position.hidden = false;
     const x = position?.x ?? -1;
     const y = position?.y ?? -1;
     const kind = position === null ? TileKind.Empty : this.world.kindAt(x, y);
@@ -223,8 +206,7 @@ export class TileInspector {
     this.hint.textContent = descriptionFor(kind);
     this.hint.hidden = false;
     this.properties.hidden = false;
-    this.orientationRow.hidden = !definition.usesOrientation;
-    this.orientation.textContent = DIRECTION_NAMES[orientation];
+    this.showComponentReference(reference);
     const componentConfiguration = componentConfigurationForKind(kind);
     const componentState = this.world.componentStateSnapshotAt(position.x, position.y);
     this.configurationRow.hidden = componentConfiguration === null;
@@ -272,72 +254,23 @@ export class TileInspector {
           `${progress}/${recipe.bakeTime} TICKS`;
       }
     }
-    const hasCircuit = definition.circuitPorts !== 0;
-    this.circuitRow.hidden = !hasCircuit;
-    this.chargeRow.hidden = !hasCircuit;
-    if (hasCircuit) {
-      if (kind === TileKind.WireCrossing) {
-        const horizontal = this.world.chargeAtPort(
-          position.x,
-          position.y,
-          Direction.Left,
-        );
-        const vertical = this.world.chargeAtPort(
-          position.x,
-          position.y,
-          Direction.Up,
-        );
-        this.charge.textContent =
-          `H ${formatCharge(horizontal)} / V ${formatCharge(vertical)}`;
-      } else {
-        const chargeLabel = formatCharge(this.world.chargeAt(position.x, position.y));
-        this.charge.textContent = definition.circuitInputPorts !== 0
-          ? `OUTPUT ${chargeLabel}`
-          : chargeLabel;
-      }
-    }
+  }
 
-    const cellIndex = position.y * this.world.width + position.x;
-    const circuitInputSides = orientedSides(definition.circuitInputPorts, orientation);
-    const circuitOutputSides = orientedSides(definition.circuitOutputPorts, orientation);
-
-    let circuitInputStates = "";
-    let circuitOutputStates = "";
-
-    let circuitDirections = "";
-    for (const direction of DIRECTIONS) {
-      const circuitConnected = this.world.hasCircuitConnectionAtIndex(cellIndex, direction);
-      if (circuitConnected) {
-        circuitDirections = appendDirection(circuitDirections, direction);
-      }
-      if (
-        kind !== TileKind.ChargeSensor &&
-        (circuitInputSides & (1 << direction)) !== 0
-      ) {
-        const separator = circuitInputStates.length === 0 ? "" : " / ";
-        const state = circuitConnected ? "CONNECTED" : "ISOLATED";
-        circuitInputStates += `${separator}${DIRECTION_NAMES[direction]} ${state}`;
-      }
-      if ((circuitOutputSides & (1 << direction)) !== 0) {
-        const separator = circuitOutputStates.length === 0 ? "" : " / ";
-        const state = circuitConnected ? "CONNECTED" : "ISOLATED";
-        circuitOutputStates += `${separator}${DIRECTION_NAMES[direction]} ${state}`;
-      }
+  private showComponentReference(reference: InspectorComponentReference | null): void {
+    this.componentReference.hidden = reference === null;
+    if (reference === null) {
+      return;
     }
-    if (kind === TileKind.ChargeSensor) {
-      this.circuit.textContent =
-        `SENSE ${DIRECTION_NAMES[orientation]} (NO WELD) · OUT ${circuitOutputStates}`;
-    } else if (definition.circuitInputPorts !== 0) {
-      this.circuit.textContent =
-        `IN ${circuitInputStates} · OUT ${circuitOutputStates}`;
-    } else {
-      this.circuit.textContent = circuitDirections || "ISOLATED";
-    }
+    this.price.textContent = `${reference.price ?? 0} ⚙`;
+    this.shortcut.hidden = reference.shortcut === null;
+    this.shortcut.textContent = reference.shortcut ?? "";
   }
 
   private showMessage(name: string, position: string, message: string): void {
     this.name.textContent = name;
     this.position.textContent = position;
+    this.position.hidden = false;
+    this.showComponentReference(null);
     this.hint.textContent = message;
     this.hint.hidden = false;
     this.paletteDetails.hidden = true;

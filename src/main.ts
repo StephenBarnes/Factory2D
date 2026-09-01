@@ -44,7 +44,10 @@ import {
   ComponentConfigurationDialog,
   type ComponentConfigurationSubmission,
 } from "./ui/component-configuration-dialog";
-import { TileInspector } from "./ui/tile-inspector";
+import {
+  type InspectorComponentReference,
+  TileInspector,
+} from "./ui/tile-inspector";
 import { populateComponentPalette } from "./ui/component-palette";
 import { PuzzleTestReportView } from "./ui/puzzle-test-report";
 
@@ -161,7 +164,6 @@ let lastPointerGridPoint: GridPoint | null = null;
 let hoveredCell: GridCell | null = null;
 let hoveredEdge: GridEdge | null = null;
 let hoveredPaletteButton: HTMLButtonElement | null = null;
-let focusedPaletteButton: HTMLButtonElement | null = null;
 let running = false;
 let accumulatedTime = 0;
 let previousFrameTime = performance.now();
@@ -171,6 +173,7 @@ let renderedTick = -1;
 let renderedPaletteDevicePixelRatio = 0;
 let tileKindsByShortcut: Readonly<Record<string, TileKind | undefined>> =
   Object.create(null);
+let componentInspectorReferences: readonly (InspectorComponentReference | undefined)[] = [];
 
 
 function updateTransportState(): void {
@@ -218,7 +221,6 @@ function loadActiveWorkshopSession(): void {
   hoveredEdge = null;
   lastEditedCell = null;
   hoveredPaletteButton = null;
-  focusedPaletteButton = null;
   lastPointerGridPoint = null;
   renderedTick = -1;
   animationDuration = 0;
@@ -264,19 +266,28 @@ function easedAnimationProgress(currentTime: number): number {
   return progress * progress * (3 - 2 * progress);
 }
 
+function inspectorReferenceFromButton(
+  button: HTMLButtonElement,
+): InspectorComponentReference {
+  const priceLabel = button.dataset.price;
+  const shortcutLabel = button.dataset.shortcut;
+  if (priceLabel === undefined || shortcutLabel === undefined) {
+    throw new Error("Component palette button is missing inspector metadata");
+  }
+  const price = priceLabel === "" ? null : Number(priceLabel);
+  if (price !== null && (!Number.isSafeInteger(price) || price < 0)) {
+    throw new Error("Component palette button has invalid price metadata");
+  }
+  return {
+    price,
+    shortcut: shortcutLabel === "" ? null : shortcutLabel,
+  };
+}
+
 function showInspectorReference(button: HTMLButtonElement): void {
   const kind = Number(button.dataset.tile);
   if (isTileKind(kind) && TILE_DEFINITIONS[kind].palette !== null) {
-    const priceLabel = button.dataset.price;
-    const shortcutLabel = button.dataset.shortcut;
-    if (priceLabel === undefined || shortcutLabel === undefined) {
-      throw new Error("Hovered component palette button is missing inspector metadata");
-    }
-    tileInspector.showPalette(
-      kind,
-      priceLabel === "" ? null : Number(priceLabel),
-      shortcutLabel === "" ? null : shortcutLabel,
-    );
+    tileInspector.showPalette(kind, inspectorReferenceFromButton(button));
     return;
   }
 
@@ -294,14 +305,11 @@ function refreshTileInspector(): void {
     return;
   }
   if (hoveredCell !== null) {
-    tileInspector.update(hoveredCell);
+    const kind = world.kindAt(hoveredCell.x, hoveredCell.y);
+    tileInspector.update(hoveredCell, componentInspectorReferences[kind] ?? null);
     return;
   }
-  if (focusedPaletteButton !== null) {
-    showInspectorReference(focusedPaletteButton);
-    return;
-  }
-  tileInspector.update(null);
+  tileInspector.update(null, null);
 }
 
 function refreshPointerHover(): void {
@@ -346,7 +354,6 @@ function sandboxEditableRegionAuthoring(): NonNullable<
 
 function configureComponentPalette(): void {
   hoveredPaletteButton = null;
-  focusedPaletteButton = null;
   if (selectedTool === "editable-region" && activeSession.editableRegionAuthoring === null) {
     selectedTool = "tile";
   }
@@ -365,6 +372,15 @@ function configureComponentPalette(): void {
     selectedTool === "tile" ? selectedKind : null,
     availableComponents,
   );
+  const references: (InspectorComponentReference | undefined)[] = [];
+  for (const button of componentPalette.querySelectorAll<HTMLButtonElement>("[data-tile]")) {
+    const kind = Number(button.dataset.tile);
+    if (!isTileKind(kind) || TILE_DEFINITIONS[kind].palette === null) {
+      throw new Error("Component palette button has invalid tile metadata");
+    }
+    references[kind] = inspectorReferenceFromButton(button);
+  }
+  componentInspectorReferences = references;
   const weldButton = sidebarControls.querySelector<HTMLButtonElement>("[data-tool=\"weld\"]");
   const editableRegionButton = sidebarControls.querySelector<HTMLButtonElement>(
     "[data-tool=\"editable-region\"]",
@@ -824,17 +840,6 @@ sidebarControls.addEventListener("pointerout", (event) => {
   refreshTileInspector();
 });
 
-sidebarControls.addEventListener("focusin", (event) => {
-  focusedPaletteButton = (event.target as HTMLElement).closest<HTMLButtonElement>(".palette-item");
-  refreshTileInspector();
-});
-
-sidebarControls.addEventListener("focusout", (event) => {
-  focusedPaletteButton = event.relatedTarget instanceof HTMLElement
-    ? event.relatedTarget.closest<HTMLButtonElement>(".palette-item")
-    : null;
-  refreshTileInspector();
-});
 
 playButton.addEventListener("click", () => {
   if (navigation.screen.kind === "puzzle") {

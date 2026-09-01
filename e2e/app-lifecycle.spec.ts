@@ -48,6 +48,43 @@ async function boardCellCenter(
   }, { cellX: x, cellY: y });
 }
 
+async function canvasBlackSpacePoint(
+  page: Page,
+): Promise<{ readonly x: number; readonly y: number }> {
+  return page.evaluate(() => {
+    const canvas = document.querySelector<HTMLCanvasElement>("#game-canvas");
+    const diagnostics = window.factory2dDiagnostics;
+    if (canvas === null || diagnostics === undefined) {
+      throw new Error("Workshop layout or diagnostics are incomplete");
+    }
+    const canvasBounds = canvas.getBoundingClientRect();
+    const board = JSON.parse(diagnostics.snapshot().serializedBoard) as {
+      readonly width: number;
+      readonly height: number;
+    };
+    const cellSize = Math.min(
+      canvas.clientWidth / board.width,
+      canvas.clientHeight / board.height,
+      64,
+    );
+    const horizontalMargin = (canvas.clientWidth - board.width * cellSize) / 2;
+    const verticalMargin = (canvas.clientHeight - board.height * cellSize) / 2;
+    if (horizontalMargin > 1) {
+      return {
+        x: canvasBounds.left + horizontalMargin / 2,
+        y: canvasBounds.top + canvas.clientHeight / 2,
+      };
+    }
+    if (verticalMargin > 1) {
+      return {
+        x: canvasBounds.left + canvas.clientWidth / 2,
+        y: canvasBounds.top + verticalMargin / 2,
+      };
+    }
+    throw new Error("Canvas has no black space outside the grid");
+  });
+}
+
 async function placeStone(page: Page, x: number, y: number): Promise<void> {
   await page.getByRole("button", { name: /^Stone/ }).click();
   let point = await boardCellCenter(page, x, y);
@@ -144,7 +181,10 @@ test("tile inspector follows palette, tool, and occupied-board hover", async ({ 
   const sandButton = page.getByRole("button", { name: /^Sand/ });
   await sandButton.hover();
   await expect(inspectorName).toHaveText("SAND");
-  await expect(inspectorPosition).toHaveText("PALETTE COMPONENT");
+  await expect(inspectorPosition).toBeHidden();
+  await expect(inspector.locator("[data-inspector-price]")).toHaveText("0 ⚙");
+  await expect(inspector.locator("[data-inspector-shortcut]")).toHaveText("1");
+  await expect(inspector).not.toContainText("PALETTE COMPONENT");
   await expect(inspector).toContainText("Falls downward and can fall diagonally around obstacles");
 
   await placeStone(page, 10, 8);
@@ -154,9 +194,36 @@ test("tile inspector follows palette, tool, and occupied-board hover", async ({ 
   await expect(inspectorName).toHaveText("STONE");
   await expect(inspectorPosition).toHaveText(/X 10\s+Y 08\s+ID #\d{4}/);
   await expect(inspectorHint).toHaveText("Solid block affected by gravity");
-  for (const removedLabel of ["TILE ID", "MOVEMENT", "WELDABLE", "WELDS", "MAGNETIC"]) {
+  await expect(inspector.locator("[data-inspector-price]")).toHaveText("0 ⚙");
+  await expect(inspector.locator("[data-inspector-shortcut]")).toHaveText("2");
+  for (const removedLabel of [
+    "TILE ID",
+    "MOVEMENT",
+    "WELDABLE",
+    "WELDS",
+    "MAGNETIC",
+    "ORIENTATION",
+    "CIRCUIT",
+    "CHARGE",
+  ]) {
     await expect(inspector.getByText(removedLabel, { exact: true })).toHaveCount(0);
   }
+
+  const visibleInspectorBounds = await inspector.boundingBox();
+  if (visibleInspectorBounds === null) {
+    throw new Error("Inspector is not visible over an occupied cell");
+  }
+  await page.mouse.move(
+    visibleInspectorBounds.x + visibleInspectorBounds.width / 2,
+    visibleInspectorBounds.y + visibleInspectorBounds.height / 2,
+  );
+  await expect(inspector).toHaveAttribute("aria-hidden", "true");
+
+  await page.mouse.move(occupiedCell.x, occupiedCell.y);
+  await expect(inspectorName).toHaveText("STONE");
+  const blackSpace = await canvasBlackSpacePoint(page);
+  await page.mouse.move(blackSpace.x, blackSpace.y);
+  await expect(inspector).toHaveAttribute("aria-hidden", "true");
 
   const weldTool = page.getByRole("button", { name: "Weld tool (hold Control)" });
   await weldTool.hover();

@@ -49,6 +49,7 @@ Components:
 * Furnaces could trigger a block to weld to neighbors after cooking it.
 * Furnaces could have stages, e.g. cookie dough -> cookie -> burnt cookie, creating timing challenges.
 * Make the glass block look transparent. Add a transparent flag in the tile definition. Make the sensor not detect transparent blocks.
+* A rotator component. It has a circuit input on one back side. It faces in a specific direction, but stores an internal direction that's either forward, left, or right, indicated on the rendered block; cannot face back to the circuit input. Signals of +1 and -1 rotate that internal direction by 90 degrees at a time. Each time it rotates, it also attaches to the block in that direction, and then rotates that block's entire body to keep that edge against its new internal direction. If the body can't be moved like that due to collisions, instead block rotation.
 
 Performance:
 * Profile to determine if there's any need to optimize, and if so, what to optimize.
@@ -92,12 +93,13 @@ UI:
 * Check for any potential bugs caused by listening only to mouse-up and mouse-down events, and assuming the mouse button is held down until a mouse-up is received. Can cause accidental deletion or placing of tiles if the mouse-up event is hidden by other window events.
 * Add step-forward and step-back to the control panel at the bottom. Requires keeping previous state in memory, or several so we can step back multiple ticks.
 * Add hotkeys for game controls: step-forward, step-back, reset, clear, and speed controls.
-* Show current price in the control panel. Animate text like "+T2" jumping off it as components are placed.
+* Show current total price in the control panel. Animate text like "+2(gear symbol)" rising off it as components are placed.
 * Add shift + mousewheel to scroll through palette entries.
 * Middle-click on palette should act like left-click on palette.
 * The charge sensor rune should not allow circuit connections on the side it's facing, because that connection doesn't do anything. It should allow welds, but not connect to circuits on that side.
-* We'll show a sidebar with all interactions relevant for a given puzzle.
-* Add support for mobile and touch screens.
+* Add support for mobile and touch screens. Check if it's playable.
+* Modify sizing to make things more visible on 4k monitors. For example the prices of components are currently displayed very small in the inspector. Might also be an issue on 1080p though, so this may be a general sizing issue rather than UI scaling.
+* In the sandbox, instead of showing `0 (gear symbol)` next to components, show nothing, because prices don't make sense for the sandbox.
 * Add a settings menu accessed from the main menu.
 * Settings menu: Add color-blindness options for people who can't distinguish red and blue circuit wires. Maybe just let them specify colors (from a short menu) for charges +1 and -1.
 * Settings menu: Add option to clear all puzzle solutions and other saved state. Keep the user's UUID.
@@ -108,8 +110,8 @@ UI:
 * On puzzle and sandbox screens, move the puzzle title and the back button to the bottom-left, on the bottom bar. Currently they're at the top of the palette panel.
 * Add info button, next to the game control region (with the puzzle name, goal text, and button to go back to menu / puzzle briefing). When clicked, this should open a modal that shows the puzzle name, description, and goal, and later maybe an extended description and some art, etc. Remove the goal text currently in that region. Also we'll move that game control region to bottom-left - it's a separate todo above.
 * When solving a puzzle, in the game control region, show the current price and footprint. When the mouse is held over the price, modify the palette to show prices over each component.
-* Bug: if the mouse moves onto the inspector panel, or if the mouse is in the black space outside the grid, but inside the canvas, we currently show the inspector panel with info on the selected palette tile. We should instead not show that. Only show the inspector with palette tile info when the mouse is actually over the button in the palette panel.
-* Make the inspector panel more compact. Remove "PALETTE COMPONENT" subtitle. Instead of separate lines with "PRICE" - "UNPRICED" or similar, just show "0 ⚙" tinted bronze; gear symbol is for our currency. Instead of "HOTKEY" - "3", just show the same hotkey icon we show in the palette. Put these on one line after the name. Similarly when showing placed tiles' info in the inspector, also show their price and hotkey next to the name, and remove visually obvious info rows (rows for orientation, charge, circuit). For both info categories, remove the horizontal line separating name from the rest, and reduce margins/padding a bit.
+* Modify delay rune's visualization - the small yellow ring should highlight the cell it's currently outputting; instead it currently shows what it'll output on the next tick.
+* Modify the ROM rune: instead of taking one input, rather take two inputs that control cursor position. One of them should increment or decrement the cursor by the width of the grid in it. Visually, the cursor is a 2D point in the grid, and the two inputs shift in X or Y dimensions. (This allows more interesting circuits, e.g. a group of ROMs whose outputs are transformed and fed back into their inputs creates a strange kind of programming language.)
 
 Visuals:
 * Re-theme the entire game's UI. The current palette (black, dark blue, cyan, yellow) doesn't really fit the theme. Prefer colors like earth brown, stone gray, bronze, gold. Maybe: 312312 (brown), 4B5052 (grey), F1CC38 (gold), 5C718C (blue).

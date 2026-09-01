@@ -130,22 +130,18 @@
 
       <aside class="tile-inspector floating-panel" id="tile-inspector" aria-label="Inspector details">
         <div class="inspector-title-row">
-          <strong data-inspector-name>NO CELL SELECTED</strong>
+          <div class="inspector-name-row">
+            <strong data-inspector-name>NO CELL SELECTED</strong>
+            <span class="inspector-component-reference" data-inspector-component-reference hidden>
+              <span class="inspector-price" data-inspector-price></span>
+              <kbd data-inspector-shortcut hidden></kbd>
+            </span>
+          </div>
           <span data-inspector-position>X -- &nbsp; Y --</span>
         </div>
         <p class="inspector-hint" data-inspector-hint>Move the pointer over the grid.</p>
         <div class="inspector-palette" data-inspector-palette hidden>
           <p data-inspector-palette-description></p>
-          <dl class="inspector-properties">
-            <div>
-              <dt>PRICE</dt>
-              <dd data-inspector-palette-price></dd>
-            </div>
-            <div>
-              <dt>HOTKEY</dt>
-              <dd data-inspector-palette-shortcut></dd>
-            </div>
-          </dl>
         </div>
         <div class="inspector-tool" data-inspector-tool hidden>
           <p data-inspector-tool-description></p>
@@ -157,10 +153,6 @@
           </dl>
         </div>
         <dl class="inspector-properties" data-inspector-properties hidden>
-          <div data-inspector-orientation-row>
-            <dt>ORIENTATION</dt>
-            <dd data-inspector-orientation></dd>
-          </div>
           <div data-inspector-configuration-row>
             <dt>CONFIG</dt>
             <dd data-inspector-configuration></dd>
@@ -172,14 +164,6 @@
           <div data-inspector-furnace-row>
             <dt>BAKE</dt>
             <dd data-inspector-furnace></dd>
-          </div>
-          <div data-inspector-circuit-row>
-            <dt>CIRCUIT</dt>
-            <dd data-inspector-circuit></dd>
-          </div>
-          <div data-inspector-charge-row>
-            <dt>CHARGE</dt>
-            <dd data-inspector-charge></dd>
           </div>
           <div data-inspector-attraction-row>
             <dt>ATTRACTION</dt>

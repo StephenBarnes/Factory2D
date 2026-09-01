@@ -619,27 +619,27 @@ canvas {
 }
 
 .tile-inspector {
-  width: 236px;
+  width: 220px;
   top: var(--inspector-gap);
   left: calc(var(--sidebar-width) + var(--inspector-gap));
-  padding: 15px;
+  padding: 11px;
 }
 
 .tile-inspector-hidden {
   visibility: hidden;
 }
 
-.inspector-title-row {
-  padding-bottom: 11px;
-  border-bottom: 1px solid #27313b;
-}
 
-.inspector-title-row strong,
-.inspector-title-row span {
-  display: block;
+.inspector-name-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
 }
 
 .inspector-title-row strong {
+  min-width: 0;
+  flex: 1;
   overflow: hidden;
   color: #e5ebee;
   font-size: 0.8rem;
@@ -648,16 +648,40 @@ canvas {
   white-space: nowrap;
 }
 
-.inspector-title-row span {
-  margin-top: 5px;
+.inspector-title-row > span {
+  display: block;
+  margin-top: 3px;
   color: #53616d;
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 0.6rem;
   letter-spacing: 0.08em;
 }
 
+.inspector-title-row > span[hidden] {
+  display: none;
+}
+
+.inspector-component-reference {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+}
+
+.inspector-component-reference[hidden] {
+  display: none;
+}
+
+.inspector-price {
+  color: #b9894e;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
 .inspector-hint {
-  margin: 13px 0 2px;
+  margin: 8px 0 0;
   color: #71808c;
   font-size: 0.7rem;
   line-height: 1.45;
@@ -665,24 +689,24 @@ canvas {
 
 .inspector-palette > p,
 .inspector-tool > p {
-  margin: 12px 0 0;
+  margin: 8px 0 0;
   color: #aab5bd;
   font-size: 0.7rem;
   line-height: 1.45;
 }
 
 .inspector-properties {
-  margin: 10px 0 0;
+  margin: 6px 0 0;
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 0.6rem;
 }
 
 .inspector-properties div {
-  min-height: 24px;
-  padding: 6px 0;
+  min-height: 20px;
+  padding: 4px 0;
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
-  gap: 8px;
+  gap: 6px;
   border-bottom: 1px solid #202a33;
 }
 
@@ -845,7 +869,8 @@ kbd {
   text-align: center;
 }
 
-.palette-item kbd {
+.palette-item kbd,
+.inspector-component-reference kbd {
   position: absolute;
   right: 2px;
   bottom: 2px;
@@ -854,6 +879,11 @@ kbd {
   border-bottom-width: 1px;
   font-size: 0.52rem;
   line-height: 1.2;
+  pointer-events: none;
+}
+
+.inspector-component-reference kbd {
+  position: static;
   pointer-events: none;
 }
 
