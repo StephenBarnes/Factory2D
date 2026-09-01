@@ -702,7 +702,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 25,
       category: PaletteCategory.Circuits,
-      description: "Counts charged rear inputs and pulses when its configured threshold is reached",
+      description: "Adds signed rear inputs and pulses with the wrap direction",
     },
     affectedByGravity: true,
     slidesDiagonally: false,

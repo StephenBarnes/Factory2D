@@ -365,10 +365,19 @@ export class World {
     if (input === 0) {
       return 0;
     }
-    const reachedThreshold = state.count + 1 >= state.threshold;
-    state.count = reachedThreshold ? 0 : state.count + 1;
+    const nextCount = state.count + input;
+    let output: Charge = 0;
+    if (nextCount < 0) {
+      state.count = state.threshold - 1;
+      output = -1;
+    } else if (nextCount >= state.threshold) {
+      state.count = 0;
+      output = 1;
+    } else {
+      state.count = nextCount;
+    }
     this.revisionValue += 1;
-    return reachedThreshold ? 1 : 0;
+    return output;
   }
 
   advanceRomAtIndex(index: number, input: Charge): Charge {

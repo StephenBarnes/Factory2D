@@ -566,7 +566,7 @@ describe("circuit networks", () => {
     });
   });
 
-  it("counts nonzero rear inputs and emits a one-tick threshold pulse", () => {
+  it("counts signed rear inputs and pulses with the wrap direction", () => {
     const world = new World(1, 3);
     world.place(0, 0, TileKind.Conduit);
     world.place(0, 1, TileKind.Counter, Direction.Up);
@@ -575,8 +575,8 @@ describe("circuit networks", () => {
     world.setWeld(0, 1, 0, 2, true);
     world.configureNumericComponent(0, 1, 3);
     const simulation = new Simulation(world);
-    const inputs = [1, -1, 0, 1, 0] as const;
-    const outputs = [0, 0, 0, 1, 0] as const;
+    const inputs = [1, 1, 1, 0, -1, 1, -1, -1, -1, 0] as const;
+    const outputs = [0, 0, 1, 0, -1, 1, -1, 0, 0, 0] as const;
 
     for (let index = 0; index < inputs.length; index += 1) {
       world.setCharge(0, 2, expectDefined(inputs[index], "counter test input"));
