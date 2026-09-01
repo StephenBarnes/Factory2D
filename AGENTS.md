@@ -109,7 +109,7 @@ The game is in early development. Currently implemented:
 
 * `index.html` — Application shell, responsive main menu, puzzle briefing and saved-solution screen, tile and weld palette, canvas, hovered-cell inspector, and simulation controls.
 * `src/main.ts` — Browser entry point, DOM event wiring, build tools, bounded pan/zoom controls, inspector-aware viewport insets, inspector coordination, and animation loop.
-* `src/styles.css` — Responsive main menu, puzzle briefing and solution list, application, palette, inspector, board, and control styling.
+* `src/styles.css` — Responsive main menu, puzzle briefing and solution list, application, palette, inspector, board, and control styling; the dwarven-mine color palette (stone, bronze, gold, ember, gem accents) lives in CSS custom properties on `:root`, with gilded corner ornaments on major panels and a serif display-heading stack.
 * `src/vite-env.d.ts` — Vite client type declarations.
 * `src/dev/diagnostic-snapshot.ts` — Development-only read-only browser diagnostic snapshot contract and installer.
 * `src/game/puzzles.ts` — Eager shipped-puzzle registry, deterministic group-and-puzzle sorting, grouped unlock checks, and fresh sandbox, puzzle, and test-case world factories.

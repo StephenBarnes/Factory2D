@@ -174,7 +174,7 @@ export class CanvasRenderer {
 
     const { context } = this;
     context.clearRect(0, 0, this.viewportWidth, this.viewportHeight);
-    context.fillStyle = "#0b0f14";
+    context.fillStyle = "#0d0a07";
     context.fillRect(0, 0, this.viewportWidth, this.viewportHeight);
 
     this.drawGrid();
@@ -311,9 +311,9 @@ export class CanvasRenderer {
     const boardHeight = this.world.height * this.cellSize;
     const { context } = this;
 
-    context.fillStyle = "#121923";
+    context.fillStyle = "#191309";
     context.fillRect(this.originX, this.originY, boardWidth, boardHeight);
-    context.strokeStyle = "#202a35";
+    context.strokeStyle = "#2b2213";
     context.lineWidth = 1;
     context.beginPath();
 
@@ -329,7 +329,7 @@ export class CanvasRenderer {
     }
     context.stroke();
 
-    context.strokeStyle = "#354250";
+    context.strokeStyle = "#4c3d24";
     context.strokeRect(this.originX + 0.5, this.originY + 0.5, boardWidth, boardHeight);
   }
 
@@ -420,7 +420,7 @@ export class CanvasRenderer {
     const { context } = this;
     if (overlay?.sourceRegion !== null && overlay?.sourceRegion !== undefined) {
       context.save();
-      context.fillStyle = "rgb(3 5 7 / 68%)";
+      context.fillStyle = "rgb(7 5 3 / 68%)";
       for (const rectangle of overlay.sourceRegion.rectangles) {
         context.fillRect(
           this.originX + rectangle.x * this.cellSize,

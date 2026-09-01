@@ -114,6 +114,8 @@ UI:
 * For the ROM's configuration modal, allow click and drag to set multiple cells. Add three buttons to fill with red, blue, or black.
 * Allow mirroring components with some hotkey. Because we want to allow mirroring selections, and components like flippers. But this probably currently breaks things like ROMs which do not have mirror symmetry. Also check all components for any that have rotational asymmetry that may cause a rotated machine to behave differently, e.g. ROM cursor's wrapping behavior may break rotational symmetry.
 * If the player tries to place a block, or weld, and we don't allow it, indicate the reason. (1) If it's because they're testing a puzzle, flash the reset button. (2) If it's a weld or tile edit outside the allowed region, flash the region red. (3) If they're trying to weld a block that can't be 
+* Currently, if I change the tick speed, and then try to use space key to run/pause, it instead opens/closes the tick speed dropup menu.
+* Modify the tick speed menu to use our own drop-up widget (like the export button).
 
 Selection tool:
 * DEFER Maybe support selections that are a union of rectangles, created by shift-LMB-drag.
@@ -121,15 +123,25 @@ Selection tool:
 * DEFER In the snippets panel, add buttons to delete a snippet, and import/export (maybe the same as the scene format, or a different format).
 
 Visuals:
-* Re-theme the entire game's UI. The current palette (black, dark blue, cyan, yellow) feels computer / electrical-engineering themed. Prefer colors like earth brown, stone gray, bronze, gold, lava orange? Although those may not work well, so maybe some subset of those, plus colors that work with those?
-* Make nice panel outlines with corner decorations, gilded Art Deco style.
-* Add a dark/light mode toggle. Set to dark by default, or browser default.
 * Add backgrounds for puzzles, maybe with parallax as the player pans.
 * For the piston base block, don't show the small rectangle that's meant to represent the head/arm of the piston. Only show it on the combined / retracted base+arm block, and on the extended arm block.
 * Mark the "wire crossing" tile in a way that makes it apparent it's a wire-crossing block regardless of how many circuit connections it has. Currently with one wire, or two opposite-side wires connected, it looks like a conduit block except for the background color. Maybe draw the central cross regardless of how many sides are wired.
 * Replace the current rune icon set with more intuitive or pretty symbols, matching the rune theme. Make stone/glass/platform have two parallel lines instead of the Z-lightning-bolt. Block sensor should have angular rune-like eye symbol (hollow diamond with center diamond for the pupil); charge sensor should be the same eye with lighting bolt replacing pupil. Fixed charge should have 3 lighting bolts, not plus symbol and circle. Inverter should be "hagalaz" N/H symbol. Subtractor should mark back with a small plus. Rectifier should be "thurisaz" `|>` instead of current `>|`. Victory block should have "jera" rune symbol. Magnet should be reworked, but defer until we change its mechanics. Also give them sensible background colors, e.g. shades of purple for all sensors, teal/blue for all 3-input mathematical transforms.
 * Rename runes; prefer metaphorical, arcane, or Anglish-style names. ROM rune -> rune of wisdom, sensor rune -> watchful rune, inverter -> gainsayer rune, delay rune -> recall rune, rectifier -> rightener, etc. Maybe rename +1, -1, and 0 to right, left, and center, or some other natural ternary system, if we can find a way to explain sum, multiply, and subtraction concisely in that system.
 * When placing welders/splitters, show additional bars for where the welds/splits will happen.
+* Move gemstone count in the main menu to be around top-right instead, and show it larger and more concisely as "3◈" instead of text. Add title text saying that gemstones are earned by completing puzzles and used automatically to unlock new puzzle groups.
+* Main menu: show lock icon / unicode character next to locked puzzles and puzzle groups. On groups, add text saying "Solve 2 more puzzles to unlock" replacing "2 gemstones required", and make that text more visible.
+
+Styling:
+* Refine the dwarven UI theme: the palette now lives in CSS custom properties on `:root` in `src/styles.css` (stone browns, bronze, gold, ember, gem accents) with gilded corner ornaments on major panels; consider richer Art Deco corner motifs (diagonals, doubled lines) and reviewing tile fill/decoration colors in `src/simulation/tile.ts` for warmth.
+* Add a dark/light mode toggle. Set to dark by default, or browser default. The `:root` custom-property palette is the switching point: add a `[data-theme="light"]` override block and a persisted toggle.
+* Add some more gradients. The current gradients on e.g. the "Sandbox" button and solution list look really good. Use them for more buttons, and for the editor panels (palette panel, bottom bar, inspector).
+* Modify selection tool color - make it purple instead of teal.
+* Modify colors for all runes. In general they're too pastel and muted. The teal of the platform block looks especially bad; it's also used by combiner and ROM.
+* Convert more text regions to a serif font, instead of small-caps or sans-serif.
+* The green color in the main menu (outlines for puzzles and puzzle groups that have been solved) looks bad. Replace with brown. For unsolved puzzles and groups, make their outlines bright yellow to differentiate. (But the green color on the solution verification / results report looks great - keep that.)
+* Make circuit components (logic gates, sensors) look more like shiny gemstones instead of smooth pebbles. Maybe they just need specular highlights.
+* Change color of the game-canvas region outside the game board - currently it's black, change it to a very dark brown (darker than game board and panels).
 
 Animations:
 * Animate when joints are welded or split, including by the welder/splitter components.
