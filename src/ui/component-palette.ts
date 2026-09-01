@@ -23,7 +23,6 @@ const PALETTE_CATEGORIES = [
   { category: PaletteCategory.RawMaterials, label: "Raw Materials" },
   { category: PaletteCategory.Mechanisms, label: "Mechanisms" },
   { category: PaletteCategory.Circuits, label: "Circuit Components" },
-  { category: PaletteCategory.Machines, label: "Machines" },
   { category: PaletteCategory.PuzzleTools, label: "Puzzle Tools" },
 ] as const;
 

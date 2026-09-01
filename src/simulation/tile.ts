@@ -81,8 +81,7 @@ export const enum PaletteCategory {
   RawMaterials = 0,
   Mechanisms = 1,
   Circuits = 2,
-  Machines = 3,
-  PuzzleTools = 4,
+  PuzzleTools = 3,
 }
 
 export interface TileDefinition {
@@ -219,7 +218,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "L",
     palette: {
       order: 3,
-      category: PaletteCategory.Machines,
+      category: PaletteCategory.Mechanisms,
       description: "Holds magnetic blocks on its pointed side",
     },
     affectedByGravity: true,
@@ -587,7 +586,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "F",
     palette: {
       order: 7,
-      category: PaletteCategory.Machines,
+      category: PaletteCategory.Mechanisms,
       description: "Bakes the block on its pointed side; rear charge disables it",
     },
     affectedByGravity: true,

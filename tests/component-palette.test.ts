@@ -83,10 +83,10 @@ describe("component palette shortcuts", () => {
       TileKind.Iron,
       TileKind.Glass,
       TileKind.IronOre,
+      TileKind.Magnet,
+      TileKind.Furnace,
       TileKind.Conveyor,
       TileKind.Piston,
-      TileKind.Conduit,
-      TileKind.Sensor,
     ]);
     expect(shortcutLabels(palette)).toEqual([
       "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
@@ -95,8 +95,8 @@ describe("component palette shortcuts", () => {
     expect(shortcuts).toMatchObject({
       Digit1: TileKind.Sand,
       Digit6: TileKind.IronOre,
-      Digit8: TileKind.Piston,
-      Digit0: TileKind.Sensor,
+      Digit8: TileKind.Furnace,
+      Digit0: TileKind.Piston,
     });
   });
 
@@ -111,7 +111,6 @@ describe("component palette shortcuts", () => {
       "Raw Materials",
       "Mechanisms",
       "Circuit Components",
-      "Machines",
       "Puzzle Tools",
     ]);
     expect(paletteButtons(palette).every((button) => button.className.includes("palette-tile"))).toBe(true);
@@ -119,8 +118,8 @@ describe("component palette shortcuts", () => {
       (button) => Number(button.dataset.tile) === TileKind.Conveyor,
     );
     expect(conveyor?.children).toHaveLength(2);
-    expect(conveyor?.dataset).toMatchObject({ price: "", shortcut: "7" });
-    expect(conveyor?.attributes["aria-label"]).toBe("Conveyor Belt (7)");
+    expect(conveyor?.dataset).toMatchObject({ price: "", shortcut: "9" });
+    expect(conveyor?.attributes["aria-label"]).toBe("Conveyor Belt (9)");
     expect(conveyor?.classList.values.has("selected")).toBe(true);
   });
 
