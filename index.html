@@ -74,6 +74,12 @@
           id="game-canvas"
           aria-label="Editable tile simulation grid. Use the mouse wheel to zoom, middle-button drag or Alt-right-drag to pan, and middle-click to pick a tile."
         ></canvas>
+        <div class="selection-actions floating-panel" id="selection-actions" hidden>
+          <button id="selection-copy-button" type="button" title="Copy selection (Ctrl+C)" aria-label="Copy selection">⧉</button>
+          <button id="selection-paste-button" type="button" title="Paste selection (Ctrl+V)" aria-label="Paste selection">▣</button>
+          <button id="selection-flip-button" type="button" title="Flip selection horizontally" aria-label="Flip selection horizontally">↔</button>
+          <button id="selection-rotate-button" type="button" title="Rotate selection clockwise" aria-label="Rotate selection clockwise">↻</button>
+        </div>
       </section>
 
       <aside class="sidebar edge-panel" id="sidebar-controls" aria-label="Build tools and components">
@@ -98,6 +104,15 @@
           >
             <span class="swatch weld-swatch"></span>
             <kbd>Ctrl</kbd>
+          </button>
+          <button
+            class="palette-item palette-tool"
+            data-tool="selection"
+            type="button"
+            aria-label="Selection tool"
+            title="Selection tool: drag to select or move tiles"
+          >
+            <span class="swatch selection-swatch"></span>
           </button>
           <button
             class="palette-item palette-tool"

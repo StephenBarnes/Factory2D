@@ -588,6 +588,39 @@ canvas {
 #game-canvas.panning {
   cursor: grabbing;
 }
+.selection-actions {
+  z-index: 3;
+  display: flex;
+  gap: 3px;
+  padding: 4px;
+  transform: translate(-50%, -100%);
+}
+
+.selection-actions[hidden] {
+  display: none;
+}
+
+.selection-actions button {
+  width: 30px;
+  min-width: 30px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #3e4d5a;
+  background: #151d26;
+  color: #c8d2da;
+  font-size: 1rem;
+}
+
+.selection-actions button:hover:not(:disabled) {
+  border-color: #78dcca;
+  background: #182b2d;
+}
+
+.selection-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
 
 .edge-panel,
 .floating-panel {
@@ -842,6 +875,30 @@ canvas {
   inset: 5px 16px;
   background: #f0c75e;
   box-shadow: 0 0 5px rgb(240 199 94 / 55%);
+}
+
+.selection-swatch {
+  border-color: #315e5b;
+  background: rgb(120 220 202 / 8%);
+}
+
+.selection-swatch::before,
+.selection-swatch::after {
+  content: "";
+  position: absolute;
+  border-color: #78dcca;
+}
+
+.selection-swatch::before {
+  inset: 7px;
+  border-style: solid;
+  border-width: 2px 0 0 2px;
+}
+
+.selection-swatch::after {
+  inset: 15px 7px 7px 15px;
+  border-style: solid;
+  border-width: 0 2px 2px 0;
 }
 
 .editable-region-swatch {

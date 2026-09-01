@@ -1,4 +1,5 @@
 import type { GridRectangle, GridRegion } from "../game/grid-region";
+import type { TileSelectionOverlay } from "../game/tile-selection";
 import {
   Direction,
   directionX,
@@ -31,6 +32,13 @@ interface CachedBody {
   readonly cells: readonly BodyCell[];
   readonly path: Path2D;
 }
+export interface GridRegionScreenBounds {
+  readonly left: number;
+  readonly top: number;
+  readonly right: number;
+  readonly bottom: number;
+}
+
 
 export class CanvasRenderer {
   private readonly canvas: HTMLCanvasElement;
@@ -39,6 +47,8 @@ export class CanvasRenderer {
   private readonly editableRegion: GridRegion | null;
   private authoredEditableRegion: GridRegion | null = null;
   private authoredEditableRegionDraft: GridRectangle | null = null;
+  private tileSelectionOverlay: TileSelectionOverlay | null = null;
+  private tileSelectionDraft: GridRegion | null = null;
 
   private cellSize = MAX_TILE_SIZE;
   private originX = 0;
@@ -87,6 +97,31 @@ export class CanvasRenderer {
     this.authoredEditableRegion = region;
     this.authoredEditableRegionDraft = draftRectangle;
   }
+  setTileSelection(
+    overlay: TileSelectionOverlay | null,
+    draft: GridRegion | null,
+  ): void {
+    this.tileSelectionOverlay = overlay;
+    this.tileSelectionDraft = draft;
+  }
+
+  screenBoundsForGridRegion(region: GridRegion): GridRegionScreenBounds | null {
+    if (region.rectangles.length === 0) {
+      return null;
+    }
+    let left = Number.POSITIVE_INFINITY;
+    let top = Number.POSITIVE_INFINITY;
+    let right = Number.NEGATIVE_INFINITY;
+    let bottom = Number.NEGATIVE_INFINITY;
+    for (const rectangle of region.rectangles) {
+      left = Math.min(left, this.originX + rectangle.x * this.cellSize);
+      top = Math.min(top, this.originY + rectangle.y * this.cellSize);
+      right = Math.max(right, this.originX + (rectangle.x + rectangle.width) * this.cellSize);
+      bottom = Math.max(bottom, this.originY + (rectangle.y + rectangle.height) * this.cellSize);
+    }
+    return { left, top, right, bottom };
+  }
+
 
 
   fitBoardToViewport(): void {
@@ -139,6 +174,7 @@ export class CanvasRenderer {
     this.drawTiles(previousWorld, Math.max(0, Math.min(1, progress)), animationTime);
     this.drawEditableRegion();
     this.drawEditableRegionAuthoring();
+    this.drawTileSelection(animationTime);
     this.drawHover(animationTime);
   }
 
@@ -292,7 +328,7 @@ export class CanvasRenderer {
 
   private drawEditableRegion(): void {
     if (this.editableRegion !== null) {
-      this.strokeGridRegion(this.editableRegion, EDITABLE_REGION_DASH_PATTERN);
+      this.strokeGridRegion(this.editableRegion, EDITABLE_REGION_DASH_PATTERN, "#d6ad61");
     }
   }
 
@@ -313,7 +349,11 @@ export class CanvasRenderer {
       );
     }
     context.restore();
-    this.strokeGridRegion(this.authoredEditableRegion, EDITABLE_REGION_DASH_PATTERN);
+    this.strokeGridRegion(
+      this.authoredEditableRegion,
+      EDITABLE_REGION_DASH_PATTERN,
+      "#d6ad61",
+    );
 
     const draft = this.authoredEditableRegionDraft;
     if (draft === null) {
@@ -338,10 +378,14 @@ export class CanvasRenderer {
     context.restore();
   }
 
-  private strokeGridRegion(region: GridRegion, dashPattern: readonly number[]): void {
+  private strokeGridRegion(
+    region: GridRegion,
+    dashPattern: readonly number[],
+    color: string,
+  ): void {
     const { context } = this;
     context.save();
-    context.strokeStyle = "#d6ad61";
+    context.strokeStyle = color;
     context.lineWidth = Math.max(1.5, Math.min(3, this.cellSize * 0.08));
     context.lineCap = "round";
     context.setLineDash(dashPattern);
@@ -359,6 +403,75 @@ export class CanvasRenderer {
     context.stroke();
     context.restore();
   }
+  private drawTileSelection(animationTime: number): void {
+    const draft = this.tileSelectionDraft;
+    const overlay = this.tileSelectionOverlay;
+    if (draft === null && overlay === null) {
+      return;
+    }
+
+    const { context } = this;
+    if (overlay?.sourceRegion !== null && overlay?.sourceRegion !== undefined) {
+      context.save();
+      context.fillStyle = "rgb(3 5 7 / 68%)";
+      for (const rectangle of overlay.sourceRegion.rectangles) {
+        context.fillRect(
+          this.originX + rectangle.x * this.cellSize,
+          this.originY + rectangle.y * this.cellSize,
+          rectangle.width * this.cellSize,
+          rectangle.height * this.cellSize,
+        );
+      }
+      context.restore();
+    }
+
+    if (overlay !== null) {
+      context.save();
+      context.globalAlpha = 0.88;
+      for (const cell of overlay.previewCells) {
+        drawTile(
+          context,
+          this.originX + cell.x * this.cellSize,
+          this.originY + cell.y * this.cellSize,
+          this.cellSize,
+          cell.kind,
+          cell.orientation,
+          animationTime,
+        );
+      }
+      context.fillStyle = overlay.valid ? "rgb(120 220 202 / 10%)" : "rgb(225 90 79 / 16%)";
+      for (const rectangle of overlay.region.rectangles) {
+        context.fillRect(
+          this.originX + rectangle.x * this.cellSize,
+          this.originY + rectangle.y * this.cellSize,
+          rectangle.width * this.cellSize,
+          rectangle.height * this.cellSize,
+        );
+      }
+      context.restore();
+      this.strokeGridRegion(
+        overlay.region,
+        [],
+        overlay.valid ? "#78dcca" : "#e15a4f",
+      );
+    }
+
+    if (draft !== null) {
+      context.save();
+      context.fillStyle = "rgb(120 220 202 / 16%)";
+      for (const rectangle of draft.rectangles) {
+        context.fillRect(
+          this.originX + rectangle.x * this.cellSize,
+          this.originY + rectangle.y * this.cellSize,
+          rectangle.width * this.cellSize,
+          rectangle.height * this.cellSize,
+        );
+      }
+      context.restore();
+      this.strokeGridRegion(draft, [], "#78dcca");
+    }
+  }
+
 
   private drawTiles(previousWorld: World | null, progress: number, animationTime: number): void {
     this.rebuildBodyCache();

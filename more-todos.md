@@ -1,10 +1,10 @@
 Tasks that are NOT actionable yet, or have prereqs, are marked as DEFER below.
 
 Game flow:
-* DEFER(until we have selection tool) Allow converting selection to the allowed placement region with a button, only in the sandbox. For designing shareable puzzles.
+* Allow converting selection to the allowed placement region with a button, only in the sandbox. For designing shareable puzzles.
 * Implement a text-box tool that places and edits text boxes on the game screen. Useful for tutorial puzzles, and also for players that want to label/annotate their designs. Model them separate from the component grid - they're not grid-aligned, don't occupy tiles, and have no prices. Include them the puzzle JSON format and scene JSON format.
 * Remove the "import" button on puzzles; it should only be displayed in the sandbox. It's already disabled in puzzles, but still visible.
-* For running test cases, some conveniences: Show the test cases running. Increase tick rate gradually so it doesn't take too long. Add a fast-forward button that runs them as fast as possible with no rendering. When a test case fails, immediately pause and show the failed state, instead of showing the results modal.
+* For running test cases, some conveniences: Show the test cases running. Increase tick rate gradually so it doesn't take too long. Add a fast-forward button that runs them as fast as possible with no rendering. When a test case fails, immediately pause and show the failed state, instead of showing the results modal; show a message somewhere (maybe a toast?) saying something like `Failed: test case "name" cycle 123` (or `reached cycle limit`).
 * Add tick speeds above 60 ticks per second; for those, step the simulation multiple times between renders. This is useful for testing solutions fast while still showing what's going on.
 * Edit format for scenes and puzzles: make the fields `orientations`, `charges`, `crossingCharges`, `furnaces`, `components` all optional, with default value of `[]`. When exporting, don't specify those fields if they're the empty list, which is often the case. This will reduce incompatibility when we add new block types and de-bloats the format.
 * Similarly, remove the "standard" test case with no overrides - treat that as a given and only list additional test cases in the file.
@@ -82,8 +82,6 @@ Game feel:
 * Add blocks that play a chime or other sound when charged.
 
 UI:
-* Add a selection tool, for selecting a rectangular region of tiles and copying, pasting, moving, rotating, flipping, saving to a list of snippets (needs separate UI). Potentially reuse the code we have for union-of-rectangles (currently used for player-modifiable regions and the tool for defining those regions in the sandbox).
-* Add a way to save a selected region in a list of saved snippets/machines, and import from that. Make it usable for transferring partial machines from one puzzle solution to another. Requires a snippet manager button and panel.
 * UI for creating multiple test cases for a puzzle. Needed so that we can create and export puzzles efficiently.
 * When saving an image using the image button, crop out parts of the screen that are over the background, outside the grid, if this can be implemented easily.
 * Implement undo and redo when editing.
@@ -106,8 +104,16 @@ UI:
 * Make the palette panel resizable. Modify the icon sizes, shrinking them as the palette becomes narrower.
 * On puzzle and sandbox screens, move the puzzle title and the back button to the bottom-left, on the bottom bar. Currently they're at the top of the palette panel.
 * Add info button, next to the game control region (with the puzzle name, goal text, and button to go back to menu / puzzle briefing). When clicked, this should open a modal that shows the puzzle name, description, and goal, and later maybe an extended description and some art, etc. Remove the goal text currently in that region. Also we'll move that game control region to bottom-left - it's a separate todo above.
-* When solving a puzzle, in the game control region, show the current total price and footprint, e.g. "5⚙ | 4×5"). When the mouse is held over the price, modify the palette to show prices over each component. Update when a block is placed or removed. Don't show in the sandbox.
+* When solving a puzzle, in the game control region, show the current total price and footprint, e.g. "5⚙ | 4×5". When the mouse is held over the price, modify the palette to show prices over each component. Update when a block is placed or removed. Don't show in the sandbox.
 * For the ROM's configuration modal, allow click and drag to set multiple cells.
+* Allow mirroring components with some hotkey. Because we want to allow mirroring selections, and components like flippers. But this probably currently breaks things like ROMs which do not have mirror symmetry. Also check all components for any that have rotational asymmetry that may cause a rotated machine to behave differently, e.g. ROM cursor's wrapping behavior may break rotational symmetry.
+
+Selection tool:
+* Render the selection with its welds. Currently it shows all the blocks as fully unwelded. (Committing it correctly welds already, so it's just the rendering that's not reflecting the welds.)
+* Left-clicking should unselect. Currently it creates a 1x1 selection.
+* Add button to flip selection vertically. (We already have horizontal flip.)
+* Later maybe support selections that are a union of rectangles, created by shift-LMB-drag.
+* Add a way to save a selected region in a list of saved snippets/machines, and import from that. Make it usable for transferring partial machines from one puzzle solution to another. Requires a snippet manager button and collapsible panel.
 
 Visuals:
 * Re-theme the entire game's UI. The current palette (black, dark blue, cyan, yellow) doesn't really fit the theme. Prefer colors like earth brown, stone gray, bronze, gold. Maybe: 312312 (brown), 4B5052 (grey), F1CC38 (gold), 5C718C (blue).

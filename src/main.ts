@@ -12,6 +12,7 @@ import {
   type WorkshopSession,
   WorkshopSessionController,
 } from "./game/workshop-session";
+import { TileSelectionState } from "./game/tile-selection";
 
 import { CanvasRenderer } from "./render/canvas-renderer";
 import {
@@ -116,8 +117,13 @@ const stateLight = requiredElement<HTMLSpanElement>("state-light");
 const stateLabel = requiredElement<HTMLSpanElement>("state-label");
 const tickCounter = requiredElement<HTMLSpanElement>("tick-counter");
 const coordinates = requiredElement<HTMLDivElement>("coordinates");
+const selectionActions = requiredElement<HTMLElement>("selection-actions");
+const selectionCopyButton = requiredElement<HTMLButtonElement>("selection-copy-button");
+const selectionPasteButton = requiredElement<HTMLButtonElement>("selection-paste-button");
+const selectionFlipButton = requiredElement<HTMLButtonElement>("selection-flip-button");
+const selectionRotateButton = requiredElement<HTMLButtonElement>("selection-rotate-button");
 
-type BuildTool = "tile" | "weld" | "editable-region";
+type BuildTool = "tile" | "weld" | "selection" | "editable-region";
 type InspectorTool = Exclude<BuildTool, "tile">;
 
 interface ToolInspectorDetails {
@@ -132,6 +138,11 @@ const TOOL_INSPECTOR_DETAILS: Readonly<Record<InspectorTool, ToolInspectorDetail
     description: "Joins adjacent occupied tiles into rigid bodies.",
     controls: "LEFT CLICK / DRAG WELD · RIGHT CLICK / DRAG UNWELD · HOLD CONTROL TEMPORARILY",
   },
+  selection: {
+    name: "Selection tool",
+    description: "Selects, moves, copies, and transforms a grid-aligned group of tiles.",
+    controls: "LEFT DRAG SELECT / MOVE · DELETE · CTRL+C / X / V / A · WASD ROTATE",
+  },
   "editable-region": {
     name: "Editable region tool",
     description: "Marks the board areas where a puzzle solution may place and remove tiles.",
@@ -140,7 +151,7 @@ const TOOL_INSPECTOR_DETAILS: Readonly<Record<InspectorTool, ToolInspectorDetail
 };
 
 function isInspectorTool(value: string | undefined): value is InspectorTool {
-  return value === "weld" || value === "editable-region";
+  return value === "weld" || value === "selection" || value === "editable-region";
 }
 
 
@@ -149,6 +160,7 @@ let selectedKind = TileKind.Sand;
 let previousSelectedKind: TileKind = selectedKind;
 let selectedOrientation = Direction.Up;
 let selectedTool: BuildTool = "tile";
+let tileSelection = new TileSelectionState(world.width, world.height);
 let temporaryWeldActive = false;
 let activePointerId: number | null = null;
 let activePointerMode: PointerGesture | null = null;
@@ -200,7 +212,28 @@ function markSimulationStarted(): boolean {
   return sessions.beginSimulation();
 }
 
+function commitTileSelection(): void {
+  const result = tileSelection.commit(
+    world,
+    (x, y) =>
+      x >= 0 &&
+      x < world.width &&
+      y >= 0 &&
+      y < world.height &&
+      canEditCell(x, y),
+    componentIsAvailable,
+  );
+  syncTileSelectionOverlay();
+  if (result.changed) {
+    saveEditedBaseline();
+    navigation.persistActiveSolutionBoard();
+  }
+}
+
 function setRunning(nextRunning: boolean): void {
+  if (nextRunning && tileSelection.active) {
+    commitTileSelection();
+  }
   const editingChanged = nextRunning && markSimulationStarted();
   running = nextRunning;
   accumulatedTime = 0;
@@ -214,7 +247,9 @@ function loadActiveWorkshopSession(): void {
   world = activeSession.world;
   simulation = activeSession.simulation;
   previousWorld = activeSession.previousWorld;
+  tileSelection = new TileSelectionState(world.width, world.height);
   renderer = new CanvasRenderer(canvas, world, activeSession.editableRegion);
+  syncTileSelectionOverlay();
   syncEditableRegionAuthoringOverlay();
   tileInspector = new TileInspector(inspectorPanel, world);
   hoveredCell = null;
@@ -244,6 +279,9 @@ function finishAnimationIfDisabled(): void {
 
 
 function advanceSimulation(duration: number, startedAt = performance.now()): void {
+  if (tileSelection.active) {
+    commitTileSelection();
+  }
   if (markSimulationStarted()) {
     updateTransportState();
     refreshPointerHover();
@@ -317,6 +355,8 @@ function refreshPointerHover(): void {
     renderer.setHover(hoveredCell);
   } else if (selectedTool === "weld") {
     renderer.setHoverEdge(hoveredEdge);
+  } else if (selectedTool === "selection") {
+    renderer.setHover(tileSelection.active || tileSelection.drafting ? null : hoveredCell);
   } else if (selectedTool === "editable-region") {
     renderer.setHover(hoveredCell);
   } else {
@@ -341,6 +381,38 @@ function syncEditableRegionAuthoringOverlay(): void {
     authoring?.draftRectangle ?? null,
   );
 }
+function syncTileSelectionOverlay(): void {
+  const selectionActive = selectedTool === "selection";
+  const overlay = selectionActive
+    ? tileSelection.overlay(canEditCell, componentIsAvailable)
+    : null;
+  renderer.setTileSelection(
+    overlay,
+    selectionActive ? tileSelection.draftRegion(activeSession.editableRegion) : null,
+  );
+  selectionActions.hidden = overlay === null;
+  selectionPasteButton.disabled = !tileSelection.hasClipboard;
+}
+
+function positionSelectionActions(): void {
+  if (selectionActions.hidden) {
+    return;
+  }
+  const overlay = tileSelection.overlay(canEditCell, componentIsAvailable);
+  const bounds = overlay === null ? null : renderer.screenBoundsForGridRegion(overlay.region);
+  if (bounds === null) {
+    selectionActions.hidden = true;
+    return;
+  }
+  const halfPanelWidth = selectionActions.offsetWidth / 2;
+  const centerX = (bounds.left + bounds.right) / 2;
+  selectionActions.style.left = `${Math.max(
+    halfPanelWidth + 6,
+    Math.min(canvas.clientWidth - halfPanelWidth - 6, centerX),
+  )}px`;
+  selectionActions.style.top = `${Math.max(selectionActions.offsetHeight + 6, bounds.top - 6)}px`;
+}
+
 function sandboxEditableRegionAuthoring(): NonNullable<
   WorkshopSession["editableRegionAuthoring"]
 > {
@@ -382,22 +454,30 @@ function configureComponentPalette(): void {
   }
   componentInspectorReferences = references;
   const weldButton = sidebarControls.querySelector<HTMLButtonElement>("[data-tool=\"weld\"]");
+  const selectionButton = sidebarControls.querySelector<HTMLButtonElement>(
+    "[data-tool=\"selection\"]",
+  );
   const editableRegionButton = sidebarControls.querySelector<HTMLButtonElement>(
     "[data-tool=\"editable-region\"]",
   );
-  if (weldButton === null || editableRegionButton === null) {
+  if (weldButton === null || selectionButton === null || editableRegionButton === null) {
     throw new Error("Tool palette buttons are missing");
   }
   weldButton.classList.toggle("selected", selectedTool === "weld");
+  selectionButton.classList.toggle("selected", selectedTool === "selection");
   editableRegionButton.hidden = activeSession.editableRegionAuthoring === null;
   editableRegionButton.classList.toggle("selected", selectedTool === "editable-region");
   syncEditableRegionAuthoringOverlay();
+  syncTileSelectionOverlay();
   renderPalettePreviews();
 }
 
 function selectTile(kind: TileKind): void {
   if (!componentIsAvailable(kind)) {
     return;
+  }
+  if (selectedTool === "selection") {
+    commitTileSelection();
   }
   if (kind !== selectedKind) {
     previousSelectedKind = selectedKind;
@@ -487,6 +567,9 @@ function setSelectedOrientation(orientation: Direction): void {
 }
 
 function selectWeldTool(): void {
+  if (selectedTool === "selection") {
+    commitTileSelection();
+  }
   selectedTool = "weld";
   for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
     item.classList.toggle("selected", item.dataset.tool === "weld");
@@ -494,16 +577,30 @@ function selectWeldTool(): void {
   syncEditableRegionAuthoringOverlay();
   refreshPointerHover();
 }
+function selectSelectionTool(): void {
+  selectedTool = "selection";
+  for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
+    item.classList.toggle("selected", item.dataset.tool === "selection");
+  }
+  syncEditableRegionAuthoringOverlay();
+  syncTileSelectionOverlay();
+  refreshPointerHover();
+}
+
 
 function selectEditableRegionTool(): void {
   if (activeSession.editableRegionAuthoring === null) {
     return;
+  }
+  if (selectedTool === "selection") {
+    commitTileSelection();
   }
   selectedTool = "editable-region";
   for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
     item.classList.toggle("selected", item.dataset.tool === "editable-region");
   }
   syncEditableRegionAuthoringOverlay();
+  syncTileSelectionOverlay();
   refreshPointerHover();
 }
 
@@ -730,6 +827,9 @@ const testReportView = new PuzzleTestReportView(testReportDialog, {
 });
 
 function stopWorkshopActivity(): void {
+  if (tileSelection.active) {
+    commitTileSelection();
+  }
   testingPuzzleSolution = false;
   testReportView.close();
   componentConfigurationView.close();
@@ -786,6 +886,8 @@ if (import.meta.env.DEV) {
       },
       selectedTool: selectedTool === "weld"
         ? { kind: "weld" }
+        : selectedTool === "selection"
+        ? { kind: "selection" }
         : selectedTool === "editable-region"
         ? { kind: "editable-region" }
         : {
@@ -819,10 +921,60 @@ sidebarControls.addEventListener("click", (event) => {
     selectTile(tileKind);
   } else if (button?.dataset.tool === "weld") {
     selectWeldTool();
+  } else if (button?.dataset.tool === "selection") {
+    selectSelectionTool();
   } else if (button?.dataset.tool === "editable-region") {
     selectEditableRegionTool();
   }
 });
+function copyTileSelection(): void {
+  if (tileSelection.copy()) {
+    syncTileSelectionOverlay();
+  }
+}
+
+function deleteTileSelection(): void {
+  if (!tileSelection.active) {
+    return;
+  }
+  const changed = tileSelection.deleteFrom(world);
+  syncTileSelectionOverlay();
+  refreshPointerHover();
+  if (changed) {
+    saveEditedBaseline();
+    navigation.persistActiveSolutionBoard();
+  }
+}
+
+function pasteTileSelection(): void {
+  if (!tileSelection.hasClipboard) {
+    return;
+  }
+  const currentOverlay = tileSelection.overlay(canEditCell, componentIsAvailable);
+  const currentRectangle = currentOverlay?.region.rectangles[0];
+  const anchor = hoveredCell ?? (currentRectangle === undefined
+    ? { x: 0, y: 0 }
+    : { x: currentRectangle.x + 1, y: currentRectangle.y + 1 });
+  if (tileSelection.active) {
+    commitTileSelection();
+  }
+  selectSelectionTool();
+  tileSelection.paste(anchor.x, anchor.y);
+  syncTileSelectionOverlay();
+  refreshPointerHover();
+}
+
+selectionCopyButton.addEventListener("click", copyTileSelection);
+selectionPasteButton.addEventListener("click", pasteTileSelection);
+selectionFlipButton.addEventListener("click", () => {
+  tileSelection.flipHorizontally();
+  syncTileSelectionOverlay();
+});
+selectionRotateButton.addEventListener("click", () => {
+  tileSelection.rotateClockwise();
+  syncTileSelectionOverlay();
+});
+
 
 sidebarControls.addEventListener("pointerover", (event) => {
   hoveredPaletteButton = (event.target as HTMLElement).closest<HTMLButtonElement>(".palette-item");
@@ -893,6 +1045,9 @@ speedSelect.addEventListener("change", () => {
 
 
 function resetSimulation(): void {
+  if (tileSelection.active) {
+    commitTileSelection();
+  }
   setRunning(false);
   sessions.resetSimulation();
   finishAnimation();
@@ -905,6 +1060,9 @@ resetButton.addEventListener("click", resetSimulation);
 clearButton.addEventListener("click", () => {
   if (!activeSession.editingState.editable) {
     return;
+  }
+  if (tileSelection.active) {
+    commitTileSelection();
   }
   if (activeSession.editableRegion === null) {
     world.clear();
@@ -1088,6 +1246,19 @@ canvas.addEventListener("pointerdown", (event) => {
     if (edge !== null) {
       editWeld(edge, activeErase);
     }
+  } else if (activeEditTool === "selection" && !activeErase) {
+    if (cell === null) {
+      if (tileSelection.active) {
+        commitTileSelection();
+      }
+    } else if (!tileSelection.beginMove(cell.x, cell.y)) {
+      if (tileSelection.active) {
+        commitTileSelection();
+      }
+      tileSelection.beginSelection(cell.x, cell.y);
+    }
+    syncTileSelectionOverlay();
+    refreshPointerHover();
   } else if (activeEditTool === "editable-region" && cell !== null) {
     const authoring = sandboxEditableRegionAuthoring();
     if (activeErase) {
@@ -1148,6 +1319,14 @@ canvas.addEventListener("pointermove", (event) => {
     }
   } else if (activeEditTool === "weld") {
     editWeldSegment(lastPointerGridPoint, point, hoveredEdge, activeErase);
+  } else if (activeEditTool === "selection" && !activeErase) {
+    if (tileSelection.drafting) {
+      const cell = clampedCellFromGridPoint(point, world.width, world.height);
+      tileSelection.updateSelection(cell.x, cell.y);
+    } else {
+      tileSelection.updateMove(Math.floor(point.x), Math.floor(point.y));
+    }
+    syncTileSelectionOverlay();
   } else if (activeEditTool === "editable-region" && !activeErase) {
     const cell = clampedCellFromGridPoint(point, world.width, world.height);
     sandboxEditableRegionAuthoring().updateRectangle(cell.x, cell.y);
@@ -1175,6 +1354,16 @@ function finishPointerGesture(event: PointerEvent): void {
       authoring.cancelRectangle();
     }
     syncEditableRegionAuthoringOverlay();
+  }
+  if (activeEditTool === "selection") {
+    if (event.type === "pointerup" && tileSelection.drafting) {
+      tileSelection.finishSelection(world, activeSession.editableRegion);
+    } else if (event.type !== "pointerup") {
+      tileSelection.cancelDraft();
+    }
+    tileSelection.finishMove();
+    syncTileSelectionOverlay();
+    refreshPointerHover();
   }
   const configurationCell = event.type === "pointerup"
     ? pendingConfigurationCell
@@ -1250,13 +1439,51 @@ document.addEventListener("keydown", (event) => {
     }
     return;
   }
+  const textEntryTarget =
+    event.target instanceof HTMLInputElement ||
+    event.target instanceof HTMLTextAreaElement ||
+    event.target instanceof HTMLSelectElement;
+  if (
+    (event.ctrlKey || event.metaKey) &&
+    !event.altKey &&
+    !textEntryTarget &&
+    activeSession.editingState.editable
+  ) {
+    if (event.code === "KeyA") {
+      event.preventDefault();
+      if (tileSelection.active) {
+        commitTileSelection();
+      }
+      selectSelectionTool();
+      tileSelection.beginSelection(0, 0);
+      tileSelection.updateSelection(world.width - 1, world.height - 1);
+      tileSelection.finishSelection(world, activeSession.editableRegion);
+      syncTileSelectionOverlay();
+      refreshPointerHover();
+      return;
+    }
+    if (event.code === "KeyC" && tileSelection.active) {
+      event.preventDefault();
+      copyTileSelection();
+      return;
+    }
+    if (event.code === "KeyX" && tileSelection.active) {
+      event.preventDefault();
+      copyTileSelection();
+      deleteTileSelection();
+      return;
+    }
+    if (event.code === "KeyV" && tileSelection.hasClipboard) {
+      event.preventDefault();
+      pasteTileSelection();
+      return;
+    }
+  }
   if (
     event.ctrlKey ||
     event.metaKey ||
     event.altKey ||
-    event.target instanceof HTMLInputElement ||
-    event.target instanceof HTMLTextAreaElement ||
-    event.target instanceof HTMLSelectElement
+    textEntryTarget
   ) {
     return;
   }
@@ -1295,6 +1522,30 @@ document.addEventListener("keydown", (event) => {
     event.preventDefault();
     openComponentConfiguration(hoveredCell);
     return;
+  }
+
+  if (selectedTool === "selection" && tileSelection.active) {
+    if (event.code === "Delete" || event.code === "Backspace") {
+      event.preventDefault();
+      deleteTileSelection();
+      return;
+    }
+    let orientation: Direction | null = null;
+    if (event.code === "KeyW") {
+      orientation = Direction.Up;
+    } else if (event.code === "KeyD") {
+      orientation = Direction.Right;
+    } else if (event.code === "KeyS") {
+      orientation = Direction.Down;
+    } else if (event.code === "KeyA") {
+      orientation = Direction.Left;
+    }
+    if (orientation !== null) {
+      event.preventDefault();
+      tileSelection.rotateTo(orientation);
+      syncTileSelectionOverlay();
+      return;
+    }
   }
 
   if (
@@ -1342,14 +1593,18 @@ document.addEventListener("keydown", (event) => {
 document.addEventListener("keyup", (event) => {
   if (event.key === "Control" && temporaryWeldActive) {
     temporaryWeldActive = false;
-    selectTile(selectedKind);
+    if (selectedTool === "weld") {
+      selectTile(selectedKind);
+    }
   }
 });
 
 window.addEventListener("blur", () => {
   if (temporaryWeldActive) {
     temporaryWeldActive = false;
-    selectTile(selectedKind);
+    if (selectedTool === "weld") {
+      selectTile(selectedKind);
+    }
   }
 });
 window.addEventListener("popstate", () => {
@@ -1394,6 +1649,7 @@ function frame(currentTime: number): void {
     animationProgress,
     currentTime,
   );
+  positionSelectionActions();
   requestAnimationFrame(frame);
 }
 
