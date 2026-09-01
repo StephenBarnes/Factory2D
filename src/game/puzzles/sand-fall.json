@@ -1,15 +1,15 @@
 {
   "format": "factory2d-puzzle",
-  "version": 3,
+  "version": 4,
   "width": 20,
   "height": 14,
   "id": "sand-fall",
+  "group": "basics",
   "order": 1,
   "name": "Sand fall",
   "description": "Tutorial puzzle teaching diagonal gravity and welding",
   "goal": "Guide one sand block to the goal",
   "features": [],
-  "prerequisites": [],
   "components": [ { "code": "#", "price": 1 } ],
   "editableRegions": [ { "x": 1, "y": 2, "width": 18, "height": 9 } ],
   "initialBoard": {

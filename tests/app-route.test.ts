@@ -6,7 +6,7 @@ import {
   resolveAppScreen,
   type AppRouteAccess,
 } from "../src/game/app-route";
-import { PUZZLES, type PuzzleId } from "../src/game/puzzles";
+import { isPuzzleUnlocked, PUZZLES, type PuzzleId } from "../src/game/puzzles";
 import { expectDefined } from "../src/util/assert";
 
 function routeAccess(
@@ -23,8 +23,8 @@ function routeAccess(
 }
 
 const ROOT_PUZZLE = expectDefined(
-  PUZZLES.find((puzzle) => puzzle.prerequisitePuzzleIds.length === 0),
-  "Missing root puzzle",
+  PUZZLES.find((puzzle) => isPuzzleUnlocked(puzzle, new Set())),
+  "Missing initially unlocked puzzle",
 );
 const ROOT_PUZZLE_PATH = `/puzzles/${ROOT_PUZZLE.id}`;
 
@@ -74,10 +74,10 @@ describe("application routes", () => {
     expect(resolveAppPath("//sandbox", access)).toEqual({ kind: "main-menu" });
   });
 
-  it("enforces each puzzle's declared prerequisites for direct routes", () => {
+  it("enforces group progression for direct puzzle routes", () => {
     for (const puzzle of PUZZLES) {
       const path = `/puzzles/${puzzle.id}`;
-      const expectedWithoutProgress = puzzle.prerequisitePuzzleIds.length === 0
+      const expectedWithoutProgress = isPuzzleUnlocked(puzzle, new Set())
         ? { kind: "puzzle-info", puzzleId: puzzle.id }
         : { kind: "main-menu" };
 
@@ -86,8 +86,12 @@ describe("application routes", () => {
         { kind: "puzzle-info", puzzleId: puzzle.id },
         routeAccess(),
       )).toEqual(expectedWithoutProgress);
+
+      const completedOtherPuzzles = PUZZLES
+        .filter((candidate) => candidate.id !== puzzle.id)
+        .map((candidate) => candidate.id);
       expect(
-        resolveAppPath(path, routeAccess(puzzle.prerequisitePuzzleIds)),
+        resolveAppPath(path, routeAccess(completedOtherPuzzles)),
       ).toEqual({ kind: "puzzle-info", puzzleId: puzzle.id });
     }
   });

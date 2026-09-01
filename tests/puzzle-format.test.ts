@@ -16,16 +16,16 @@ const TEST_PUZZLE_ID = "parser-fixture";
 function puzzleFile(): JsonObject {
   return {
     format: "factory2d-puzzle",
-    version: 3,
+    version: 4,
     width: 4,
     height: 4,
     id: TEST_PUZZLE_ID,
+    group: "basics",
     order: 0,
     name: "Parser Fixture",
     description: "Controlled parser test data.",
     goal: "Exercise the puzzle format.",
     features: ["Parsing"],
-    prerequisites: [],
     components: [
       { code: "#", price: 1 },
       { code: "=", price: 3 },
@@ -109,6 +109,8 @@ describe("puzzle JSON format", () => {
     const parsed = parsePuzzleFile(puzzleFile(), "parser-fixture.json");
 
     expect(parsed.id).toBe(TEST_PUZZLE_ID);
+    expect(parsed.groupId).toBe("basics");
+    expect(parsed.order).toBe(0);
     expect(parsed.editableRegion.contains(1, 1)).toBe(true);
     expect(parsed.availableComponents.priceOf(TileKind.Stone)).toBe(1);
     expect(parsed.initialWorld.kindAt(1, 1)).toBe(TileKind.Sand);
@@ -277,10 +279,10 @@ describe("puzzle JSON format", () => {
 
   it("reports the source file and exact invalid field", () => {
     const file = puzzleFile();
-    file.order = -1;
+    file.order = Number.POSITIVE_INFINITY;
 
     expect(() => parsePuzzleFile(file, "puzzles/broken.json")).toThrow(
-      "puzzles/broken.json: Puzzle order must be an integer from 0",
+      "puzzles/broken.json: Puzzle order must be a finite number",
     );
   });
 
@@ -305,13 +307,33 @@ describe("puzzle JSON format", () => {
     );
   });
 
-  it("rejects registry references to missing puzzles", () => {
+  it("rejects puzzles assigned to undefined groups", () => {
     const file = puzzleFile();
     file.id = "orphan";
-    file.prerequisites = ["missing"];
+    file.group = "missing";
 
     expect(() => loadPuzzleDefinitions({ "./puzzles/orphan.json": file })).toThrow(
-      './puzzles/orphan.json: prerequisite puzzle "missing" does not exist',
+      './puzzles/orphan.json: puzzle group "missing" is not defined',
     );
+  });
+
+  it("sorts group order values and breaks ties by puzzle id", () => {
+    const later = puzzleFile();
+    later.id = "later";
+    later.order = 10.5;
+    const tieB = puzzleFile();
+    tieB.id = "tie-b";
+    tieB.order = -4;
+    const tieA = puzzleFile();
+    tieA.id = "tie-a";
+    tieA.order = -4;
+
+    const puzzles = loadPuzzleDefinitions({
+      "./puzzles/later.json": later,
+      "./puzzles/tie-b.json": tieB,
+      "./puzzles/tie-a.json": tieA,
+    });
+
+    expect(puzzles.map((puzzle) => puzzle.id)).toEqual(["tie-a", "tie-b", "later"]);
   });
 });

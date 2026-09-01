@@ -69,7 +69,9 @@ export function browserStorageFixture(
   if (name === "unlocked") {
     return {
       values: {
-        [PUZZLE_PROGRESS_STORAGE_KEY]: progressValue(new Set<PuzzleId>(["sand-fall"])),
+        [PUZZLE_PROGRESS_STORAGE_KEY]: progressValue(
+          new Set<PuzzleId>(["first-shift", "sand-fall"]),
+        ),
       },
       solutionIds: [],
       editedBoard: null,

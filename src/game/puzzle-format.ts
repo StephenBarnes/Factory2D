@@ -13,7 +13,7 @@ import { TILE_DEFINITIONS, TILE_KINDS, TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
 
 export const PUZZLE_FORMAT = "factory2d-puzzle";
-export const PUZZLE_VERSION = 3;
+export const PUZZLE_VERSION = 4;
 const PUZZLE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const DEFAULT_PUZZLE_CYCLE_LIMIT = 1_000;
 export const MAX_PUZZLE_CYCLE_LIMIT = 10_000;
@@ -23,12 +23,12 @@ const PUZZLE_FIELDS = [
   "width",
   "height",
   "id",
+  "group",
   "order",
   "name",
   "description",
   "goal",
   "features",
-  "prerequisites",
   "components",
   "editableRegions",
   "initialBoard",
@@ -84,13 +84,13 @@ export interface ParsedPuzzleTestCase {
 
 export interface ParsedPuzzleFile {
   readonly id: string;
+  readonly groupId: string;
   readonly order: number;
   readonly name: string;
   readonly cycleLimit: number;
   readonly description: string;
   readonly goal: string;
   readonly features: readonly string[];
-  readonly prerequisitePuzzleIds: readonly string[];
   readonly editableRegion: GridRegion;
   readonly availableComponents: PuzzleComponents;
   readonly initialWorld: World;
@@ -137,26 +137,17 @@ function parsePuzzleFileValue(value: unknown): ParsedPuzzleFile {
   if (!PUZZLE_ID_PATTERN.test(id)) {
     throw new Error("Puzzle id must contain lowercase letters, digits, and single hyphens only");
   }
-  const order = requireInteger(puzzle.order, "Puzzle order", 0, Number.MAX_SAFE_INTEGER);
+  const groupId = requireNonEmptyString(puzzle.group, "Puzzle group");
+  if (!PUZZLE_ID_PATTERN.test(groupId)) {
+    throw new Error("Puzzle group must be a lowercase hyphenated identifier");
+  }
+  const order = requireFiniteNumber(puzzle.order, "Puzzle order");
   const name = requireNonEmptyString(puzzle.name, "Puzzle name");
   const description = requireNonEmptyString(puzzle.description, "Puzzle description");
   const goal = requireNonEmptyString(puzzle.goal, "Puzzle goal");
   const cycleLimit = parseCycleLimit(puzzle.cycleLimit, "Puzzle cycleLimit");
   const features = parseUniqueStrings(puzzle.features, "Puzzle features");
-  const prerequisitePuzzleIds = parseUniqueStrings(
-    puzzle.prerequisites,
-    "Puzzle prerequisites",
-  );
-  for (const prerequisiteId of prerequisitePuzzleIds) {
-    if (!PUZZLE_ID_PATTERN.test(prerequisiteId)) {
-      throw new Error(
-        `Puzzle prerequisite "${prerequisiteId}" must be a lowercase hyphenated identifier`,
-      );
-    }
-    if (prerequisiteId === id) {
-      throw new Error("Puzzle cannot require itself");
-    }
-  }
+
 
   const availableComponents = parseComponents(puzzle.components);
   const editableRegion = parseEditableRegion(puzzle.editableRegions);
@@ -171,13 +162,13 @@ function parsePuzzleFileValue(value: unknown): ParsedPuzzleFile {
   const testCases = parseTestCases(puzzle.testCases, board, initialWorld, cycleLimit);
   return Object.freeze({
     id,
+    groupId,
     order,
     name,
     cycleLimit,
     description,
     goal,
     features,
-    prerequisitePuzzleIds,
     editableRegion,
     availableComponents,
     initialWorld,
@@ -391,6 +382,13 @@ function requireArray(value: unknown, label: string): readonly unknown[] {
 function requireNonEmptyString(value: unknown, label: string): string {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`${label} must be a non-empty string`);
+  }
+  return value;
+}
+
+function requireFiniteNumber(value: unknown, label: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new Error(`${label} must be a finite number`);
   }
   return value;
 }

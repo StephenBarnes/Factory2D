@@ -1,15 +1,15 @@
 {
   "format": "factory2d-puzzle",
-  "version": 3,
+  "version": 4,
   "width": 20,
   "height": 14,
   "id": "first-shift",
+  "group": "basics",
   "order": 0,
   "name": "First Shift",
   "description": "Tutorial puzzle teaching block placement",
   "goal": "Drop one iron block into the delivery box",
   "features": [],
-  "prerequisites": [],
   "components": [
     { "code": "#", "price": 1 }
   ],

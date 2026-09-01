@@ -10,6 +10,8 @@ import { World } from "../src/simulation/world";
 function scoringPuzzle(): PuzzleDefinition {
   return {
     id: "score-test",
+    groupId: "basics",
+    order: 0,
     name: "Score Test",
     cycleLimit: 20,
     description: "Score calculation test",
@@ -23,7 +25,6 @@ function scoringPuzzle(): PuzzleDefinition {
       { kind: TileKind.FixedCharge, price: 3 },
       { kind: TileKind.Stone, price: 7 },
     ]),
-    prerequisitePuzzleIds: [],
     createInitialWorld: () => new World(6, 5),
     testCases: [],
   };

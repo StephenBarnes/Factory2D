@@ -1,15 +1,15 @@
 {
   "format": "factory2d-puzzle",
-  "version": 3,
+  "version": 4,
   "width": 20,
   "height": 14,
   "id": "conduits",
+  "group": "runelore",
   "order": 2,
   "name": "Conduits",
   "description": "Tutorial puzzle teaching conduit mechanics",
   "goal": "Connect the blue positive wire to the victory block",
   "features": [],
-  "prerequisites": ["sand-fall"],
   "components": [ { "code": "C", "price": 1 } ],
   "editableRegions": [ { "x": 7, "y": 1, "width": 6, "height": 12 } ],
   "initialBoard": {

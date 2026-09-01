@@ -1,28 +1,73 @@
 import { describe, expect, it } from "vitest";
 
+import { GridRegion } from "../src/game/grid-region";
+import { puzzleGroupById } from "../src/game/puzzle-groups";
+
 import { PuzzleComponents } from "../src/game/puzzle-components";
 import {
   createSandboxWorld,
+  isPuzzleGroupUnlocked,
   isPuzzleUnlocked,
   PUZZLES,
   puzzleById,
+  type PuzzleDefinition,
   type PuzzleId,
 } from "../src/game/puzzles";
 import { TileKind } from "../src/simulation/tile";
+import { World } from "../src/simulation/world";
 import { expectDefined } from "../src/util/assert";
 
-describe("puzzle definitions", () => {
-  it("unlocks puzzles only after all declared prerequisites are complete", () => {
-    for (const puzzle of PUZZLES) {
-      const completed = new Set<PuzzleId>(puzzle.prerequisitePuzzleIds);
-      expect(isPuzzleUnlocked(puzzle, completed)).toBe(true);
+function progressionPuzzle(id: string, order: number): PuzzleDefinition {
+  return {
+    id,
+    groupId: "basics",
+    order,
+    name: id,
+    cycleLimit: 10,
+    description: id,
+    features: [],
+    goal: id,
+    editableRegion: new GridRegion([{ x: 0, y: 0, width: 1, height: 1 }]),
+    availableComponents: new PuzzleComponents([{ kind: TileKind.Stone, price: 1 }]),
+    createInitialWorld: () => new World(1, 1),
+    testCases: [],
+  };
+}
 
-      for (const prerequisiteId of puzzle.prerequisitePuzzleIds) {
-        completed.delete(prerequisiteId);
-        expect(isPuzzleUnlocked(puzzle, completed)).toBe(false);
-        completed.add(prerequisiteId);
-      }
-    }
+describe("puzzle definitions", () => {
+  it("unlocks groups at their gemstone thresholds", () => {
+    const runelore = expectDefined(puzzleGroupById("runelore"), "Missing Runelore group");
+    expect(isPuzzleGroupUnlocked(runelore, new Set())).toBe(false);
+    expect(isPuzzleGroupUnlocked(
+      runelore,
+      new Set<PuzzleId>(["first-shift", "sand-fall"]),
+    )).toBe(true);
+  });
+
+  it("unlocks three puzzles per group plus one for each group completion", () => {
+    const puzzles = Array.from(
+      { length: 6 },
+      (_, index) => progressionPuzzle(`sequence-${index}`, index),
+    );
+    const completed = new Set<PuzzleId>();
+    expect(puzzles.map((puzzle) => isPuzzleUnlocked(puzzle, completed, puzzles))).toEqual([
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+    ]);
+
+    completed.add("sequence-0");
+    expect(puzzles.map((puzzle) => isPuzzleUnlocked(puzzle, completed, puzzles))).toEqual([
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+    ]);
   });
 
   it("keeps registry order and identifier lookup aligned", () => {

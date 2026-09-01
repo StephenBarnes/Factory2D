@@ -18,6 +18,8 @@ import { World } from "../src/simulation/world";
 function puzzleWith(testCases: readonly PuzzleTestCaseDefinition[]): PuzzleDefinition {
   return {
     id: "runner-test",
+    groupId: "basics",
+    order: 0,
     name: "Runner Test",
     cycleLimit: 20,
     description: "Runner test puzzle",
@@ -25,7 +27,6 @@ function puzzleWith(testCases: readonly PuzzleTestCaseDefinition[]): PuzzleDefin
     goal: "Trigger victory",
     editableRegion: new GridRegion([{ x: 0, y: 0, width: 1, height: 1 }]),
     availableComponents: new PuzzleComponents([{ kind: TileKind.FixedCharge, price: 1 }]),
-    prerequisitePuzzleIds: [],
     createInitialWorld: () => testCases[0]?.createInitialWorld() ?? new World(2, 1),
     testCases,
   };

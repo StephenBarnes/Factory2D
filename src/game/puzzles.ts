@@ -1,5 +1,10 @@
 import type { GridRegion } from "./grid-region";
 import { parsePuzzleFile, type ParsedPuzzleFile } from "./puzzle-format";
+import {
+  INITIAL_UNLOCKED_PUZZLES_PER_GROUP,
+  puzzleGroupById,
+  type PuzzleGroupDefinition,
+} from "./puzzle-groups";
 import type { PuzzleComponents } from "./puzzle-components";
 import { TileKind } from "../simulation/tile";
 import { World } from "../simulation/world";
@@ -16,6 +21,8 @@ export interface PuzzleTestCaseDefinition {
 
 export interface PuzzleDefinition {
   readonly id: PuzzleId;
+  readonly groupId: string;
+  readonly order: number;
   readonly name: string;
   readonly cycleLimit: number;
   readonly description: string;
@@ -23,7 +30,6 @@ export interface PuzzleDefinition {
   readonly goal: string;
   readonly editableRegion: GridRegion;
   readonly availableComponents: PuzzleComponents;
-  readonly prerequisitePuzzleIds: readonly PuzzleId[];
   readonly createInitialWorld: () => World;
   readonly testCases: readonly PuzzleTestCaseDefinition[];
 }
@@ -91,7 +97,6 @@ export function loadPuzzleDefinitions(
 ): readonly PuzzleDefinition[] {
   const loadedPuzzles: LoadedPuzzle[] = [];
   const loadedById: Record<string, LoadedPuzzle | undefined> = Object.create(null);
-  const loadedByOrder: Record<number, LoadedPuzzle | undefined> = Object.create(null);
 
   for (const [sourcePath, value] of Object.entries(files)) {
     const parsed = parsePuzzleFile(value, sourcePath);
@@ -107,35 +112,39 @@ export function loadPuzzleDefinitions(
         `${sourcePath}: puzzle id "${parsed.id}" is already defined by ${existingId.sourcePath}`,
       );
     }
-    const existingOrder = loadedByOrder[parsed.order];
-    if (existingOrder !== undefined) {
-      throw new Error(
-        `${sourcePath}: puzzle order ${parsed.order} is already used by ${existingOrder.sourcePath}`,
-      );
-    }
     const loaded = { sourcePath, parsed };
     loadedPuzzles.push(loaded);
     loadedById[parsed.id] = loaded;
-    loadedByOrder[parsed.order] = loaded;
   }
 
   if (loadedPuzzles.length === 0) {
     throw new Error("At least one shipped puzzle JSON file is required");
   }
   for (const loaded of loadedPuzzles) {
-    for (const prerequisiteId of loaded.parsed.prerequisitePuzzleIds) {
-      if (loadedById[prerequisiteId] === undefined) {
-        throw new Error(
-          `${loaded.sourcePath}: prerequisite puzzle "${prerequisiteId}" does not exist`,
-        );
-      }
+    if (puzzleGroupById(loaded.parsed.groupId) === undefined) {
+      throw new Error(
+        `${loaded.sourcePath}: puzzle group "${loaded.parsed.groupId}" is not defined`,
+      );
     }
   }
-  validateAcyclicPrerequisites(loadedPuzzles, loadedById);
 
-  loadedPuzzles.sort((left, right) => left.parsed.order - right.parsed.order);
+  loadedPuzzles.sort((left, right) => {
+    const leftGroup = expectDefined(
+      puzzleGroupById(left.parsed.groupId),
+      `Missing validated puzzle group "${left.parsed.groupId}"`,
+    );
+    const rightGroup = expectDefined(
+      puzzleGroupById(right.parsed.groupId),
+      `Missing validated puzzle group "${right.parsed.groupId}"`,
+    );
+    return leftGroup.displayOrder - rightGroup.displayOrder ||
+      left.parsed.order - right.parsed.order ||
+      left.parsed.id.localeCompare(right.parsed.id);
+  });
   return Object.freeze(loadedPuzzles.map(({ parsed }) => Object.freeze({
     id: parsed.id,
+    groupId: parsed.groupId,
+    order: parsed.order,
     name: parsed.name,
     cycleLimit: parsed.cycleLimit,
     description: parsed.description,
@@ -143,7 +152,6 @@ export function loadPuzzleDefinitions(
     goal: parsed.goal,
     editableRegion: parsed.editableRegion,
     availableComponents: parsed.availableComponents,
-    prerequisitePuzzleIds: parsed.prerequisitePuzzleIds,
     createInitialWorld: () => parsed.initialWorld.clone(),
     testCases: Object.freeze(
       parsed.testCases.map((testCase) =>
@@ -158,36 +166,6 @@ export function loadPuzzleDefinitions(
   })));
 }
 
-function validateAcyclicPrerequisites(
-  loadedPuzzles: readonly LoadedPuzzle[],
-  loadedById: Readonly<Record<string, LoadedPuzzle | undefined>>,
-): void {
-  const visiting: Record<string, true | undefined> = Object.create(null);
-  const visited: Record<string, true | undefined> = Object.create(null);
-
-  function visit(loaded: LoadedPuzzle): void {
-    const id = loaded.parsed.id;
-    if (visiting[id] === true) {
-      throw new Error(`${loaded.sourcePath}: prerequisite graph contains a cycle at "${id}"`);
-    }
-    if (visited[id] === true) {
-      return;
-    }
-    visiting[id] = true;
-    for (const prerequisiteId of loaded.parsed.prerequisitePuzzleIds) {
-      visit(expectDefined(
-        loadedById[prerequisiteId],
-        `Missing validated prerequisite "${prerequisiteId}"`,
-      ));
-    }
-    delete visiting[id];
-    visited[id] = true;
-  }
-
-  for (const loaded of loadedPuzzles) {
-    visit(loaded);
-  }
-}
 
 const puzzlesById: Record<string, PuzzleDefinition | undefined> = Object.create(null);
 for (const puzzle of PUZZLES) {
@@ -199,9 +177,46 @@ export function puzzleById(id: PuzzleId): PuzzleDefinition {
   return expectDefined(PUZZLES_BY_ID[id], `Unknown puzzle id "${id}"`);
 }
 
+export function isPuzzleGroupUnlocked(
+  group: PuzzleGroupDefinition,
+  completedPuzzleIds: ReadonlySet<PuzzleId>,
+): boolean {
+  return completedPuzzleIds.size >= group.gemstoneThreshold;
+}
+
 export function isPuzzleUnlocked(
   puzzle: PuzzleDefinition,
   completedPuzzleIds: ReadonlySet<PuzzleId>,
+  puzzles: readonly PuzzleDefinition[] = PUZZLES,
 ): boolean {
-  return puzzle.prerequisitePuzzleIds.every((id) => completedPuzzleIds.has(id));
+  if (completedPuzzleIds.has(puzzle.id)) {
+    return true;
+  }
+  const group = expectDefined(
+    puzzleGroupById(puzzle.groupId),
+    `Unknown puzzle group "${puzzle.groupId}"`,
+  );
+  if (!isPuzzleGroupUnlocked(group, completedPuzzleIds)) {
+    return false;
+  }
+
+  let puzzleIndex = -1;
+  let groupPuzzleCount = 0;
+  let completedInGroup = 0;
+  for (const candidate of puzzles) {
+    if (candidate.groupId !== puzzle.groupId) {
+      continue;
+    }
+    if (candidate.id === puzzle.id) {
+      puzzleIndex = groupPuzzleCount;
+    }
+    if (completedPuzzleIds.has(candidate.id)) {
+      completedInGroup += 1;
+    }
+    groupPuzzleCount += 1;
+  }
+  if (puzzleIndex < 0) {
+    throw new Error(`Puzzle "${puzzle.id}" is missing from its progression list`);
+  }
+  return puzzleIndex < INITIAL_UNLOCKED_PUZZLES_PER_GROUP + completedInGroup;
 }

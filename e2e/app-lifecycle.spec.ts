@@ -262,10 +262,30 @@ test("tile inspector follows palette, tool, and occupied-board hover", async ({ 
   expect(Math.abs(inspectorBounds.y - 18)).toBeLessThanOrEqual(1);
 });
 
-test("unlocked fixture opens the dependent puzzle", async ({ page }) => {
+test("puzzle groups show gemstone progression and default collapse states", async ({ page }) => {
+  await seedBrowserStorage(page, "empty");
+  await page.goto("/");
+
+  const basics = page.locator(".puzzle-group").filter({ hasText: "Basics" });
+  const runelore = page.locator(".puzzle-group").filter({ hasText: "Runelore" });
+  await expect(page.locator(".gemstone-count")).toHaveText("◆ 0 GEMSTONES");
+  await expect(basics).toHaveJSProperty("open", true);
+  await expect(runelore).toHaveJSProperty("open", false);
+  await expect(page.getByRole("button", { name: /First Shift/ })).toBeEnabled();
+  await expect(runelore.locator("button")).toBeDisabled();
+});
+
+test("unlocked fixture opens a gemstone-gated group and puzzle", async ({ page }) => {
   await seedBrowserStorage(page, "unlocked");
   await page.goto("/");
-  const conduits = page.getByRole("button", { name: /^03 Conduits/ });
+
+  const basics = page.locator(".puzzle-group").filter({ hasText: "Basics" });
+  const runelore = page.locator(".puzzle-group").filter({ hasText: "Runelore" });
+  await expect(page.locator(".gemstone-count")).toHaveText("◆ 2 GEMSTONES");
+  await expect(basics).toHaveJSProperty("open", false);
+  await expect(runelore).toHaveJSProperty("open", true);
+
+  const conduits = page.getByRole("button", { name: /Conduits/ });
   await expect(conduits).toBeEnabled();
   await conduits.click();
   await expect(page).toHaveURL(/\/puzzles\/conduits$/);
