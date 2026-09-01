@@ -23,6 +23,8 @@ describe("puzzle export", () => {
     const exported = JSON.parse(source) as {
       readonly format: string;
       readonly version: number;
+      readonly width: number;
+      readonly height: number;
       readonly components: readonly { readonly code: string; readonly price: number }[];
       readonly editableRegions: readonly {
         readonly x: number;
@@ -31,6 +33,8 @@ describe("puzzle export", () => {
         readonly height: number;
       }[];
       readonly initialBoard: {
+        readonly width: number;
+        readonly height: number;
         readonly tick: number;
         readonly result: string;
         readonly grid: readonly string[];
@@ -44,7 +48,10 @@ describe("puzzle export", () => {
 
     expect(exported.format).toBe(PUZZLE_FORMAT);
     expect(exported.version).toBe(PUZZLE_VERSION);
+    expect([exported.width, exported.height]).toEqual([4, 3]);
     expect(exported.initialBoard).toMatchObject({
+      width: 4,
+      height: 3,
       tick: 0,
       result: "in-progress",
       grid: ["...V", ".#..", "...."],

@@ -13,9 +13,11 @@ import { World } from "./world";
 import { expectDefined } from "../util/assert";
 
 const FORMAT_NAME = "factory2d-board";
-const FORMAT_VERSION = 8;
-const MAX_BOARD_WIDTH = 400;
-const MAX_BOARD_HEIGHT = 300;
+const FORMAT_VERSION = 9;
+export const MIN_BOARD_WIDTH = 1;
+export const MAX_BOARD_WIDTH = 400;
+export const MIN_BOARD_HEIGHT = 1;
+export const MAX_BOARD_HEIGHT = 300;
 
 function buildTileKindsByCode(): Readonly<Record<string, TileKind | undefined>> {
   const kindsByCode = Object.create(null) as Record<string, TileKind | undefined>;
@@ -88,6 +90,8 @@ interface ExportedFurnace {
 interface ExportedBoard {
   readonly format: typeof FORMAT_NAME;
   readonly version: typeof FORMAT_VERSION;
+  readonly width: number;
+  readonly height: number;
   readonly tick: number;
   readonly result: string;
   readonly grid: readonly string[];
@@ -104,6 +108,9 @@ export interface ImportedBoard {
 }
 
 export function serializeBoard(world: World, tick: number): string {
+  requireInteger(world.width, "Board width", MIN_BOARD_WIDTH, MAX_BOARD_WIDTH);
+  requireInteger(world.height, "Board height", MIN_BOARD_HEIGHT, MAX_BOARD_HEIGHT);
+
   if (!Number.isSafeInteger(tick) || tick < 0) {
     throw new RangeError("Board tick must be a non-negative integer");
   }
@@ -170,6 +177,8 @@ export function serializeBoard(world: World, tick: number): string {
   const board: ExportedBoard = {
     format: FORMAT_NAME,
     version: FORMAT_VERSION,
+    width: world.width,
+    height: world.height,
     tick,
     result: PUZZLE_RESULT_NAMES[world.puzzleResult],
     grid,
@@ -198,6 +207,8 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
     "version",
     "tick",
     "result",
+    "width",
+    "height",
     "grid",
     "orientations",
     "charges",
@@ -218,12 +229,23 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
   if (result === undefined) {
     throw new Error(`Board result must be \"in-progress\", \"won\", or \"lost\"`);
   }
+  const width = requireInteger(
+    board.width,
+    "Board width",
+    MIN_BOARD_WIDTH,
+    MAX_BOARD_WIDTH,
+  );
+  const height = requireInteger(
+    board.height,
+    "Board height",
+    MIN_BOARD_HEIGHT,
+    MAX_BOARD_HEIGHT,
+  );
   const grid = requireArray(board.grid, "Board grid");
-  requireInteger(grid.length, "Board grid height", 1, MAX_BOARD_HEIGHT);
+  if (grid.length !== height) {
+    throw new Error(`Board grid must contain exactly ${height} rows`);
+  }
 
-  const firstRow = requireString(grid[0], "Board grid row 0");
-  const width = requireInteger(firstRow.length, "Board grid width", 1, MAX_BOARD_WIDTH);
-  const height = grid.length;
   const kinds = new Uint8Array(width * height);
 
   for (let y = 0; y < height; y += 1) {

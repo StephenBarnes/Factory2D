@@ -1,18 +1,27 @@
 import { GridRegion, type GridRectangle } from "./grid-region";
 import { PuzzleComponents, type PricedComponent } from "./puzzle-components";
-import { deserializeBoardValue, type ImportedBoard } from "../simulation/board-export";
+import {
+  deserializeBoardValue,
+  MAX_BOARD_HEIGHT,
+  MAX_BOARD_WIDTH,
+  MIN_BOARD_HEIGHT,
+  MIN_BOARD_WIDTH,
+  type ImportedBoard,
+} from "../simulation/board-export";
 import { PuzzleResult } from "../simulation/puzzle-result";
 import { TILE_DEFINITIONS, TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
 
 export const PUZZLE_FORMAT = "factory2d-puzzle";
-export const PUZZLE_VERSION = 2;
+export const PUZZLE_VERSION = 3;
 const PUZZLE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const DEFAULT_PUZZLE_CYCLE_LIMIT = 1_000;
 export const MAX_PUZZLE_CYCLE_LIMIT = 10_000;
 const PUZZLE_FIELDS = [
   "format",
   "version",
+  "width",
+  "height",
   "id",
   "order",
   "name",
@@ -29,6 +38,8 @@ const OPTIONAL_PUZZLE_FIELDS = ["cycleLimit"] as const;
 const BOARD_FIELDS = [
   "format",
   "version",
+  "width",
+  "height",
   "tick",
   "result",
   "grid",
@@ -105,6 +116,19 @@ function parsePuzzleFileValue(value: unknown): ParsedPuzzleFile {
   if (puzzle.version !== PUZZLE_VERSION) {
     throw new Error(`Puzzle version must be ${PUZZLE_VERSION}`);
   }
+  const width = requireInteger(
+    puzzle.width,
+    "Puzzle width",
+    MIN_BOARD_WIDTH,
+    MAX_BOARD_WIDTH,
+  );
+  const height = requireInteger(
+    puzzle.height,
+    "Puzzle height",
+    MIN_BOARD_HEIGHT,
+    MAX_BOARD_HEIGHT,
+  );
+
 
   const id = requireNonEmptyString(puzzle.id, "Puzzle id");
   if (!PUZZLE_ID_PATTERN.test(id)) {
@@ -135,6 +159,9 @@ function parsePuzzleFileValue(value: unknown): ParsedPuzzleFile {
   const editableRegion = parseEditableRegion(puzzle.editableRegions);
   const board = requireExactObject(puzzle.initialBoard, "Puzzle initialBoard", BOARD_FIELDS);
   const initialWorld = parseInitialWorld(board, "Puzzle initialBoard");
+  if (initialWorld.width !== width || initialWorld.height !== height) {
+    throw new Error("Puzzle initialBoard dimensions must match Puzzle width and height");
+  }
   if (!editableRegion.fitsWithin(initialWorld.width, initialWorld.height)) {
     throw new Error("Puzzle editableRegions must fit within initialBoard dimensions");
   }

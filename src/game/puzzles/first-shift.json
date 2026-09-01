@@ -1,6 +1,8 @@
 {
   "format": "factory2d-puzzle",
-  "version": 2,
+  "version": 3,
+  "width": 20,
+  "height": 14,
   "id": "first-shift",
   "order": 0,
   "name": "First Shift",
@@ -14,7 +16,9 @@
   "editableRegions": [ { "x": 8, "y": 3, "width": 4, "height": 4 } ],
   "initialBoard": {
     "format": "factory2d-board",
-    "version": 8,
+    "version": 9,
+    "width": 20,
+    "height": 14,
     "tick": 0,
     "result": "in-progress",
     "grid": [

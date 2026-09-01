@@ -16,7 +16,9 @@ const TEST_PUZZLE_ID = "parser-fixture";
 function puzzleFile(): JsonObject {
   return {
     format: "factory2d-puzzle",
-    version: 2,
+    version: 3,
+    width: 4,
+    height: 4,
     id: TEST_PUZZLE_ID,
     order: 0,
     name: "Parser Fixture",
@@ -31,7 +33,9 @@ function puzzleFile(): JsonObject {
     editableRegions: [{ x: 1, y: 1, width: 2, height: 2 }],
     initialBoard: {
       format: "factory2d-board",
-      version: 8,
+      version: 9,
+      width: 4,
+      height: 4,
       tick: 0,
       result: "in-progress",
       grid: [
@@ -213,7 +217,7 @@ describe("puzzle JSON format", () => {
     );
   });
 
-  it("rejects test-case boards with dimensions different from the base board", () => {
+  it("rejects malformed test-case board dimensions", () => {
     const file = puzzleFile();
     const offsetTestCase = expectDefined(
       arrayField(file, "testCases")[1],
@@ -222,13 +226,29 @@ describe("puzzle JSON format", () => {
     const overrides = objectField(offsetTestCase, "overrides");
     const boardOverrides = objectField(overrides, "initialBoard");
     arrayField(boardOverrides, "grid").pop();
-    boardOverrides.welds = structuredClone(
-      arrayField(objectField(file, "initialBoard"), "welds"),
-    );
-    arrayField(boardOverrides, "welds").pop();
 
     expect(() => parsePuzzleFile(file, "puzzles/mismatched.json")).toThrow(
-      "puzzles/mismatched.json: Puzzle testCases[1] initialBoard dimensions must match Puzzle initialBoard",
+      "puzzles/mismatched.json: Puzzle testCases[1] initialBoard is invalid: Board grid must contain exactly 4 rows",
+    );
+  });
+
+  it("requires bounded puzzle dimensions matching the initial board", () => {
+    const file = puzzleFile();
+    file.width = 0;
+    expect(() => parsePuzzleFile(file, "puzzles/width.json")).toThrow(
+      "puzzles/width.json: Puzzle width must be an integer from 1 through 400",
+    );
+
+    file.width = 4;
+    file.height = 301;
+    expect(() => parsePuzzleFile(file, "puzzles/height.json")).toThrow(
+      "puzzles/height.json: Puzzle height must be an integer from 1 through 300",
+    );
+
+    file.height = 4;
+    file.width = 3;
+    expect(() => parsePuzzleFile(file, "puzzles/mismatched.json")).toThrow(
+      "puzzles/mismatched.json: Puzzle initialBoard dimensions must match Puzzle width and height",
     );
   });
 

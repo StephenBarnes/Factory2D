@@ -22,7 +22,7 @@ import {
 
 
 const MAX_TILE_SIZE = 64;
-const MIN_TILE_SIZE = 2;
+const MIN_MANUAL_TILE_SIZE = 2;
 const GRID_EDGE_EPSILON = 1e-6;
 const EDITABLE_REGION_DASH_PATTERN = [4, 4];
 
@@ -106,10 +106,17 @@ export class CanvasRenderer {
     }
     this.viewportInsets = insets;
     if (this.viewInitialized && !this.viewModified) {
-      this.fitView();
+      this.fitViewToViewport();
     } else {
       this.updateOrigin();
     }
+  }
+
+  fitBoardToViewport(): void {
+    this.resizeBackingStore();
+    this.fitViewToViewport();
+    this.viewInitialized = true;
+    this.viewModified = false;
   }
 
   zoomAtClientPoint(clientX: number, clientY: number, wheelDeltaY: number): void {
@@ -119,8 +126,9 @@ export class CanvasRenderer {
     const localY = clientY - bounds.top;
     const gridX = (localX - this.originX) / this.cellSize;
     const gridY = (localY - this.originY) / this.cellSize;
+    const minimumSize = Math.min(MIN_MANUAL_TILE_SIZE, this.cellSize);
     const nextSize = Math.max(
-      MIN_TILE_SIZE,
+      minimumSize,
       Math.min(MAX_TILE_SIZE, this.cellSize * Math.exp(-wheelDeltaY * 0.0015)),
     );
     if (nextSize === this.cellSize) {
@@ -248,18 +256,19 @@ export class CanvasRenderer {
     this.viewportHeight = height;
 
     if (!this.viewInitialized || (sizeChanged && !this.viewModified)) {
-      this.fitView();
+      this.fitViewToViewport();
       this.viewInitialized = true;
     } else if (sizeChanged) {
       this.updateOrigin();
     }
   }
 
-  private fitView(): void {
+  private fitViewToViewport(): void {
     const { width, height } = this.safeViewport();
-    this.cellSize = Math.max(
-      MIN_TILE_SIZE,
-      Math.min(width / this.world.width, height / this.world.height, MAX_TILE_SIZE),
+    this.cellSize = Math.min(
+      width / this.world.width,
+      height / this.world.height,
+      MAX_TILE_SIZE,
     );
     this.viewCenterX = this.world.width / 2;
     this.viewCenterY = this.world.height / 2;

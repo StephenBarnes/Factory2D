@@ -38,6 +38,8 @@ export function serializePuzzleTemplate(world: World, editableRegion: GridRegion
   const puzzle = {
     format: PUZZLE_FORMAT,
     version: PUZZLE_VERSION,
+    width: world.width,
+    height: world.height,
     id: "untitled-puzzle",
     order: 0,
     name: "Untitled Puzzle",

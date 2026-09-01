@@ -625,6 +625,7 @@ const navigation = new NavigationController(
       importButton.disabled = activeSession.editableRegion !== null;
       updateExportOptionsForSession();
       updateViewportInsets();
+      renderer.fitBoardToViewport();
       refreshPointerHover();
     },
   },
@@ -906,6 +907,7 @@ importFile.addEventListener("change", async () => {
     sessions.replaceActiveWorld(imported.world, imported.tick);
     loadActiveWorkshopSession();
     updateViewportInsets();
+    renderer.fitBoardToViewport();
     refreshPointerHover();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
