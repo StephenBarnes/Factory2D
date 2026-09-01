@@ -5,7 +5,7 @@ Game flow:
 * Implement a text-box tool that places and edits text boxes on the game screen. Useful for tutorial puzzles, and also for players that want to label/annotate their designs. Model them separate from the component grid - they're not grid-aligned, don't occupy tiles, and have no prices. Include them the puzzle JSON format and scene JSON format.
 * Remove the "import" button on puzzles; it should only be displayed in the sandbox. It's already disabled in puzzles, but still visible.
 * For running test cases, some conveniences: Show the test cases running. Increase tick rate gradually so it doesn't take too long. Add a fast-forward button that runs them as fast as possible with no rendering. When a test case fails, immediately pause and show the failed state, instead of showing the results modal.
-* Add tick speeds about 60 ticks per second; for those, step the simulation multiple times between renders. This is useful for testing solutions fast while still showing what's going on.
+* Add tick speeds above 60 ticks per second; for those, step the simulation multiple times between renders. This is useful for testing solutions fast while still showing what's going on.
 * Edit format for scenes and puzzles: make the fields `orientations`, `charges`, `crossingCharges`, `furnaces`, `components` all optional, with default value of `[]`. When exporting, don't specify those fields if they're the empty list, which is often the case. This will reduce incompatibility when we add new block types and de-bloats the format.
 * Similarly, remove the "standard" test case with no overrides - treat that as a given and only list additional test cases in the file.
 * Further compact orientations and charges in the export/import format, possibly storing charges per network instead of per tile. More complex per-tile state (e.g. furnace stored ticks or target/delivery-block configuration) can remain verbose. Only include full ASCII grids for fields that aren't the default value.
@@ -30,8 +30,6 @@ Components useful for designing puzzles in-world:
 
 Components:
 * A sensor that detects when the sensor's own tile moves, and outputs +1 on that side, -1 on the other side.
-* Welder blocks.
-* Splitter blocks.
 * Comparers: compare front neighbor to back neighbor, and output +1 on sides if they're equal, else output 0.
 * Assemblers that convert a group of blocks welded in a specific way into one block. For example iron and copper blocks welded in a specific way are converted to a piston block. We also want this to be able to convert one block to multiple (unwelded) blocks - so need to store a queue of blocks to emit, emit them one-by-one when the output tile is empty, and prevent the assembler from running when the queue is non-empty or over some limit.
 * Flipper: attaches to one block, then flips the entire connected/welded group of blocks around that line horizontally or vertically, if it would not collide/overlap other blocks.
@@ -108,7 +106,8 @@ UI:
 * Make the palette panel resizable. Modify the icon sizes, shrinking them as the palette becomes narrower.
 * On puzzle and sandbox screens, move the puzzle title and the back button to the bottom-left, on the bottom bar. Currently they're at the top of the palette panel.
 * Add info button, next to the game control region (with the puzzle name, goal text, and button to go back to menu / puzzle briefing). When clicked, this should open a modal that shows the puzzle name, description, and goal, and later maybe an extended description and some art, etc. Remove the goal text currently in that region. Also we'll move that game control region to bottom-left - it's a separate todo above.
-* When solving a puzzle, in the game control region, show the current price and footprint. When the mouse is held over the price, modify the palette to show prices over each component.
+* When solving a puzzle, in the game control region, show the current total price and footprint, e.g. "5⚙ | 4×5"). When the mouse is held over the price, modify the palette to show prices over each component. Update when a block is placed or removed. Don't show in the sandbox.
+* For the ROM's configuration modal, allow click and drag to set multiple cells.
 
 Visuals:
 * Re-theme the entire game's UI. The current palette (black, dark blue, cyan, yellow) doesn't really fit the theme. Prefer colors like earth brown, stone gray, bronze, gold. Maybe: 312312 (brown), 4B5052 (grey), F1CC38 (gold), 5C718C (blue).
@@ -121,6 +120,8 @@ Visuals:
 * Replace the current icon set with more intuitive or pretty symbols, matching the rune theme. Make stone/glass/platform have two parallel lines instead of the Z-lightning-bolt. Block sensor should have angular rune-like eye symbol (hollow diamond with center diamond for the pupil); charge sensor should be the same eye with lighting bolt replacing pupil. Fixed charge should have 3 lighting bolts, not plus symbol and circle. Inverter should be "hagalaz" N/H symbol. Subtractor should mark back with a small plus. Rectifier should be "thurisaz" `|>` instead of current `>|`. Victory block should have "jera" rune symbol. Magnet should be reworked, but defer until we change its mechanics. Also give them sensible background colors, e.g. shades of purple for all sensors, teal/blue for all 3-input mathematical transforms.
 * Improve piston extension/retraction animation.
 * Rename runes; prefer metaphorical, arcane, or Anglish-style names. ROM rune -> rune of wisdom, sensor rune -> watchful rune, inverter -> gainsayer rune, delay rune -> recall rune, rectifier -> rightener, etc. Maybe rename +1, -1, and 0 to right, left, and center, or some other natural ternary system, if we can find a way to explain sum, multiply, and subtraction concisely in that system.
+* When placing welders/splitters, show additional bars for where the welds/splits will happen.
+* Animate when joints are welded or split, including by the welder/splitter components.
 
 Larger projects, DEFER to later or never, and break up into tasks:
 * DEFER Add a hexagonal variant. All tiles become hexagons. Most of our code probably still works, though using 6 neighbors instead of 4.

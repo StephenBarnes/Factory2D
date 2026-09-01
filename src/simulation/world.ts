@@ -40,6 +40,7 @@ export class World {
   private readonly orientations: Uint8Array;
   private readonly charges: Int8Array;
   private readonly crossingVerticalCharges: Int8Array;
+  private readonly isolatedOutputCharges: Int8Array;
   private readonly furnaceProgress: Uint16Array;
   private readonly furnaceTargetIds: Uint32Array;
   private readonly componentStates = new Map<number, ConfigurableComponentState>();
@@ -51,6 +52,7 @@ export class World {
   private readonly movedOrientations: Uint8Array;
   private readonly movedCharges: Int8Array;
   private readonly movedCrossingVerticalCharges: Int8Array;
+  private readonly movedIsolatedOutputCharges: Int8Array;
   private readonly movedFurnaceProgress: Uint16Array;
   private readonly movedFurnaceTargetIds: Uint32Array;
   private readonly movedRightWelds: Uint8Array;
@@ -71,6 +73,7 @@ export class World {
     this.orientations = new Uint8Array(this.cellCount);
     this.charges = new Int8Array(this.cellCount);
     this.crossingVerticalCharges = new Int8Array(this.cellCount);
+    this.isolatedOutputCharges = new Int8Array(this.cellCount);
     this.furnaceProgress = new Uint16Array(this.cellCount);
     this.furnaceTargetIds = new Uint32Array(this.cellCount);
     this.rightWelds = new Uint8Array(this.cellCount);
@@ -80,6 +83,7 @@ export class World {
     this.movedOrientations = new Uint8Array(this.cellCount);
     this.movedCharges = new Int8Array(this.cellCount);
     this.movedCrossingVerticalCharges = new Int8Array(this.cellCount);
+    this.movedIsolatedOutputCharges = new Int8Array(this.cellCount);
     this.movedFurnaceProgress = new Uint16Array(this.cellCount);
     this.movedFurnaceTargetIds = new Uint32Array(this.cellCount);
     this.movedRightWelds = new Uint8Array(this.cellCount);
@@ -176,11 +180,31 @@ export class World {
       this.revisionValue += 1;
     }
   }
+  setIsolatedOutputCharge(x: number, y: number, charge: Charge): void {
+    const index = this.indexOf(x, y);
+    const kind = this.kinds[index] as TileKind;
+    if (!hasSeparateIsolatedOutput(kind)) {
+      throw new Error(`Tile at (${x}, ${y}) has no separate isolated output`);
+    }
+    if (!isCharge(charge)) {
+      throw new RangeError(`Invalid isolated output charge ${charge as number}`);
+    }
+    if (this.isolatedOutputCharges[index] !== charge) {
+      this.isolatedOutputCharges[index] = charge;
+      this.revisionValue += 1;
+    }
+  }
 
-  applyCircuitCharges(charges: Int8Array, crossingVerticalCharges: Int8Array): void {
+
+  applyCircuitCharges(
+    charges: Int8Array,
+    crossingVerticalCharges: Int8Array,
+    isolatedOutputCharges: Int8Array,
+  ): void {
     if (
       charges.length !== this.cellCount ||
-      crossingVerticalCharges.length !== this.cellCount
+      crossingVerticalCharges.length !== this.cellCount ||
+      isolatedOutputCharges.length !== this.cellCount
     ) {
       throw new RangeError("Circuit charge buffers must match the world cell count");
     }
@@ -192,8 +216,18 @@ export class World {
         crossingVerticalCharges[index],
         "crossing vertical charge",
       );
-      if (!isCharge(charge) || !isCharge(verticalCharge)) {
-        throw new RangeError(`Invalid circuit charges ${charge}, ${verticalCharge}`);
+      const isolatedOutputCharge = expectDefined(
+        isolatedOutputCharges[index],
+        "isolated output charge",
+      );
+      if (
+        !isCharge(charge) ||
+        !isCharge(verticalCharge) ||
+        !isCharge(isolatedOutputCharge)
+      ) {
+        throw new RangeError(
+          `Invalid circuit charges ${charge}, ${verticalCharge}, ${isolatedOutputCharge}`,
+        );
       }
       const kind = this.kinds[index] as TileKind;
       if (charge !== 0 && TILE_DEFINITIONS[kind].circuitPorts === 0) {
@@ -203,11 +237,21 @@ export class World {
         throw new Error(`Non-crossing tile at index ${index} cannot hold vertical charge`);
       }
       if (
+        isolatedOutputCharge !== 0 &&
+        !hasSeparateIsolatedOutput(kind)
+      ) {
+        throw new Error(
+          `Tile without a separate isolated output at index ${index} cannot hold its charge`,
+        );
+      }
+      if (
         this.charges[index] !== charge ||
-        this.crossingVerticalCharges[index] !== verticalCharge
+        this.crossingVerticalCharges[index] !== verticalCharge ||
+        this.isolatedOutputCharges[index] !== isolatedOutputCharge
       ) {
         this.charges[index] = charge;
         this.crossingVerticalCharges[index] = verticalCharge;
+        this.isolatedOutputCharges[index] = isolatedOutputCharge;
         changed = true;
       }
     }
@@ -516,6 +560,7 @@ export class World {
       this.orientations[targetIndex] = Direction.Up;
       this.charges[targetIndex] = 0;
       this.crossingVerticalCharges[targetIndex] = 0;
+      this.isolatedOutputCharges[targetIndex] = 0;
       this.furnaceProgress[targetIndex] = 0;
       this.furnaceTargetIds[targetIndex] = 0;
       this.clearDisallowedWeldsAtIndex(targetIndex);
@@ -713,6 +758,7 @@ export class World {
         this.orientations[index] = orientation;
         this.charges[index] = 0;
         this.crossingVerticalCharges[index] = 0;
+        this.isolatedOutputCharges[index] = 0;
         this.furnaceProgress[index] = 0;
         this.furnaceTargetIds[index] = 0;
         this.clearDisallowedWeldsAtIndex(index);
@@ -732,6 +778,7 @@ export class World {
     this.ids[index] = id;
     this.charges[index] = 0;
     this.crossingVerticalCharges[index] = 0;
+    this.isolatedOutputCharges[index] = 0;
     this.furnaceProgress[index] = 0;
     this.furnaceTargetIds[index] = 0;
     this.orientations[index] = orientation;
@@ -749,6 +796,7 @@ export class World {
     this.orientations.fill(Direction.Up);
     this.charges.fill(0);
     this.crossingVerticalCharges.fill(0);
+    this.isolatedOutputCharges.fill(0);
     this.furnaceProgress.fill(0);
     this.furnaceTargetIds.fill(0);
     this.componentStates.clear();
@@ -774,6 +822,7 @@ export class World {
     this.orientations.set(source.orientations);
     this.charges.set(source.charges);
     this.crossingVerticalCharges.set(source.crossingVerticalCharges);
+    this.isolatedOutputCharges.set(source.isolatedOutputCharges);
     this.furnaceProgress.set(source.furnaceProgress);
     this.furnaceTargetIds.set(source.furnaceTargetIds);
     this.rightWelds.set(source.rightWelds);
@@ -809,7 +858,19 @@ export class World {
     ) {
       throw new RangeError(`Invalid circuit direction ${direction as number}`);
     }
-    return this.kinds[index] === TileKind.WireCrossing &&
+    const kind = this.kinds[index] as TileKind;
+    const definition = TILE_DEFINITIONS[kind];
+    const outputSides = orientedSides(
+      definition.circuitOutputPorts,
+      this.orientations[index] as Direction,
+    );
+    if (
+      hasSeparateIsolatedOutput(kind) &&
+      (outputSides & (1 << direction)) !== 0
+    ) {
+      return this.isolatedOutputCharges[index] as Charge;
+    }
+    return kind === TileKind.WireCrossing &&
         (direction === Direction.Up || direction === Direction.Down)
       ? this.crossingVerticalCharges[index] as Charge
       : this.charges[index] as Charge;
@@ -901,6 +962,7 @@ export class World {
         this.orientations[arm] = orientation;
         this.charges[arm] = 0;
         this.crossingVerticalCharges[arm] = 0;
+        this.isolatedOutputCharges[arm] = 0;
         this.furnaceProgress[arm] = 0;
         this.furnaceTargetIds[arm] = 0;
         this.setWeldAtIndices(base, arm, 1);
@@ -989,6 +1051,7 @@ export class World {
     this.movedOrientations.set(this.orientations);
     this.movedCharges.set(this.charges);
     this.movedCrossingVerticalCharges.set(this.crossingVerticalCharges);
+    this.movedIsolatedOutputCharges.set(this.isolatedOutputCharges);
     this.movedFurnaceProgress.set(this.furnaceProgress);
     this.movedFurnaceTargetIds.set(this.furnaceTargetIds);
     this.movedRightWelds.set(this.rightWelds);
@@ -1009,6 +1072,7 @@ export class World {
       this.movedOrientations[source] = Direction.Up;
       this.movedCharges[source] = 0;
       this.movedCrossingVerticalCharges[source] = 0;
+      this.movedIsolatedOutputCharges[source] = 0;
       this.movedFurnaceProgress[source] = 0;
       this.movedFurnaceTargetIds[source] = 0;
       this.movedRightWelds[source] = 0;
@@ -1037,6 +1101,10 @@ export class World {
         this.crossingVerticalCharges[source],
         "moving crossing vertical charge",
       );
+      this.movedIsolatedOutputCharges[destination] = expectDefined(
+        this.isolatedOutputCharges[source],
+        "moving isolated output charge",
+      );
       this.movedFurnaceProgress[destination] = expectDefined(
         this.furnaceProgress[source],
         "moving furnace progress",
@@ -1060,6 +1128,7 @@ export class World {
     this.orientations.set(this.movedOrientations);
     this.charges.set(this.movedCharges);
     this.crossingVerticalCharges.set(this.movedCrossingVerticalCharges);
+    this.isolatedOutputCharges.set(this.movedIsolatedOutputCharges);
     this.furnaceProgress.set(this.movedFurnaceProgress);
     this.furnaceTargetIds.set(this.movedFurnaceTargetIds);
     this.rightWelds.set(this.movedRightWelds);
@@ -1244,9 +1313,17 @@ export class World {
     this.orientations[index] = Direction.Up;
     this.charges[index] = 0;
     this.crossingVerticalCharges[index] = 0;
+    this.isolatedOutputCharges[index] = 0;
     this.furnaceProgress[index] = 0;
     this.furnaceTargetIds[index] = 0;
     this.ids[index] = 0;
     this.clearWeldsAtIndex(index);
   }
+}
+
+function hasSeparateIsolatedOutput(kind: TileKind): boolean {
+  const definition = TILE_DEFINITIONS[kind];
+  const sharedPorts = definition.circuitPorts &
+    ~(definition.circuitInputPorts | definition.circuitOutputPorts);
+  return sharedPorts !== 0 && definition.circuitOutputPorts !== 0;
 }

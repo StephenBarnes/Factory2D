@@ -59,6 +59,7 @@ canvas:focus-visible {
   inset: 0;
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
   background: #030507;
 }
 

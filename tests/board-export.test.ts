@@ -35,6 +35,7 @@ describe("board export", () => {
         { x: 2, y: 1, charge: -1 },
       ],
       crossingCharges: [],
+      isolatedOutputCharges: [],
       furnaces: [],
       components: [],
       welds: [
@@ -60,6 +61,7 @@ describe("board export", () => {
       orientations: [],
       charges: [],
       crossingCharges: [],
+      isolatedOutputCharges: [],
       furnaces: [],
       components: [],
       welds: [".."],

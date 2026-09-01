@@ -44,6 +44,7 @@
     ],
     "charges": [],
     "crossingCharges": [],
+    "isolatedOutputCharges": [],
     "furnaces": [],
     "components": [],
     "welds": [

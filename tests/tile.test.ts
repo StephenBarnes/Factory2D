@@ -25,6 +25,8 @@ describe("tile orientation", () => {
     TileKind.Delay,
     TileKind.Counter,
     TileKind.Rom,
+    TileKind.Welder,
+    TileKind.Splitter,
   ])(
     "preserves the selected orientation for directional kind %s",
     (kind) => {

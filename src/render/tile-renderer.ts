@@ -4,6 +4,7 @@ import {
   Direction,
   directionX,
   directionY,
+  orientedSides,
   TILE_DEFINITIONS,
   TileDecorationStyle,
   type TileDefinition,
@@ -420,8 +421,13 @@ function drawDecoration(
       size,
       circuitConnections,
       circuitPortCharges,
-      definition.circuitInputPorts !== WeldSide.None ||
-        definition.decorationStyle === TileDecorationStyle.WireCrossing,
+      (orientedSides(
+        (definition.circuitInputPorts | definition.circuitOutputPorts) as WeldSide,
+        orientation,
+      ) |
+        (definition.decorationStyle === TileDecorationStyle.WireCrossing
+          ? WeldSide.All
+          : WeldSide.None)) as WeldSide,
       hasComponentDisplay ? 0.39 : 0.26,
     );
   }
@@ -475,6 +481,52 @@ function drawDecoration(
       drawDot(context, left + rivetOffset, top + size - rivetOffset, rivetRadius);
       drawDot(context, left + size - rivetOffset, top + size - rivetOffset, rivetRadius);
       context.fill();
+      break;
+    }
+    case TileDecorationStyle.Welder:
+    case TileDecorationStyle.Splitter: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.strokeStyle = definition.decorationColor;
+      context.fillStyle = "#211a16";
+      context.lineWidth = Math.max(1.5, size * 0.055);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.beginPath();
+      context.moveTo(-size * 0.18, size * 0.2);
+      context.lineTo(-size * 0.1, -size * 0.1);
+      context.lineTo(size * 0.1, -size * 0.1);
+      context.lineTo(size * 0.18, size * 0.2);
+      context.closePath();
+      context.fill();
+      context.stroke();
+      context.beginPath();
+      if (definition.decorationStyle === TileDecorationStyle.Welder) {
+        context.moveTo(-size * 0.28, -size * 0.2);
+        context.lineTo(-size * 0.1, -size * 0.12);
+        context.moveTo(size * 0.28, -size * 0.2);
+        context.lineTo(size * 0.1, -size * 0.12);
+        context.moveTo(0, -size * 0.3);
+        context.lineTo(0, -size * 0.14);
+      } else {
+        context.moveTo(-size * 0.25, -size * 0.26);
+        context.lineTo(0, -size * 0.1);
+        context.lineTo(size * 0.25, -size * 0.26);
+        context.moveTo(0, -size * 0.1);
+        context.lineTo(-size * 0.12, -size * 0.31);
+        context.moveTo(0, -size * 0.1);
+        context.lineTo(size * 0.12, -size * 0.31);
+      }
+      context.stroke();
+      const backDirection = ((orientation + Direction.Down) & 3) as Direction;
+      context.fillStyle = CIRCUIT_CHARGE_COLORS[
+        circuitPortCharge(circuitPortCharges, backDirection)
+      ];
+      context.beginPath();
+      drawDot(context, 0, size * 0.2, Math.max(1.5, size * 0.065));
+      context.fill();
+      context.restore();
       break;
     }
     case TileDecorationStyle.Furnace: {
@@ -1056,7 +1108,7 @@ function drawCircuitConnections(
   size: number,
   connections: WeldSide,
   portCharges: number,
-  isolatePorts: boolean,
+  isolatedPorts: WeldSide,
   innerOffsetRatio: number,
 ): void {
   const centerX = left + size / 2;
@@ -1079,7 +1131,7 @@ function drawCircuitConnections(
 
       const offsetX = directionX(direction);
       const offsetY = directionY(direction);
-      if (isolatePorts) {
+      if ((isolatedPorts & (1 << direction)) !== 0) {
         context.moveTo(
           centerX + offsetX * size / 2,
           centerY + offsetY * size / 2,

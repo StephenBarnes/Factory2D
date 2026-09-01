@@ -15,6 +15,7 @@ import {
   Direction,
   directionX,
   directionY,
+  oppositeDirection,
   TILE_DEFINITIONS,
   TILE_KINDS,
   TileKind,
@@ -137,6 +138,7 @@ interface ExportedBoard {
   readonly orientations: readonly ExportedOrientation[];
   readonly charges: readonly ExportedCharge[];
   readonly crossingCharges: readonly ExportedCrossingCharge[];
+  readonly isolatedOutputCharges: readonly ExportedCharge[];
   readonly furnaces: readonly ExportedFurnace[];
   readonly components: readonly ExportedComponent[];
   readonly welds: readonly string[];
@@ -159,6 +161,7 @@ export function serializeBoard(world: World, tick: number): string {
   const orientations: ExportedOrientation[] = [];
   const charges: ExportedCharge[] = [];
   const crossingCharges: ExportedCrossingCharge[] = [];
+  const isolatedOutputCharges: ExportedCharge[] = [];
   const furnaces: ExportedFurnace[] = [];
   const components: ExportedComponent[] = [];
   const welds: string[] = [];
@@ -191,6 +194,16 @@ export function serializeBoard(world: World, tick: number): string {
         const charge = world.chargeAt(x, y);
         if (charge !== 0) {
           charges.push({ x, y, charge });
+        }
+      }
+      if (kind === TileKind.Welder || kind === TileKind.Splitter) {
+        const outputCharge = world.chargeAtPort(
+          x,
+          y,
+          oppositeDirection(orientation),
+        );
+        if (outputCharge !== 0) {
+          isolatedOutputCharges.push({ x, y, charge: outputCharge });
         }
       }
       if (kind === TileKind.Furnace) {
@@ -230,6 +243,7 @@ export function serializeBoard(world: World, tick: number): string {
     orientations,
     charges,
     crossingCharges,
+    isolatedOutputCharges,
     furnaces,
     components,
     welds,
@@ -260,6 +274,7 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
     "charges",
     "crossingCharges",
     "furnaces",
+    "isolatedOutputCharges",
     "components",
     "welds",
   ]);
@@ -448,6 +463,32 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
     verticalChargeByCell[cellIndex] = vertical;
     hasCrossingCharge[cellIndex] = 1;
   }
+  const isolatedOutputCharges = board.isolatedOutputCharges === undefined
+    ? []
+    : requireArray(board.isolatedOutputCharges, "Board isolated output charges");
+  const isolatedOutputChargeByCell = new Int8Array(width * height);
+  const hasIsolatedOutputCharge = new Uint8Array(width * height);
+  for (let index = 0; index < isolatedOutputCharges.length; index += 1) {
+    const label = `Isolated output charge ${index}`;
+    const state = requireObject(isolatedOutputCharges[index], label, ["x", "y", "charge"]);
+    const x = requireInteger(state.x, `${label} x`, 0, width - 1);
+    const y = requireInteger(state.y, `${label} y`, 0, height - 1);
+    const cellIndex = y * width + x;
+    if (hasIsolatedOutputCharge[cellIndex] === 1) {
+      throw new Error(`${label} duplicates cell (${x}, ${y})`);
+    }
+    const kind = expectDefined(kinds[cellIndex], `tile kind at (${x}, ${y})`) as TileKind;
+    if (kind !== TileKind.Welder && kind !== TileKind.Splitter) {
+      throw new Error(`${label} targets a tile without a separate isolated output`);
+    }
+    const charge = requireInteger(state.charge, `${label} value`, -1, 1) as Charge;
+    if (charge === 0) {
+      throw new Error(`${label} value must be -1 or 1`);
+    }
+    isolatedOutputChargeByCell[cellIndex] = charge;
+    hasIsolatedOutputCharge[cellIndex] = 1;
+  }
+
 
 
   const components = board.components === undefined
@@ -633,6 +674,16 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
           `vertical crossing charge at (${x}, ${y})`,
         ) as Charge;
         world.setCrossingCharges(x, y, horizontal, vertical);
+      }
+      if (hasIsolatedOutputCharge[cellIndex] === 1) {
+        world.setIsolatedOutputCharge(
+          x,
+          y,
+          expectDefined(
+            isolatedOutputChargeByCell[cellIndex],
+            `isolated output charge at (${x}, ${y})`,
+          ) as Charge,
+        );
       }
       const componentState = componentStatesByCell[cellIndex];
       if (componentState !== undefined) {

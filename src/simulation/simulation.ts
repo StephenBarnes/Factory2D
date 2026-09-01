@@ -3,6 +3,7 @@ import { DeliveryResolver } from "./delivery-resolver";
 import { FurnaceResolver } from "./furnace-resolver";
 import { MotionWorkspace } from "./motion-workspace";
 import { PuzzleResult } from "./puzzle-result";
+import { WeldOperationResolver } from "./weld-operation-resolver";
 import { Direction, oppositeDirection, TileKind } from "./tile";
 import { World } from "./world";
 
@@ -16,6 +17,7 @@ export class Simulation {
   private readonly deliveryResolver: DeliveryResolver;
   private readonly furnaceResolver: FurnaceResolver;
   private readonly motionWorkspace: MotionWorkspace;
+  private readonly weldOperationResolver: WeldOperationResolver;
   tick = 0;
 
   constructor(world: World) {
@@ -24,12 +26,19 @@ export class Simulation {
     this.deliveryResolver = new DeliveryResolver(world);
     this.furnaceResolver = new FurnaceResolver(world);
     this.motionWorkspace = new MotionWorkspace(world);
+    this.weldOperationResolver = new WeldOperationResolver(world);
   }
 
   step(): number {
     this.resolveVictoryBlocks();
     this.deliveryResolver.collect();
-    this.circuitResolver.resolve(this.tick, this.deliveryResolver.absorptionTargetIndices);
+    this.weldOperationResolver.collect();
+    this.circuitResolver.resolve(
+      this.tick,
+      this.deliveryResolver.absorptionTargetIndices,
+      this.weldOperationResolver.successfulOperationIndices,
+    );
+    this.weldOperationResolver.commit();
     this.furnaceResolver.resolve(this.circuitResolver.furnaceDisabled);
     this.deliveryResolver.commit();
     const movementCount = this.motionWorkspace.resolveOrdinaryMovements(this.tick);

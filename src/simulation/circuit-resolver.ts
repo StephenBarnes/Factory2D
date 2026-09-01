@@ -22,6 +22,7 @@ export class CircuitResolver {
   private readonly driveSums: Int32Array;
   private readonly nextCharges: Int8Array;
   private readonly nextCrossingVerticalCharges: Int8Array;
+  private readonly nextIsolatedOutputCharges: Int8Array;
 
   constructor(world: World) {
     this.world = world;
@@ -29,20 +30,31 @@ export class CircuitResolver {
     this.driveSums = new Int32Array(world.cellCount * 2);
     this.nextCharges = new Int8Array(world.cellCount);
     this.nextCrossingVerticalCharges = new Int8Array(world.cellCount);
+    this.nextIsolatedOutputCharges = new Int8Array(world.cellCount);
     this.furnaceDisabled = new Uint8Array(world.cellCount);
   }
 
-  resolve(tick: number, deliveryAbsorptionTargets: Int32Array): void {
+  resolve(
+    tick: number,
+    deliveryAbsorptionTargets: Int32Array,
+    successfulWeldOperationIndices: Uint8Array,
+  ): void {
+    if (successfulWeldOperationIndices.length !== this.world.cellCount) {
+      throw new RangeError("Weld operation result buffer must match the world cell count");
+    }
     this.roots.fill(-1);
     this.driveSums.fill(0);
     this.nextCharges.fill(0);
     this.nextCrossingVerticalCharges.fill(0);
+    this.nextIsolatedOutputCharges.fill(0);
     this.furnaceDisabled.fill(0);
 
     for (let index = 0; index < this.world.cellCount; index += 1) {
       const kind = this.world.kindAtIndex(index);
       const definition = TILE_DEFINITIONS[kind];
-      if (definition.circuitPorts === 0 || definition.circuitInputPorts !== 0) {
+      const sharedPorts = definition.circuitPorts &
+        ~(definition.circuitInputPorts | definition.circuitOutputPorts);
+      if (sharedPorts === 0) {
         continue;
       }
 
@@ -64,6 +76,12 @@ export class CircuitResolver {
           throw new Error(`Connected circuit at index ${index} has no neighbor`);
         }
         const ownNode = this.circuitNode(index, direction);
+        if (
+          !this.isSharedCircuitPort(index, direction) ||
+          !this.isSharedCircuitPort(neighbor, oppositeDirection(direction))
+        ) {
+          continue;
+        }
         const neighborNode = this.circuitNode(neighbor, oppositeDirection(direction));
         if (
           expectDefined(this.roots[ownNode], "circuit root marker") >= 0 &&
@@ -76,6 +94,18 @@ export class CircuitResolver {
 
     for (let index = 0; index < this.world.cellCount; index += 1) {
       const kind = this.world.kindAtIndex(index);
+      if (kind === TileKind.Welder || kind === TileKind.Splitter) {
+        const outputCharge = successfulWeldOperationIndices[index] === 1 ? 1 : 0;
+        this.nextIsolatedOutputCharges[index] = outputCharge;
+        const orientation = this.world.orientationAtIndex(index);
+        this.driveOutputs(
+          index,
+          orientedSides(TILE_DEFINITIONS[kind].circuitOutputPorts, orientation),
+          outputCharge,
+          false,
+        );
+        continue;
+      }
       let outputCharge: Charge;
       if (kind === TileKind.FixedCharge) {
         outputCharge = 1;
@@ -234,11 +264,19 @@ export class CircuitResolver {
     this.world.applyCircuitCharges(
       this.nextCharges,
       this.nextCrossingVerticalCharges,
+      this.nextIsolatedOutputCharges,
     );
   }
 
-  private driveOutputs(index: number, outputSides: WeldSide, outputCharge: Charge): void {
-    this.nextCharges[index] = outputCharge;
+  private driveOutputs(
+    index: number,
+    outputSides: WeldSide,
+    outputCharge: Charge,
+    storeOnTile = true,
+  ): void {
+    if (storeOnTile) {
+      this.nextCharges[index] = outputCharge;
+    }
     for (let value = Direction.Up; value <= Direction.Left; value += 1) {
       const outputDirection = value as Direction;
       if ((outputSides & (1 << outputDirection)) === 0) {
@@ -262,6 +300,17 @@ export class CircuitResolver {
       this.driveSums[outputRoot] =
         expectDefined(this.driveSums[outputRoot], "circuit drive sum") + outputCharge;
     }
+  }
+
+  private isSharedCircuitPort(index: number, direction: Direction): boolean {
+    const definition = TILE_DEFINITIONS[this.world.kindAtIndex(index)];
+    const orientation = this.world.orientationAtIndex(index);
+    const sharedPorts = orientedSides(
+      (definition.circuitPorts &
+        ~(definition.circuitInputPorts | definition.circuitOutputPorts)) as WeldSide,
+      orientation,
+    );
+    return (sharedPorts & (1 << direction)) !== 0;
   }
 
   private unionNodes(first: number, second: number): void {

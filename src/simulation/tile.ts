@@ -29,6 +29,8 @@ export const enum TileKind {
   Delay = 27,
   Counter = 28,
   Rom = 29,
+  Welder = 30,
+  Splitter = 31,
 }
 
 export const enum Direction {
@@ -75,6 +77,8 @@ export const enum TileDecorationStyle {
   Delay = 24,
   Counter = 25,
   Rom = 26,
+  Welder = 27,
+  Splitter = 28,
 }
 
 export const enum PaletteCategory {
@@ -741,6 +745,52 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     shadow: "#2a3d3a",
     decorationStyle: TileDecorationStyle.Rom,
     decorationColor: "#d1ece1",
+  },
+  [TileKind.Welder]: {
+    name: "Welder",
+    boardCode: "J",
+    palette: {
+      order: 27,
+      category: PaletteCategory.Mechanisms,
+      description: "Welds both transverse edges of the block ahead; -1 side charge disables it",
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: true,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Right | WeldSide.Down | WeldSide.Left,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.Down,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#6d5c4b",
+    shadow: "#3c3027",
+    decorationStyle: TileDecorationStyle.Welder,
+    decorationColor: "#f0b85d",
+  },
+  [TileKind.Splitter]: {
+    name: "Splitter",
+    boardCode: "X",
+    palette: {
+      order: 28,
+      category: PaletteCategory.Mechanisms,
+      description: "Splits both transverse edges of the block ahead; -1 side charge disables it",
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: true,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Right | WeldSide.Down | WeldSide.Left,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.Down,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#625669",
+    shadow: "#362d3b",
+    decorationStyle: TileDecorationStyle.Splitter,
+    decorationColor: "#e0b7ee",
   },
   [TileKind.Piston]: {
     name: "Piston",

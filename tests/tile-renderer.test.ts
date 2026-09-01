@@ -383,6 +383,53 @@ describe("circuit rendering", () => {
     expect(outputTrace?.segments).toHaveLength(3);
     expect(context.fillStyles).toContain(CIRCUIT_CHARGE_COLORS[1]);
   });
+  it("joins welder side traces while isolating its rear output trace", () => {
+    const context = new RecordingCanvasContext();
+    let portCharges = setCircuitPortCharge(0, Direction.Right, -1);
+    portCharges = setCircuitPortCharge(portCharges, Direction.Down, 1);
+    portCharges = setCircuitPortCharge(portCharges, Direction.Left, -1);
+    const welder: BodyCell = {
+      x: 0,
+      y: 0,
+      kind: TileKind.Welder,
+      orientation: Direction.Up,
+      outputCharge: -1,
+      circuitConnections: WeldSide.Right | WeldSide.Down | WeldSide.Left,
+      circuitPortCharges: portCharges,
+      seamRight: false,
+      seamDown: false,
+    };
+
+    drawBody(
+      context as unknown as CanvasRenderingContext2D,
+      0,
+      0,
+      32,
+      [welder],
+      1,
+      new RecordingPath2D() as unknown as Path2D,
+    );
+
+    const sideTrace = context.strokes.find(
+      (stroke) => stroke.strokeStyle === CIRCUIT_CHARGE_COLORS[-1],
+    );
+    expect(sideTrace?.segments).toHaveLength(2);
+    expect(sideTrace?.segments.every(
+      (segment) => segment.fromX === 16 && segment.fromY === 16,
+    )).toBe(true);
+
+    const outputTrace = context.strokes.find(
+      (stroke) => stroke.strokeStyle === CIRCUIT_CHARGE_COLORS[1],
+    );
+    expect(outputTrace?.segments).toHaveLength(1);
+    expect(outputTrace?.segments[0]).toMatchObject({
+      fromX: 16,
+      fromY: 32,
+      toX: 16,
+    });
+    expect(outputTrace?.segments[0]?.toY).toBeCloseTo(24.32);
+  });
+
 
   it.each([
     { kind: TileKind.Inverter, inputDirection: Direction.Right },

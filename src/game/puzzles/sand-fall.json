@@ -38,6 +38,7 @@
     "orientations": [],
     "charges": [],
     "crossingCharges": [],
+    "isolatedOutputCharges": [],
     "furnaces": [],
     "components": [],
     "welds": [

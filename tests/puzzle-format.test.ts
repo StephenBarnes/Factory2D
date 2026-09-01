@@ -47,6 +47,7 @@ function puzzleFile(): JsonObject {
       orientations: [],
       charges: [],
       crossingCharges: [],
+      isolatedOutputCharges: [],
       furnaces: [],
       components: [],
       welds: [
