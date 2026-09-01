@@ -604,6 +604,135 @@ export class World {
     }
     this.revisionValue += 1;
   }
+
+  applyDuplications(sourceForDestination: Int32Array): void {
+    if (sourceForDestination.length !== this.cellCount) {
+      throw new RangeError("Duplicator source buffer must match the world cell count");
+    }
+
+    let duplicateCount = 0;
+    for (let destination = 0; destination < this.cellCount; destination += 1) {
+      const source = expectDefined(
+        sourceForDestination[destination],
+        "duplicator source index",
+      );
+      if (source === -1) {
+        continue;
+      }
+      if (source < 0 || source >= this.cellCount) {
+        throw new RangeError(`Invalid duplicator source index ${source}`);
+      }
+      if (this.kinds[source] === TileKind.Empty) {
+        throw new Error(`Duplicator source at index ${source} is empty`);
+      }
+      if (this.kinds[destination] !== TileKind.Empty) {
+        throw new Error(`Duplicator destination at index ${destination} is occupied`);
+      }
+      duplicateCount += 1;
+    }
+    if (duplicateCount === 0) {
+      return;
+    }
+
+    for (let destination = 0; destination < this.cellCount; destination += 1) {
+      const source = expectDefined(
+        sourceForDestination[destination],
+        "committed duplicator source index",
+      );
+      if (source < 0) {
+        continue;
+      }
+      const kind = this.kinds[source] as TileKind;
+      const id = this.nextTileId;
+      this.nextTileId += 1;
+      this.kinds[destination] = kind;
+      this.ids[destination] = id;
+      this.orientations[destination] = expectDefined(
+        this.orientations[source],
+        "duplicated tile orientation",
+      );
+      this.charges[destination] = expectDefined(
+        this.charges[source],
+        "duplicated tile charge",
+      );
+      this.crossingVerticalCharges[destination] = expectDefined(
+        this.crossingVerticalCharges[source],
+        "duplicated crossing charge",
+      );
+      this.isolatedOutputCharges[destination] = expectDefined(
+        this.isolatedOutputCharges[source],
+        "duplicated isolated output charge",
+      );
+      this.furnaceProgress[destination] = 0;
+      this.furnaceTargetIds[destination] = 0;
+      if (componentConfigurationForKind(kind) !== null) {
+        this.componentStates.set(
+          id,
+          cloneComponentState(this.requireComponentStateAtIndex(source)),
+        );
+      }
+    }
+
+    for (let destination = 0; destination < this.cellCount; destination += 1) {
+      const source = expectDefined(
+        sourceForDestination[destination],
+        "duplicated furnace source index",
+      );
+      if (source < 0 || this.kinds[source] !== TileKind.Furnace) {
+        continue;
+      }
+      const progress = expectDefined(
+        this.furnaceProgress[source],
+        "duplicated furnace progress",
+      );
+      if (progress === 0) {
+        continue;
+      }
+      const orientation = this.orientations[source] as Direction;
+      const sourceTarget = this.neighborIndex(source, orientation);
+      const destinationTarget = this.neighborIndex(destination, orientation);
+      if (
+        sourceTarget >= 0 &&
+        destinationTarget >= 0 &&
+        sourceForDestination[destinationTarget] === sourceTarget &&
+        this.furnaceTargetIds[source] === this.ids[sourceTarget]
+      ) {
+        this.furnaceProgress[destination] = progress;
+        this.furnaceTargetIds[destination] = expectDefined(
+          this.ids[destinationTarget],
+          "duplicated furnace target ID",
+        );
+      }
+    }
+
+    for (let destination = 0; destination < this.cellCount; destination += 1) {
+      const source = expectDefined(
+        sourceForDestination[destination],
+        "duplicated weld source index",
+      );
+      if (source < 0) {
+        continue;
+      }
+      if (
+        destination % this.width < this.width - 1 &&
+        source % this.width < this.width - 1 &&
+        sourceForDestination[destination + 1] === source + 1 &&
+        this.rightWelds[source] === 1
+      ) {
+        this.rightWelds[destination] = 1;
+      }
+      if (
+        destination < this.cellCount - this.width &&
+        source < this.cellCount - this.width &&
+        sourceForDestination[destination + this.width] === source + this.width &&
+        this.downWelds[source] === 1
+      ) {
+        this.downWelds[destination] = 1;
+      }
+    }
+    this.revisionValue += 1;
+  }
+
   isWelded(x1: number, y1: number, x2: number, y2: number): boolean {
     const first = this.indexOf(x1, y1);
     const second = this.indexOf(x2, y2);

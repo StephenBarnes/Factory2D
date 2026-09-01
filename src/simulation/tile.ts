@@ -31,6 +31,7 @@ export const enum TileKind {
   Rom = 29,
   Welder = 30,
   Splitter = 31,
+  Duplicator = 32,
 }
 
 export const enum Direction {
@@ -79,6 +80,7 @@ export const enum TileDecorationStyle {
   Rom = 26,
   Welder = 27,
   Splitter = 28,
+  Duplicator = 29,
 }
 
 export const enum PaletteCategory {
@@ -791,6 +793,29 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     shadow: "#362d3b",
     decorationStyle: TileDecorationStyle.Splitter,
     decorationColor: "#e0b7ee",
+  },
+  [TileKind.Duplicator]: {
+    name: "Duplicator",
+    boardCode: "Y",
+    palette: {
+      order: 29,
+      category: PaletteCategory.Mechanisms,
+      description: "Copies the welded body behind it to its pointed side on +1 side charge",
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.Right | WeldSide.Left,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Right | WeldSide.Left,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#58666c",
+    shadow: "#303a3f",
+    decorationStyle: TileDecorationStyle.Duplicator,
+    decorationColor: "#c9e4dc",
   },
   [TileKind.Piston]: {
     name: "Piston",

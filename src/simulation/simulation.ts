@@ -1,5 +1,6 @@
 import { CircuitResolver } from "./circuit-resolver";
 import { DeliveryResolver } from "./delivery-resolver";
+import { DuplicatorResolver } from "./duplicator-resolver";
 import { FurnaceResolver } from "./furnace-resolver";
 import { MotionWorkspace } from "./motion-workspace";
 import { PuzzleResult } from "./puzzle-result";
@@ -15,6 +16,7 @@ export class Simulation {
   readonly world: World;
   private readonly circuitResolver: CircuitResolver;
   private readonly deliveryResolver: DeliveryResolver;
+  private readonly duplicatorResolver: DuplicatorResolver;
   private readonly furnaceResolver: FurnaceResolver;
   private readonly motionWorkspace: MotionWorkspace;
   private readonly weldOperationResolver: WeldOperationResolver;
@@ -24,6 +26,7 @@ export class Simulation {
     this.world = world;
     this.circuitResolver = new CircuitResolver(world);
     this.deliveryResolver = new DeliveryResolver(world);
+    this.duplicatorResolver = new DuplicatorResolver(world);
     this.furnaceResolver = new FurnaceResolver(world);
     this.motionWorkspace = new MotionWorkspace(world);
     this.weldOperationResolver = new WeldOperationResolver(world);
@@ -32,12 +35,14 @@ export class Simulation {
   step(): number {
     this.resolveVictoryBlocks();
     this.deliveryResolver.collect();
+    this.duplicatorResolver.collect();
     this.weldOperationResolver.collect();
     this.circuitResolver.resolve(
       this.tick,
       this.deliveryResolver.absorptionTargetIndices,
       this.weldOperationResolver.successfulOperationIndices,
     );
+    this.duplicatorResolver.commit();
     this.weldOperationResolver.commit();
     this.furnaceResolver.resolve(this.circuitResolver.furnaceDisabled);
     this.deliveryResolver.commit();

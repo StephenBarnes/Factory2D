@@ -567,6 +567,31 @@ function drawDecoration(
       context.restore();
       break;
     }
+    case TileDecorationStyle.Duplicator: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.strokeStyle = definition.decorationColor;
+      context.fillStyle = definition.decorationColor;
+      context.lineWidth = Math.max(1.5, size * 0.055);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.beginPath();
+      context.moveTo(-size * 0.13, -size * 0.14);
+      context.lineTo(-size * 0.13, size * 0.17);
+      context.moveTo(size * 0.13, -size * 0.14);
+      context.lineTo(size * 0.13, size * 0.17);
+      context.moveTo(-size * 0.24, -size * 0.14);
+      context.lineTo(size * 0.24, -size * 0.14);
+      context.moveTo(-size * 0.24, size * 0.17);
+      context.lineTo(size * 0.24, size * 0.17);
+      context.stroke();
+      context.beginPath();
+      drawDot(context, 0, -size * 0.29, Math.max(1.5, size * 0.06));
+      context.fill();
+      context.restore();
+      break;
+    }
     case TileDecorationStyle.Delivery: {
       context.save();
       context.translate(left + size / 2, top + size / 2);
