@@ -107,6 +107,31 @@ const tickCounter = requiredElement<HTMLSpanElement>("tick-counter");
 const coordinates = requiredElement<HTMLDivElement>("coordinates");
 
 type BuildTool = "tile" | "weld" | "editable-region";
+type InspectorTool = Exclude<BuildTool, "tile">;
+
+interface ToolInspectorDetails {
+  readonly name: string;
+  readonly description: string;
+  readonly controls: string;
+}
+
+const TOOL_INSPECTOR_DETAILS: Readonly<Record<InspectorTool, ToolInspectorDetails>> = {
+  weld: {
+    name: "Weld tool",
+    description: "Joins adjacent occupied tiles into rigid bodies.",
+    controls: "LEFT CLICK / DRAG WELD · RIGHT CLICK / DRAG UNWELD · HOLD CONTROL TEMPORARILY",
+  },
+  "editable-region": {
+    name: "Editable region tool",
+    description: "Marks the board areas where a puzzle solution may place and remove tiles.",
+    controls: "LEFT DRAG ADD RECTANGLE · RIGHT CLICK REMOVE RECTANGLE",
+  },
+};
+
+function isInspectorTool(value: string | undefined): value is InspectorTool {
+  return value === "weld" || value === "editable-region";
+}
+
 
 let testingPuzzleSolution = false;
 let selectedKind = TileKind.Sand;
@@ -230,27 +255,44 @@ function easedAnimationProgress(currentTime: number): number {
   return progress * progress * (3 - 2 * progress);
 }
 
-function refreshTileInspector(): void {
-  const button = hoveredPaletteButton ?? focusedPaletteButton;
-  if (button === null) {
-    tileInspector.update(hoveredCell);
+function showInspectorReference(button: HTMLButtonElement): void {
+  const kind = Number(button.dataset.tile);
+  if (isTileKind(kind) && TILE_DEFINITIONS[kind].palette !== null) {
+    const priceLabel = button.dataset.price;
+    const shortcutLabel = button.dataset.shortcut;
+    if (priceLabel === undefined || shortcutLabel === undefined) {
+      throw new Error("Hovered component palette button is missing inspector metadata");
+    }
+    tileInspector.showPalette(
+      kind,
+      priceLabel === "" ? null : Number(priceLabel),
+      shortcutLabel === "" ? null : shortcutLabel,
+    );
     return;
   }
 
-  const kind = Number(button.dataset.tile);
-  if (!isTileKind(kind) || TILE_DEFINITIONS[kind].palette === null) {
-    throw new Error("Hovered component palette button has invalid tile metadata");
+  const tool = button.dataset.tool;
+  if (!isInspectorTool(tool)) {
+    throw new Error("Hovered palette item has invalid inspector metadata");
   }
-  const priceLabel = button.dataset.price;
-  const shortcutLabel = button.dataset.shortcut;
-  if (priceLabel === undefined || shortcutLabel === undefined) {
-    throw new Error("Hovered component palette button is missing inspector metadata");
+  const details = TOOL_INSPECTOR_DETAILS[tool];
+  tileInspector.showTool(details.name, details.description, details.controls);
+}
+
+function refreshTileInspector(): void {
+  if (hoveredPaletteButton !== null) {
+    showInspectorReference(hoveredPaletteButton);
+    return;
   }
-  tileInspector.showPalette(
-    kind,
-    priceLabel === "" ? null : Number(priceLabel),
-    shortcutLabel === "" ? null : shortcutLabel,
-  );
+  if (hoveredCell !== null) {
+    tileInspector.update(hoveredCell);
+    return;
+  }
+  if (focusedPaletteButton !== null) {
+    showInspectorReference(focusedPaletteButton);
+    return;
+  }
+  tileInspector.update(null);
 }
 
 function refreshPointerHover(): void {
@@ -678,14 +720,14 @@ sidebarControls.addEventListener("click", (event) => {
   }
 });
 
-componentPalette.addEventListener("pointerover", (event) => {
-  hoveredPaletteButton = (event.target as HTMLElement).closest<HTMLButtonElement>(".palette-tile");
+sidebarControls.addEventListener("pointerover", (event) => {
+  hoveredPaletteButton = (event.target as HTMLElement).closest<HTMLButtonElement>(".palette-item");
   refreshTileInspector();
 });
 
-componentPalette.addEventListener("pointerout", (event) => {
+sidebarControls.addEventListener("pointerout", (event) => {
   const nextButton = event.relatedTarget instanceof HTMLElement
-    ? event.relatedTarget.closest<HTMLButtonElement>(".palette-tile")
+    ? event.relatedTarget.closest<HTMLButtonElement>(".palette-item")
     : null;
   if (nextButton === hoveredPaletteButton) {
     return;
@@ -694,14 +736,14 @@ componentPalette.addEventListener("pointerout", (event) => {
   refreshTileInspector();
 });
 
-componentPalette.addEventListener("focusin", (event) => {
-  focusedPaletteButton = (event.target as HTMLElement).closest<HTMLButtonElement>(".palette-tile");
+sidebarControls.addEventListener("focusin", (event) => {
+  focusedPaletteButton = (event.target as HTMLElement).closest<HTMLButtonElement>(".palette-item");
   refreshTileInspector();
 });
 
-componentPalette.addEventListener("focusout", (event) => {
+sidebarControls.addEventListener("focusout", (event) => {
   focusedPaletteButton = event.relatedTarget instanceof HTMLElement
-    ? event.relatedTarget.closest<HTMLButtonElement>(".palette-tile")
+    ? event.relatedTarget.closest<HTMLButtonElement>(".palette-item")
     : null;
   refreshTileInspector();
 });

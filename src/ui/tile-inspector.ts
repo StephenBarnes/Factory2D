@@ -58,6 +58,20 @@ function formatCharge(charge: number): string {
     ? "-1 · NEGATIVE"
     : charge > 0 ? "+1 · POSITIVE" : "0 · NEUTRAL";
 }
+function descriptionFor(kind: TileKind): string {
+  const definition = TILE_DEFINITIONS[kind];
+  if (definition.palette !== null) {
+    return definition.palette.description;
+  }
+  if (kind === TileKind.PistonBase) {
+    return "Extended piston base; its rear sides retain the piston's welds and circuit connections.";
+  }
+  if (kind === TileKind.PistonArm) {
+    return "Extended piston arm; its head carries the piston's forward weld.";
+  }
+  throw new Error(`${definition.name} is missing inspector description metadata`);
+}
+
 
 export class TileInspector {
   private readonly root: HTMLElement;
@@ -69,25 +83,23 @@ export class TileInspector {
   private readonly paletteDescription: HTMLElement;
   private readonly palettePrice: HTMLElement;
   private readonly paletteShortcut: HTMLElement;
-  private readonly id: HTMLElement;
+  private readonly toolDetails: HTMLElement;
+  private readonly toolDescription: HTMLElement;
+  private readonly toolControls: HTMLElement;
   private readonly orientationRow: HTMLElement;
   private readonly orientation: HTMLElement;
-  private readonly movement: HTMLElement;
   private readonly furnaceRow: HTMLElement;
   private readonly furnace: HTMLElement;
-  private readonly weldable: HTMLElement;
-  private readonly welds: HTMLElement;
   private readonly circuitRow: HTMLElement;
   private readonly circuit: HTMLElement;
   private readonly chargeRow: HTMLElement;
   private readonly charge: HTMLElement;
-  private readonly magnetic: HTMLElement;
   private readonly attractionRow: HTMLElement;
   private readonly attraction: HTMLElement;
   private lastX = -2;
   private lastY = -2;
   private lastRevision = -1;
-  private showingPalette = false;
+  private showingReference = false;
 
   constructor(
     root: HTMLElement,
@@ -102,19 +114,17 @@ export class TileInspector {
     this.paletteDescription = requiredDescendant(root, "[data-inspector-palette-description]");
     this.palettePrice = requiredDescendant(root, "[data-inspector-palette-price]");
     this.paletteShortcut = requiredDescendant(root, "[data-inspector-palette-shortcut]");
-    this.id = requiredDescendant(root, "[data-inspector-id]");
+    this.toolDetails = requiredDescendant(root, "[data-inspector-tool]");
+    this.toolDescription = requiredDescendant(root, "[data-inspector-tool-description]");
+    this.toolControls = requiredDescendant(root, "[data-inspector-tool-controls]");
     this.orientationRow = requiredDescendant(root, "[data-inspector-orientation-row]");
     this.orientation = requiredDescendant(root, "[data-inspector-orientation]");
-    this.movement = requiredDescendant(root, "[data-inspector-movement]");
     this.furnaceRow = requiredDescendant(root, "[data-inspector-furnace-row]");
     this.furnace = requiredDescendant(root, "[data-inspector-furnace]");
-    this.weldable = requiredDescendant(root, "[data-inspector-weldable]");
-    this.welds = requiredDescendant(root, "[data-inspector-welds]");
     this.circuitRow = requiredDescendant(root, "[data-inspector-circuit-row]");
     this.circuit = requiredDescendant(root, "[data-inspector-circuit]");
     this.chargeRow = requiredDescendant(root, "[data-inspector-charge-row]");
     this.charge = requiredDescendant(root, "[data-inspector-charge]");
-    this.magnetic = requiredDescendant(root, "[data-inspector-magnetic]");
     this.attractionRow = requiredDescendant(root, "[data-inspector-attraction-row]");
     this.attraction = requiredDescendant(root, "[data-inspector-attraction]");
   }
@@ -126,23 +136,39 @@ export class TileInspector {
       throw new Error(`${definition.name} is missing palette metadata`);
     }
 
-    this.showingPalette = true;
+    this.showingReference = true;
     this.root.classList.remove("tile-inspector-hidden");
     this.root.setAttribute("aria-hidden", "false");
     this.name.textContent = definition.name.toUpperCase();
     this.position.textContent = "PALETTE COMPONENT";
     this.hint.hidden = true;
     this.properties.hidden = true;
+    this.toolDetails.hidden = true;
     this.paletteDetails.hidden = false;
     this.paletteDescription.textContent = palette.description;
     this.palettePrice.textContent = price === null ? "UNPRICED" : String(price);
     this.paletteShortcut.textContent = shortcut ?? "NONE";
   }
 
-  update(position: GridPosition | null): void {
-    const wasShowingPalette = this.showingPalette;
-    this.showingPalette = false;
+  showTool(name: string, description: string, controls: string): void {
+    this.showingReference = true;
+    this.root.classList.remove("tile-inspector-hidden");
+    this.root.setAttribute("aria-hidden", "false");
+    this.name.textContent = name.toUpperCase();
+    this.position.textContent = "PALETTE TOOL";
+    this.hint.hidden = true;
+    this.properties.hidden = true;
     this.paletteDetails.hidden = true;
+    this.toolDetails.hidden = false;
+    this.toolDescription.textContent = description;
+    this.toolControls.textContent = controls;
+  }
+
+  update(position: GridPosition | null): void {
+    const wasShowingReference = this.showingReference;
+    this.showingReference = false;
+    this.paletteDetails.hidden = true;
+    this.toolDetails.hidden = true;
     const x = position?.x ?? -1;
     const y = position?.y ?? -1;
     const kind = position === null ? TileKind.Empty : this.world.kindAt(x, y);
@@ -150,7 +176,7 @@ export class TileInspector {
     this.root.classList.toggle("tile-inspector-hidden", hidden);
     this.root.setAttribute("aria-hidden", String(hidden));
     if (
-      !wasShowingPalette &&
+      !wasShowingReference &&
       x === this.lastX &&
       y === this.lastY &&
       this.world.revision === this.lastRevision
@@ -166,7 +192,9 @@ export class TileInspector {
       return;
     }
 
-    const positionLabel = `X ${position.x.toString().padStart(2, "0")}   Y ${position.y.toString().padStart(2, "0")}`;
+    const positionLabel =
+      `X ${position.x.toString().padStart(2, "0")}   ` +
+      `Y ${position.y.toString().padStart(2, "0")}`;
     if (kind === TileKind.Empty) {
       this.showMessage("EMPTY", positionLabel, "No component occupies this cell.");
       return;
@@ -174,17 +202,12 @@ export class TileInspector {
 
     const definition = TILE_DEFINITIONS[kind];
     const orientation = this.world.orientationAt(position.x, position.y);
+    const id = this.world.idAt(position.x, position.y).toString().padStart(4, "0");
     this.name.textContent = definition.name.toUpperCase();
-    this.position.textContent = positionLabel;
-    this.hint.hidden = true;
+    this.position.textContent = `${positionLabel}   ID #${id}`;
+    this.hint.textContent = descriptionFor(kind);
+    this.hint.hidden = false;
     this.properties.hidden = false;
-    this.id.textContent = `#${this.world.idAt(position.x, position.y).toString().padStart(4, "0")}`;
-    this.movement.textContent = kind === TileKind.Conveyor
-      ? "GRAVITY + CONVEYOR FORCE"
-      : definition.affectedByGravity
-        ? definition.slidesDiagonally ? "GRAVITY + DIAGONAL" : "GRAVITY"
-        : "FIXED";
-    this.magnetic.textContent = definition.magnetic ? "YES" : "NO";
     this.orientationRow.hidden = !definition.usesOrientation;
     this.orientation.textContent = DIRECTION_NAMES[orientation];
     this.attractionRow.hidden = definition.attractionRange === 0;
@@ -243,30 +266,12 @@ export class TileInspector {
     const cellIndex = position.y * this.world.width + position.x;
     const circuitInputSides = orientedSides(definition.circuitInputPorts, orientation);
     const circuitOutputSides = orientedSides(definition.circuitOutputPorts, orientation);
-    const weldableSides = orientedSides(definition.weldableSides, orientation);
+
     let circuitInputStates = "";
     let circuitOutputStates = "";
-    let weldableDirections = "";
-    let weldableSideCount = 0;
-    let weldedDirections = "";
+
     let circuitDirections = "";
     for (const direction of DIRECTIONS) {
-      const sideIsWeldable = (weldableSides & (1 << direction)) !== 0 &&
-        (!definition.excludesFacingWeld || direction !== orientation);
-      if (sideIsWeldable) {
-        weldableSideCount += 1;
-        weldableDirections = appendDirection(weldableDirections, direction);
-      }
-
-      const neighborX = position.x + DIRECTION_X[direction];
-      const neighborY = position.y + DIRECTION_Y[direction];
-      if (
-        neighborX >= 0 && neighborX < this.world.width &&
-        neighborY >= 0 && neighborY < this.world.height &&
-        this.world.isWelded(position.x, position.y, neighborX, neighborY)
-      ) {
-        weldedDirections = appendDirection(weldedDirections, direction);
-      }
       const circuitConnected = this.world.hasCircuitConnectionAtIndex(cellIndex, direction);
       if (circuitConnected) {
         circuitDirections = appendDirection(circuitDirections, direction);
@@ -285,10 +290,6 @@ export class TileInspector {
         circuitOutputStates += `${separator}${DIRECTION_NAMES[direction]} ${state}`;
       }
     }
-    this.weldable.textContent = weldableSideCount === DIRECTIONS.length
-      ? "ALL"
-      : weldableDirections || "NONE";
-    this.welds.textContent = weldedDirections || "NONE";
     if (kind === TileKind.ChargeSensor) {
       this.circuit.textContent =
         `SENSE ${DIRECTION_NAMES[orientation]} (NO WELD) · OUT ${circuitOutputStates}`;
@@ -306,6 +307,7 @@ export class TileInspector {
     this.hint.textContent = message;
     this.hint.hidden = false;
     this.paletteDetails.hidden = true;
+    this.toolDetails.hidden = true;
     this.properties.hidden = true;
   }
 }

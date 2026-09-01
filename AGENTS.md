@@ -2,7 +2,7 @@
 
 ## Concept
 
-This is a game similar to Infinifactory but 2D. We have a series of one-screen puzzles where the player places square 2D tiles/blocks on a grid to accomplish some goal.
+This is a Zachtronics-like game about 2D machines built out of square tiles, using discrete tile physics and sequential logic, similar to Infinifactory but 2D. We have a series of one-screen puzzles where the player places tiles/blocks on a grid to accomplish some goal.
 
 At each line between two non-empty blocks, they can be either welded together, or separate. Welded groups move as one rigid body. The simulation runs in discrete time steps and blocks move in discrete one-block increments; no continuous physics. Blocks can rotate in 90-degree increments. Blocks have different types, like stone or sand or pistons or conveyor belts or wires. This is a side view, so unsupported blocks fall down one space every one time step. Some blocks have internal state.
 

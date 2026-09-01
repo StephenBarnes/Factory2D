@@ -133,6 +133,53 @@ test("edge panels reserve a non-overlapping canvas region", async ({ page }) => 
   }
 });
 
+test("tile inspector follows palette, tool, and occupied-board hover", async ({ page }) => {
+  await seedBrowserStorage(page, "empty");
+  await page.goto("/sandbox");
+
+  const inspector = page.locator("#tile-inspector");
+  const inspectorName = inspector.locator("[data-inspector-name]");
+  const inspectorPosition = inspector.locator("[data-inspector-position]");
+  const inspectorHint = inspector.locator("[data-inspector-hint]");
+  const sandButton = page.getByRole("button", { name: /^Sand/ });
+  await sandButton.hover();
+  await expect(inspectorName).toHaveText("SAND");
+  await expect(inspectorPosition).toHaveText("PALETTE COMPONENT");
+  await expect(inspector).toContainText("Falls downward and can fall diagonally around obstacles");
+
+  await placeStone(page, 10, 8);
+  await sandButton.click();
+  const occupiedCell = await boardCellCenter(page, 10, 8);
+  await page.mouse.move(occupiedCell.x, occupiedCell.y);
+  await expect(inspectorName).toHaveText("STONE");
+  await expect(inspectorPosition).toHaveText(/X 10\s+Y 08\s+ID #\d{4}/);
+  await expect(inspectorHint).toHaveText("Solid block affected by gravity");
+  for (const removedLabel of ["TILE ID", "MOVEMENT", "WELDABLE", "WELDS", "MAGNETIC"]) {
+    await expect(inspector.getByText(removedLabel, { exact: true })).toHaveCount(0);
+  }
+
+  const weldTool = page.getByRole("button", { name: "Weld tool (hold Control)" });
+  await weldTool.hover();
+  await expect(inspectorName).toHaveText("WELD TOOL");
+  await expect(inspectorPosition).toHaveText("PALETTE TOOL");
+  await expect(inspector).toContainText("Joins adjacent occupied tiles into rigid bodies.");
+  await expect(inspector).toContainText("LEFT CLICK / DRAG WELD");
+  await expect(inspector).toContainText("RIGHT CLICK / DRAG UNWELD");
+
+  const editableRegionTool = page.getByRole("button", { name: "Editable region tool" });
+  await editableRegionTool.hover();
+  await expect(inspectorName).toHaveText("EDITABLE REGION TOOL");
+  await expect(inspector).toContainText("LEFT DRAG ADD RECTANGLE");
+
+  const sidebarBounds = await page.locator("#sidebar-controls").boundingBox();
+  const inspectorBounds = await inspector.boundingBox();
+  if (sidebarBounds === null || inspectorBounds === null) {
+    throw new Error("Inspector layout is not visible");
+  }
+  expect(Math.abs(inspectorBounds.x - sidebarBounds.width - 18)).toBeLessThanOrEqual(1);
+  expect(Math.abs(inspectorBounds.y - 18)).toBeLessThanOrEqual(1);
+});
+
 test("unlocked fixture opens the dependent puzzle", async ({ page }) => {
   await seedBrowserStorage(page, "unlocked");
   await page.goto("/");

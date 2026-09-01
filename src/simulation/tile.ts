@@ -168,7 +168,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 0,
       category: PaletteCategory.RawMaterials,
-      description: "Falls and slides around obstacles",
+      description: "Falls downward and can fall diagonally around obstacles",
     },
     affectedByGravity: true,
     slidesDiagonally: true,
@@ -191,7 +191,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 2,
       category: PaletteCategory.RawMaterials,
-      description: "Fixed structural block",
+      description: "Fixed structural block not affected by gravity",
     },
     affectedByGravity: false,
     slidesDiagonally: false,
@@ -237,7 +237,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 4,
       category: PaletteCategory.RawMaterials,
-      description: "Magnetic structural block smelted from iron ore",
+      description: "Magnetic structural block affected by gravity and smelted from iron ore",
     },
     affectedByGravity: true,
     slidesDiagonally: false,

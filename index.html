@@ -127,7 +127,7 @@
         <div class="coordinates" id="coordinates">X -- &nbsp; Y --</div>
       </aside>
 
-      <aside class="tile-inspector floating-panel" id="tile-inspector" aria-label="Hovered cell details">
+      <aside class="tile-inspector floating-panel" id="tile-inspector" aria-label="Inspector details">
         <div class="inspector-title-row">
           <strong data-inspector-name>NO CELL SELECTED</strong>
           <span data-inspector-position>X -- &nbsp; Y --</span>
@@ -146,11 +146,16 @@
             </div>
           </dl>
         </div>
+        <div class="inspector-tool" data-inspector-tool hidden>
+          <p data-inspector-tool-description></p>
+          <dl class="inspector-properties">
+            <div>
+              <dt>CONTROLS</dt>
+              <dd data-inspector-tool-controls></dd>
+            </div>
+          </dl>
+        </div>
         <dl class="inspector-properties" data-inspector-properties hidden>
-          <div>
-            <dt>TILE ID</dt>
-            <dd data-inspector-id></dd>
-          </div>
           <div data-inspector-orientation-row>
             <dt>ORIENTATION</dt>
             <dd data-inspector-orientation></dd>
@@ -159,18 +164,6 @@
             <dt>BAKE</dt>
             <dd data-inspector-furnace></dd>
           </div>
-          <div>
-            <dt>MOVEMENT</dt>
-            <dd data-inspector-movement></dd>
-          </div>
-          <div>
-            <dt>WELDABLE</dt>
-            <dd data-inspector-weldable></dd>
-          </div>
-          <div>
-            <dt>WELDS</dt>
-            <dd data-inspector-welds></dd>
-          </div>
           <div data-inspector-circuit-row>
             <dt>CIRCUIT</dt>
             <dd data-inspector-circuit></dd>
@@ -178,10 +171,6 @@
           <div data-inspector-charge-row>
             <dt>CHARGE</dt>
             <dd data-inspector-charge></dd>
-          </div>
-          <div>
-            <dt>MAGNETIC</dt>
-            <dd data-inspector-magnetic></dd>
           </div>
           <div data-inspector-attraction-row>
             <dt>ATTRACTION</dt>
