@@ -5,6 +5,7 @@ import {
   TileKind,
 } from "./tile";
 import type { World } from "./world";
+import { WeldedBodyIndex } from "./welded-body-index";
 
 /**
  * Collects duplicator requests from one stable topology, jams overlapping
@@ -13,25 +14,20 @@ import type { World } from "./world";
  */
 export class DuplicatorResolver {
   private readonly world: World;
-  private readonly bodyRoots: Int32Array;
-  private readonly bodyHeads: Int32Array;
-  private readonly nextBodyMember: Int32Array;
+  private readonly bodies: WeldedBodyIndex;
   private readonly candidateDuplicators: Uint8Array;
   private readonly destinationOwners: Int32Array;
   private readonly sourceForDestination: Int32Array;
 
-  constructor(world: World) {
+  constructor(world: World, bodies: WeldedBodyIndex) {
     this.world = world;
-    this.bodyRoots = new Int32Array(world.cellCount);
-    this.bodyHeads = new Int32Array(world.cellCount);
-    this.nextBodyMember = new Int32Array(world.cellCount);
+    this.bodies = bodies;
     this.candidateDuplicators = new Uint8Array(world.cellCount);
     this.destinationOwners = new Int32Array(world.cellCount);
     this.sourceForDestination = new Int32Array(world.cellCount);
   }
 
   collect(): void {
-    this.collectWeldedBodies();
     this.candidateDuplicators.fill(0);
     this.destinationOwners.fill(-1);
     this.sourceForDestination.fill(-1);
@@ -45,7 +41,7 @@ export class DuplicatorResolver {
       if (source < 0 || this.world.kindAtIndex(source) === TileKind.Empty) {
         continue;
       }
-      const sourceRoot = expectDefined(this.bodyRoots[source], "duplicator source body root");
+      const sourceRoot = this.bodies.rootAt(source);
       if (this.bodyFits(sourceRoot, duplicator, orientation)) {
         this.candidateDuplicators[duplicator] = 1;
       }
@@ -57,15 +53,15 @@ export class DuplicatorResolver {
       }
       const orientation = this.world.orientationAtIndex(duplicator);
       const source = this.neighborIndex(duplicator, oppositeDirection(orientation));
-      const sourceRoot = expectDefined(this.bodyRoots[source], "candidate source body root");
-      let member = expectDefined(this.bodyHeads[sourceRoot], "candidate body member head");
+      const sourceRoot = this.bodies.rootAt(source);
+      let member = this.bodies.headAtRoot(sourceRoot);
       while (member >= 0) {
         const destination = this.destinationIndex(member, duplicator, orientation);
         const owner = expectDefined(this.destinationOwners[destination], "duplicator output owner");
         this.destinationOwners[destination] = owner === -1 || owner === duplicator
           ? duplicator
           : -2;
-        member = expectDefined(this.nextBodyMember[member], "next candidate body member");
+        member = this.bodies.nextMember(member);
       }
     }
 
@@ -75,24 +71,24 @@ export class DuplicatorResolver {
       }
       const orientation = this.world.orientationAtIndex(duplicator);
       const source = this.neighborIndex(duplicator, oppositeDirection(orientation));
-      const sourceRoot = expectDefined(this.bodyRoots[source], "accepted source body root");
+      const sourceRoot = this.bodies.rootAt(source);
       let accepted = true;
-      let member = expectDefined(this.bodyHeads[sourceRoot], "accepted body member head");
+      let member = this.bodies.headAtRoot(sourceRoot);
       while (member >= 0) {
         const destination = this.destinationIndex(member, duplicator, orientation);
         if (this.destinationOwners[destination] !== duplicator) {
           accepted = false;
         }
-        member = expectDefined(this.nextBodyMember[member], "next accepted body member");
+        member = this.bodies.nextMember(member);
       }
       if (!accepted) {
         continue;
       }
-      member = expectDefined(this.bodyHeads[sourceRoot], "committed body member head");
+      member = this.bodies.headAtRoot(sourceRoot);
       while (member >= 0) {
         const destination = this.destinationIndex(member, duplicator, orientation);
         this.sourceForDestination[destination] = member;
-        member = expectDefined(this.nextBodyMember[member], "next committed body member");
+        member = this.bodies.nextMember(member);
       }
     }
   }
@@ -113,13 +109,13 @@ export class DuplicatorResolver {
   }
 
   private bodyFits(root: number, duplicator: number, orientation: Direction): boolean {
-    let member = expectDefined(this.bodyHeads[root], "fitted body member head");
+    let member = this.bodies.headAtRoot(root);
     while (member >= 0) {
       const destination = this.destinationIndex(member, duplicator, orientation);
       if (destination < 0 || this.world.kindAtIndex(destination) !== TileKind.Empty) {
         return false;
       }
-      member = expectDefined(this.nextBodyMember[member], "next fitted body member");
+      member = this.bodies.nextMember(member);
     }
     return true;
   }
@@ -147,63 +143,6 @@ export class DuplicatorResolver {
       : -1;
   }
 
-  private collectWeldedBodies(): void {
-    this.bodyRoots.fill(-1);
-    this.bodyHeads.fill(-1);
-    this.nextBodyMember.fill(-1);
-    for (let index = 0; index < this.world.cellCount; index += 1) {
-      if (this.world.kindAtIndex(index) !== TileKind.Empty) {
-        this.bodyRoots[index] = index;
-      }
-    }
-    for (let index = 0; index < this.world.cellCount; index += 1) {
-      if (this.bodyRoots[index] === -1) {
-        continue;
-      }
-      if (this.world.hasRightWeldAtIndex(index)) {
-        this.unionBodies(index, index + 1);
-      }
-      if (this.world.hasDownWeldAtIndex(index)) {
-        this.unionBodies(index, index + this.world.width);
-      }
-    }
-    for (let index = this.world.cellCount - 1; index >= 0; index -= 1) {
-      if (this.bodyRoots[index] === -1) {
-        continue;
-      }
-      const root = this.findBodyRoot(index);
-      this.bodyRoots[index] = root;
-      this.nextBodyMember[index] = expectDefined(this.bodyHeads[root], "duplicator body head");
-      this.bodyHeads[root] = index;
-    }
-  }
-
-
-  private unionBodies(first: number, second: number): void {
-    const firstRoot = this.findBodyRoot(first);
-    const secondRoot = this.findBodyRoot(second);
-    if (firstRoot === secondRoot) {
-      return;
-    }
-    if (firstRoot < secondRoot) {
-      this.bodyRoots[secondRoot] = firstRoot;
-    } else {
-      this.bodyRoots[firstRoot] = secondRoot;
-    }
-  }
-
-  private findBodyRoot(index: number): number {
-    let root = index;
-    while (expectDefined(this.bodyRoots[root], "duplicator body parent") !== root) {
-      root = expectDefined(this.bodyRoots[root], "duplicator body parent");
-    }
-    while (index !== root) {
-      const parent = expectDefined(this.bodyRoots[index], "duplicator body parent");
-      this.bodyRoots[index] = root;
-      index = parent;
-    }
-    return root;
-  }
 
   private neighborIndex(index: number, direction: Direction): number {
     const x = index % this.world.width;

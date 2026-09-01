@@ -659,7 +659,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 21,
       category: PaletteCategory.PuzzleTools,
-      description: "Absorbs a front block matching the block behind it and pulses +1 sideways",
+      description: "Absorbs a front welded body exactly matching the body behind it and pulses +1 sideways",
     },
     affectedByGravity: true,
     slidesDiagonally: false,

@@ -7,7 +7,6 @@ Game flow:
 * DEFER After the last set of puzzles is unlocked, also unlock a "full toolbelt" equivalent of every puzzle - a variant where all components are available, with the same list of prices for each. This adds some content, lets players compete on more histograms.
 * Add a mechanism to detect if previous state is exactly equal to current state. Some false negatives are acceptable. The goal is to detect loops, and interrupt execution when testing puzzle solutions. (For example: the puzzle is to drop one stone block on a delivery block. The player drops it in some other location, where it sits indefinitely. We don't want to make them sit through N ticks or have to press fast-forward button.) We could combine this with the "active/asleep regions" optimization pointed out elsewhere in this file.
 * DEFER Add support for a new puzzle type, where the player starts with a machine that doesn't work. They have to modify as few tiles as possible to make it work. Same scoring rules but we only count modified tiles. Add some way to view what tiles have been modified - maybe color grid cells yellow if their contained cell is modified. Could auto-generate some of these puzzles from reference solutions.
-* Modify the delivery box: it should consume an entire welded body in front of it, if it matches the entire welded body behind it. When consuming, delete the entire body at once. (Later, overlay an animation of it shrinking and moving into the block.) This allows more complex puzzles where the output is a group welded in a specific way.
 
 Storage format, import/export:
 * Allow importing puzzle files in the sandbox. Should be almost the same as importing a scene, but also create the player modifiable regions, and later (once sandbox has tools for setting name/descripton and test cases) import those from the test file as well.
@@ -33,7 +32,6 @@ Components useful for designing puzzles in-world:
 
 Components:
 * A sensor that detects when the sensor's own tile moves, and outputs +1 on that side, -1 on the other side.
-* Comparers: compare front neighbor to back neighbor, and output +1 on sides if they're equal, else output 0.
 * Assemblers that convert a group of blocks welded in a specific way into one block. For example iron and copper blocks welded in a specific way are converted to a piston block. We also want this to be able to convert one block to multiple (unwelded) blocks - so need to store a queue of blocks to emit, emit them one-by-one when the output tile is empty, and prevent the assembler from consuming more inputs when the queue is non-empty.
 * Assembler should match input rotation (relative to recipe's output) to input rotation (relative to recipe's defined input). For example if a recipe says that an "L" shape of welded blocks is assembled to a right-facing magnet, then a rotated "L" shape should produce a magnet with corresponding rotation relative to the recipe's "right-facing".
 * Flipper: attaches to one block, then flips the entire connected/welded group of blocks around that line horizontally or vertically, if it would not collide/overlap other blocks.
@@ -59,6 +57,7 @@ Performance:
 * Mark some tiles or regions as asleep, if they have no updates. Wake up only regions where things are happening. E.g. a static structure made of only solid no-action blocks doesn't need to be processed every frame, doesn't need to re-check gravity every frame, etc.
 * Cache circuit networks instead of rebuilding every tick.
 * Maybe: Compute the next simulation step async, while the last update is still being animated. Would improve performance if simulation step time grows to exceed frame time.
+* Optimization: For simulation, `Simulation.step()` does stages like `this.duplicatorResolver.collect();` even if there's no duplicators on the map, and each resolver iterates the entire grid. Could skip some of these if we can maintain a flag for whether any duplicators are present, or the counts of all components on the board. Or we could walk the grid once in `Simulation.step()` and collect all candidates - each TileKind in `TILE_DEFINITIONS` could define which resolvers need to be aware of it. Then only call the relevant resolver if it has nonzero relevant blocks, and pass it the list of relevant blocks.
 
 Circuit network:
 * Figure out how to handle wires that become split or welded together while a game runs. May already be handled correctly.
@@ -71,6 +70,7 @@ Circuit network design problems to try, to decide whether we should add componen
 * Try to design a minimal circuit that can convert a sequence of charges like "-1 repeated N times (for N ticks), then 0 for one tick, then +1 repeated N times, then 0 for one tick, then repeat" into a sequence "-1 repeated N+1 times, then +1 repeated N+1 times, then repeat". If it requires say 4 or more components, then consider adding a component to make it easier. Currently it can be done using 2 combiners - one just delays the signal by 1, and the second combiner adds current and previous value; this needs around 4 components (though 2 are just conduits), and introduces a 1-tick lag. Is a better way possible?
 * Similarly check how hard it is to do XOR-like operations (e.g. check if two ternary inputs are different, or check whether a set of 3 inputs contains both +1 and -1). Maybe add min/max components if these are hard.
 * Similarly check whether we can compute a min or max of 2 or 3 inputs, compactly.
+* Comparers: compare front neighbor to back neighbor, and output +1 on sides if they're equal, else output 0.
 
 Don't add, for circuit network, because they can be built from a few existing components:
 * AND/OR, NAND/NOR. (Maybe add min/max, though.)

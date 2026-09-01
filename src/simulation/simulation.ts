@@ -7,6 +7,7 @@ import { PuzzleResult } from "./puzzle-result";
 import { WeldOperationResolver } from "./weld-operation-resolver";
 import { Direction, oppositeDirection, TileKind } from "./tile";
 import { World } from "./world";
+import { WeldedBodyIndex } from "./welded-body-index";
 
 /**
  * Advances a world in discrete ticks. Every movement decision is collected from
@@ -15,6 +16,7 @@ import { World } from "./world";
 export class Simulation {
   readonly world: World;
   private readonly circuitResolver: CircuitResolver;
+  private readonly weldedBodies: WeldedBodyIndex;
   private readonly deliveryResolver: DeliveryResolver;
   private readonly duplicatorResolver: DuplicatorResolver;
   private readonly furnaceResolver: FurnaceResolver;
@@ -25,8 +27,9 @@ export class Simulation {
   constructor(world: World) {
     this.world = world;
     this.circuitResolver = new CircuitResolver(world);
-    this.deliveryResolver = new DeliveryResolver(world);
-    this.duplicatorResolver = new DuplicatorResolver(world);
+    this.weldedBodies = new WeldedBodyIndex(world);
+    this.deliveryResolver = new DeliveryResolver(world, this.weldedBodies);
+    this.duplicatorResolver = new DuplicatorResolver(world, this.weldedBodies);
     this.furnaceResolver = new FurnaceResolver(world);
     this.motionWorkspace = new MotionWorkspace(world);
     this.weldOperationResolver = new WeldOperationResolver(world);
@@ -34,6 +37,7 @@ export class Simulation {
 
   step(): number {
     this.resolveVictoryBlocks();
+    this.weldedBodies.collect();
     this.deliveryResolver.collect();
     this.duplicatorResolver.collect();
     this.weldOperationResolver.collect();

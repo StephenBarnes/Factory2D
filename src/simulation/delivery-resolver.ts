@@ -1,60 +1,93 @@
 import { expectDefined } from "../util/assert";
 import { Direction, oppositeDirection, TileKind } from "./tile";
 import type { World } from "./world";
+import { WeldedBodyIndex } from "./welded-body-index";
 
-/** Collects delivery intents before circuits observe them, then commits absorption. */
+/** Collects complete-body delivery intents, jams shared targets, then commits absorption. */
 export class DeliveryResolver {
   readonly absorptionTargetIndices: Int32Array;
 
   private readonly world: World;
-  private readonly targetOwners: Int32Array;
+  private readonly bodies: WeldedBodyIndex;
+  private readonly absorbedBodyOwners: Int32Array;
 
-  constructor(world: World) {
+  constructor(world: World, bodies: WeldedBodyIndex) {
     this.world = world;
-    this.targetOwners = new Int32Array(world.cellCount);
+    this.bodies = bodies;
+    this.absorbedBodyOwners = new Int32Array(world.cellCount);
     this.absorptionTargetIndices = new Int32Array(world.cellCount);
   }
 
   collect(): void {
-    this.targetOwners.fill(-1);
+    this.absorbedBodyOwners.fill(-1);
     this.absorptionTargetIndices.fill(-1);
 
-    for (let index = 0; index < this.world.cellCount; index += 1) {
-      if (this.world.kindAtIndex(index) !== TileKind.Delivery) {
+    for (let delivery = 0; delivery < this.world.cellCount; delivery += 1) {
+      if (this.world.kindAtIndex(delivery) !== TileKind.Delivery) {
         continue;
       }
-      const orientation = this.world.orientationAtIndex(index);
-      const targetIndex = this.neighborIndex(index, orientation);
-      const referenceIndex = this.neighborIndex(index, oppositeDirection(orientation));
-      if (targetIndex < 0 || referenceIndex < 0) {
-        continue;
-      }
-      const targetKind = this.world.kindAtIndex(targetIndex);
+      const orientation = this.world.orientationAtIndex(delivery);
+      const target = this.neighborIndex(delivery, orientation);
+      const reference = this.neighborIndex(delivery, oppositeDirection(orientation));
       if (
-        targetKind === TileKind.Empty ||
-        targetKind !== this.world.kindAtIndex(referenceIndex)
+        target < 0 ||
+        reference < 0 ||
+        this.world.kindAtIndex(target) === TileKind.Empty ||
+        this.world.kindAtIndex(reference) === TileKind.Empty
       ) {
         continue;
       }
 
-      const existingOwner = expectDefined(
-        this.targetOwners[targetIndex],
-        "delivery target owner",
+      const deliveryRoot = this.bodies.rootAt(delivery);
+      const targetRoot = this.bodies.rootAt(target);
+      const referenceRoot = this.bodies.rootAt(reference);
+      if (
+        targetRoot === deliveryRoot ||
+        referenceRoot === deliveryRoot ||
+        !this.bodies.matchesUnderTranslation(reference, target)
+      ) {
+        continue;
+      }
+
+      this.absorptionTargetIndices[delivery] = target;
+      let member = this.bodies.headAtRoot(targetRoot);
+      while (member >= 0) {
+        const owner = expectDefined(
+          this.absorbedBodyOwners[member],
+          "delivery body owner",
+        );
+        this.absorbedBodyOwners[member] = owner === -1 || owner === delivery
+          ? delivery
+          : -2;
+        member = this.bodies.nextMember(member);
+      }
+    }
+
+    for (let delivery = 0; delivery < this.world.cellCount; delivery += 1) {
+      const target = expectDefined(
+        this.absorptionTargetIndices[delivery],
+        "delivery target index",
       );
-      if (existingOwner === -1) {
-        this.targetOwners[targetIndex] = index;
-        this.absorptionTargetIndices[index] = targetIndex;
-      } else {
-        if (existingOwner >= 0) {
-          this.absorptionTargetIndices[existingOwner] = -1;
+      if (target < 0) {
+        continue;
+      }
+      const targetRoot = this.bodies.rootAt(target);
+      let member = this.bodies.headAtRoot(targetRoot);
+      while (member >= 0) {
+        if (this.absorbedBodyOwners[member] !== delivery) {
+          this.absorptionTargetIndices[delivery] = -1;
+          break;
         }
-        this.targetOwners[targetIndex] = -2;
+        member = this.bodies.nextMember(member);
       }
     }
   }
 
   commit(): void {
-    this.world.applyDeliveryAbsorptions(this.absorptionTargetIndices);
+    this.world.applyDeliveryAbsorptions(
+      this.absorptionTargetIndices,
+      this.absorbedBodyOwners,
+    );
   }
 
   private neighborIndex(index: number, direction: Direction): number {

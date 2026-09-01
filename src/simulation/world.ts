@@ -574,34 +574,55 @@ export class World {
     }
   }
 
-  applyDeliveryAbsorptions(targetIndices: Int32Array): void {
-    if (targetIndices.length !== this.cellCount) {
-      throw new RangeError("Delivery target buffer must match the world cell count");
+  applyDeliveryAbsorptions(
+    targetIndices: Int32Array,
+    bodyOwners: Int32Array,
+  ): void {
+    if (
+      targetIndices.length !== this.cellCount ||
+      bodyOwners.length !== this.cellCount
+    ) {
+      throw new RangeError("Delivery buffers must match the world cell count");
     }
 
-    let absorptionCount = 0;
-    for (let deliveryIndex = 0; deliveryIndex < this.cellCount; deliveryIndex += 1) {
-      const targetIndex = expectDefined(targetIndices[deliveryIndex], "delivery target index");
-      if (targetIndex < 0) {
+    for (let delivery = 0; delivery < this.cellCount; delivery += 1) {
+      const target = expectDefined(targetIndices[delivery], "delivery target index");
+      if (target < 0) {
         continue;
       }
-      this.assertIndex(targetIndex);
-      if (this.kinds[deliveryIndex] !== TileKind.Delivery) {
-        throw new Error(`Non-delivery tile at index ${deliveryIndex} cannot absorb a target`);
+      this.assertIndex(target);
+      if (this.kinds[delivery] !== TileKind.Delivery) {
+        throw new Error(`Non-delivery tile at index ${delivery} cannot absorb a body`);
       }
-      if (this.kinds[targetIndex] === TileKind.Empty) {
-        throw new Error(`Delivery box at index ${deliveryIndex} lost its absorption target`);
+      if (
+        this.kinds[target] === TileKind.Empty ||
+        bodyOwners[target] !== delivery
+      ) {
+        throw new Error(`Delivery box at index ${delivery} lost its absorption body`);
       }
-      absorptionCount += 1;
     }
 
-    if (absorptionCount === 0) {
+    let removedCellCount = 0;
+    for (let index = 0; index < this.cellCount; index += 1) {
+      const delivery = expectDefined(bodyOwners[index], "absorbed body owner");
+      if (delivery < 0) {
+        continue;
+      }
+      this.assertIndex(delivery);
+      if (
+        expectDefined(targetIndices[delivery], "absorbing delivery target") < 0 ||
+        this.kinds[index] === TileKind.Empty
+      ) {
+        throw new Error(`Delivery box at index ${delivery} has an invalid body member`);
+      }
+      removedCellCount += 1;
+    }
+    if (removedCellCount === 0) {
       return;
     }
-    for (let deliveryIndex = 0; deliveryIndex < this.cellCount; deliveryIndex += 1) {
-      const targetIndex = expectDefined(targetIndices[deliveryIndex], "delivery target index");
-      if (targetIndex >= 0) {
-        this.clearIndex(targetIndex);
+    for (let index = 0; index < this.cellCount; index += 1) {
+      if (expectDefined(bodyOwners[index], "absorbed body owner") >= 0) {
+        this.clearIndex(index);
       }
     }
     this.revisionValue += 1;
