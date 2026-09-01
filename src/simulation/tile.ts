@@ -725,7 +725,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 26,
       category: PaletteCategory.Circuits,
-      description: "Left and rear inputs move a configurable 2D cursor; outputs the selected value. Press E to configure",
+      description: "Positive left/rear inputs move the 2D cursor away from their side; negative inputs reverse it. Outputs the selected value. Press E to configure",
     },
     affectedByGravity: true,
     slidesDiagonally: false,

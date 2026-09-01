@@ -380,23 +380,19 @@ export class World {
     return output;
   }
 
-  advanceRomAtIndex(
-    index: number,
-    horizontalInput: Charge,
-    verticalInput: Charge,
-  ): Charge {
+  advanceRomAtIndex(index: number, cursorDeltaX: number, cursorDeltaY: number): Charge {
     const state = this.requireComponentStateAtIndex(index);
     if (state.type !== "rom") {
       throw new Error(`Tile at index ${index} is not a ROM`);
     }
     const cellCount = state.values.length;
-    let nextCursor = (state.cursor + horizontalInput + cellCount) % cellCount;
-    if (verticalInput !== 0) {
+    let nextCursor = (state.cursor + cursorDeltaX + cellCount) % cellCount;
+    if (cursorDeltaY !== 0) {
       const column = nextCursor % state.width;
       const row = (nextCursor - column) / state.width;
       const columnMajorCursor = column * state.height + row;
       const nextColumnMajorCursor =
-        (columnMajorCursor + verticalInput + cellCount) % cellCount;
+        (columnMajorCursor + cursorDeltaY + cellCount) % cellCount;
       const nextColumn = Math.floor(nextColumnMajorCursor / state.height);
       const nextRow = nextColumnMajorCursor % state.height;
       nextCursor = nextRow * state.width + nextColumn;

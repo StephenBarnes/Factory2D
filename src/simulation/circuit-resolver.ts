@@ -3,6 +3,8 @@ import { chargeFromSum, type Charge } from "./circuit";
 import { furnaceRecipeFor } from "./furnace";
 import {
   Direction,
+  directionX,
+  directionY,
   orientedSides,
   oppositeDirection,
   TILE_DEFINITIONS,
@@ -179,9 +181,20 @@ export class CircuitResolver {
         case TileKind.Counter:
           outputCharge = this.world.advanceCounterAtIndex(index, rearInput);
           break;
-        case TileKind.Rom:
-          outputCharge = this.world.advanceRomAtIndex(index, leftInput, rearInput);
+        case TileKind.Rom: {
+          const leftInputSide = ((orientation + Direction.Left) & 3) as Direction;
+          const rearInputSide = ((orientation + Direction.Down) & 3) as Direction;
+          const cursorDeltaX = chargeFromSum(
+            -directionX(leftInputSide) * leftInput -
+              directionX(rearInputSide) * rearInput,
+          );
+          const cursorDeltaY = chargeFromSum(
+            -directionY(leftInputSide) * leftInput -
+              directionY(rearInputSide) * rearInput,
+          );
+          outputCharge = this.world.advanceRomAtIndex(index, cursorDeltaX, cursorDeltaY);
           break;
+        }
         case TileKind.Furnace: {
           const disabled = rearInput !== 0;
           this.furnaceDisabled[index] = disabled ? 1 : 0;

@@ -606,7 +606,7 @@ describe("circuit networks", () => {
     const simulation = new Simulation(world);
     const horizontalInputs = [1, 0, -1, 0] as const;
     const verticalInputs = [0, 1, 0, -1] as const;
-    const outputs = [1, 1, -1, 0] as const;
+    const outputs = [1, -1, 1, 1] as const;
 
     for (let index = 0; index < horizontalInputs.length; index += 1) {
       world.setCharge(
@@ -628,34 +628,143 @@ describe("circuit networks", () => {
       type: "rom",
       width: 2,
       height: 2,
-      cursor: 0,
+      cursor: 3,
       values: [0, 1, -1, 1],
     });
   });
 
   it.each([
     {
-      orientation: Direction.Up,
+      inputX: 0,
+      inputY: 1,
       expectedCursors: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0],
     },
     {
-      orientation: Direction.Right,
-      expectedCursors: [4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15, 0],
+      inputX: 1,
+      inputY: 2,
+      expectedCursors: [15, 11, 7, 3, 14, 10, 6, 2, 13, 9, 5, 1, 12, 8, 4, 0],
     },
   ])(
-    "carries $orientation input overflow across both ROM dimensions",
-    ({ orientation, expectedCursors }) => {
+    "carries input at ($inputX, $inputY) across both ROM dimensions",
+    ({ inputX, inputY, expectedCursors }) => {
       const world = new World(3, 3);
-      world.place(0, 2, TileKind.FixedCharge);
-      world.place(1, 2, TileKind.Rom, orientation);
-      world.setWeld(0, 2, 1, 2, true);
-      world.configureRom(1, 2, 4, 4, Array.from({ length: 16 }, () => 0));
+      world.place(1, 0, TileKind.Conduit);
+      world.place(0, 1, TileKind.Conduit);
+      world.place(1, 1, TileKind.Rom, Direction.Up);
+      world.place(2, 1, TileKind.Conduit);
+      world.place(1, 2, TileKind.Conduit);
+      world.setWeld(1, 0, 1, 1, true);
+      world.setWeld(0, 1, 1, 1, true);
+      world.setWeld(1, 1, 2, 1, true);
+      world.setWeld(1, 1, 1, 2, true);
+      world.configureRom(1, 1, 4, 4, Array.from({ length: 16 }, () => 0));
       const simulation = new Simulation(world);
-      simulation.step();
 
       for (const expectedCursor of expectedCursors) {
+        world.setCharge(inputX, inputY, 1);
         simulation.step();
-        expect(world.componentStateSnapshotAt(1, 2)).toMatchObject({
+        expect(world.componentStateSnapshotAt(1, 1)).toMatchObject({
+          type: "rom",
+          cursor: expectedCursor,
+        });
+      }
+    },
+  );
+
+  it.each([
+    {
+      orientation: Direction.Up,
+      port: "left",
+      inputX: 0,
+      inputY: 1,
+      positiveCursor: 5,
+      negativeCursor: 3,
+    },
+    {
+      orientation: Direction.Up,
+      port: "rear",
+      inputX: 1,
+      inputY: 2,
+      positiveCursor: 1,
+      negativeCursor: 7,
+    },
+    {
+      orientation: Direction.Right,
+      port: "left",
+      inputX: 1,
+      inputY: 0,
+      positiveCursor: 7,
+      negativeCursor: 1,
+    },
+    {
+      orientation: Direction.Right,
+      port: "rear",
+      inputX: 0,
+      inputY: 1,
+      positiveCursor: 5,
+      negativeCursor: 3,
+    },
+    {
+      orientation: Direction.Down,
+      port: "left",
+      inputX: 2,
+      inputY: 1,
+      positiveCursor: 3,
+      negativeCursor: 5,
+    },
+    {
+      orientation: Direction.Down,
+      port: "rear",
+      inputX: 1,
+      inputY: 0,
+      positiveCursor: 7,
+      negativeCursor: 1,
+    },
+    {
+      orientation: Direction.Left,
+      port: "left",
+      inputX: 1,
+      inputY: 2,
+      positiveCursor: 1,
+      negativeCursor: 7,
+    },
+    {
+      orientation: Direction.Left,
+      port: "rear",
+      inputX: 2,
+      inputY: 1,
+      positiveCursor: 3,
+      negativeCursor: 5,
+    },
+  ])(
+    "moves away from the $port input for ROM orientation $orientation",
+    ({ orientation, inputX, inputY, positiveCursor, negativeCursor }) => {
+      for (const [charge, expectedCursor] of [
+        [1, positiveCursor],
+        [-1, negativeCursor],
+      ] as const) {
+        const world = new World(3, 3);
+        world.place(1, 0, TileKind.Conduit);
+        world.place(0, 1, TileKind.Conduit);
+        world.place(1, 1, TileKind.Rom, orientation);
+        world.place(2, 1, TileKind.Conduit);
+        world.place(1, 2, TileKind.Conduit);
+        world.setWeld(1, 0, 1, 1, true);
+        world.setWeld(0, 1, 1, 1, true);
+        world.setWeld(1, 1, 2, 1, true);
+        world.setWeld(1, 1, 1, 2, true);
+        world.restoreComponentState(1, 1, {
+          type: "rom",
+          width: 3,
+          height: 3,
+          cursor: 4,
+          values: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        });
+        world.setCharge(inputX, inputY, charge);
+
+        new Simulation(world).step();
+
+        expect(world.componentStateSnapshotAt(1, 1)).toMatchObject({
           type: "rom",
           cursor: expectedCursor,
         });
