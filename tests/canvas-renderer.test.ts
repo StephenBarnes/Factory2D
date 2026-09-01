@@ -8,7 +8,7 @@ interface FakeCanvas {
   readonly context: CanvasRenderingContext2D;
 }
 
-function createCanvas(width: number, height: number): FakeCanvas {
+function createCanvas(width: number, height: number, left = 0, top = 0): FakeCanvas {
   const context = {
     imageSmoothingEnabled: true,
     setTransform: vi.fn(),
@@ -19,7 +19,7 @@ function createCanvas(width: number, height: number): FakeCanvas {
     width: 0,
     height: 0,
     getContext: (kind: string) => kind === "2d" ? context : null,
-    getBoundingClientRect: () => ({ left: 0, top: 0 }),
+    getBoundingClientRect: () => ({ left, top }),
   } as unknown as HTMLCanvasElement;
   return { canvas, context };
 }
@@ -44,16 +44,15 @@ describe("CanvasRenderer viewport fitting", () => {
     expect(bottomRight.y).toBeCloseTo(300);
   });
 
-  it("centers at the largest size inside the unobscured viewport", () => {
+  it("centers in the canvas regardless of its screen position", () => {
     vi.stubGlobal("window", { devicePixelRatio: 1 });
-    const { canvas } = createCanvas(800, 600);
+    const { canvas } = createCanvas(800, 600, 240, 30);
     const renderer = new CanvasRenderer(canvas, new World(20, 10));
-    renderer.setViewportInsets({ top: 0, right: 200, bottom: 0, left: 0 });
 
     renderer.fitBoardToViewport();
 
-    expect(renderer.gridPointFromClientPoint(0, 150)).toEqual({ x: 0, y: 0 });
-    expect(renderer.gridPointFromClientPoint(600, 450)).toEqual({ x: 20, y: 10 });
+    expect(renderer.gridPointFromClientPoint(240, 130)).toEqual({ x: 0, y: 0 });
+    expect(renderer.gridPointFromClientPoint(1_040, 530)).toEqual({ x: 20, y: 10 });
   });
 
   it("restores the fitted view after player panning", () => {

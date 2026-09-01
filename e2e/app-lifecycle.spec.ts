@@ -24,22 +24,23 @@ async function boardCellCenter(
 ): Promise<{ readonly x: number; readonly y: number }> {
   return page.evaluate(({ cellX, cellY }) => {
     const canvas = document.querySelector<HTMLCanvasElement>("#game-canvas");
-    const inspector = document.querySelector<HTMLElement>("#tile-inspector");
-    if (canvas === null || inspector === null) {
-      throw new Error("Workshop layout is incomplete");
+    const diagnostics = window.factory2dDiagnostics;
+    if (canvas === null || diagnostics === undefined) {
+      throw new Error("Workshop layout or diagnostics are incomplete");
     }
 
     const canvasBounds = canvas.getBoundingClientRect();
-    const inspectorBounds = inspector.getBoundingClientRect();
-    const left = 16;
-    const right = Math.max(16, canvasBounds.right - inspectorBounds.left + 16);
-    const top = 16;
-    const bottom = 16;
-    const safeWidth = Math.max(1, canvas.clientWidth - left - right);
-    const safeHeight = Math.max(1, canvas.clientHeight - top - bottom);
-    const cellSize = Math.max(2, Math.min(safeWidth / 20, safeHeight / 14, 64));
-    const originX = left + safeWidth / 2 - 10 * cellSize;
-    const originY = top + safeHeight / 2 - 7 * cellSize;
+    const board = JSON.parse(diagnostics.snapshot().serializedBoard) as {
+      readonly width: number;
+      readonly height: number;
+    };
+    const cellSize = Math.min(
+      canvas.clientWidth / board.width,
+      canvas.clientHeight / board.height,
+      64,
+    );
+    const originX = (canvas.clientWidth - board.width * cellSize) / 2;
+    const originY = (canvas.clientHeight - board.height * cellSize) / 2;
     return {
       x: canvasBounds.left + originX + (cellX + 0.5) * cellSize,
       y: canvasBounds.top + originY + (cellY + 0.5) * cellSize,

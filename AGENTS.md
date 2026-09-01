@@ -78,7 +78,7 @@ Keep this section up-to-date.
 The game is in early development. Currently implemented:
 
 * A variable-size editable Canvas 2D grid, bounded from 1x1 through 400x300, with procedural sand, falling stone, glass, iron ore, magnetic iron, directional magnets, pistons, furnaces, delivery boxes, and victory blocks, clockwise/counterclockwise conveyor belts, circuit conduits and wire crossings, and fixed charge, spark, occupancy sensor, charge sensor, inverter, combiner, rectifier, multiplier, subtractor, and selector runes.
-* A responsive workshop frame anchors the component palette to the left screen edge and the simulation controls to the bottom edge, with the Canvas limited to the remaining rectangular board region. On narrow screens the controls span the full bottom edge below both the palette and board. Entering any workshop or importing a scene resets the view to the largest zoom that keeps the entire grid visible and centered in the unobscured area around the floating inspector, including subpixel tile sizes for maximum-size boards; mouse-wheel zoom stays anchored beneath the pointer; and arrow keys, middle-button drags, or Alt-right-button drags pan within bounds that keep the screen center over the grid.
+* A responsive workshop frame anchors the component palette to the left screen edge and the simulation controls to the bottom edge, with the Canvas limited to the remaining rectangular board region. On narrow screens the controls span the full bottom edge below both the palette and board. Entering any workshop or importing a scene resets the view to the largest zoom that keeps the entire grid visible and centered in `#game-canvas`, including subpixel tile sizes for maximum-size boards; mouse-wheel zoom stays anchored beneath the pointer; and arrow keys, middle-button drags, or Alt-right-button drags pan within bounds that keep the canvas center over the grid.
 * Build controls for gap-free click-and-drag placement and removal, including Shift-left placement welded to every eligible occupied neighbor, drags that leave the grid, middle-click or Q picking that preserves directional component orientation and reselects the previous tile when aimed at an empty cell, middle-button drag panning, metadata-driven WASD rotation and aiming shared by palette previews, placement ghosts, and placed tiles, stepping, running, pausing, resetting, clearing, PNG image downloads, speed selection, and an animation toggle. Component palette definitions, categories, compact board codes, descriptions, and ordering come from the single tile definition registry. The palette groups image-only component buttons into raw-material, mechanism, circuit, machine, and puzzle-tool grids, keeps the compact weld tool above them, and overlays 1-9 and 0 on each workshop's first ten visible components.
 * A separate weld tool for joining eligible occupied neighbors into rigid bodies and unwelding them, with gap-free fast-drag traversal, an immediate held-Control temporary override, and red invalid-edge feedback. Sand is not weldable, and magnets reject welds on their pointed side.
 * A sandbox-only editable-region authoring tool sits beside the weld tool. Left drags add inclusive rectangles, right clicks remove every rectangle under the clicked cell, and gold overlays preview the authored union without constraining sandbox tile or weld edits. Puzzle-template downloads preserve the authored rectangle list, including an empty region.
@@ -120,7 +120,7 @@ The game is in early development. Currently implemented:
 * `src/game/saved-solution-controller.ts` — Saved-solution selection, creation, duplication, deletion, dirty-board tracking, and local-storage persistence.
 * `src/game/workshop-session.ts` — Independent sandbox and saved-solution world, baseline, previous-world, simulation, component-catalog, and editing-lock session ownership.
 * `src/game/workshop-editing-state.ts` — Per-session puzzle edit locking after simulation starts, with reset and unrestricted sandbox policies.
-* `src/render/canvas-renderer.ts` — Responsive Canvas 2D grid, editable-region boundary rendering and invalid-hover feedback, overlay-aware camera fitting, bounded pan and pointer-anchored zoom, revision-and-scale-keyed welded-body geometry cache, stable-ID movement interpolation in every adjacent direction, hit testing, placement previews, and hover feedback.
+* `src/render/canvas-renderer.ts` — Responsive Canvas 2D grid, editable-region boundary rendering and invalid-hover feedback, canvas-centered camera fitting, bounded pan and pointer-anchored zoom, revision-and-scale-keyed welded-body geometry cache, stable-ID movement interpolation in every adjacent direction, hit testing, placement previews, and hover feedback.
 * `src/render/grid-drag.ts` — Board-clipped tile-drag endpoints and continuous weld-edge traversal between pointer events.
 * `src/render/pointer-gesture.ts` — Button/modifier gesture classification and middle-click drag-threshold policy.
 * `src/render/tile-renderer.ts` — Body outline tracing and rounded-slab drawing (fill, bevel lighting, decorations), including animated conveyor perimeters, for the board and component palette.
@@ -143,7 +143,7 @@ The game is in early development. Currently implemented:
 * `src/ui/puzzle-test-report.ts` — Accessible per-case success/failure modal rendering, successful score presentation, and report actions.
 * `tests/component-palette.test.ts` — Sandbox and puzzle category, compact-button metadata, and visible-order shortcut tests.
 * `tests/board-export.test.ts` — Compact board format dimensions, ordering, round-trip, state, boundary, and malformed-input validation tests.
-* `tests/canvas-renderer.test.ts` — Maximum-size, inspector-aware, and player-modified viewport fitting regression tests.
+* `tests/canvas-renderer.test.ts` — Maximum-size, canvas-coordinate, and player-modified viewport fitting regression tests.
 * `tests/circuit.test.ts` — Fixed and sensed circuit drivers, instant welded-network propagation, wire-crossing axis isolation, occupancy and charge sensor directionality, isolated gate networks and delay, combiner, multiplier, subtractor, and selector truth tables, disconnection, and moving-charge tests.
 * `tests/furnace.test.ts` — Furnace recipe timing, target identity and movement, circuit control/output, and snapshot tests.
 * `tests/delivery.test.ts` — Delivery matching, one-tick circuit pulses, competing-target jamming, and board-format round-trip tests.
@@ -186,7 +186,7 @@ The game is in early development. Currently implemented:
 
 ## Current TODOs
 
-More items in `more-todos.md`.
+Listed in `more-todos.md`.
 
 ## Development guidelines
 

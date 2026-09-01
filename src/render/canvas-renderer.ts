@@ -26,12 +26,6 @@ const MIN_MANUAL_TILE_SIZE = 2;
 const GRID_EDGE_EPSILON = 1e-6;
 const EDITABLE_REGION_DASH_PATTERN = [4, 4];
 
-export interface ViewportInsets {
-  readonly top: number;
-  readonly right: number;
-  readonly bottom: number;
-  readonly left: number;
-}
 
 interface CachedBody {
   readonly cells: readonly BodyCell[];
@@ -53,7 +47,6 @@ export class CanvasRenderer {
   private viewportHeight = 0;
   private viewCenterX: number;
   private viewCenterY: number;
-  private viewportInsets: ViewportInsets = { top: 0, right: 0, bottom: 0, left: 0 };
   private viewInitialized = false;
   private viewModified = false;
   /** Per-cell body stamp: 0 = unvisited, otherwise the body's start index + 1. */
@@ -95,22 +88,6 @@ export class CanvasRenderer {
     this.authoredEditableRegionDraft = draftRectangle;
   }
 
-  setViewportInsets(insets: ViewportInsets): void {
-    if (
-      this.viewportInsets.top === insets.top &&
-      this.viewportInsets.right === insets.right &&
-      this.viewportInsets.bottom === insets.bottom &&
-      this.viewportInsets.left === insets.left
-    ) {
-      return;
-    }
-    this.viewportInsets = insets;
-    if (this.viewInitialized && !this.viewModified) {
-      this.fitViewToViewport();
-    } else {
-      this.updateOrigin();
-    }
-  }
 
   fitBoardToViewport(): void {
     this.resizeBackingStore();
@@ -135,10 +112,9 @@ export class CanvasRenderer {
       return;
     }
 
-    const { centerX, centerY } = this.safeViewport();
     this.cellSize = nextSize;
-    this.viewCenterX = gridX - (localX - centerX) / nextSize;
-    this.viewCenterY = gridY - (localY - centerY) / nextSize;
+    this.viewCenterX = gridX - (localX - this.viewportWidth / 2) / nextSize;
+    this.viewCenterY = gridY - (localY - this.viewportHeight / 2) / nextSize;
     this.viewModified = true;
     this.updateOrigin();
   }
@@ -264,10 +240,9 @@ export class CanvasRenderer {
   }
 
   private fitViewToViewport(): void {
-    const { width, height } = this.safeViewport();
     this.cellSize = Math.min(
-      width / this.world.width,
-      height / this.world.height,
+      this.viewportWidth / this.world.width,
+      this.viewportHeight / this.world.height,
       MAX_TILE_SIZE,
     );
     this.viewCenterX = this.world.width / 2;
@@ -275,38 +250,17 @@ export class CanvasRenderer {
     this.updateOrigin();
   }
 
-  private safeViewport(): {
-    readonly centerX: number;
-    readonly centerY: number;
-    readonly width: number;
-    readonly height: number;
-  } {
-    const left = Math.max(0, Math.min(this.viewportInsets.left, this.viewportWidth - 1));
-    const top = Math.max(0, Math.min(this.viewportInsets.top, this.viewportHeight - 1));
-    const width = Math.max(1, this.viewportWidth - left - Math.max(0, this.viewportInsets.right));
-    const height = Math.max(1, this.viewportHeight - top - Math.max(0, this.viewportInsets.bottom));
-    return {
-      centerX: left + width / 2,
-      centerY: top + height / 2,
-      width,
-      height,
-    };
-  }
-
   private updateOrigin(): void {
-    const { centerX, centerY } = this.safeViewport();
-    const screenCenterOffsetX = (this.viewportWidth / 2 - centerX) / this.cellSize;
-    const screenCenterOffsetY = (this.viewportHeight / 2 - centerY) / this.cellSize;
     this.viewCenterX = Math.max(
-      -screenCenterOffsetX,
-      Math.min(this.world.width - GRID_EDGE_EPSILON - screenCenterOffsetX, this.viewCenterX),
+      0,
+      Math.min(this.world.width - GRID_EDGE_EPSILON, this.viewCenterX),
     );
     this.viewCenterY = Math.max(
-      -screenCenterOffsetY,
-      Math.min(this.world.height - GRID_EDGE_EPSILON - screenCenterOffsetY, this.viewCenterY),
+      0,
+      Math.min(this.world.height - GRID_EDGE_EPSILON, this.viewCenterY),
     );
-    this.originX = centerX - this.viewCenterX * this.cellSize;
-    this.originY = centerY - this.viewCenterY * this.cellSize;
+    this.originX = this.viewportWidth / 2 - this.viewCenterX * this.cellSize;
+    this.originY = this.viewportHeight / 2 - this.viewCenterY * this.cellSize;
   }
 
   private drawGrid(): void {

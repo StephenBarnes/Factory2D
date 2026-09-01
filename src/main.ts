@@ -138,20 +138,6 @@ let renderedPaletteDevicePixelRatio = 0;
 let tileKindsByShortcut: Readonly<Record<string, TileKind | undefined>> =
   Object.create(null);
 
-function updateViewportInsets(): void {
-  const canvasBounds = canvas.getBoundingClientRect();
-  const inspectorBounds = inspectorPanel.getBoundingClientRect();
-  renderer.setViewportInsets({
-    top: 16,
-    right: Math.max(16, canvasBounds.right - inspectorBounds.left + 16),
-    bottom: 16,
-    left: 16,
-  });
-}
-
-const overlayResizeObserver = new ResizeObserver(updateViewportInsets);
-overlayResizeObserver.observe(inspectorPanel);
-updateViewportInsets();
 
 function updateTransportState(): void {
   const editingEnabled = activeSession.editingState.editable;
@@ -624,7 +610,6 @@ const navigation = new NavigationController(
       updateTransportState();
       importButton.disabled = activeSession.editableRegion !== null;
       updateExportOptionsForSession();
-      updateViewportInsets();
       renderer.fitBoardToViewport();
       refreshPointerHover();
     },
@@ -906,7 +891,6 @@ importFile.addEventListener("change", async () => {
     const imported = deserializeBoard(await file.text());
     sessions.replaceActiveWorld(imported.world, imported.tick);
     loadActiveWorkshopSession();
-    updateViewportInsets();
     renderer.fitBoardToViewport();
     refreshPointerHover();
   } catch (error) {
@@ -1203,10 +1187,7 @@ window.addEventListener("popstate", () => {
   navigation.navigatePath(window.location.pathname);
 });
 window.addEventListener("pagehide", () => navigation.persistActiveSolutionBoard());
-window.addEventListener("resize", () => {
-  renderPalettePreviews();
-  updateViewportInsets();
-});
+window.addEventListener("resize", renderPalettePreviews);
 
 function frame(currentTime: number): void {
   const elapsed = Math.min(currentTime - previousFrameTime, 250);
