@@ -5,33 +5,15 @@ import type {
 } from "./dev/diagnostic-snapshot";
 import { NavigationController } from "./game/navigation-controller";
 import { SavedSolutionController } from "./game/saved-solution-controller";
-import {
-  createPuzzleTestCaseWorld,
-  PuzzleTestRun,
-  type PuzzleTestReport,
-} from "./game/puzzle-test-runner";
+import { PuzzleTestController } from "./game/puzzle-test-controller";
 import { serializePuzzleTemplate } from "./game/puzzle-export";
 import { createSandboxWorld, puzzleById } from "./game/puzzles";
-import {
-  type WorkshopSession,
-  WorkshopSessionController,
-} from "./game/workshop-session";
-import { TileSelectionState } from "./game/tile-selection";
+import { WorkshopSessionController } from "./game/workshop-session";
+import { WorkshopSurfaceController } from "./game/workshop-surface-controller";
 
-import { CanvasRenderer } from "./render/canvas-renderer";
-import {
-  clampedCellFromGridPoint,
-  cellsOnGridSegment,
-  visitCrossedGridEdges,
-} from "./render/grid-drag";
+import { visitCrossedGridEdges } from "./render/grid-drag";
 import type { GridCell, GridEdge, GridPoint } from "./render/grid-drag";
 import { drawTile } from "./render/tile-renderer";
-import {
-  exceedsPanDragThreshold,
-  pointerGesture,
-  shouldWeldPlacedTile,
-} from "./render/pointer-gesture";
-import type { PointerGesture } from "./render/pointer-gesture";
 import { componentConfigurationForKind } from "./simulation/configurable-components";
 import { deserializeBoard, serializeBoard } from "./simulation/board-export";
 import { PuzzleResult } from "./simulation/puzzle-result";
@@ -50,19 +32,15 @@ import {
   type ComponentConfigurationSubmission,
 } from "./ui/component-configuration-dialog";
 import {
-  type InspectorComponentReference,
-  TileInspector,
-} from "./ui/tile-inspector";
+  CanvasInteractionController,
+  type BuildTool,
+} from "./ui/canvas-interaction-controller";
+import type { InspectorComponentReference } from "./ui/tile-inspector";
 import { populateComponentPalette } from "./ui/component-palette";
-import { PuzzleTestReportView } from "./ui/puzzle-test-report";
 
 const MAX_AUTOMATIC_ANIMATION_MS = 250;
 const MANUAL_STEP_ANIMATION_MS = 200;
 const HIGH_SPEED_TICKS_PER_SECOND = 60;
-const INITIAL_TEST_TICKS_PER_SECOND = 5;
-const MAX_TEST_TICKS_PER_SECOND = 60;
-const TEST_SPEED_DOUBLING_MS = 3_000;
-const TEST_CASE_TRANSITION_MS = 600;
 const PALETTE_PREVIEW_SUPERSAMPLING = 2;
 const KEYBOARD_PAN_PIXELS = 64;
 const MAX_CLIPBOARD_EXPORT_CHARACTERS = 1_000_000;
@@ -82,12 +60,7 @@ function requiredElement<T extends HTMLElement>(id: string): T {
 }
 
 const sessions = new WorkshopSessionController(createSandboxWorld());
-let activeSession: WorkshopSession = sessions.active;
-let world = activeSession.world;
-let simulation = activeSession.simulation;
-let previousWorld = activeSession.previousWorld;
 const canvas = requiredElement<HTMLCanvasElement>("game-canvas");
-let renderer = new CanvasRenderer(canvas, world, activeSession.editableRegion);
 const gameScreen = requiredElement<HTMLElement>("game-screen");
 const mainMenuScreen = requiredElement<HTMLElement>("main-menu-screen");
 const puzzleInfoScreen = requiredElement<HTMLElement>("puzzle-info-screen");
@@ -99,7 +72,7 @@ const screenDescription = requiredElement<HTMLElement>("screen-description");
 const sidebarControls = requiredElement<HTMLElement>("sidebar-controls");
 const componentPalette = requiredElement<HTMLElement>("component-palette");
 const inspectorPanel = requiredElement<HTMLElement>("tile-inspector");
-let tileInspector = new TileInspector(inspectorPanel, world);
+const surface = new WorkshopSurfaceController(sessions, canvas, inspectorPanel);
 const playButton = requiredElement<HTMLButtonElement>("play-button");
 const transportShortcutLabel = requiredElement<HTMLElement>("transport-shortcut-label");
 const testReportDialog = requiredElement<HTMLDialogElement>("test-report-dialog");
@@ -141,7 +114,6 @@ const selectionVerticalFlipButton = requiredElement<HTMLButtonElement>(
 );
 const selectionRotateButton = requiredElement<HTMLButtonElement>("selection-rotate-button");
 
-type BuildTool = "tile" | "weld" | "selection" | "editable-region";
 type InspectorTool = Exclude<BuildTool, "tile">;
 
 interface ToolInspectorDetails {
@@ -173,32 +145,11 @@ function isInspectorTool(value: string | undefined): value is InspectorTool {
 }
 
 
-let testingPuzzleSolution = false;
-let activePuzzleTestRun: PuzzleTestRun | null = null;
-let viewedPuzzleTestCaseId: string | null = null;
-let puzzleTestCaseStartedAt = 0;
-let nextPuzzleTestCaseAt = 0;
 let selectedKind = TileKind.Sand;
 let previousSelectedKind: TileKind = selectedKind;
 let selectedOrientation = Direction.Up;
 let selectedTool: BuildTool = "tile";
-let tileSelection = new TileSelectionState(world.width, world.height);
 let temporaryWeldActive = false;
-let activePointerId: number | null = null;
-let activePointerMode: PointerGesture | null = null;
-let activeEditTool: BuildTool | null = null;
-let activeErase = false;
-let activeWeldPlacement = false;
-let activePointerWorldChanged = false;
-let lastPanClientX = 0;
-let lastPanClientY = 0;
-let pendingPickCell: GridCell | null = null;
-let lastEditedCell: GridCell | null = null;
-let pendingConfigurationCell: GridCell | null = null;
-let lastPointerGridPoint: GridPoint | null = null;
-let hoveredCell: GridCell | null = null;
-let hoveredEdge: GridEdge | null = null;
-let hoveredPaletteButton: HTMLButtonElement | null = null;
 let running = false;
 let accumulatedTime = 0;
 let previousFrameTime = performance.now();
@@ -212,9 +163,11 @@ let componentInspectorReferences: readonly (InspectorComponentReference | undefi
 
 
 function updateTransportState(): void {
-  const editingEnabled = activeSession.editingState.editable;
+  const editingEnabled = surface.session.editingState.editable;
   const puzzleWorkshop = navigation.screen.kind === "puzzle";
-  const testFailed = activePuzzleTestRun?.status === "failed";
+  const testingPuzzleSolution = puzzleTests.testing;
+  const testLifecycle = puzzleTests.lifecycle.kind;
+  const testFailed = testLifecycle === "failed";
   playButton.textContent = puzzleWorkshop
     ? testingPuzzleSolution ? "TESTING…" : "◆ TEST"
     : running ? "Ⅱ PAUSE" : "▶ RUN";
@@ -226,7 +179,7 @@ function updateTransportState(): void {
   stateLight.classList.toggle("running", running || testingPuzzleSolution);
   stateLight.classList.toggle("failed", testFailed);
   stateLabel.textContent = testingPuzzleSolution
-    ? activePuzzleTestRun?.status === "between-cases" ? "CASE PASSED" : "TESTING CASE"
+    ? testLifecycle === "between-cases" ? "CASE PASSED" : "TESTING CASE"
     : testFailed ? "TEST FAILED"
     : running ? "SIMULATING" : editingEnabled ? "BUILD MODE" : "RESET TO EDIT";
   stepButton.disabled = running || testingPuzzleSolution;
@@ -242,13 +195,13 @@ function markSimulationStarted(): boolean {
 }
 
 function commitTileSelection(): void {
-  const result = tileSelection.commit(
-    world,
+  const result = surface.selection.commit(
+    surface.world,
     (x, y) =>
       x >= 0 &&
-      x < world.width &&
+      x < surface.world.width &&
       y >= 0 &&
-      y < world.height &&
+      y < surface.world.height &&
       canEditCell(x, y),
     componentIsAvailable,
   );
@@ -262,7 +215,7 @@ function setRunning(nextRunning: boolean): void {
   if (nextRunning) {
     finalizeActivePointerGesture();
   }
-  if (nextRunning && tileSelection.active) {
+  if (nextRunning && surface.selection.active) {
     commitTileSelection();
   }
   const editingChanged = nextRunning && markSimulationStarted();
@@ -273,122 +226,20 @@ function setRunning(nextRunning: boolean): void {
     refreshPointerHover();
   }
 }
-function loadActiveWorkshopSession(): void {
-  if (activePointerId !== null || activePointerWorldChanged) {
-    throw new Error("Active pointer gesture must finish before mounting a workshop session");
-  }
-  activeSession = sessions.active;
-  world = activeSession.world;
-  simulation = activeSession.simulation;
-  previousWorld = activeSession.previousWorld;
-  tileSelection = new TileSelectionState(world.width, world.height);
-  renderer = new CanvasRenderer(canvas, world, activeSession.editableRegion);
+
+surface.setMountListener(() => {
   syncTileSelectionOverlay();
   syncEditableRegionAuthoringOverlay();
-  tileInspector = new TileInspector(inspectorPanel, world);
-  hoveredCell = null;
-  hoveredEdge = null;
-  lastEditedCell = null;
-  hoveredPaletteButton = null;
-  lastPointerGridPoint = null;
   renderedTick = -1;
   animationDuration = 0;
-}
-
-function setTestCaseOptionsOpen(open: boolean): void {
-  testCaseOptions.hidden = !open;
-  testCaseButton.setAttribute("aria-expanded", String(open));
-}
-
-function hideTestStatus(): void {
-  testStatusToast.hidden = true;
-  testStatusToast.textContent = "";
-}
-
-function syncViewedTestCaseControl(): void {
-  const screen = navigation.screen;
-  if (screen.kind !== "puzzle") {
-    testCaseDropup.hidden = true;
-    setTestCaseOptionsOpen(false);
-    return;
-  }
-  const puzzle = puzzleById(screen.puzzleId);
-  const testCase = expectDefined(
-    puzzle.testCases.find((candidate) => candidate.id === viewedPuzzleTestCaseId),
-    `Viewed test case "${viewedPuzzleTestCaseId ?? ""}"`,
-  );
-  testCaseDropup.hidden = false;
-  testCaseButton.textContent = `CASE: ${testCase.name}`;
-  for (const option of testCaseOptions.querySelectorAll<HTMLButtonElement>("button")) {
-    option.setAttribute("aria-pressed", String(option.dataset.testCaseId === testCase.id));
-  }
-}
-
-function configureTestCaseControls(): void {
-  const screen = navigation.screen;
-  testCaseOptions.replaceChildren();
-  setTestCaseOptionsOpen(false);
-  if (screen.kind !== "puzzle") {
-    viewedPuzzleTestCaseId = null;
-    syncViewedTestCaseControl();
-    return;
-  }
-
-  const puzzle = puzzleById(screen.puzzleId);
-  viewedPuzzleTestCaseId = expectDefined(
-    puzzle.testCases[0],
-    `Puzzle "${puzzle.id}" first test case`,
-  ).id;
-  for (const testCase of puzzle.testCases) {
-    const option = document.createElement("button");
-    option.type = "button";
-    option.textContent = testCase.name;
-    option.dataset.testCaseId = testCase.id;
-    option.setAttribute("aria-pressed", "false");
-    option.addEventListener("click", () => {
-      setTestCaseOptionsOpen(false);
-      showPuzzleTestCase(testCase.id);
-    });
-    testCaseOptions.append(option);
-  }
-  syncViewedTestCaseControl();
-}
-
-function showPuzzleTestCase(testCaseId: string): void {
-  finalizeActivePointerGesture();
-  const screen = navigation.screen;
-  if (screen.kind !== "puzzle" || testingPuzzleSolution) {
-    return;
-  }
-  if (tileSelection.active) {
-    commitTileSelection();
-  }
-  const puzzle = puzzleById(screen.puzzleId);
-  const testCase = expectDefined(
-    puzzle.testCases.find((candidate) => candidate.id === testCaseId),
-    `Puzzle "${puzzle.id}" test case "${testCaseId}"`,
-  );
-  sessions.resetSimulation();
-  const testWorld = createPuzzleTestCaseWorld(
-    testCase,
-    puzzle.editableRegion,
-    activeSession.baseline,
-  );
-  sessions.showActiveRuntime(testWorld);
-  activePuzzleTestRun = null;
-  viewedPuzzleTestCaseId = testCase.id;
-  hideTestStatus();
-  testReportView.close();
-  loadActiveWorkshopSession();
-  renderer.fitBoardToViewport();
-  syncViewedTestCaseControl();
   updateTransportState();
   refreshPointerHover();
-}
+});
+
 
 
 function finishAnimation(): void {
-  previousWorld.copyFrom(world);
+  surface.previousWorld.copyFrom(surface.world);
   animationDuration = 0;
 }
 function animationsEnabled(ticksPerSecond = Number(speedSelect.value)): boolean {
@@ -404,15 +255,15 @@ function finishAnimationIfDisabled(): void {
 
 function advanceSimulation(duration: number, startedAt = performance.now()): void {
   finalizeActivePointerGesture();
-  if (tileSelection.active) {
+  if (surface.selection.active) {
     commitTileSelection();
   }
   if (markSimulationStarted()) {
     updateTransportState();
     refreshPointerHover();
   }
-  previousWorld.copyFrom(world);
-  simulation.step();
+  surface.previousWorld.copyFrom(surface.world);
+  surface.simulation.step();
 
   animationStartedAt = startedAt;
   animationDuration = duration;
@@ -450,7 +301,7 @@ function inspectorReferenceFromButton(
 function showInspectorReference(button: HTMLButtonElement): void {
   const kind = Number(button.dataset.tile);
   if (isTileKind(kind) && TILE_DEFINITIONS[kind].palette !== null) {
-    tileInspector.showPalette(kind, inspectorReferenceFromButton(button));
+    surface.inspector.showPalette(kind, inspectorReferenceFromButton(button));
     return;
   }
 
@@ -459,49 +310,49 @@ function showInspectorReference(button: HTMLButtonElement): void {
     throw new Error("Hovered palette item has invalid inspector metadata");
   }
   const details = TOOL_INSPECTOR_DETAILS[tool];
-  tileInspector.showTool(details.name, details.description, details.controls);
+  surface.inspector.showTool(details.name, details.description, details.controls);
 }
 
 function refreshTileInspector(): void {
-  if (hoveredPaletteButton !== null) {
-    showInspectorReference(hoveredPaletteButton);
+  if (surface.hoveredPaletteButton !== null) {
+    showInspectorReference(surface.hoveredPaletteButton);
     return;
   }
-  if (hoveredCell !== null) {
-    const kind = world.kindAt(hoveredCell.x, hoveredCell.y);
-    tileInspector.update(hoveredCell, componentInspectorReferences[kind] ?? null);
+  if (surface.hoveredCell !== null) {
+    const kind = surface.world.kindAt(surface.hoveredCell.x, surface.hoveredCell.y);
+    surface.inspector.update(surface.hoveredCell, componentInspectorReferences[kind] ?? null);
     return;
   }
-  tileInspector.update(null, null);
+  surface.inspector.update(null, null);
 }
 
 function refreshPointerHover(): void {
-  if (!activeSession.editingState.editable) {
-    renderer.setHover(hoveredCell);
+  if (!surface.session.editingState.editable) {
+    surface.renderer.setHover(surface.hoveredCell);
   } else if (selectedTool === "weld") {
-    renderer.setHoverEdge(hoveredEdge);
+    surface.renderer.setHoverEdge(surface.hoveredEdge);
   } else if (selectedTool === "selection") {
-    renderer.setHover(tileSelection.active || tileSelection.drafting ? null : hoveredCell);
+    surface.renderer.setHover(surface.selection.active || surface.selection.drafting ? null : surface.hoveredCell);
   } else if (selectedTool === "editable-region") {
-    renderer.setHover(hoveredCell);
+    surface.renderer.setHover(surface.hoveredCell);
   } else {
-    renderer.setHover(
-      hoveredCell,
+    surface.renderer.setHover(
+      surface.hoveredCell,
       selectedKind,
       orientationForKind(selectedKind, selectedOrientation),
     );
   }
-  coordinates.textContent = hoveredCell === null
+  coordinates.textContent = surface.hoveredCell === null
     ? "X --   Y --"
-    : `X ${hoveredCell.x.toString().padStart(2, "0")}   Y ${hoveredCell.y.toString().padStart(2, "0")}`;
+    : `X ${surface.hoveredCell.x.toString().padStart(2, "0")}   Y ${surface.hoveredCell.y.toString().padStart(2, "0")}`;
   refreshTileInspector();
 }
 
 function syncEditableRegionAuthoringOverlay(): void {
   const authoring = selectedTool === "editable-region"
-    ? activeSession.editableRegionAuthoring
+    ? surface.session.editableRegionAuthoring
     : null;
-  renderer.setEditableRegionAuthoring(
+  surface.renderer.setEditableRegionAuthoring(
     authoring?.region ?? null,
     authoring?.draftRectangle ?? null,
   );
@@ -509,22 +360,22 @@ function syncEditableRegionAuthoringOverlay(): void {
 function syncTileSelectionOverlay(): void {
   const selectionActive = selectedTool === "selection";
   const overlay = selectionActive
-    ? tileSelection.overlay(canEditCell, componentIsAvailable)
+    ? surface.selection.overlay(canEditCell, componentIsAvailable)
     : null;
-  renderer.setTileSelection(
+  surface.renderer.setTileSelection(
     overlay,
-    selectionActive ? tileSelection.draftRegion(activeSession.editableRegion) : null,
+    selectionActive ? surface.selection.draftRegion(surface.session.editableRegion) : null,
   );
   selectionActions.hidden = overlay === null;
-  selectionPasteButton.disabled = !tileSelection.hasClipboard;
+  selectionPasteButton.disabled = !surface.selection.hasClipboard;
 }
 
 function positionSelectionActions(): void {
   if (selectionActions.hidden) {
     return;
   }
-  const overlay = tileSelection.overlay(canEditCell, componentIsAvailable);
-  const bounds = overlay === null ? null : renderer.screenBoundsForGridRegion(overlay.region);
+  const overlay = surface.selection.overlay(canEditCell, componentIsAvailable);
+  const bounds = overlay === null ? null : surface.renderer.screenBoundsForGridRegion(overlay.region);
   if (bounds === null) {
     selectionActions.hidden = true;
     return;
@@ -538,23 +389,14 @@ function positionSelectionActions(): void {
   selectionActions.style.top = `${Math.max(selectionActions.offsetHeight + 6, bounds.top - 6)}px`;
 }
 
-function sandboxEditableRegionAuthoring(): NonNullable<
-  WorkshopSession["editableRegionAuthoring"]
-> {
-  const authoring = activeSession.editableRegionAuthoring;
-  if (authoring === null) {
-    throw new Error("Editable-region authoring is only available in the sandbox");
-  }
-  return authoring;
-}
 
 
 function configureComponentPalette(): void {
-  hoveredPaletteButton = null;
-  if (selectedTool === "editable-region" && activeSession.editableRegionAuthoring === null) {
+  surface.hoveredPaletteButton = null;
+  if (selectedTool === "editable-region" && surface.session.editableRegionAuthoring === null) {
     selectedTool = "tile";
   }
-  const availableComponents = activeSession.availableComponents;
+  const availableComponents = surface.session.availableComponents;
   if (availableComponents !== null && !availableComponents.has(selectedKind)) {
     selectedKind = expectDefined(
       availableComponents.entries[0],
@@ -590,7 +432,7 @@ function configureComponentPalette(): void {
   }
   weldButton.classList.toggle("selected", selectedTool === "weld");
   selectionButton.classList.toggle("selected", selectedTool === "selection");
-  editableRegionButton.hidden = activeSession.editableRegionAuthoring === null;
+  editableRegionButton.hidden = surface.session.editableRegionAuthoring === null;
   editableRegionButton.classList.toggle("selected", selectedTool === "editable-region");
   syncEditableRegionAuthoringOverlay();
   syncTileSelectionOverlay();
@@ -622,7 +464,7 @@ function selectTile(kind: TileKind): void {
 }
 
 function pickTileAt(cell: GridCell): void {
-  const kind = world.kindAt(cell.x, cell.y);
+  const kind = surface.world.kindAt(cell.x, cell.y);
   if (kind === TileKind.Empty) {
     selectTile(previousSelectedKind);
     return;
@@ -636,7 +478,7 @@ function pickTileAt(cell: GridCell): void {
 
   selectTile(pickedKind);
   if (TILE_DEFINITIONS[pickedKind].usesOrientation) {
-    setSelectedOrientation(world.orientationAt(cell.x, cell.y));
+    setSelectedOrientation(surface.world.orientationAt(cell.x, cell.y));
   }
 }
 
@@ -714,7 +556,7 @@ function selectSelectionTool(): void {
 
 
 function selectEditableRegionTool(): void {
-  if (activeSession.editableRegionAuthoring === null) {
+  if (surface.session.editableRegionAuthoring === null) {
     return;
   }
   if (selectedTool === "selection") {
@@ -737,20 +579,20 @@ function commitEditedWorld(): void {
 }
 
 function componentIsAvailable(kind: TileKind): boolean {
-  return activeSession.availableComponents?.has(kind) ?? true;
+  return surface.session.availableComponents?.has(kind) ?? true;
 }
 
 function canEditCell(x: number, y: number): boolean {
-  return activeSession.editableRegion?.contains(x, y) ?? true;
+  return surface.session.editableRegion?.contains(x, y) ?? true;
 }
 
 function canEditEdge(x1: number, y1: number, x2: number, y2: number): boolean {
-  return activeSession.editableRegion?.containsEdge(x1, y1, x2, y2) ?? true;
+  return surface.session.editableRegion?.containsEdge(x1, y1, x2, y2) ?? true;
 }
 
 function weldEligibleEditableNeighbors(x: number, y: number): boolean {
-  if (activeSession.editableRegion === null) {
-    return world.weldEligibleNeighbors(x, y);
+  if (surface.session.editableRegion === null) {
+    return surface.world.weldEligibleNeighbors(x, y);
   }
 
   let changed = false;
@@ -760,12 +602,12 @@ function weldEligibleEditableNeighbors(x: number, y: number): boolean {
     const neighborY = y + directionY(direction);
     if (
       neighborX >= 0 &&
-      neighborX < world.width &&
+      neighborX < surface.world.width &&
       neighborY >= 0 &&
-      neighborY < world.height &&
+      neighborY < surface.world.height &&
       canEditEdge(x, y, neighborX, neighborY)
     ) {
-      changed = world.setWeld(x, y, neighborX, neighborY, true) || changed;
+      changed = surface.world.setWeld(x, y, neighborX, neighborY, true) || changed;
     }
   }
   return changed;
@@ -777,7 +619,7 @@ function editCellLine(
   erase: boolean,
   weldPlacedTiles: boolean,
 ): boolean {
-  if (!activeSession.editingState.editable || (!erase && !componentIsAvailable(selectedKind))) {
+  if (!surface.session.editingState.editable || (!erase && !componentIsAvailable(selectedKind))) {
     return false;
   }
 
@@ -795,13 +637,13 @@ function editCellLine(
   while (true) {
     if (canEditCell(x, y)) {
       if (
-        world.kindAt(x, y) !== kind ||
+        surface.world.kindAt(x, y) !== kind ||
         (
           kind !== TileKind.Empty &&
-          world.orientationAt(x, y) !== orientation
+          surface.world.orientationAt(x, y) !== orientation
         )
       ) {
-        world.place(x, y, kind, orientation);
+        surface.world.place(x, y, kind, orientation);
         changed = true;
       }
       if (weldPlacedTiles && kind !== TileKind.Empty) {
@@ -825,32 +667,32 @@ function editCellLine(
   return changed;
 }
 function openComponentConfiguration(cell: GridCell): void {
-  if (!activeSession.editingState.editable || !canEditCell(cell.x, cell.y)) {
+  if (!surface.session.editingState.editable || !canEditCell(cell.x, cell.y)) {
     return;
   }
-  const kind = world.kindAt(cell.x, cell.y);
+  const kind = surface.world.kindAt(cell.x, cell.y);
   if (componentConfigurationForKind(kind) === null) {
     return;
   }
-  const state = world.componentStateSnapshotAt(cell.x, cell.y);
+  const state = surface.world.componentStateSnapshotAt(cell.x, cell.y);
   if (state === null) {
     throw new Error(`${TILE_DEFINITIONS[kind].name} is missing configuration state`);
   }
-  const tileId = world.idAt(cell.x, cell.y);
+  const tileId = surface.world.idAt(cell.x, cell.y);
   componentConfigurationView.show(
     kind,
     state,
     (submission: ComponentConfigurationSubmission) => {
       if (
-        !activeSession.editingState.editable ||
-        world.idAt(cell.x, cell.y) !== tileId ||
-        world.kindAt(cell.x, cell.y) !== kind
+        !surface.session.editingState.editable ||
+        surface.world.idAt(cell.x, cell.y) !== tileId ||
+        surface.world.kindAt(cell.x, cell.y) !== kind
       ) {
         return;
       }
       const changed = submission.type === "number"
-        ? world.configureNumericComponent(cell.x, cell.y, submission.value)
-        : world.configureRom(
+        ? surface.world.configureNumericComponent(cell.x, cell.y, submission.value)
+        : surface.world.configureRom(
             cell.x,
             cell.y,
             submission.width,
@@ -867,15 +709,15 @@ function openComponentConfiguration(cell: GridCell): void {
 
 function adjustHoveredNumericComponent(delta: number): boolean {
   if (
-    hoveredCell === null ||
-    !activeSession.editingState.editable ||
-    !canEditCell(hoveredCell.x, hoveredCell.y)
+    surface.hoveredCell === null ||
+    !surface.session.editingState.editable ||
+    !canEditCell(surface.hoveredCell.x, surface.hoveredCell.y)
   ) {
     return false;
   }
-  const kind = world.kindAt(hoveredCell.x, hoveredCell.y);
+  const kind = surface.world.kindAt(surface.hoveredCell.x, surface.hoveredCell.y);
   const configuration = componentConfigurationForKind(kind);
-  const state = world.componentStateSnapshotAt(hoveredCell.x, hoveredCell.y);
+  const state = surface.world.componentStateSnapshotAt(surface.hoveredCell.x, surface.hoveredCell.y);
   if (
     configuration === null ||
     configuration.type !== "number" ||
@@ -891,7 +733,7 @@ function adjustHoveredNumericComponent(delta: number): boolean {
   if (nextValue === currentValue) {
     return true;
   }
-  world.configureNumericComponent(hoveredCell.x, hoveredCell.y, nextValue);
+  surface.world.configureNumericComponent(surface.hoveredCell.x, surface.hoveredCell.y, nextValue);
   commitEditedWorld();
   refreshPointerHover();
   return true;
@@ -900,9 +742,9 @@ function adjustHoveredNumericComponent(delta: number): boolean {
 
 function editWeld(edge: GridEdge, erase: boolean): boolean {
   return (
-    activeSession.editingState.editable &&
+    surface.session.editingState.editable &&
     canEditEdge(edge.x1, edge.y1, edge.x2, edge.y2) &&
-    world.setWeld(edge.x1, edge.y1, edge.x2, edge.y2, !erase)
+    surface.world.setWeld(edge.x1, edge.y1, edge.x2, edge.y2, !erase)
   );
 }
 
@@ -912,21 +754,21 @@ function editWeldSegment(
   endpointEdge: GridEdge | null,
   erase: boolean,
 ): boolean {
-  if (!activeSession.editingState.editable) {
+  if (!surface.session.editingState.editable) {
     return false;
   }
 
   let changed = false;
-  visitCrossedGridEdges(from, to, world.width, world.height, (x1, y1, x2, y2) => {
+  visitCrossedGridEdges(from, to, surface.world.width, surface.world.height, (x1, y1, x2, y2) => {
     if (canEditEdge(x1, y1, x2, y2)) {
-      changed = world.setWeld(x1, y1, x2, y2, !erase) || changed;
+      changed = surface.world.setWeld(x1, y1, x2, y2, !erase) || changed;
     }
   });
   if (
     endpointEdge !== null &&
     canEditEdge(endpointEdge.x1, endpointEdge.y1, endpointEdge.x2, endpointEdge.y2)
   ) {
-    changed = world.setWeld(
+    changed = surface.world.setWeld(
       endpointEdge.x1,
       endpointEdge.y1,
       endpointEdge.x2,
@@ -939,22 +781,75 @@ function editWeldSegment(
 const componentConfigurationView = new ComponentConfigurationDialog(
   componentConfigurationDialogElement,
 );
-const testReportView = new PuzzleTestReportView(testReportDialog, {
-  onContinueEditing: () => resetSimulation(),
-  onBackToPuzzle: () => navigation.leaveWorkshop(),
+const canvasInteraction = new CanvasInteractionController(surface, {
+  getSelectedTool: () => selectedTool,
+  getSelectedKind: () => selectedKind,
+  editCellLine,
+  editWeld,
+  editWeldSegment,
+  commitSelection: commitTileSelection,
+  syncSelectionOverlay: syncTileSelectionOverlay,
+  syncEditableRegionOverlay: syncEditableRegionAuthoringOverlay,
+  refreshHover: refreshPointerHover,
+  pickTile: pickTileAt,
+  openConfiguration: openComponentConfiguration,
+  commitEditTransaction: commitEditedWorld,
 });
-
-function stopWorkshopActivity(): void {
+surface.setInteractionCanceler(() => {
+  canvasInteraction.cancel();
+});
+function prepareForRuntimeChange(): void {
   finalizeActivePointerGesture();
-  if (tileSelection.active) {
+  if (surface.selection.active) {
     commitTileSelection();
   }
-  testingPuzzleSolution = false;
-  activePuzzleTestRun = null;
-  viewedPuzzleTestCaseId = null;
-  hideTestStatus();
-  setTestCaseOptionsOpen(false);
-  testReportView.close();
+}
+
+const puzzleTests = new PuzzleTestController(
+  {
+    caseDropup: testCaseDropup,
+    caseButton: testCaseButton,
+    caseOptions: testCaseOptions,
+    statusToast: testStatusToast,
+    reportDialog: testReportDialog,
+  },
+  {
+    getBaseline: () => surface.session.baseline,
+    prepareForRuntimeChange,
+    resetSession: () => sessions.resetSimulation(),
+    beginSimulation: () => {
+      sessions.beginSimulation();
+    },
+    mountRuntime: (world, simulation) => {
+      surface.mountActiveSession({
+        fitBoard: true,
+        cancelInteraction: true,
+        updateSession: () => {
+          if (simulation === undefined) {
+            sessions.showActiveRuntime(world);
+          } else {
+            sessions.showActiveRuntime(world, simulation);
+          }
+        },
+      });
+    },
+    beforeStep: () => surface.previousWorld.copyFrom(surface.world),
+    setStepAnimation: (startedAt, duration) => {
+      animationStartedAt = startedAt;
+      animationDuration = duration;
+    },
+    finishAnimation,
+    animationsEnabled,
+    recordResult: (scores) => navigation.recordActivePuzzleTestResult(scores),
+    refreshTransport: updateTransportState,
+    refreshHover: refreshPointerHover,
+    leaveWorkshop: () => navigation.leaveWorkshop(),
+  },
+);
+
+function stopWorkshopActivity(): void {
+  prepareForRuntimeChange();
+  puzzleTests.stop();
   componentConfigurationView.close();
   closeExportOptions();
   setRunning(false);
@@ -973,15 +868,16 @@ const navigation = new NavigationController(
   },
   {
     stopSimulation: stopWorkshopActivity,
-    onWorkshopSessionChanged: loadActiveWorkshopSession,
+    onWorkshopSessionChanged: () => {
+      surface.mountActiveSession({ fitBoard: true, cancelInteraction: true });
+    },
     onWorkshopShown: () => {
       configureComponentPalette();
-      configureTestCaseControls();
+      const screen = navigation.screen;
+      puzzleTests.configure(screen.kind === "puzzle" ? puzzleById(screen.puzzleId) : null);
       updateTransportState();
-      importButton.disabled = activeSession.editableRegion !== null;
+      importButton.disabled = surface.session.editableRegion !== null;
       updateExportOptionsForSession();
-      renderer.fitBoardToViewport();
-      refreshPointerHover();
     },
   },
   sessions,
@@ -993,9 +889,9 @@ const navigation = new NavigationController(
 if (import.meta.env.DEV) {
   const getDiagnosticSnapshot = (): DevelopmentDiagnosticSnapshot => {
     const screen = navigation.screen;
-    const puzzleResult = world.puzzleResult === PuzzleResult.InProgress
+    const puzzleResult = surface.world.puzzleResult === PuzzleResult.InProgress
       ? "in-progress"
-      : world.puzzleResult === PuzzleResult.Won ? "won" : "lost";
+      : surface.world.puzzleResult === PuzzleResult.Won ? "won" : "lost";
     return {
       screen: { ...screen },
       activePuzzleId: screen.kind === "puzzle-info" || screen.kind === "puzzle"
@@ -1003,9 +899,9 @@ if (import.meta.env.DEV) {
         : null,
       activeSolutionId: screen.kind === "puzzle" ? screen.solutionId : null,
       simulation: {
-        running: running || testingPuzzleSolution,
-        tick: simulation.tick,
-        editable: activeSession.editingState.editable,
+        running: running || puzzleTests.testing,
+        tick: surface.simulation.tick,
+        editable: surface.session.editingState.editable,
         puzzleResult,
       },
       selectedTool: selectedTool === "weld"
@@ -1019,9 +915,9 @@ if (import.meta.env.DEV) {
           tileKind: TILE_DEFINITIONS[selectedKind].name,
           orientation: DIAGNOSTIC_DIRECTIONS[selectedOrientation],
         },
-      hoveredCell: hoveredCell === null ? null : { ...hoveredCell },
-      worldRevision: world.revision,
-      serializedBoard: serializeBoard(world, simulation.tick),
+      hoveredCell: surface.hoveredCell === null ? null : { ...surface.hoveredCell },
+      worldRevision: surface.world.revision,
+      serializedBoard: serializeBoard(surface.world, surface.simulation.tick),
     };
   };
   void import("./dev/diagnostic-snapshot").then(({ installDevelopmentDiagnostics }) => {
@@ -1052,16 +948,16 @@ sidebarControls.addEventListener("click", (event) => {
   }
 });
 function copyTileSelection(): void {
-  if (tileSelection.copy()) {
+  if (surface.selection.copy()) {
     syncTileSelectionOverlay();
   }
 }
 
 function deleteTileSelection(): void {
-  if (!tileSelection.active) {
+  if (!surface.selection.active) {
     return;
   }
-  const changed = tileSelection.deleteFrom(world);
+  const changed = surface.selection.deleteFrom(surface.world);
   syncTileSelectionOverlay();
   refreshPointerHover();
   if (changed) {
@@ -1070,19 +966,19 @@ function deleteTileSelection(): void {
 }
 
 function pasteTileSelection(): void {
-  if (!tileSelection.hasClipboard) {
+  if (!surface.selection.hasClipboard) {
     return;
   }
-  const currentOverlay = tileSelection.overlay(canEditCell, componentIsAvailable);
+  const currentOverlay = surface.selection.overlay(canEditCell, componentIsAvailable);
   const currentRectangle = currentOverlay?.region.rectangles[0];
-  const anchor = hoveredCell ?? (currentRectangle === undefined
+  const anchor = surface.hoveredCell ?? (currentRectangle === undefined
     ? { x: 0, y: 0 }
     : { x: currentRectangle.x + 1, y: currentRectangle.y + 1 });
-  if (tileSelection.active) {
+  if (surface.selection.active) {
     commitTileSelection();
   }
   selectSelectionTool();
-  tileSelection.paste(anchor.x, anchor.y);
+  surface.selection.paste(anchor.x, anchor.y);
   syncTileSelectionOverlay();
   refreshPointerHover();
 }
@@ -1090,21 +986,21 @@ function pasteTileSelection(): void {
 selectionCopyButton.addEventListener("click", copyTileSelection);
 selectionPasteButton.addEventListener("click", pasteTileSelection);
 selectionHorizontalFlipButton.addEventListener("click", () => {
-  tileSelection.flipHorizontally();
+  surface.selection.flipHorizontally();
   syncTileSelectionOverlay();
 });
 selectionVerticalFlipButton.addEventListener("click", () => {
-  tileSelection.flipVertically();
+  surface.selection.flipVertically();
   syncTileSelectionOverlay();
 });
 selectionRotateButton.addEventListener("click", () => {
-  tileSelection.rotateClockwise();
+  surface.selection.rotateClockwise();
   syncTileSelectionOverlay();
 });
 
 
 sidebarControls.addEventListener("pointerover", (event) => {
-  hoveredPaletteButton = (event.target as HTMLElement).closest<HTMLButtonElement>(".palette-item");
+  surface.hoveredPaletteButton = (event.target as HTMLElement).closest<HTMLButtonElement>(".palette-item");
   refreshTileInspector();
 });
 
@@ -1112,91 +1008,28 @@ sidebarControls.addEventListener("pointerout", (event) => {
   const nextButton = event.relatedTarget instanceof HTMLElement
     ? event.relatedTarget.closest<HTMLButtonElement>(".palette-item")
     : null;
-  if (nextButton === hoveredPaletteButton) {
+  if (nextButton === surface.hoveredPaletteButton) {
     return;
   }
-  hoveredPaletteButton = nextButton;
+  surface.hoveredPaletteButton = nextButton;
   refreshTileInspector();
 });
 
 
 playButton.addEventListener("click", () => {
   if (navigation.screen.kind === "puzzle") {
-    testCurrentPuzzleSolution();
+    puzzleTests.start();
   } else {
     setRunning(!running);
   }
 });
 
-function mountCurrentPuzzleTestCase(run: PuzzleTestRun, startedAt: number): void {
-  sessions.showActiveRuntime(run.world, run.simulation);
-  viewedPuzzleTestCaseId = run.currentCase.id;
-  puzzleTestCaseStartedAt = startedAt;
-  nextPuzzleTestCaseAt = 0;
-  accumulatedTime = 0;
-  loadActiveWorkshopSession();
-  renderer.fitBoardToViewport();
-  syncViewedTestCaseControl();
-}
-
-function testCurrentPuzzleSolution(): void {
-  const screen = navigation.screen;
-  if (screen.kind !== "puzzle" || testingPuzzleSolution) {
-    return;
-  }
-
-  resetSimulation();
-  hideTestStatus();
-  testReportView.close();
-  activePuzzleTestRun = new PuzzleTestRun(
-    puzzleById(screen.puzzleId),
-    activeSession.baseline,
-  );
-  testingPuzzleSolution = true;
-  sessions.beginSimulation();
-  mountCurrentPuzzleTestCase(activePuzzleTestRun, performance.now());
-  updateTransportState();
-  refreshPointerHover();
-}
-
-function finishPuzzleTestRun(report: PuzzleTestReport): void {
-  testingPuzzleSolution = false;
-  finishAnimation();
-  navigation.recordActivePuzzleTestResult(report.scores);
-  if (report.succeeded) {
-    hideTestStatus();
-    testReportView.show(report);
-  } else {
-    const failed = expectDefined(
-      report.results[report.results.length - 1],
-      "Failed puzzle test result",
-    );
-    testStatusToast.textContent = failed.outcome === "cycle-limit"
-      ? `Failed: test case "${failed.name}" reached cycle limit ${failed.cycleLimit}`
-      : `Failed: test case "${failed.name}" cycle ${failed.cycles}`;
-    testStatusToast.hidden = false;
-  }
-  updateTransportState();
-  refreshPointerHover();
-}
-
 fastForwardButton.addEventListener("click", () => {
-  const run = activePuzzleTestRun;
-  if (!testingPuzzleSolution || run === null) {
-    return;
-  }
-  finishAnimation();
-  const report = run.runRemaining();
-  sessions.showActiveRuntime(run.world, run.simulation);
-  viewedPuzzleTestCaseId = run.currentCase.id;
-  loadActiveWorkshopSession();
-  renderer.fitBoardToViewport();
-  syncViewedTestCaseControl();
-  finishPuzzleTestRun(report);
+  puzzleTests.fastForward();
 });
 
 testCaseButton.addEventListener("click", () => {
-  setTestCaseOptionsOpen(testCaseOptions.hidden !== false);
+  puzzleTests.toggleCaseOptions();
 });
 
 stepButton.addEventListener("click", () => {
@@ -1211,33 +1044,13 @@ speedSelect.addEventListener("change", () => {
 
 
 function resetSimulation(): void {
-  finalizeActivePointerGesture();
-  if (tileSelection.active) {
-    commitTileSelection();
-  }
-  testingPuzzleSolution = false;
-  activePuzzleTestRun = null;
-  hideTestStatus();
   setRunning(false);
-  sessions.resetSimulation();
-
-  const screen = navigation.screen;
-  if (screen.kind === "puzzle") {
-    const puzzle = puzzleById(screen.puzzleId);
-    const testCase = expectDefined(
-      puzzle.testCases.find((candidate) => candidate.id === viewedPuzzleTestCaseId),
-      `Viewed test case "${viewedPuzzleTestCaseId ?? ""}"`,
-    );
-    const testWorld = createPuzzleTestCaseWorld(
-      testCase,
-      puzzle.editableRegion,
-      activeSession.baseline,
-    );
-    sessions.showActiveRuntime(testWorld);
-    loadActiveWorkshopSession();
-    renderer.fitBoardToViewport();
-    syncViewedTestCaseControl();
+  if (navigation.screen.kind === "puzzle") {
+    puzzleTests.reset();
+    return;
   }
+  prepareForRuntimeChange();
+  sessions.resetSimulation();
   finishAnimation();
   updateTransportState();
   refreshPointerHover();
@@ -1246,19 +1059,19 @@ function resetSimulation(): void {
 resetButton.addEventListener("click", resetSimulation);
 
 clearButton.addEventListener("click", () => {
-  if (!activeSession.editingState.editable) {
+  if (!surface.session.editingState.editable) {
     return;
   }
-  if (tileSelection.active) {
+  if (surface.selection.active) {
     commitTileSelection();
   }
-  if (activeSession.editableRegion === null) {
-    world.clear();
+  if (surface.session.editableRegion === null) {
+    surface.world.clear();
   } else {
-    for (let y = 0; y < world.height; y += 1) {
-      for (let x = 0; x < world.width; x += 1) {
-        if (canEditCell(x, y) && world.kindAt(x, y) !== TileKind.Empty) {
-          world.place(x, y, TileKind.Empty);
+    for (let y = 0; y < surface.world.height; y += 1) {
+      for (let x = 0; x < surface.world.width; x += 1) {
+        if (canEditCell(x, y) && surface.world.kindAt(x, y) !== TileKind.Empty) {
+          surface.world.place(x, y, TileKind.Empty);
         }
       }
     }
@@ -1287,7 +1100,7 @@ function closeExportOptions(): void {
 }
 
 function updateExportOptionsForSession(): void {
-  const sandboxOnly = activeSession.editableRegion === null;
+  const sandboxOnly = surface.session.editableRegion === null;
   downloadPuzzleButton.hidden = !sandboxOnly;
   sharePuzzleButton.hidden = !sandboxOnly;
   sharePuzzleButton.disabled = true;
@@ -1302,13 +1115,13 @@ exportButton.addEventListener("click", () => {
 
 downloadSceneButton.addEventListener("click", () => {
   closeExportOptions();
-  const source = serializeBoard(world, simulation.tick);
+  const source = serializeBoard(surface.world, surface.simulation.tick);
   downloadBlob(new Blob([source], { type: "application/json" }), "factory2d-scene.json");
 });
 
 copySceneButton.addEventListener("click", () => {
   closeExportOptions();
-  const source = serializeBoard(world, simulation.tick);
+  const source = serializeBoard(surface.world, surface.simulation.tick);
   if (source.length > MAX_CLIPBOARD_EXPORT_CHARACTERS) {
     window.alert(
       "This scene is too large to copy to the clipboard. Download the scene file instead.",
@@ -1331,15 +1144,15 @@ downloadImageButton.addEventListener("click", () => {
 });
 
 downloadPuzzleButton.addEventListener("click", () => {
-  if (activeSession.editableRegion !== null) {
+  if (surface.session.editableRegion !== null) {
     throw new Error("Puzzle files can only be exported from the sandbox");
   }
   closeExportOptions();
-  const authoring = activeSession.editableRegionAuthoring;
+  const authoring = surface.session.editableRegionAuthoring;
   if (authoring === null) {
     throw new Error("Sandbox editable-region authoring state is missing");
   }
-  const source = serializePuzzleTemplate(world, authoring.region);
+  const source = serializePuzzleTemplate(surface.world, authoring.region);
   downloadBlob(new Blob([source], { type: "application/json" }), "factory2d-puzzle.json");
 });
 
@@ -1348,12 +1161,12 @@ document.addEventListener("click", (event) => {
     closeExportOptions();
   }
   if (event.target instanceof Node && !testCaseDropup.contains(event.target)) {
-    setTestCaseOptionsOpen(false);
+    puzzleTests.closeCaseOptions();
   }
 });
 
 importButton.addEventListener("click", () => {
-  if (activeSession.editableRegion === null) {
+  if (surface.session.editableRegion === null) {
     importFile.click();
   }
 });
@@ -1364,7 +1177,7 @@ importFile.addEventListener("change", async () => {
   if (file === undefined) {
     return;
   }
-  if (activeSession.editableRegion !== null) {
+  if (surface.session.editableRegion !== null) {
     return;
   }
 
@@ -1373,270 +1186,28 @@ importFile.addEventListener("change", async () => {
   try {
     finalizeActivePointerGesture();
     const imported = deserializeBoard(await file.text());
-    sessions.replaceActiveWorld(imported.world, imported.tick);
-    loadActiveWorkshopSession();
-    renderer.fitBoardToViewport();
-    refreshPointerHover();
+    surface.mountActiveSession({
+      fitBoard: true,
+      cancelInteraction: true,
+      updateSession: () => sessions.replaceActiveWorld(imported.world, imported.tick),
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     window.alert(`Could not import board: ${message}`);
   } finally {
-    importButton.disabled = activeSession.editableRegion !== null;
+    importButton.disabled = surface.session.editableRegion !== null;
   }
 });
-
-function resetActivePointerState(): void {
-  const pointerId = activePointerId;
-  activePointerId = null;
-  activePointerMode = null;
-  activeEditTool = null;
-  activeErase = false;
-  activeWeldPlacement = false;
-  activePointerWorldChanged = false;
-  pendingPickCell = null;
-  pendingConfigurationCell = null;
-  lastEditedCell = null;
-  lastPointerGridPoint = null;
-  canvas.classList.remove("panning");
-  if (pointerId !== null && canvas.hasPointerCapture(pointerId)) {
-    canvas.releasePointerCapture(pointerId);
-  }
-}
 
 function finalizeActivePointerGesture(): boolean {
-  if (activePointerId === null) {
-    return false;
-  }
-  if (activeEditTool === "editable-region") {
-    sandboxEditableRegionAuthoring().cancelRectangle();
-    syncEditableRegionAuthoringOverlay();
-  } else if (activeEditTool === "selection") {
-    tileSelection.cancelDraft();
-    tileSelection.finishMove();
-    syncTileSelectionOverlay();
-  }
-  const changed = activePointerWorldChanged;
-  resetActivePointerState();
-  if (changed) {
-    commitEditedWorld();
-  }
-  return changed;
+  return canvasInteraction.cancel();
 }
-
-canvas.addEventListener("pointerdown", (event) => {
-  const point = renderer.gridPointFromClientPoint(event.clientX, event.clientY);
-  const cell = renderer.cellFromGridPoint(point);
-  const gesture = pointerGesture(event.button, event.altKey);
-
-  if (gesture === null || (!activeSession.editingState.editable && gesture === "edit")) {
-    return;
-  }
-
-  event.preventDefault();
-  activePointerId = event.pointerId;
-  activePointerMode = gesture;
-  activeEditTool = gesture === "edit" ? selectedTool : null;
-  lastPanClientX = event.clientX;
-  lastPanClientY = event.clientY;
-  pendingPickCell = gesture === "pick-or-pan" ? cell : null;
-  pendingConfigurationCell = null;
-  activePointerWorldChanged = false;
-  canvas.setPointerCapture(event.pointerId);
-
-  if (gesture === "pick-or-pan") {
-    return;
-  }
-
-  if (gesture === "pan") {
-    canvas.classList.add("panning");
-    hoveredCell = null;
-    hoveredEdge = null;
-    refreshPointerHover();
-    return;
-  }
-
-  activeErase = event.button === 2;
-  activeWeldPlacement = shouldWeldPlacedTile(event.button, event.shiftKey);
-  lastPointerGridPoint = point;
-  const shouldConfigurePlacement =
-    !activeErase &&
-    cell !== null &&
-    world.kindAt(cell.x, cell.y) !== selectedKind &&
-    componentConfigurationForKind(selectedKind)?.configureOnPlacement === true;
-  if (activeEditTool === "tile") {
-    if (cell !== null) {
-      activePointerWorldChanged = editCellLine(
-        cell,
-        cell,
-        activeErase,
-        activeWeldPlacement,
-      );
-      lastEditedCell = cell;
-      if (shouldConfigurePlacement && world.kindAt(cell.x, cell.y) === selectedKind) {
-        pendingConfigurationCell = cell;
-      }
-    }
-  } else if (activeEditTool === "weld") {
-    const edge = renderer.edgeFromGridPoint(point);
-    if (edge !== null) {
-      activePointerWorldChanged = editWeld(edge, activeErase);
-    }
-  } else if (activeEditTool === "selection" && !activeErase) {
-    if (cell === null) {
-      if (tileSelection.active) {
-        commitTileSelection();
-      }
-    } else if (tileSelection.active) {
-      if (!tileSelection.beginMove(cell.x, cell.y)) {
-        commitTileSelection();
-      }
-    } else {
-      tileSelection.beginSelection(cell.x, cell.y);
-    }
-    syncTileSelectionOverlay();
-    refreshPointerHover();
-  } else if (activeEditTool === "editable-region" && cell !== null) {
-    const authoring = sandboxEditableRegionAuthoring();
-    if (activeErase) {
-      authoring.removeRectanglesAt(cell.x, cell.y);
-    } else {
-      authoring.beginRectangle(cell.x, cell.y);
-    }
-    syncEditableRegionAuthoringOverlay();
-  }
-});
-
-canvas.addEventListener("pointermove", (event) => {
-  const point = renderer.gridPointFromClientPoint(event.clientX, event.clientY);
-  hoveredCell = renderer.cellFromGridPoint(point);
-  hoveredEdge = renderer.edgeFromGridPoint(point);
-  refreshPointerHover();
-
-  if (event.pointerId !== activePointerId) {
-    return;
-  }
-  if (activePointerMode === "pick-or-pan") {
-    const deltaX = event.clientX - lastPanClientX;
-    const deltaY = event.clientY - lastPanClientY;
-    if (!exceedsPanDragThreshold(deltaX, deltaY)) {
-      return;
-    }
-    activePointerMode = "pan";
-    canvas.classList.add("panning");
-  }
-  if (activePointerMode === "pan") {
-    renderer.panByPixels(event.clientX - lastPanClientX, event.clientY - lastPanClientY);
-    lastPanClientX = event.clientX;
-    lastPanClientY = event.clientY;
-    hoveredCell = null;
-    hoveredEdge = null;
-    refreshPointerHover();
-    return;
-  }
-  if (activePointerMode !== "edit" || lastPointerGridPoint === null) {
-    throw new Error("Active edit pointer is missing its edit state");
-  }
-
-  if (activeEditTool === "tile") {
-    const segment = cellsOnGridSegment(
-      lastPointerGridPoint,
-      point,
-      world.width,
-      world.height,
-    );
-    if (segment !== null) {
-      activePointerWorldChanged = editCellLine(
-        lastEditedCell ?? segment.from,
-        segment.to,
-        activeErase,
-        activeWeldPlacement,
-      ) || activePointerWorldChanged;
-      lastEditedCell = segment.to;
-    }
-  } else if (activeEditTool === "weld") {
-    activePointerWorldChanged = editWeldSegment(
-      lastPointerGridPoint,
-      point,
-      hoveredEdge,
-      activeErase,
-    ) || activePointerWorldChanged;
-  } else if (activeEditTool === "selection" && !activeErase) {
-    if (tileSelection.drafting) {
-      const cell = clampedCellFromGridPoint(point, world.width, world.height);
-      tileSelection.updateSelection(cell.x, cell.y);
-    } else {
-      tileSelection.updateMove(Math.floor(point.x), Math.floor(point.y));
-    }
-    syncTileSelectionOverlay();
-  } else if (activeEditTool === "editable-region" && !activeErase) {
-    const cell = clampedCellFromGridPoint(point, world.width, world.height);
-    sandboxEditableRegionAuthoring().updateRectangle(cell.x, cell.y);
-    syncEditableRegionAuthoringOverlay();
-  }
-  lastPointerGridPoint = point;
-});
-
-function finishPointerGesture(event: PointerEvent): void {
-  if (event.pointerId !== activePointerId) {
-    return;
-  }
-  if (
-    event.type === "pointerup" &&
-    activePointerMode === "pick-or-pan" &&
-    pendingPickCell !== null
-  ) {
-    pickTileAt(pendingPickCell);
-  }
-  if (activeEditTool === "editable-region") {
-    const authoring = sandboxEditableRegionAuthoring();
-    if (event.type === "pointerup" && !activeErase) {
-      authoring.commitRectangle();
-    } else {
-      authoring.cancelRectangle();
-    }
-    syncEditableRegionAuthoringOverlay();
-  }
-  if (activeEditTool === "selection") {
-    if (event.type === "pointerup" && tileSelection.drafting) {
-      tileSelection.finishSelection(world, activeSession.editableRegion);
-    } else if (event.type !== "pointerup") {
-      tileSelection.cancelDraft();
-    }
-    tileSelection.finishMove();
-    syncTileSelectionOverlay();
-    refreshPointerHover();
-  }
-  const configurationCell = event.type === "pointerup"
-    ? pendingConfigurationCell
-    : null;
-  const changed = activePointerWorldChanged;
-  resetActivePointerState();
-  if (changed) {
-    commitEditedWorld();
-  }
-  if (configurationCell !== null) {
-    openComponentConfiguration(configurationCell);
-  }
-}
-
-canvas.addEventListener("pointerup", finishPointerGesture);
-canvas.addEventListener("pointercancel", finishPointerGesture);
-
-canvas.addEventListener("pointerleave", () => {
-  hoveredCell = null;
-  hoveredEdge = null;
-  refreshPointerHover();
-});
-
-canvas.addEventListener("contextmenu", (event) => {
-  event.preventDefault();
-});
 
 canvas.addEventListener("wheel", (event) => {
   event.preventDefault();
-  const point = renderer.gridPointFromClientPoint(event.clientX, event.clientY);
-  hoveredCell = renderer.cellFromGridPoint(point);
-  hoveredEdge = renderer.edgeFromGridPoint(point);
+  const point = surface.renderer.gridPointFromClientPoint(event.clientX, event.clientY);
+  surface.hoveredCell = surface.renderer.cellFromGridPoint(point);
+  surface.hoveredEdge = surface.renderer.edgeFromGridPoint(point);
   if (
     event.shiftKey &&
     event.deltaY !== 0 &&
@@ -1644,7 +1215,7 @@ canvas.addEventListener("wheel", (event) => {
   ) {
     return;
   }
-  renderer.zoomAtClientPoint(event.clientX, event.clientY, event.deltaY);
+  surface.renderer.zoomAtClientPoint(event.clientX, event.clientY, event.deltaY);
   refreshPointerHover();
 }, { passive: false });
 
@@ -1683,31 +1254,31 @@ document.addEventListener("keydown", (event) => {
     (event.ctrlKey || event.metaKey) &&
     !event.altKey &&
     !textEntryTarget &&
-    activeSession.editingState.editable
+    surface.session.editingState.editable
   ) {
     if (event.code === "KeyA") {
       event.preventDefault();
-      if (tileSelection.active) {
+      if (surface.selection.active) {
         commitTileSelection();
       }
       selectSelectionTool();
-      tileSelection.selectOccupiedBounds(world, activeSession.editableRegion);
+      surface.selection.selectOccupiedBounds(surface.world, surface.session.editableRegion);
       syncTileSelectionOverlay();
       refreshPointerHover();
       return;
     }
-    if (event.code === "KeyC" && tileSelection.active) {
+    if (event.code === "KeyC" && surface.selection.active) {
       event.preventDefault();
       copyTileSelection();
       return;
     }
-    if (event.code === "KeyX" && tileSelection.active) {
+    if (event.code === "KeyX" && surface.selection.active) {
       event.preventDefault();
       copyTileSelection();
       deleteTileSelection();
       return;
     }
-    if (event.code === "KeyV" && tileSelection.hasClipboard) {
+    if (event.code === "KeyV" && surface.selection.hasClipboard) {
       event.preventDefault();
       pasteTileSelection();
       return;
@@ -1723,42 +1294,42 @@ document.addEventListener("keydown", (event) => {
   }
   if (event.code === "ArrowLeft") {
     event.preventDefault();
-    renderer.panByPixels(KEYBOARD_PAN_PIXELS, 0);
+    surface.renderer.panByPixels(KEYBOARD_PAN_PIXELS, 0);
   } else if (event.code === "ArrowRight") {
     event.preventDefault();
-    renderer.panByPixels(-KEYBOARD_PAN_PIXELS, 0);
+    surface.renderer.panByPixels(-KEYBOARD_PAN_PIXELS, 0);
   } else if (event.code === "ArrowUp") {
     event.preventDefault();
-    renderer.panByPixels(0, KEYBOARD_PAN_PIXELS);
+    surface.renderer.panByPixels(0, KEYBOARD_PAN_PIXELS);
   } else if (event.code === "ArrowDown") {
     event.preventDefault();
-    renderer.panByPixels(0, -KEYBOARD_PAN_PIXELS);
+    surface.renderer.panByPixels(0, -KEYBOARD_PAN_PIXELS);
   }
   if (event.code.startsWith("Arrow")) {
-    hoveredCell = null;
-    hoveredEdge = null;
+    surface.hoveredCell = null;
+    surface.hoveredEdge = null;
     refreshPointerHover();
     return;
   }
   if (event.code === "KeyQ") {
     event.preventDefault();
-    if (hoveredCell !== null) {
-      pickTileAt(hoveredCell);
+    if (surface.hoveredCell !== null) {
+      pickTileAt(surface.hoveredCell);
     }
     return;
   }
   if (
     event.code === "KeyE" &&
-    hoveredCell !== null &&
-    activeSession.editingState.editable &&
-    componentConfigurationForKind(world.kindAt(hoveredCell.x, hoveredCell.y)) !== null
+    surface.hoveredCell !== null &&
+    surface.session.editingState.editable &&
+    componentConfigurationForKind(surface.world.kindAt(surface.hoveredCell.x, surface.hoveredCell.y)) !== null
   ) {
     event.preventDefault();
-    openComponentConfiguration(hoveredCell);
+    openComponentConfiguration(surface.hoveredCell);
     return;
   }
 
-  if (selectedTool === "selection" && tileSelection.active) {
+  if (selectedTool === "selection" && surface.selection.active) {
     if (event.code === "Delete" || event.code === "Backspace") {
       event.preventDefault();
       deleteTileSelection();
@@ -1776,7 +1347,7 @@ document.addEventListener("keydown", (event) => {
     }
     if (orientation !== null) {
       event.preventDefault();
-      tileSelection.rotateTo(orientation);
+      surface.selection.rotateTo(orientation);
       syncTileSelectionOverlay();
       return;
     }
@@ -1785,7 +1356,7 @@ document.addEventListener("keydown", (event) => {
   if (
     selectedTool === "tile" &&
     TILE_DEFINITIONS[selectedKind].usesOrientation &&
-    activeSession.editingState.editable
+    surface.session.editingState.editable
   ) {
     let orientation: Direction | null = null;
     if (event.code === "KeyW") {
@@ -1808,11 +1379,11 @@ document.addEventListener("keydown", (event) => {
   if (event.code === "Space") {
     event.preventDefault();
     if (navigation.screen.kind === "puzzle") {
-      void testCurrentPuzzleSolution();
+      puzzleTests.start();
     } else {
       setRunning(!running);
     }
-  } else if (event.code === "KeyN" && !running && !testingPuzzleSolution) {
+  } else if (event.code === "KeyN" && !running && !puzzleTests.testing) {
     advanceSimulation(animationsEnabled() ? MANUAL_STEP_ANIMATION_MS : 0);
   } else if (event.code === "KeyR") {
     resetSimulation();
@@ -1851,52 +1422,6 @@ window.addEventListener("pagehide", () => {
 });
 window.addEventListener("resize", renderPalettePreviews);
 
-function testTicksPerSecond(currentTime: number): number {
-  const elapsed = Math.max(0, currentTime - puzzleTestCaseStartedAt);
-  return Math.min(
-    MAX_TEST_TICKS_PER_SECOND,
-    INITIAL_TEST_TICKS_PER_SECOND * 2 ** (elapsed / TEST_SPEED_DOUBLING_MS),
-  );
-}
-
-function advanceVisiblePuzzleTests(currentTime: number, elapsed: number): void {
-  const run = activePuzzleTestRun;
-  if (!testingPuzzleSolution || run === null) {
-    return;
-  }
-  if (run.status === "between-cases") {
-    if (nextPuzzleTestCaseAt === 0) {
-      nextPuzzleTestCaseAt = currentTime + TEST_CASE_TRANSITION_MS;
-      updateTransportState();
-    }
-    if (currentTime >= nextPuzzleTestCaseAt) {
-      run.continueToNextCase();
-      mountCurrentPuzzleTestCase(run, currentTime);
-      updateTransportState();
-      refreshPointerHover();
-    }
-    return;
-  }
-
-  accumulatedTime += elapsed;
-  const ticksPerSecond = testTicksPerSecond(currentTime);
-  const tickDuration = 1000 / ticksPerSecond;
-  while (accumulatedTime >= tickDuration && run.status === "running") {
-    accumulatedTime -= tickDuration;
-    previousWorld.copyFrom(world);
-    const status = run.step();
-    animationStartedAt = currentTime - accumulatedTime;
-    animationDuration = animationsEnabled(ticksPerSecond)
-      ? Math.min(tickDuration, MAX_AUTOMATIC_ANIMATION_MS)
-      : 0;
-    if (status === "between-cases") {
-      nextPuzzleTestCaseAt = currentTime + TEST_CASE_TRANSITION_MS;
-      updateTransportState();
-    } else if (status === "failed" || status === "succeeded") {
-      finishPuzzleTestRun(expectDefined(run.report ?? undefined, "Completed puzzle test report"));
-    }
-  }
-}
 
 function frame(currentTime: number): void {
   const elapsed = Math.min(currentTime - previousFrameTime, 250);
@@ -1905,7 +1430,7 @@ function frame(currentTime: number): void {
     requestAnimationFrame(frame);
     return;
   }
-  advanceVisiblePuzzleTests(currentTime, elapsed);
+  puzzleTests.advanceFrame(currentTime, elapsed);
 
 
   if (running) {
@@ -1925,14 +1450,14 @@ function frame(currentTime: number): void {
     renderPalettePreviews();
   }
 
-  if (renderedTick !== simulation.tick) {
-    tickCounter.textContent = `TICK ${simulation.tick.toString().padStart(4, "0")}`;
-    renderedTick = simulation.tick;
+  if (renderedTick !== surface.simulation.tick) {
+    tickCounter.textContent = `TICK ${surface.simulation.tick.toString().padStart(4, "0")}`;
+    renderedTick = surface.simulation.tick;
   }
   refreshTileInspector();
   const animationProgress = easedAnimationProgress(currentTime);
-  renderer.render(
-    animationDuration === 0 ? null : previousWorld,
+  surface.renderer.render(
+    animationDuration === 0 ? null : surface.previousWorld,
     animationProgress,
     currentTime,
   );

@@ -14,104 +14,42 @@ pointer-up and pointer-cancel persistence happen exactly once per changed gestur
 
 ---
 
-### 2. Centralize active-workshop mounting
+### 2. Centralize active-workshop mounting — Completed
 
-**TODO:** Add a focused workshop-surface controller that atomically binds the active session’s world, simulation, previous world, renderer, selection state, inspector, and hover state.
+`WorkshopSurfaceController` now owns the active session, world, simulation, previous world,
+renderer, selection, inspector, and hover bindings. `mountActiveSession()` cancels interaction
+before an optional session mutation, rebuilds every bound view together, optionally fits the
+board, and invokes one post-mount synchronization path.
 
-**Current risk:**
-
-`activeSession`, `world`, `simulation`, and `previousWorld` are parallel mutable aliases (`src/main.ts:84-90`). `loadActiveWorkshopSession()` manually refreshes those aliases and reconstructs several dependent objects (`src/main.ts:273-290`).
-
-Every runtime replacement must then remember a repeated protocol:
-
-1. Change the session/runtime.
-2. Call `loadActiveWorkshopSession()`.
-3. Fit the renderer.
-4. Synchronize test-case controls or overlays.
-5. Refresh hover and transport state.
-
-That sequence is repeated for viewing a case, starting a test, fast-forwarding, resetting, importing, and navigation (`src/main.ts:364-379`, `1130-1139`, `1188-1194`, `1220-1241`, `1373-1377`). Missing one step can leave the renderer, inspector, selection, or simulation pointing at different worlds.
-
-**Suggested shape:**
-
-- A concrete `WorkshopSurfaceController`, not a generic application framework.
-- One `mountActiveSession({ fitBoard, cancelInteraction })` operation.
-- It owns the session-bound renderer, selection, inspector, and cached world references.
-- Session/runtime replacement callsites cannot access stale bindings.
-- Mounting also cancels an active pointer gesture before changing worlds.
-
-**Check:** Importing, selecting a test case, beginning the next test case, resetting, and returning to an existing workshop should all use the same mounting path.
+**Check:** Navigation, imports, test-case selection and transitions, fast-forwarding, and reset
+all mount through the controller. `tests/workshop-surface-controller.test.ts` verifies cancellation
+ordering, atomic rebinding, fit behavior, and mount notifications.
 
 ---
 
-### 3. Extract puzzle-test presentation and lifecycle control
+### 3. Extract puzzle-test presentation and lifecycle control — Completed
 
-**TODO:** Move puzzle test-case selection, visible execution, transitions, fast-forwarding, failure presentation, and report presentation into a `PuzzleTestController`.
+`PuzzleTestController` now owns case selection, visible timing and transitions, fast-forwarding,
+failure status, success reports, and case-runtime mounting around the existing `PuzzleTestRun`
+domain object. One tagged lifecycle represents idle, viewing, running, between-case, failed, and
+succeeded states; `main.ts` delegates controls and animation frames.
 
-**Why:**
-
-Puzzle-test orchestration is currently spread across several distant sections:
-
-- Mutable state at `src/main.ts:176-180`.
-- Case selector management at `292-380`.
-- Test start/mount/finish and fast-forward at `1130-1195`.
-- Reset interaction at `1212-1242`.
-- Timed visible execution at `1804-1849`.
-
-The lifecycle is represented by overlapping values:
-
-- `testingPuzzleSolution`
-- `activePuzzleTestRun`
-- `activePuzzleTestRun.status`
-- `viewedPuzzleTestCaseId`
-- `nextPuzzleTestCaseAt`
-
-Those values admit invalid combinations even though existing callsites try to maintain them correctly.
-
-**Suggested shape:**
-
-- Retain `PuzzleTestRun` as the simulation/domain object.
-- Add a UI/application controller around it with an explicit tagged lifecycle, such as:
-  - `idle`
-  - `viewing-case`
-  - `running`
-  - `between-cases`
-  - `failed`
-  - `succeeded`
-- Public operations should be narrow: `showCase`, `start`, `advanceFrame`, `fastForward`, `reset`, and `stop`.
-- The controller should own the case dropup, status toast, report dialog, timing fields, and mounting of case runtimes.
-- `main.ts` should only delegate button events and animation-frame time.
-
-**Check:** Cover visible case transitions, fast-forward success, cycle-limit failure, simulation failure, reset, and stopping due to navigation with controller-level tests.
+**Check:** `tests/puzzle-test-controller.test.ts` covers visible multi-case transitions,
+fast-forward success, cycle-limit and simulation failures, reset, case selection, and navigation
+stop.
 
 ---
 
-### 4. Encapsulate the canvas pointer state machine
+### 4. Encapsulate the canvas pointer state machine — Completed
 
-**TODO:** Extract canvas pointer handling into a `CanvasInteractionController` that owns pointer capture and all active-gesture state.
+`CanvasInteractionController` now owns pointer capture and a discriminated active gesture that
+captures its tool and workshop session at pointer-down. It handles edit, selection, authoring,
+pick-versus-pan, finish, and cancellation paths through focused callbacks. Surface mounting,
+simulation starts, navigation, imports, and page hide all cancel through the same operation.
 
-**Why:**
-
-The pointer lifecycle currently depends on a large tuple of module-level mutable fields (`src/main.ts:187-200`), while the handlers span `src/main.ts:1386-1603`. Examples include:
-
-- Pointer ID and gesture mode
-- Tool captured at pointer-down
-- Erase and weld-placement flags
-- Pending pick and configuration cells
-- Last grid point and edited cell
-- Pan coordinates
-
-The invariant tying these together is enforced only by runtime checks such as the one at `src/main.ts:1490-1492`. `stopWorkshopActivity()` does not explicitly clear or cancel this pointer state, making navigation or runtime replacement during a captured gesture particularly fragile.
-
-**Suggested shape:**
-
-- Own pointer-down/move/up/cancel state privately.
-- Capture the active tool and session binding at gesture start.
-- Emit concrete operations through a small callback interface: edit cells, edit welds, update selection, update authoring rectangle, pan, pick, open configuration, and commit edit transaction.
-- Provide an explicit `cancel()` called before session/runtime switches.
-- Keep keyboard shortcuts separate; avoid creating a catch-all input manager.
-
-**Check:** Test pointer cancellation, leaving and re-entering the grid, pick-versus-pan threshold behavior, tool changes during a gesture, session changes during capture, and one-time edit commits.
+**Check:** `tests/canvas-interaction-controller.test.ts` covers pointer cancellation, grid
+leave/re-entry, pick-versus-pan behavior, mid-gesture tool changes, stale session capture, and
+one-time transaction commits.
 
 ## Not worth standalone TODOs
 
