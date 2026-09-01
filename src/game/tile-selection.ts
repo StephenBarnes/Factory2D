@@ -8,6 +8,8 @@ export interface SelectionPreviewCell {
   readonly y: number;
   readonly kind: TileKind;
   readonly orientation: Direction;
+  readonly weldRight: boolean;
+  readonly weldDown: boolean;
 }
 
 export interface TileSelectionOverlay {
@@ -44,6 +46,7 @@ interface ClipboardSelection {
   readonly content: SelectionContent;
   readonly quarterTurns: number;
   readonly flippedHorizontally: boolean;
+  readonly flippedVertically: boolean;
 }
 
 interface ActiveSelection {
@@ -51,6 +54,7 @@ interface ActiveSelection {
   readonly removesSourceOnCommit: boolean;
   quarterTurns: number;
   flippedHorizontally: boolean;
+  flippedVertically: boolean;
   originX: number;
   originY: number;
   dragAnchorX: number;
@@ -151,6 +155,7 @@ export class TileSelectionState {
       removesSourceOnCommit: true,
       quarterTurns: 0,
       flippedHorizontally: false,
+      flippedVertically: false,
       originX: content.bounds.x,
       originY: content.bounds.y,
       dragAnchorX: 0,
@@ -160,6 +165,33 @@ export class TileSelectionState {
       moving: false,
     };
     return true;
+  }
+
+  selectOccupiedBounds(world: World, editableRegion: GridRegion | null): boolean {
+    let left = this.boardWidth;
+    let top = this.boardHeight;
+    let right = -1;
+    let bottom = -1;
+    for (let y = 0; y < this.boardHeight; y += 1) {
+      for (let x = 0; x < this.boardWidth; x += 1) {
+        if (
+          (editableRegion === null || editableRegion.contains(x, y)) &&
+          world.kindAt(x, y) !== TileKind.Empty
+        ) {
+          left = Math.min(left, x);
+          top = Math.min(top, y);
+          right = Math.max(right, x);
+          bottom = Math.max(bottom, y);
+        }
+      }
+    }
+    if (right < left || bottom < top) {
+      this.clear();
+      return false;
+    }
+    this.beginSelection(left, top);
+    this.updateSelection(right, bottom);
+    return this.finishSelection(world, editableRegion);
   }
 
   cancelDraft(): void {
@@ -230,6 +262,15 @@ export class TileSelectionState {
     return true;
   }
 
+  flipVertically(): boolean {
+    const active = this.activeSelection;
+    if (active === null) {
+      return false;
+    }
+    active.flippedVertically = !active.flippedVertically;
+    return true;
+  }
+
   copy(): boolean {
     const active = this.activeSelection;
     if (active === null) {
@@ -239,6 +280,7 @@ export class TileSelectionState {
       content: active.content,
       quarterTurns: active.quarterTurns,
       flippedHorizontally: active.flippedHorizontally,
+      flippedVertically: active.flippedVertically,
     };
     return true;
   }
@@ -253,6 +295,7 @@ export class TileSelectionState {
       removesSourceOnCommit: false,
       quarterTurns: clipboard.quarterTurns,
       flippedHorizontally: clipboard.flippedHorizontally,
+      flippedVertically: clipboard.flippedVertically,
       originX: anchorX,
       originY: anchorY,
       dragAnchorX: 0,
@@ -335,12 +378,7 @@ export class TileSelectionState {
     return {
       region: transformedRegion(active),
       sourceRegion: active.removesSourceOnCommit ? active.content.region : null,
-      previewCells: mappedCells.map((cell) => ({
-        x: cell.destinationX,
-        y: cell.destinationY,
-        kind: cell.kind,
-        orientation: cell.orientation,
-      })),
+      previewCells: createPreviewCells(active, mappedCells),
       valid: mappedCells.every((cell) =>
         canPlaceCell(cell.destinationX, cell.destinationY) && canPlaceKind(cell.kind)
       ),
@@ -408,6 +446,9 @@ function mapOccupiedCells(active: ActiveSelection): MappedSelectionCell[] {
     if (active.flippedHorizontally) {
       orientation = flipDirectionHorizontally(orientation);
     }
+    if (active.flippedVertically) {
+      orientation = flipDirectionVertically(orientation);
+    }
     orientation = ((orientation + active.quarterTurns) & 3) as Direction;
     return {
       ...cell,
@@ -418,6 +459,52 @@ function mapOccupiedCells(active: ActiveSelection): MappedSelectionCell[] {
       orientation,
     };
   });
+}
+
+function createPreviewCells(
+  active: ActiveSelection,
+  mappedCells: readonly MappedSelectionCell[],
+): SelectionPreviewCell[] {
+  const previewBySource = new Map<string, {
+    x: number;
+    y: number;
+    kind: TileKind;
+    orientation: Direction;
+    weldRight: boolean;
+    weldDown: boolean;
+  }>();
+  const previewCells = mappedCells.map((cell) => {
+    const preview = {
+      x: cell.destinationX,
+      y: cell.destinationY,
+      kind: cell.kind,
+      orientation: cell.orientation,
+      weldRight: false,
+      weldDown: false,
+    };
+    previewBySource.set(cellKey(cell.sourceX, cell.sourceY), preview);
+    return preview;
+  });
+  visitInternalWelds(active, mappedCells, (first, second) => {
+    const firstPreview = previewBySource.get(cellKey(first.sourceX, first.sourceY));
+    const secondPreview = previewBySource.get(cellKey(second.sourceX, second.sourceY));
+    if (firstPreview === undefined || secondPreview === undefined) {
+      throw new Error("Selection preview weld is missing a mapped cell");
+    }
+    if (firstPreview.y === secondPreview.y && Math.abs(firstPreview.x - secondPreview.x) === 1) {
+      const left = firstPreview.x < secondPreview.x ? firstPreview : secondPreview;
+      left.weldRight = true;
+    } else if (
+      firstPreview.x === secondPreview.x &&
+      Math.abs(firstPreview.y - secondPreview.y) === 1
+    ) {
+      const top = firstPreview.y < secondPreview.y ? firstPreview : secondPreview;
+      top.weldDown = true;
+    } else {
+      throw new Error("Selection transform produced a non-adjacent weld");
+    }
+  });
+  return previewCells;
 }
 
 function transformedRegion(active: ActiveSelection): GridRegion {
@@ -436,9 +523,12 @@ function transformedDimensions(active: ActiveSelection): { readonly width: numbe
 function transformCell(active: ActiveSelection, x: number, y: number): GridCell {
   const bounds = active.content.bounds;
   let localX = x - bounds.x;
-  const localY = y - bounds.y;
+  let localY = y - bounds.y;
   if (active.flippedHorizontally) {
     localX = bounds.width - 1 - localX;
+  }
+  if (active.flippedVertically) {
+    localY = bounds.height - 1 - localY;
   }
   switch (active.quarterTurns) {
     case 0:
@@ -494,6 +584,7 @@ function placementIsUnchanged(active: ActiveSelection): boolean {
   return active.removesSourceOnCommit &&
     active.quarterTurns === 0 &&
     !active.flippedHorizontally &&
+    !active.flippedVertically &&
     active.originX === active.content.bounds.x &&
     active.originY === active.content.bounds.y;
 }
@@ -514,6 +605,22 @@ function restoreInternalWelds(
   active: ActiveSelection,
   mappedCells: readonly MappedSelectionCell[],
 ): void {
+  visitInternalWelds(active, mappedCells, (cell, neighbor) => {
+    world.setWeld(
+      cell.destinationX,
+      cell.destinationY,
+      neighbor.destinationX,
+      neighbor.destinationY,
+      true,
+    );
+  });
+}
+
+function visitInternalWelds(
+  active: ActiveSelection,
+  mappedCells: readonly MappedSelectionCell[],
+  visit: (first: MappedSelectionCell, second: MappedSelectionCell) => void,
+): void {
   const mappedBySource = new Map<string, MappedSelectionCell>();
   for (const cell of mappedCells) {
     mappedBySource.set(cellKey(cell.sourceX, cell.sourceY), cell);
@@ -524,23 +631,16 @@ function restoreInternalWelds(
       mappedBySource.get(cellKey(cell.sourceX, cell.sourceY + 1)),
     ]) {
       if (
-        neighbor === undefined ||
-        !active.content.sourceWorld.isWelded(
+        neighbor !== undefined &&
+        active.content.sourceWorld.isWelded(
           cell.sourceX,
           cell.sourceY,
           neighbor.sourceX,
           neighbor.sourceY,
         )
       ) {
-        continue;
+        visit(cell, neighbor);
       }
-      world.setWeld(
-        cell.destinationX,
-        cell.destinationY,
-        neighbor.destinationX,
-        neighbor.destinationY,
-        true,
-      );
     }
   }
 }
@@ -596,6 +696,16 @@ function flipDirectionHorizontally(direction: Direction): Direction {
   }
   if (direction === Direction.Left) {
     return Direction.Right;
+  }
+  return direction;
+}
+
+function flipDirectionVertically(direction: Direction): Direction {
+  if (direction === Direction.Up) {
+    return Direction.Down;
+  }
+  if (direction === Direction.Down) {
+    return Direction.Up;
   }
   return direction;
 }

@@ -133,7 +133,12 @@ const coordinates = requiredElement<HTMLDivElement>("coordinates");
 const selectionActions = requiredElement<HTMLElement>("selection-actions");
 const selectionCopyButton = requiredElement<HTMLButtonElement>("selection-copy-button");
 const selectionPasteButton = requiredElement<HTMLButtonElement>("selection-paste-button");
-const selectionFlipButton = requiredElement<HTMLButtonElement>("selection-flip-button");
+const selectionHorizontalFlipButton = requiredElement<HTMLButtonElement>(
+  "selection-flip-horizontal-button",
+);
+const selectionVerticalFlipButton = requiredElement<HTMLButtonElement>(
+  "selection-flip-vertical-button",
+);
 const selectionRotateButton = requiredElement<HTMLButtonElement>("selection-rotate-button");
 
 type BuildTool = "tile" | "weld" | "selection" | "editable-region";
@@ -154,7 +159,7 @@ const TOOL_INSPECTOR_DETAILS: Readonly<Record<InspectorTool, ToolInspectorDetail
   selection: {
     name: "Selection tool",
     description: "Selects, moves, copies, and transforms a grid-aligned group of tiles.",
-    controls: "LEFT DRAG SELECT / MOVE · DELETE · CTRL+C / X / V / A · WASD ROTATE",
+    controls: "LEFT DRAG SELECT / MOVE · DELETE · CTRL+C / X / V / A · WASD ROTATE · FLIP",
   },
   "editable-region": {
     name: "Editable region tool",
@@ -1083,8 +1088,12 @@ function pasteTileSelection(): void {
 
 selectionCopyButton.addEventListener("click", copyTileSelection);
 selectionPasteButton.addEventListener("click", pasteTileSelection);
-selectionFlipButton.addEventListener("click", () => {
+selectionHorizontalFlipButton.addEventListener("click", () => {
   tileSelection.flipHorizontally();
+  syncTileSelectionOverlay();
+});
+selectionVerticalFlipButton.addEventListener("click", () => {
+  tileSelection.flipVertically();
   syncTileSelectionOverlay();
 });
 selectionRotateButton.addEventListener("click", () => {
@@ -1431,10 +1440,11 @@ canvas.addEventListener("pointerdown", (event) => {
       if (tileSelection.active) {
         commitTileSelection();
       }
-    } else if (!tileSelection.beginMove(cell.x, cell.y)) {
-      if (tileSelection.active) {
+    } else if (tileSelection.active) {
+      if (!tileSelection.beginMove(cell.x, cell.y)) {
         commitTileSelection();
       }
+    } else {
       tileSelection.beginSelection(cell.x, cell.y);
     }
     syncTileSelectionOverlay();
@@ -1635,9 +1645,7 @@ document.addEventListener("keydown", (event) => {
         commitTileSelection();
       }
       selectSelectionTool();
-      tileSelection.beginSelection(0, 0);
-      tileSelection.updateSelection(world.width - 1, world.height - 1);
-      tileSelection.finishSelection(world, activeSession.editableRegion);
+      tileSelection.selectOccupiedBounds(world, activeSession.editableRegion);
       syncTileSelectionOverlay();
       refreshPointerHover();
       return;

@@ -66,6 +66,13 @@ export class CanvasRenderer {
   private cachedWorldRevision = -1;
   private cachedCellSize = 0;
   private readonly cachedBodies: CachedBody[] = [];
+  private readonly cachedSelectionBodies: CachedBody[] = [];
+  private cachedSelectionOverlay: TileSelectionOverlay | null = null;
+  private cachedSelectionCellSize = 0;
+  private selectionBodyStamps = new Int32Array(0);
+  private selectionBodyStack = new Int32Array(0);
+  private selectionCellIndices = new Int32Array(0);
+  private readonly selectionBodyCells: BodyCell[] = [];
   private hoverX = -1;
   private hoverY = -1;
   private hoverEdge: GridEdge | null = null;
@@ -428,17 +435,23 @@ export class CanvasRenderer {
     if (overlay !== null) {
       context.save();
       context.globalAlpha = 0.88;
-      for (const cell of overlay.previewCells) {
-        drawTile(
+      this.rebuildSelectionBodyCache();
+      context.translate(this.originX, this.originY);
+      for (const body of this.cachedSelectionBodies) {
+        drawBody(
           context,
-          this.originX + cell.x * this.cellSize,
-          this.originY + cell.y * this.cellSize,
+          0,
+          0,
           this.cellSize,
-          cell.kind,
-          cell.orientation,
+          body.cells,
+          body.cells.length,
+          body.path,
           animationTime,
         );
       }
+      context.restore();
+      context.save();
+      context.globalAlpha = 0.88;
       context.fillStyle = overlay.valid ? "rgb(120 220 202 / 10%)" : "rgb(225 90 79 / 16%)";
       for (const rectangle of overlay.region.rectangles) {
         context.fillRect(
@@ -470,6 +483,185 @@ export class CanvasRenderer {
       context.restore();
       this.strokeGridRegion(draft, [], "#78dcca");
     }
+  }
+
+  private rebuildSelectionBodyCache(): void {
+    const overlay = this.tileSelectionOverlay;
+    if (
+      this.cachedSelectionOverlay === overlay &&
+      this.cachedSelectionCellSize === this.cellSize
+    ) {
+      return;
+    }
+    this.cachedSelectionOverlay = overlay;
+    this.cachedSelectionCellSize = this.cellSize;
+    this.cachedSelectionBodies.length = 0;
+    if (overlay === null) {
+      return;
+    }
+
+    const cellCount = this.world.cellCount;
+    if (this.selectionBodyStamps.length !== cellCount) {
+      this.selectionBodyStamps = new Int32Array(cellCount);
+      this.selectionBodyStack = new Int32Array(cellCount);
+      this.selectionCellIndices = new Int32Array(cellCount);
+    } else {
+      this.selectionBodyStamps.fill(0);
+      this.selectionCellIndices.fill(0);
+    }
+    for (let previewIndex = 0; previewIndex < overlay.previewCells.length; previewIndex += 1) {
+      const cell = expectDefined(overlay.previewCells[previewIndex], "selection preview cell");
+      this.selectionCellIndices[cell.y * this.world.width + cell.x] = previewIndex + 1;
+    }
+    for (const cell of overlay.previewCells) {
+      const index = cell.y * this.world.width + cell.x;
+      if (this.selectionBodyStamps[index] !== 0) {
+        continue;
+      }
+      const count = this.collectSelectionBody(index, overlay);
+      const cells = new Array<BodyCell>(count);
+      for (let cellIndex = 0; cellIndex < count; cellIndex += 1) {
+        const bodyCell = expectDefined(
+          this.selectionBodyCells[cellIndex],
+          "cached selection body cell",
+        );
+        cells[cellIndex] = { ...bodyCell };
+      }
+      this.cachedSelectionBodies.push({
+        cells,
+        path: createBodyPath(0, 0, this.cellSize, cells, count),
+      });
+    }
+  }
+
+  private collectSelectionBody(startIndex: number, overlay: TileSelectionOverlay): number {
+    const width = this.world.width;
+    const stamp = startIndex + 1;
+    let stackSize = 0;
+    let count = 0;
+    this.selectionBodyStamps[startIndex] = stamp;
+    this.selectionBodyStack[stackSize] = startIndex;
+    stackSize += 1;
+
+    while (stackSize > 0) {
+      stackSize -= 1;
+      const index = expectDefined(
+        this.selectionBodyStack[stackSize],
+        "selection body stack entry",
+      );
+      const preview = this.selectionPreviewCellAtIndex(
+        index,
+        overlay,
+        "indexed selection preview cell",
+      );
+      if (preview === null) {
+        throw new Error("Selection body contains an empty preview position");
+      }
+      let cell = this.selectionBodyCells[count];
+      if (cell === undefined) {
+        cell = {
+          x: 0,
+          y: 0,
+          kind: TileKind.Empty,
+          orientation: Direction.Up,
+          outputCharge: 0,
+          circuitConnections: WeldSide.None,
+          circuitPortCharges: 0,
+          componentState: null,
+          seamRight: false,
+          seamDown: false,
+        };
+        this.selectionBodyCells.push(cell);
+      }
+      count += 1;
+      cell.x = preview.x;
+      cell.y = preview.y;
+      cell.kind = preview.kind;
+      cell.orientation = preview.orientation;
+      cell.outputCharge = 0;
+      cell.circuitConnections = WeldSide.None;
+      cell.circuitPortCharges = 0;
+      cell.componentState = null;
+      cell.seamRight = false;
+      cell.seamDown = false;
+
+      const x = preview.x;
+      if (preview.weldRight) {
+        stackSize = this.pushSelectionBodyCell(index + 1, stamp, stackSize);
+      }
+      const leftPreview = x > 0
+        ? this.selectionPreviewCellAtIndex(
+          index - 1,
+          overlay,
+          "left selection preview cell",
+        )
+        : null;
+      if (leftPreview?.weldRight === true) {
+        stackSize = this.pushSelectionBodyCell(index - 1, stamp, stackSize);
+      }
+      if (preview.weldDown) {
+        stackSize = this.pushSelectionBodyCell(index + width, stamp, stackSize);
+      }
+      const upperPreview = index >= width
+        ? this.selectionPreviewCellAtIndex(
+          index - width,
+          overlay,
+          "upper selection preview cell",
+        )
+        : null;
+      if (upperPreview?.weldDown === true) {
+        stackSize = this.pushSelectionBodyCell(index - width, stamp, stackSize);
+      }
+    }
+
+    for (let i = 0; i < count; i += 1) {
+      const cell = expectDefined(this.selectionBodyCells[i], "collected selection body cell");
+      const index = cell.y * width + cell.x;
+      const preview = this.selectionPreviewCellAtIndex(
+        index,
+        overlay,
+        "collected selection preview cell",
+      );
+      if (preview === null) {
+        throw new Error("Collected selection body cell has no preview");
+      }
+      cell.seamRight = cell.x < this.world.width - 1 &&
+        this.selectionBodyStamps[index + 1] === stamp &&
+        !preview.weldRight;
+      cell.seamDown = cell.y < this.world.height - 1 &&
+        this.selectionBodyStamps[index + width] === stamp &&
+        !preview.weldDown;
+    }
+    return count;
+  }
+
+  private selectionPreviewCellAtIndex(
+    index: number,
+    overlay: TileSelectionOverlay,
+    description: string,
+  ): TileSelectionOverlay["previewCells"][number] | null {
+    if (index < 0 || index >= this.selectionCellIndices.length) {
+      throw new RangeError(`Selection preview index ${index} is outside the board`);
+    }
+    const storedIndex = expectDefined(this.selectionCellIndices[index], description);
+    return storedIndex === 0
+      ? null
+      : expectDefined(overlay.previewCells[storedIndex - 1], description);
+  }
+
+  private pushSelectionBodyCell(index: number, stamp: number, stackSize: number): number {
+    if (index < 0 || index >= this.selectionCellIndices.length) {
+      throw new RangeError(`Selection weld index ${index} is outside the board`);
+    }
+    if (expectDefined(this.selectionCellIndices[index], "selection weld cell index") === 0) {
+      throw new Error("Selection weld is missing its neighboring preview cell");
+    }
+    if (this.selectionBodyStamps[index] !== stamp) {
+      this.selectionBodyStamps[index] = stamp;
+      this.selectionBodyStack[stackSize] = index;
+      return stackSize + 1;
+    }
+    return stackSize;
   }
 
 

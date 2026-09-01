@@ -96,6 +96,21 @@ async function placeStone(page: Page, x: number, y: number): Promise<void> {
   await page.mouse.click(point.x, point.y);
 }
 
+test("selection shortcuts use occupied bounds and grid clicks unselect", async ({ page }) => {
+  await seedBrowserStorage(page, "empty");
+  await page.goto("/sandbox");
+  await page.getByRole("button", { name: "Selection tool" }).click();
+
+  await page.keyboard.press("Control+A");
+  const selectionActions = page.locator("#selection-actions");
+  await expect(selectionActions).toBeVisible();
+  await expect(page.getByRole("button", { name: "Flip selection vertically" })).toBeVisible();
+
+  const outsideOccupiedBounds = await boardCellCenter(page, 19, 0);
+  await page.mouse.click(outsideOccupiedBounds.x, outsideOccupiedBounds.y);
+  await expect(selectionActions).toBeHidden();
+});
+
 test("routes only to accessible canonical screens", async ({ page }) => {
   await seedBrowserStorage(page, "empty");
   await page.goto("/puzzles/first-shift");

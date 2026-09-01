@@ -1,6 +1,7 @@
 Tasks that are NOT actionable yet due to prereqs, or are lower priority, are marked as DEFER below.
 
 Game flow:
+* Rework the main menu to put puzzles into unlockable groups. We want to have groups like "Basics", "Runelore", "Advanced Runelore", "Elves", etc. Each group has several puzzles in sequence. When a group is unlocked, we unlock the first 3 puzzles; then we unlock one more puzzle in the group, for each puzzle in the group that's been solved. Groups should be displayed as collapsible sections, default to collapsed if all puzzles are solved or the group isn't unlocked yet. Display each puzzle's button compactly so we can fit many on the screen. For each solved puzzle, the player gets one gemstone - display gemstone count on the main menu (by counting solved puzzles - don't need to store the gemstone count separately). Each group has an unlock threshold in gemstones. Remove the current hard per-puzzle prerequisite system entirely - remove the field from the puzzle format. Each puzzle should specify what group it's in, and order in that group (any number - we sort these order values to order them, breaking ties in some way). Define the list of groups (names, display order, gem unlock threshold) in code. Adding a new puzzle JSON file in the puzzles directory should automatically add it to the main menu with no TypeScript code changes needed.
 * Implement a text-box tool that places and edits text boxes on the game screen. Useful for tutorial puzzles, and also for players that want to label/annotate their designs. Model them separate from the component grid - they're not grid-aligned, don't occupy tiles, and have no prices. Include them the puzzle JSON format and scene JSON format.
 * Remove the "import" button on puzzles; it should only be displayed in the sandbox. It's already disabled in puzzles, but still visible.
 * Add tick speeds above 60 ticks per second; for those, step the simulation multiple times between renders. This is useful for testing solutions fast while still showing what's going on.
@@ -115,10 +116,6 @@ UI:
 * If the player tries to place a block, or weld, and we don't allow it, indicate the reason. (1) If it's because they're testing a puzzle, flash the reset button. (2) If it's a weld or tile edit outside the allowed region, flash the region red. (3) If they're trying to weld a block that can't be 
 
 Selection tool:
-* Render the selection with its welds. Currently it shows all the blocks as fully unwelded. (Committing it correctly welds already, so it's just the rendering that's not reflecting the welds.)
-* Left-clicking on the grid, while something is selected, should unselect. Currently it creates a 1x1 selection.
-* Add button to flip selection vertically. (We already have horizontal flip.)
-* Modify the control-A shortcut: instead of selecting the entire board or region, rather select the AABB of nonempty tiles in that region.
 * DEFER Maybe support selections that are a union of rectangles, created by shift-LMB-drag.
 * Add a way to save a selected region in a list of saved snippets/machines, and import from that. Make it usable for transferring partial machines from one puzzle solution to another. Requires a snippet manager button and collapsible panel. Store snippets globally per user, not per puzzle.
 * DEFER In the snippets panel, add buttons to delete a snippet, and import/export (maybe the same as the scene format, or a different format).

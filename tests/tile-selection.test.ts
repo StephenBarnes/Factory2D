@@ -143,4 +143,67 @@ describe("tile selection", () => {
     expect(world.kindAt(2, 0)).toBe(TileKind.Iron);
     expect(selection.active).toBe(false);
   });
+  it("describes transformed internal welds in the selection preview", () => {
+    const world = new World(5, 5);
+    world.place(1, 1, TileKind.Stone);
+    world.place(2, 1, TileKind.Iron);
+    world.setWeld(1, 1, 2, 1, true);
+    const selection = new TileSelectionState(world.width, world.height);
+    selectRectangle(selection, world, 1, 1, 2, 1);
+
+    let preview = selection.overlay(ALLOW_CELL, ALLOW_KIND)?.previewCells;
+    expect(preview).toEqual([
+      expect.objectContaining({ x: 1, y: 1, weldRight: true, weldDown: false }),
+      expect.objectContaining({ x: 2, y: 1, weldRight: false, weldDown: false }),
+    ]);
+
+    selection.rotateTo(Direction.Right);
+    preview = selection.overlay(ALLOW_CELL, ALLOW_KIND)?.previewCells;
+    expect(preview).toEqual([
+      expect.objectContaining({ x: 1, y: 1, weldRight: false, weldDown: true }),
+      expect.objectContaining({ x: 1, y: 2, weldRight: false, weldDown: false }),
+    ]);
+  });
+
+  it("flips geometry, tile orientation, and welds vertically", () => {
+    const world = new World(4, 4);
+    world.place(1, 1, TileKind.Sensor, Direction.Up);
+    world.place(1, 2, TileKind.Stone);
+    world.setWeld(1, 1, 1, 2, true);
+    const selection = new TileSelectionState(world.width, world.height);
+    selectRectangle(selection, world, 1, 1, 1, 2);
+
+    expect(selection.flipVertically()).toBe(true);
+    expect(selection.commit(world, ALLOW_CELL, ALLOW_KIND)).toEqual({
+      accepted: true,
+      changed: true,
+    });
+
+    expect(world.kindAt(1, 1)).toBe(TileKind.Stone);
+    expect(world.kindAt(1, 2)).toBe(TileKind.Sensor);
+    expect(world.orientationAt(1, 2)).toBe(Direction.Down);
+    expect(world.isWelded(1, 1, 1, 2)).toBe(true);
+  });
+
+  it("selects the occupied-cell bounds inside the editable region", () => {
+    const world = new World(6, 5);
+    world.place(0, 0, TileKind.Stone);
+    world.place(2, 1, TileKind.Iron);
+    world.place(4, 3, TileKind.Stone);
+    const editableRegion = new GridRegion([{ x: 1, y: 1, width: 4, height: 3 }]);
+    const selection = new TileSelectionState(world.width, world.height);
+
+    expect(selection.selectOccupiedBounds(world, editableRegion)).toBe(true);
+    expect(selection.overlay(ALLOW_CELL, ALLOW_KIND)?.region.rectangles).toEqual([
+      { x: 2, y: 1, width: 3, height: 3 },
+    ]);
+    expect(selection.overlay(ALLOW_CELL, ALLOW_KIND)?.previewCells).toEqual([
+      expect.objectContaining({ x: 2, y: 1, kind: TileKind.Iron }),
+      expect.objectContaining({ x: 4, y: 3, kind: TileKind.Stone }),
+    ]);
+
+    world.clear();
+    expect(selection.selectOccupiedBounds(world, editableRegion)).toBe(false);
+    expect(selection.active).toBe(false);
+  });
 });
