@@ -9,7 +9,7 @@ import {
   type ImportedBoard,
 } from "../simulation/board-export";
 import { PuzzleResult } from "../simulation/puzzle-result";
-import { TILE_DEFINITIONS, TileKind } from "../simulation/tile";
+import { TILE_DEFINITIONS, TILE_KINDS, TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
 
 export const PUZZLE_FORMAT = "factory2d-puzzle";
@@ -47,6 +47,7 @@ const BOARD_FIELDS = [
   "charges",
   "crossingCharges",
   "furnaces",
+  "components",
   "welds",
 ] as const;
 const TEST_CASE_FIELDS = ["id", "name", "overrides"] as const;
@@ -58,6 +59,7 @@ const INITIAL_BOARD_OVERRIDE_FIELDS = [
   "charges",
   "crossingCharges",
   "furnaces",
+  "components",
   "welds",
 ] as const;
 
@@ -65,9 +67,8 @@ const TILE_KINDS_BY_CODE = buildTileKindsByCode();
 
 function buildTileKindsByCode(): Readonly<Record<string, TileKind | undefined>> {
   const kindsByCode: Record<string, TileKind | undefined> = Object.create(null);
-  for (let kind = TileKind.Empty; kind <= TileKind.PistonArm; kind += 1) {
-    const tileKind = kind as TileKind;
-    kindsByCode[TILE_DEFINITIONS[tileKind].boardCode] = tileKind;
+  for (const kind of TILE_KINDS) {
+    kindsByCode[TILE_DEFINITIONS[kind].boardCode] = kind;
   }
   return kindsByCode;
 }

@@ -515,6 +515,7 @@ export class CanvasRenderer {
           outputCharge: 0,
           circuitConnections: WeldSide.None,
           circuitPortCharges: 0,
+          componentState: null,
           seamRight: false,
           seamDown: false,
         };
@@ -532,6 +533,7 @@ export class CanvasRenderer {
         : networkCharge;
       cell.circuitConnections = WeldSide.None;
       cell.circuitPortCharges = 0;
+      cell.componentState = world.componentStateSnapshotAtIndex(index);
       const inputPorts = orientedSides(
         TILE_DEFINITIONS[cell.kind].circuitInputPorts,
         cell.orientation,

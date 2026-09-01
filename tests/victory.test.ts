@@ -83,7 +83,7 @@ describe("victory blocks", () => {
     const imported = deserializeBoard(serialized);
 
     expect(JSON.parse(serialized)).toMatchObject({
-      version: 9,
+      version: 10,
       tick: 9,
       result: "lost",
       grid: ["V"],

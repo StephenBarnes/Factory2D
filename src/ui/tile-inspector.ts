@@ -1,3 +1,4 @@
+import { componentConfigurationForKind } from "../simulation/configurable-components";
 import { furnaceRecipeFor } from "../simulation/furnace";
 import {
   Direction,
@@ -89,6 +90,10 @@ export class TileInspector {
   private readonly orientationRow: HTMLElement;
   private readonly orientation: HTMLElement;
   private readonly furnaceRow: HTMLElement;
+  private readonly configurationRow: HTMLElement;
+  private readonly configuration: HTMLElement;
+  private readonly configurationControlsRow: HTMLElement;
+  private readonly configurationControls: HTMLElement;
   private readonly furnace: HTMLElement;
   private readonly circuitRow: HTMLElement;
   private readonly circuit: HTMLElement;
@@ -120,6 +125,16 @@ export class TileInspector {
     this.orientationRow = requiredDescendant(root, "[data-inspector-orientation-row]");
     this.orientation = requiredDescendant(root, "[data-inspector-orientation]");
     this.furnaceRow = requiredDescendant(root, "[data-inspector-furnace-row]");
+    this.configurationRow = requiredDescendant(root, "[data-inspector-configuration-row]");
+    this.configuration = requiredDescendant(root, "[data-inspector-configuration]");
+    this.configurationControlsRow = requiredDescendant(
+      root,
+      "[data-inspector-configuration-controls-row]",
+    );
+    this.configurationControls = requiredDescendant(
+      root,
+      "[data-inspector-configuration-controls]",
+    );
     this.furnace = requiredDescendant(root, "[data-inspector-furnace]");
     this.circuitRow = requiredDescendant(root, "[data-inspector-circuit-row]");
     this.circuit = requiredDescendant(root, "[data-inspector-circuit]");
@@ -210,6 +225,25 @@ export class TileInspector {
     this.properties.hidden = false;
     this.orientationRow.hidden = !definition.usesOrientation;
     this.orientation.textContent = DIRECTION_NAMES[orientation];
+    const componentConfiguration = componentConfigurationForKind(kind);
+    const componentState = this.world.componentStateSnapshotAt(position.x, position.y);
+    this.configurationRow.hidden = componentConfiguration === null;
+    this.configurationControlsRow.hidden = componentConfiguration === null;
+    if (componentState !== null && componentConfiguration !== null) {
+      if (componentState.type === "delay") {
+        this.configuration.textContent =
+          `${componentState.length} TICKS · CURSOR ${componentState.cursor + 1}`;
+      } else if (componentState.type === "counter") {
+        this.configuration.textContent =
+          `COUNT ${componentState.count} · THRESHOLD ${componentState.threshold}`;
+      } else {
+        this.configuration.textContent =
+          `${componentState.width} × ${componentState.height} · CELL ${componentState.cursor + 1}`;
+      }
+      this.configurationControls.textContent = componentConfiguration.type === "number"
+        ? "E EDIT · SHIFT + WHEEL ADJUST"
+        : "E EDIT";
+    }
     this.attractionRow.hidden = definition.attractionRange === 0;
     if (definition.attractionRange > 0) {
       this.attraction.textContent = `${DIRECTION_NAMES[orientation]} · ${definition.attractionRange} CELL`;

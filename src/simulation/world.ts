@@ -1,3 +1,16 @@
+import {
+  cloneComponentState,
+  componentConfigurationForKind,
+  componentStateMatchesKind,
+  createDefaultComponentState,
+  MAX_ROM_DIMENSION,
+  MIN_ROM_DIMENSION,
+  snapshotComponentState,
+  stateFromSnapshot,
+  validateComponentSnapshot,
+  type ConfigurableComponentSnapshot,
+  type ConfigurableComponentState,
+} from "./configurable-components";
 import { isCharge, type Charge } from "./circuit";
 import { furnaceRecipeFor } from "./furnace";
 import { PuzzleResult } from "./puzzle-result";
@@ -29,6 +42,7 @@ export class World {
   private readonly crossingVerticalCharges: Int8Array;
   private readonly furnaceProgress: Uint16Array;
   private readonly furnaceTargetIds: Uint32Array;
+  private readonly componentStates = new Map<number, ConfigurableComponentState>();
   private nextTileId = 1;
   private readonly rightWelds: Uint8Array;
   private readonly downWelds: Uint8Array;
@@ -201,6 +215,173 @@ export class World {
       this.revisionValue += 1;
     }
   }
+  componentStateSnapshotAt(
+    x: number,
+    y: number,
+  ): ConfigurableComponentSnapshot | null {
+    return this.componentStateSnapshotAtIndex(this.indexOf(x, y));
+  }
+
+  componentStateSnapshotAtIndex(index: number): ConfigurableComponentSnapshot | null {
+    this.assertIndex(index);
+    const kind = this.kinds[index] as TileKind;
+    if (componentConfigurationForKind(kind) === null) {
+      return null;
+    }
+    return snapshotComponentState(this.requireComponentStateAtIndex(index));
+  }
+
+  configureNumericComponent(x: number, y: number, value: number): boolean {
+    const index = this.indexOf(x, y);
+    const state = this.requireComponentStateAtIndex(index);
+    const configuration = componentConfigurationForKind(this.kinds[index] as TileKind);
+    if (configuration === null || configuration.type !== "number") {
+      throw new Error(`Tile at (${x}, ${y}) does not have numeric configuration`);
+    }
+    if (
+      !Number.isInteger(value) ||
+      value < configuration.minimum ||
+      value > configuration.maximum
+    ) {
+      throw new RangeError(
+        `${configuration.label} must be an integer from ` +
+        `${configuration.minimum} through ${configuration.maximum}`,
+      );
+    }
+
+    if (state.type === "delay") {
+      if (state.length === value) {
+        return false;
+      }
+      state.length = value;
+      state.cursor = 0;
+      state.data = new Int8Array(value);
+    } else if (state.type === "counter") {
+      if (state.threshold === value) {
+        return false;
+      }
+      state.threshold = value;
+      state.count = 0;
+    } else {
+      throw new Error(`ROM at (${x}, ${y}) does not have numeric configuration`);
+    }
+    this.charges[index] = 0;
+    this.revisionValue += 1;
+    return true;
+  }
+
+  configureRom(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    values: readonly Charge[],
+  ): boolean {
+    const index = this.indexOf(x, y);
+    const state = this.requireComponentStateAtIndex(index);
+    if (state.type !== "rom") {
+      throw new Error(`Tile at (${x}, ${y}) is not a ROM`);
+    }
+    if (
+      !Number.isInteger(width) ||
+      width < MIN_ROM_DIMENSION ||
+      width > MAX_ROM_DIMENSION ||
+      !Number.isInteger(height) ||
+      height < MIN_ROM_DIMENSION ||
+      height > MAX_ROM_DIMENSION
+    ) {
+      throw new RangeError(
+        `ROM dimensions must be integers from ${MIN_ROM_DIMENSION} through ${MAX_ROM_DIMENSION}`,
+      );
+    }
+    if (values.length !== width * height) {
+      throw new RangeError(`ROM values must contain exactly ${width * height} charges`);
+    }
+    for (const value of values) {
+      if (!isCharge(value)) {
+        throw new RangeError(`ROM contains invalid charge ${value as number}`);
+      }
+    }
+    let changed = state.width !== width || state.height !== height;
+    if (!changed) {
+      for (let valueIndex = 0; valueIndex < values.length; valueIndex += 1) {
+        if (state.values[valueIndex] !== values[valueIndex]) {
+          changed = true;
+          break;
+        }
+      }
+    }
+    if (!changed) {
+      return false;
+    }
+    state.width = width;
+    state.height = height;
+    state.cursor = 0;
+    state.values = Int8Array.from(values);
+    this.charges[index] = 0;
+    this.revisionValue += 1;
+    return true;
+  }
+
+  restoreComponentState(
+    x: number,
+    y: number,
+    snapshot: ConfigurableComponentSnapshot,
+  ): void {
+    const index = this.indexOf(x, y);
+    const kind = this.kinds[index] as TileKind;
+    validateComponentSnapshot(snapshot);
+    if (!componentStateMatchesKind(snapshot, kind)) {
+      throw new Error(`Component state at (${x}, ${y}) does not match ${TILE_DEFINITIONS[kind].name}`);
+    }
+    const id = this.ids[index] ?? 0;
+    if (id === 0) {
+      throw new Error(`Configurable component at (${x}, ${y}) has no tile identity`);
+    }
+    this.componentStates.set(id, stateFromSnapshot(snapshot));
+    this.revisionValue += 1;
+  }
+
+  advanceDelayAtIndex(index: number, input: Charge): Charge {
+    const state = this.requireComponentStateAtIndex(index);
+    if (state.type !== "delay") {
+      throw new Error(`Tile at index ${index} is not a delay`);
+    }
+    const output = state.data[state.cursor] as Charge;
+    const changed = state.length > 1 || output !== input;
+    state.data[state.cursor] = input;
+    state.cursor = (state.cursor + 1) % state.length;
+    if (changed) {
+      this.revisionValue += 1;
+    }
+    return output;
+  }
+
+  advanceCounterAtIndex(index: number, input: Charge): Charge {
+    const state = this.requireComponentStateAtIndex(index);
+    if (state.type !== "counter") {
+      throw new Error(`Tile at index ${index} is not a counter`);
+    }
+    if (input === 0) {
+      return 0;
+    }
+    const reachedThreshold = state.count + 1 >= state.threshold;
+    state.count = reachedThreshold ? 0 : state.count + 1;
+    this.revisionValue += 1;
+    return reachedThreshold ? 1 : 0;
+  }
+
+  advanceRomAtIndex(index: number, input: Charge): Charge {
+    const state = this.requireComponentStateAtIndex(index);
+    if (state.type !== "rom") {
+      throw new Error(`Tile at index ${index} is not a ROM`);
+    }
+    if (input !== 0) {
+      state.cursor = (state.cursor + input + state.values.length) % state.values.length;
+      this.revisionValue += 1;
+    }
+    return state.values[state.cursor] as Charge;
+  }
 
   furnaceProgressAt(x: number, y: number): number {
     return this.furnaceProgress[this.indexOf(x, y)] ?? 0;
@@ -305,6 +486,10 @@ export class World {
       ) as TileKind;
       if (outputKind === TileKind.Empty || TILE_DEFINITIONS[outputKind] === undefined) {
         throw new Error(`Furnace at index ${index} has invalid output kind ${outputKind}`);
+      }
+      const transformedId = this.ids[targetIndex] ?? 0;
+      if (transformedId !== 0) {
+        this.componentStates.delete(transformedId);
       }
       this.kinds[targetIndex] = outputKind;
       this.orientations[targetIndex] = Direction.Up;
@@ -514,6 +699,10 @@ export class World {
       }
       return this.ids[index] ?? 0;
     }
+    const replacedId = this.ids[index] ?? 0;
+    if (replacedId !== 0) {
+      this.componentStates.delete(replacedId);
+    }
     this.clearWeldsAtIndex(index);
 
     const id = this.nextTileId;
@@ -525,6 +714,10 @@ export class World {
     this.furnaceProgress[index] = 0;
     this.furnaceTargetIds[index] = 0;
     this.orientations[index] = orientation;
+    const componentState = createDefaultComponentState(kind);
+    if (componentState !== null) {
+      this.componentStates.set(id, componentState);
+    }
     this.revisionValue += 1;
     return id;
   }
@@ -537,6 +730,7 @@ export class World {
     this.crossingVerticalCharges.fill(0);
     this.furnaceProgress.fill(0);
     this.furnaceTargetIds.fill(0);
+    this.componentStates.clear();
     this.rightWelds.fill(0);
     this.downWelds.fill(0);
     this.puzzleResultValue = PuzzleResult.InProgress;
@@ -563,6 +757,10 @@ export class World {
     this.furnaceTargetIds.set(source.furnaceTargetIds);
     this.rightWelds.set(source.rightWelds);
     this.downWelds.set(source.downWelds);
+    this.componentStates.clear();
+    for (const [id, state] of source.componentStates) {
+      this.componentStates.set(id, cloneComponentState(state));
+    }
     this.puzzleResultValue = source.puzzleResultValue;
     this.nextTileId = source.nextTileId;
     this.revisionValue += 1;
@@ -999,7 +1197,28 @@ export class World {
     }
   }
 
+  private requireComponentStateAtIndex(index: number): ConfigurableComponentState {
+    this.assertIndex(index);
+    const id = this.ids[index] ?? 0;
+    if (id === 0) {
+      throw new Error(`Configurable component at index ${index} has no tile identity`);
+    }
+    const state = this.componentStates.get(id);
+    if (state === undefined) {
+      throw new Error(`Configurable component at index ${index} has no state`);
+    }
+    const kind = this.kinds[index] as TileKind;
+    if (!componentStateMatchesKind(state, kind)) {
+      throw new Error(`Component state at index ${index} does not match ${TILE_DEFINITIONS[kind].name}`);
+    }
+    return state;
+  }
+
   private clearIndex(index: number): void {
+    const id = this.ids[index] ?? 0;
+    if (id !== 0) {
+      this.componentStates.delete(id);
+    }
     this.kinds[index] = TileKind.Empty;
     this.orientations[index] = Direction.Up;
     this.charges[index] = 0;

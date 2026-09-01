@@ -16,7 +16,7 @@
   "editableRegions": [ { "x": 8, "y": 3, "width": 4, "height": 4 } ],
   "initialBoard": {
     "format": "factory2d-board",
-    "version": 9,
+    "version": 10,
     "width": 20,
     "height": 14,
     "tick": 0,
@@ -41,6 +41,7 @@
     "charges": [],
     "crossingCharges": [],
     "furnaces": [],
+    "components": [],
     "welds": [
       "+------------------|",
       "|..................|",

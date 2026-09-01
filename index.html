@@ -120,7 +120,8 @@
           <p><span>REMOVE / UNWELD</span> Right click or drag</p>
           <p><span>PAN</span> Arrows, middle-drag, or Alt + right-drag</p>
           <p><span>ZOOM</span> Mouse wheel</p>
-          <p><span>ROTATE / AIM</span> Q / E or WASD</p>
+          <p><span>ROTATE / AIM</span> WASD</p>
+          <p><span>CONFIGURE</span> E / Shift + mouse wheel</p>
           <p><span id="transport-shortcut-label">RUN / PAUSE</span> Space</p>
           <p><span>STEP</span> N</p>
         </div>
@@ -159,6 +160,14 @@
           <div data-inspector-orientation-row>
             <dt>ORIENTATION</dt>
             <dd data-inspector-orientation></dd>
+          </div>
+          <div data-inspector-configuration-row>
+            <dt>CONFIG</dt>
+            <dd data-inspector-configuration></dd>
+          </div>
+          <div data-inspector-configuration-controls-row>
+            <dt>CONTROLS</dt>
+            <dd data-inspector-configuration-controls></dd>
           </div>
           <div data-inspector-furnace-row>
             <dt>BAKE</dt>
@@ -231,6 +240,53 @@
         </label>
       </footer>
       </section>
+      <dialog
+        class="component-configuration-dialog"
+        id="component-configuration-dialog"
+        aria-labelledby="component-configuration-title"
+        aria-describedby="component-configuration-description"
+      >
+        <form data-component-configuration-form>
+          <div class="component-configuration-status">COMPONENT CONFIGURATION</div>
+          <h2 id="component-configuration-title" data-component-configuration-title></h2>
+          <p id="component-configuration-description" data-component-configuration-description></p>
+          <label class="component-numeric-panel" data-component-numeric-panel>
+            <span data-component-numeric-label></span>
+            <input data-component-numeric-input type="number" step="1" required />
+          </label>
+          <div class="component-rom-panel" data-component-rom-panel hidden>
+            <div class="component-rom-dimensions">
+              <label>
+                WIDTH
+                <input
+                  data-component-rom-width
+                  type="number"
+                  min="1"
+                  max="9"
+                  step="1"
+                  required
+                />
+              </label>
+              <label>
+                HEIGHT
+                <input
+                  data-component-rom-height
+                  type="number"
+                  min="1"
+                  max="9"
+                  step="1"
+                  required
+                />
+              </label>
+            </div>
+            <div class="rom-configuration-grid" data-component-rom-grid></div>
+          </div>
+          <div class="component-configuration-actions">
+            <button type="button" data-component-configuration-cancel>CANCEL</button>
+            <button class="primary-control" type="submit">SAVE</button>
+          </div>
+        </form>
+      </dialog>
       <dialog
         class="test-report-dialog"
         id="test-report-dialog"

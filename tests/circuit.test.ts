@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { expectDefined } from "../src/util/assert";
 
 import { Simulation } from "../src/simulation/simulation";
 import { Direction, TileKind } from "../src/simulation/tile";
@@ -538,6 +539,90 @@ describe("circuit networks", () => {
       expect(world.chargeAt(1, 0)).toBe(output);
     },
   );
+
+  it("delays the rear input by its configured ring-buffer length", () => {
+    const world = new World(1, 3);
+    world.place(0, 0, TileKind.Conduit);
+    world.place(0, 1, TileKind.Delay, Direction.Up);
+    world.place(0, 2, TileKind.Conduit);
+    world.setWeld(0, 0, 0, 1, true);
+    world.setWeld(0, 1, 0, 2, true);
+    world.configureNumericComponent(0, 1, 3);
+    const simulation = new Simulation(world);
+    const inputs = [1, -1, 0, 0, 0, 0] as const;
+    const outputs = [0, 0, 0, 1, -1, 0] as const;
+
+    for (let index = 0; index < inputs.length; index += 1) {
+      world.setCharge(0, 2, expectDefined(inputs[index], "delay test input"));
+      simulation.step();
+      expect(world.chargeAt(0, 0)).toBe(outputs[index]);
+    }
+
+    expect(world.componentStateSnapshotAt(0, 1)).toEqual({
+      type: "delay",
+      length: 3,
+      cursor: 0,
+      data: [0, 0, 0],
+    });
+  });
+
+  it("counts nonzero rear inputs and emits a one-tick threshold pulse", () => {
+    const world = new World(1, 3);
+    world.place(0, 0, TileKind.Conduit);
+    world.place(0, 1, TileKind.Counter, Direction.Up);
+    world.place(0, 2, TileKind.Conduit);
+    world.setWeld(0, 0, 0, 1, true);
+    world.setWeld(0, 1, 0, 2, true);
+    world.configureNumericComponent(0, 1, 3);
+    const simulation = new Simulation(world);
+    const inputs = [1, -1, 0, 1, 0] as const;
+    const outputs = [0, 0, 0, 1, 0] as const;
+
+    for (let index = 0; index < inputs.length; index += 1) {
+      world.setCharge(0, 2, expectDefined(inputs[index], "counter test input"));
+      simulation.step();
+      expect(world.chargeAt(0, 0)).toBe(outputs[index]);
+    }
+
+    expect(world.componentStateSnapshotAt(0, 1)).toEqual({
+      type: "counter",
+      threshold: 3,
+      count: 0,
+    });
+  });
+
+  it("moves a ROM cursor with signed rear input and drives its other sides", () => {
+    const world = new World(3, 3);
+    world.place(1, 0, TileKind.Conduit);
+    world.place(0, 1, TileKind.Conduit);
+    world.place(1, 1, TileKind.Rom, Direction.Up);
+    world.place(2, 1, TileKind.Conduit);
+    world.place(1, 2, TileKind.Conduit);
+    world.setWeld(1, 0, 1, 1, true);
+    world.setWeld(0, 1, 1, 1, true);
+    world.setWeld(1, 1, 2, 1, true);
+    world.setWeld(1, 1, 1, 2, true);
+    world.configureRom(1, 1, 2, 2, [0, 1, -1, 1]);
+    const simulation = new Simulation(world);
+    const inputs = [1, 1, -1, 0] as const;
+    const outputs = [1, -1, 1, 1] as const;
+
+    for (let index = 0; index < inputs.length; index += 1) {
+      world.setCharge(1, 2, expectDefined(inputs[index], "ROM test input"));
+      simulation.step();
+      expect(world.chargeAt(1, 0)).toBe(outputs[index]);
+      expect(world.chargeAt(0, 1)).toBe(outputs[index]);
+      expect(world.chargeAt(2, 1)).toBe(outputs[index]);
+    }
+
+    expect(world.componentStateSnapshotAt(1, 1)).toEqual({
+      type: "rom",
+      width: 2,
+      height: 2,
+      cursor: 1,
+      values: [0, 1, -1, 1],
+    });
+  });
 
   it("keeps horizontal and vertical wire-crossing networks independent", () => {
     const world = new World(4, 5);

@@ -173,6 +173,15 @@ export class CircuitResolver {
         case TileKind.Selector:
           outputCharge = rearInput === 1 ? leftInput : rearInput === -1 ? rightInput : 0;
           break;
+        case TileKind.Delay:
+          outputCharge = this.world.advanceDelayAtIndex(index, rearInput);
+          break;
+        case TileKind.Counter:
+          outputCharge = this.world.advanceCounterAtIndex(index, rearInput);
+          break;
+        case TileKind.Rom:
+          outputCharge = this.world.advanceRomAtIndex(index, rearInput);
+          break;
         case TileKind.Furnace: {
           const disabled = rearInput !== 0;
           this.furnaceDisabled[index] = disabled ? 1 : 0;

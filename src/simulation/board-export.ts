@@ -1,5 +1,15 @@
+import {
+  componentConfigurationForKind,
+  MAX_COUNTER_THRESHOLD,
+  MAX_DELAY_LENGTH,
+  MAX_ROM_DIMENSION,
+  MIN_COUNTER_THRESHOLD,
+  MIN_DELAY_LENGTH,
+  MIN_ROM_DIMENSION,
+  type ConfigurableComponentSnapshot,
+} from "./configurable-components";
 import { furnaceRecipeFor } from "./furnace";
-import type { Charge } from "./circuit";
+import { isCharge, type Charge } from "./circuit";
 import { PuzzleResult } from "./puzzle-result";
 import {
   Direction,
@@ -13,7 +23,7 @@ import { World } from "./world";
 import { expectDefined } from "../util/assert";
 
 const FORMAT_NAME = "factory2d-board";
-const FORMAT_VERSION = 9;
+const FORMAT_VERSION = 10;
 export const MIN_BOARD_WIDTH = 1;
 export const MAX_BOARD_WIDTH = 400;
 export const MIN_BOARD_HEIGHT = 1;
@@ -86,6 +96,35 @@ interface ExportedFurnace {
   readonly y: number;
   readonly progress: number;
 }
+interface ExportedDelay {
+  readonly x: number;
+  readonly y: number;
+  readonly type: "delay";
+  readonly length: number;
+  readonly cursor: number;
+  readonly data: readonly Charge[];
+}
+
+interface ExportedCounter {
+  readonly x: number;
+  readonly y: number;
+  readonly type: "counter";
+  readonly threshold: number;
+  readonly count: number;
+}
+
+interface ExportedRom {
+  readonly x: number;
+  readonly y: number;
+  readonly type: "rom";
+  readonly width: number;
+  readonly height: number;
+  readonly cursor: number;
+  readonly values: readonly Charge[];
+}
+
+type ExportedComponent = ExportedDelay | ExportedCounter | ExportedRom;
+
 
 interface ExportedBoard {
   readonly format: typeof FORMAT_NAME;
@@ -99,6 +138,7 @@ interface ExportedBoard {
   readonly charges: readonly ExportedCharge[];
   readonly crossingCharges: readonly ExportedCrossingCharge[];
   readonly furnaces: readonly ExportedFurnace[];
+  readonly components: readonly ExportedComponent[];
   readonly welds: readonly string[];
 }
 
@@ -120,6 +160,7 @@ export function serializeBoard(world: World, tick: number): string {
   const charges: ExportedCharge[] = [];
   const crossingCharges: ExportedCrossingCharge[] = [];
   const furnaces: ExportedFurnace[] = [];
+  const components: ExportedComponent[] = [];
   const welds: string[] = [];
 
   for (let y = 0; y < world.height; y += 1) {
@@ -169,6 +210,10 @@ export function serializeBoard(world: World, tick: number): string {
         }
       }
 
+      const componentState = world.componentStateSnapshotAt(x, y);
+      if (componentState !== null) {
+        components.push({ x, y, ...componentState });
+      }
     }
     grid.push(row);
     welds.push(weldRow);
@@ -186,6 +231,7 @@ export function serializeBoard(world: World, tick: number): string {
     charges,
     crossingCharges,
     furnaces,
+    components,
     welds,
   };
   return `${JSON.stringify(board, null, 2)}\n`;
@@ -214,6 +260,7 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
     "charges",
     "crossingCharges",
     "furnaces",
+    "components",
     "welds",
   ]);
   if (board.format !== FORMAT_NAME) {
@@ -403,6 +450,119 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
   }
 
 
+  const components = board.components === undefined
+    ? []
+    : requireArray(board.components, "Board components");
+  const componentStatesByCell = new Array<ConfigurableComponentSnapshot | undefined>(
+    width * height,
+  );
+  const hasComponentState = new Uint8Array(width * height);
+  for (let index = 0; index < components.length; index += 1) {
+    const label = `Component ${index}`;
+    const entry = requireObject(components[index], label, [
+      "x",
+      "y",
+      "type",
+      "length",
+      "cursor",
+      "data",
+      "threshold",
+      "count",
+      "width",
+      "height",
+      "values",
+    ]);
+    const type = requireString(entry.type, `${label} type`);
+    const fields = type === "delay"
+      ? ["x", "y", "type", "length", "cursor", "data"]
+      : type === "counter"
+        ? ["x", "y", "type", "threshold", "count"]
+        : type === "rom"
+          ? ["x", "y", "type", "width", "height", "cursor", "values"]
+          : null;
+    if (fields === null) {
+      throw new Error(`${label} has unknown type "${type}"`);
+    }
+    const state = requireObject(components[index], label, fields);
+    const x = requireInteger(state.x, `${label} x`, 0, width - 1);
+    const y = requireInteger(state.y, `${label} y`, 0, height - 1);
+    const cellIndex = y * width + x;
+    if (hasComponentState[cellIndex] === 1) {
+      throw new Error(`${label} duplicates cell (${x}, ${y})`);
+    }
+    const kind = expectDefined(kinds[cellIndex], `tile kind at (${x}, ${y})`) as TileKind;
+    let snapshot: ConfigurableComponentSnapshot;
+    if (type === "delay") {
+      const length = requireInteger(
+        state.length,
+        `${label} length`,
+        MIN_DELAY_LENGTH,
+        MAX_DELAY_LENGTH,
+      );
+      snapshot = {
+        type,
+        length,
+        cursor: requireInteger(state.cursor, `${label} cursor`, 0, length - 1),
+        data: requireChargeArray(state.data, length, `${label} data`),
+      };
+    } else if (type === "counter") {
+      const threshold = requireInteger(
+        state.threshold,
+        `${label} threshold`,
+        MIN_COUNTER_THRESHOLD,
+        MAX_COUNTER_THRESHOLD,
+      );
+      snapshot = {
+        type,
+        threshold,
+        count: requireInteger(state.count, `${label} count`, 0, threshold - 1),
+      };
+    } else {
+      const componentWidth = requireInteger(
+        state.width,
+        `${label} width`,
+        MIN_ROM_DIMENSION,
+        MAX_ROM_DIMENSION,
+      );
+      const componentHeight = requireInteger(
+        state.height,
+        `${label} height`,
+        MIN_ROM_DIMENSION,
+        MAX_ROM_DIMENSION,
+      );
+      const valueCount = componentWidth * componentHeight;
+      snapshot = {
+        type: "rom",
+        width: componentWidth,
+        height: componentHeight,
+        cursor: requireInteger(state.cursor, `${label} cursor`, 0, valueCount - 1),
+        values: requireChargeArray(state.values, valueCount, `${label} values`),
+      };
+    }
+    const expectedConfiguration = componentConfigurationForKind(kind);
+    if (
+      expectedConfiguration === null ||
+      (snapshot.type === "delay" && kind !== TileKind.Delay) ||
+      (snapshot.type === "counter" && kind !== TileKind.Counter) ||
+      (snapshot.type === "rom" && kind !== TileKind.Rom)
+    ) {
+      throw new Error(`${label} does not match the tile at (${x}, ${y})`);
+    }
+    componentStatesByCell[cellIndex] = snapshot;
+    hasComponentState[cellIndex] = 1;
+  }
+  for (let cellIndex = 0; cellIndex < kinds.length; cellIndex += 1) {
+    const kind = expectDefined(kinds[cellIndex], `tile kind at index ${cellIndex}`) as TileKind;
+    if (
+      componentConfigurationForKind(kind) !== null &&
+      hasComponentState[cellIndex] !== 1
+    ) {
+      const x = cellIndex % width;
+      const y = (cellIndex - x) / width;
+      throw new Error(`Configurable component at (${x}, ${y}) is missing state`);
+    }
+  }
+
   const welds = requireArray(board.welds, "Board weld grid");
   if (welds.length !== height) {
     throw new Error(`Board weld grid must contain exactly ${height} rows`);
@@ -473,6 +633,10 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
           `vertical crossing charge at (${x}, ${y})`,
         ) as Charge;
         world.setCrossingCharges(x, y, horizontal, vertical);
+      }
+      const componentState = componentStatesByCell[cellIndex];
+      if (componentState !== undefined) {
+        world.restoreComponentState(x, y, componentState);
       }
     }
   }
@@ -559,3 +723,21 @@ function requireInteger(
   }
   return value;
 }
+function requireChargeArray(
+  value: unknown,
+  length: number,
+  label: string,
+): readonly Charge[] {
+  const entries = requireArray(value, label);
+  if (entries.length !== length) {
+    throw new Error(`${label} must contain exactly ${length} values`);
+  }
+  return entries.map((entry, index) => {
+    const charge = requireInteger(entry, `${label} ${index}`, -1, 1);
+    if (!isCharge(charge)) {
+      throw new Error(`${label} ${index} must be a ternary charge`);
+    }
+    return charge;
+  });
+}
+

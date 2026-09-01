@@ -33,7 +33,7 @@ function puzzleFile(): JsonObject {
     editableRegions: [{ x: 1, y: 1, width: 2, height: 2 }],
     initialBoard: {
       format: "factory2d-board",
-      version: 9,
+      version: 10,
       width: 4,
       height: 4,
       tick: 0,
@@ -48,6 +48,7 @@ function puzzleFile(): JsonObject {
       charges: [],
       crossingCharges: [],
       furnaces: [],
+      components: [],
       welds: [
         "....",
         "....",

@@ -27,6 +27,7 @@ import {
   shouldWeldPlacedTile,
 } from "./render/pointer-gesture";
 import type { PointerGesture } from "./render/pointer-gesture";
+import { componentConfigurationForKind } from "./simulation/configurable-components";
 import { deserializeBoard, serializeBoard } from "./simulation/board-export";
 import { PuzzleResult } from "./simulation/puzzle-result";
 import {
@@ -39,6 +40,10 @@ import {
   TileKind,
 } from "./simulation/tile";
 import { expectDefined } from "./util/assert";
+import {
+  ComponentConfigurationDialog,
+  type ComponentConfigurationSubmission,
+} from "./ui/component-configuration-dialog";
 import { TileInspector } from "./ui/tile-inspector";
 import { populateComponentPalette } from "./ui/component-palette";
 import { PuzzleTestReportView } from "./ui/puzzle-test-report";
@@ -86,6 +91,9 @@ let tileInspector = new TileInspector(inspectorPanel, world);
 const playButton = requiredElement<HTMLButtonElement>("play-button");
 const transportShortcutLabel = requiredElement<HTMLElement>("transport-shortcut-label");
 const testReportDialog = requiredElement<HTMLDialogElement>("test-report-dialog");
+const componentConfigurationDialogElement = requiredElement<HTMLDialogElement>(
+  "component-configuration-dialog",
+);
 const stepButton = requiredElement<HTMLButtonElement>("step-button");
 const resetButton = requiredElement<HTMLButtonElement>("reset-button");
 const clearButton = requiredElement<HTMLButtonElement>("clear-button");
@@ -148,6 +156,7 @@ let lastPanClientX = 0;
 let lastPanClientY = 0;
 let pendingPickCell: GridCell | null = null;
 let lastEditedCell: GridCell | null = null;
+let pendingConfigurationCell: GridCell | null = null;
 let lastPointerGridPoint: GridPoint | null = null;
 let hoveredCell: GridCell | null = null;
 let hoveredEdge: GridEdge | null = null;
@@ -578,6 +587,81 @@ function editCellLine(
     saveEditedBaseline();
   }
 }
+function openComponentConfiguration(cell: GridCell): void {
+  if (!activeSession.editingState.editable || !canEditCell(cell.x, cell.y)) {
+    return;
+  }
+  const kind = world.kindAt(cell.x, cell.y);
+  if (componentConfigurationForKind(kind) === null) {
+    return;
+  }
+  const state = world.componentStateSnapshotAt(cell.x, cell.y);
+  if (state === null) {
+    throw new Error(`${TILE_DEFINITIONS[kind].name} is missing configuration state`);
+  }
+  const tileId = world.idAt(cell.x, cell.y);
+  componentConfigurationView.show(
+    kind,
+    state,
+    (submission: ComponentConfigurationSubmission) => {
+      if (
+        !activeSession.editingState.editable ||
+        world.idAt(cell.x, cell.y) !== tileId ||
+        world.kindAt(cell.x, cell.y) !== kind
+      ) {
+        return;
+      }
+      const changed = submission.type === "number"
+        ? world.configureNumericComponent(cell.x, cell.y, submission.value)
+        : world.configureRom(
+            cell.x,
+            cell.y,
+            submission.width,
+            submission.height,
+            submission.values,
+          );
+      if (changed) {
+        saveEditedBaseline();
+        navigation.persistActiveSolutionBoard();
+        refreshPointerHover();
+      }
+    },
+  );
+}
+
+function adjustHoveredNumericComponent(delta: number): boolean {
+  if (
+    hoveredCell === null ||
+    !activeSession.editingState.editable ||
+    !canEditCell(hoveredCell.x, hoveredCell.y)
+  ) {
+    return false;
+  }
+  const kind = world.kindAt(hoveredCell.x, hoveredCell.y);
+  const configuration = componentConfigurationForKind(kind);
+  const state = world.componentStateSnapshotAt(hoveredCell.x, hoveredCell.y);
+  if (
+    configuration === null ||
+    configuration.type !== "number" ||
+    (state?.type !== "delay" && state?.type !== "counter")
+  ) {
+    return false;
+  }
+  const currentValue = state.type === "delay" ? state.length : state.threshold;
+  const nextValue = Math.min(
+    configuration.maximum,
+    Math.max(configuration.minimum, currentValue + delta),
+  );
+  if (nextValue === currentValue) {
+    return true;
+  }
+  world.configureNumericComponent(hoveredCell.x, hoveredCell.y, nextValue);
+  saveEditedBaseline();
+  navigation.persistActiveSolutionBoard();
+  refreshPointerHover();
+  return true;
+}
+
 
 function editWeld(edge: GridEdge, erase: boolean): void {
   if (
@@ -621,6 +705,9 @@ function editWeldSegment(
     saveEditedBaseline();
   }
 }
+const componentConfigurationView = new ComponentConfigurationDialog(
+  componentConfigurationDialogElement,
+);
 const testReportView = new PuzzleTestReportView(testReportDialog, {
   onContinueEditing: () => resetSimulation(),
   onBackToPuzzle: () => navigation.leaveWorkshop(),
@@ -629,6 +716,7 @@ const testReportView = new PuzzleTestReportView(testReportDialog, {
 function stopWorkshopActivity(): void {
   testingPuzzleSolution = false;
   testReportView.close();
+  componentConfigurationView.close();
   closeExportOptions();
   setRunning(false);
 }
@@ -959,6 +1047,7 @@ canvas.addEventListener("pointerdown", (event) => {
   lastPanClientX = event.clientX;
   lastPanClientY = event.clientY;
   pendingPickCell = gesture === "pick-or-pan" ? cell : null;
+  pendingConfigurationCell = null;
   canvas.setPointerCapture(event.pointerId);
 
   if (gesture === "pick-or-pan") {
@@ -976,10 +1065,18 @@ canvas.addEventListener("pointerdown", (event) => {
   activeErase = event.button === 2;
   activeWeldPlacement = shouldWeldPlacedTile(event.button, event.shiftKey);
   lastPointerGridPoint = point;
+  const shouldConfigurePlacement =
+    !activeErase &&
+    cell !== null &&
+    world.kindAt(cell.x, cell.y) !== selectedKind &&
+    componentConfigurationForKind(selectedKind)?.configureOnPlacement === true;
   if (activeEditTool === "tile") {
     if (cell !== null) {
       editCellLine(cell, cell, activeErase, activeWeldPlacement);
       lastEditedCell = cell;
+      if (shouldConfigurePlacement && world.kindAt(cell.x, cell.y) === selectedKind) {
+        pendingConfigurationCell = cell;
+      }
     }
   } else if (activeEditTool === "weld") {
     const edge = renderer.edgeFromGridPoint(point);
@@ -1074,15 +1171,22 @@ function finishPointerGesture(event: PointerEvent): void {
     }
     syncEditableRegionAuthoringOverlay();
   }
+  const configurationCell = event.type === "pointerup"
+    ? pendingConfigurationCell
+    : null;
   activePointerId = null;
   activePointerMode = null;
   activeEditTool = null;
   activeWeldPlacement = false;
   pendingPickCell = null;
+  pendingConfigurationCell = null;
   lastEditedCell = null;
   lastPointerGridPoint = null;
   canvas.classList.remove("panning");
   navigation.persistActiveSolutionBoard();
+  if (configurationCell !== null) {
+    openComponentConfiguration(configurationCell);
+  }
 }
 
 canvas.addEventListener("pointerup", finishPointerGesture);
@@ -1100,10 +1204,17 @@ canvas.addEventListener("contextmenu", (event) => {
 
 canvas.addEventListener("wheel", (event) => {
   event.preventDefault();
-  renderer.zoomAtClientPoint(event.clientX, event.clientY, event.deltaY);
   const point = renderer.gridPointFromClientPoint(event.clientX, event.clientY);
   hoveredCell = renderer.cellFromGridPoint(point);
   hoveredEdge = renderer.edgeFromGridPoint(point);
+  if (
+    event.shiftKey &&
+    event.deltaY !== 0 &&
+    adjustHoveredNumericComponent(event.deltaY < 0 ? 1 : -1)
+  ) {
+    return;
+  }
+  renderer.zoomAtClientPoint(event.clientX, event.clientY, event.deltaY);
   refreshPointerHover();
 }, { passive: false });
 
@@ -1122,7 +1233,8 @@ document.addEventListener("keydown", (event) => {
   if (
     navigation.screen.kind === "main-menu" ||
     navigation.screen.kind === "puzzle-info" ||
-    testReportDialog.open
+    testReportDialog.open ||
+    componentConfigurationView.open
   ) {
     return;
   }
@@ -1167,6 +1279,16 @@ document.addEventListener("keydown", (event) => {
     if (hoveredCell !== null) {
       pickTileAt(hoveredCell);
     }
+    return;
+  }
+  if (
+    event.code === "KeyE" &&
+    hoveredCell !== null &&
+    activeSession.editingState.editable &&
+    componentConfigurationForKind(world.kindAt(hoveredCell.x, hoveredCell.y)) !== null
+  ) {
+    event.preventDefault();
+    openComponentConfiguration(hoveredCell);
     return;
   }
 

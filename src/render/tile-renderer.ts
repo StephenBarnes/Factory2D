@@ -1,3 +1,4 @@
+import type { ConfigurableComponentSnapshot } from "../simulation/configurable-components";
 import { CIRCUIT_CHARGE_COLORS, type Charge } from "../simulation/circuit";
 import {
   Direction,
@@ -22,6 +23,7 @@ export interface BodyCell {
   /** Two signed bits per direction, used to color each connected circuit port. */
   circuitPortCharges: number;
   circuitConnections: WeldSide;
+  componentState?: ConfigurableComponentSnapshot | null;
   /** The right neighbor belongs to the same body but this edge is not welded. */
   seamRight: boolean;
   /** The down neighbor belongs to the same body but this edge is not welded. */
@@ -142,6 +144,7 @@ export function drawBody(
       cell.outputCharge,
       cell.circuitConnections,
       cell.circuitPortCharges,
+      cell.componentState ?? null,
       animationTime,
       cell.pistonTransition ?? 0,
       cell.pistonTransitionProgress ?? 1,
@@ -170,6 +173,7 @@ const SINGLE_CELL: [BodyCell] = [
     outputCharge: 0,
     circuitConnections: WeldSide.None,
     circuitPortCharges: 0,
+    componentState: null,
     seamRight: false,
     seamDown: false,
   },
@@ -399,6 +403,7 @@ function drawDecoration(
   outputCharge: Charge,
   circuitConnections: WeldSide,
   circuitPortCharges: number,
+  componentState: ConfigurableComponentSnapshot | null,
   animationTime: number,
   pistonTransition: -1 | 0 | 1,
   pistonTransitionProgress: number,
@@ -873,6 +878,87 @@ function drawDecoration(
         context.moveTo(centerX, centerY);
         context.lineTo(centerX, centerY + innerOffset);
         context.stroke();
+      }
+      break;
+    }
+    case TileDecorationStyle.Delay: {
+      const state = componentState?.type === "delay" ? componentState : null;
+      const length = state?.length ?? 3;
+      const cursor = state?.cursor ?? 0;
+      const columns = Math.ceil(Math.sqrt(length));
+      const rows = Math.ceil(length / columns);
+      const gridWidth = size * 0.5;
+      const gridHeight = size * 0.5;
+      const spacing = Math.min(gridWidth / columns, gridHeight / rows);
+      const startX = left + size / 2 - (columns - 1) * spacing / 2;
+      const startY = top + size / 2 - (rows - 1) * spacing / 2;
+      const radius = Math.max(1, spacing * 0.22);
+      for (let valueIndex = 0; valueIndex < length; valueIndex += 1) {
+        const x = startX + (valueIndex % columns) * spacing;
+        const y = startY + Math.floor(valueIndex / columns) * spacing;
+        const charge = state?.data[valueIndex] ?? 0;
+        context.fillStyle = CIRCUIT_CHARGE_COLORS[charge];
+        context.beginPath();
+        drawDot(context, x, y, radius);
+        context.fill();
+        if (valueIndex === cursor) {
+          context.strokeStyle = "#f1cc38";
+          context.lineWidth = Math.max(1, size * 0.025);
+          context.beginPath();
+          context.arc(x, y, radius * 1.55, 0, Math.PI * 2);
+          context.stroke();
+        }
+      }
+      break;
+    }
+    case TileDecorationStyle.Counter: {
+      const state = componentState?.type === "counter" ? componentState : null;
+      context.save();
+      context.fillStyle = definition.decorationColor;
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.font = `700 ${Math.max(8, size * 0.31)}px ui-monospace, monospace`;
+      context.fillText(String(state?.count ?? 0), left + size / 2, top + size * 0.48);
+      context.globalAlpha = 0.72;
+      context.font = `600 ${Math.max(5, size * 0.12)}px ui-monospace, monospace`;
+      context.fillText(
+        `/ ${state?.threshold ?? 4}`,
+        left + size / 2,
+        top + size * 0.7,
+      );
+      context.restore();
+      break;
+    }
+    case TileDecorationStyle.Rom: {
+      const state = componentState?.type === "rom" ? componentState : null;
+      const width = state?.width ?? 3;
+      const height = state?.height ?? 3;
+      const gridSize = size * 0.52;
+      const cellSize = Math.min(gridSize / width, gridSize / height);
+      const gridLeft = left + size / 2 - width * cellSize / 2;
+      const gridTop = top + size / 2 - height * cellSize / 2;
+      const inset = Math.max(0.5, cellSize * 0.08);
+      for (let valueIndex = 0; valueIndex < width * height; valueIndex += 1) {
+        const charge = state?.values[valueIndex] ?? 0;
+        const x = gridLeft + (valueIndex % width) * cellSize;
+        const y = gridTop + Math.floor(valueIndex / width) * cellSize;
+        context.fillStyle = charge === 0 ? "#17131f" : CIRCUIT_CHARGE_COLORS[charge];
+        context.fillRect(
+          x + inset,
+          y + inset,
+          Math.max(1, cellSize - inset * 2),
+          Math.max(1, cellSize - inset * 2),
+        );
+        if (valueIndex === (state?.cursor ?? 0)) {
+          context.strokeStyle = "#f1cc38";
+          context.lineWidth = Math.max(1, size * 0.025);
+          context.strokeRect(
+            x + inset / 2,
+            y + inset / 2,
+            Math.max(1, cellSize - inset),
+            Math.max(1, cellSize - inset),
+          );
+        }
       }
       break;
     }
