@@ -409,6 +409,10 @@ function drawDecoration(
   pistonTransitionProgress: number,
 ): void {
   if (circuitConnections !== WeldSide.None) {
+    const hasComponentDisplay =
+      definition.decorationStyle === TileDecorationStyle.Delay ||
+      definition.decorationStyle === TileDecorationStyle.Counter ||
+      definition.decorationStyle === TileDecorationStyle.Rom;
     drawCircuitConnections(
       context,
       left,
@@ -418,6 +422,7 @@ function drawDecoration(
       circuitPortCharges,
       definition.circuitInputPorts !== WeldSide.None ||
         definition.decorationStyle === TileDecorationStyle.WireCrossing,
+      hasComponentDisplay ? 0.39 : 0.26,
     );
   }
   context.fillStyle = definition.decorationColor;
@@ -885,6 +890,7 @@ function drawDecoration(
       const state = componentState?.type === "delay" ? componentState : null;
       const length = state?.length ?? 3;
       const cursor = state?.cursor ?? 0;
+      const highlightedCursor = state === null ? cursor : (cursor + length - 1) % length;
       const columns = Math.ceil(Math.sqrt(length));
       const rows = Math.ceil(length / columns);
       const gridWidth = size * 0.5;
@@ -901,7 +907,7 @@ function drawDecoration(
         context.beginPath();
         drawDot(context, x, y, radius);
         context.fill();
-        if (valueIndex === cursor) {
+        if (valueIndex === highlightedCursor) {
           context.strokeStyle = "#f1cc38";
           context.lineWidth = Math.max(1, size * 0.025);
           context.beginPath();
@@ -909,6 +915,16 @@ function drawDecoration(
           context.stroke();
         }
       }
+      drawPortArrows(
+        context,
+        left,
+        top,
+        size,
+        orientation,
+        WeldSide.Down,
+        WeldSide.Up,
+        definition.decorationColor,
+      );
       break;
     }
     case TileDecorationStyle.Counter: {
@@ -927,6 +943,16 @@ function drawDecoration(
         top + size * 0.7,
       );
       context.restore();
+      drawPortArrows(
+        context,
+        left,
+        top,
+        size,
+        orientation,
+        WeldSide.Down,
+        WeldSide.Up,
+        definition.decorationColor,
+      );
       break;
     }
     case TileDecorationStyle.Rom: {
@@ -942,7 +968,7 @@ function drawDecoration(
         const charge = state?.values[valueIndex] ?? 0;
         const x = gridLeft + (valueIndex % width) * cellSize;
         const y = gridTop + Math.floor(valueIndex / width) * cellSize;
-        context.fillStyle = charge === 0 ? "#17131f" : CIRCUIT_CHARGE_COLORS[charge];
+        context.fillStyle = charge === 0 ? "#2b1838" : CIRCUIT_CHARGE_COLORS[charge];
         context.fillRect(
           x + inset,
           y + inset,
@@ -960,6 +986,16 @@ function drawDecoration(
           );
         }
       }
+      drawPortArrows(
+        context,
+        left,
+        top,
+        size,
+        orientation,
+        WeldSide.Left | WeldSide.Down,
+        WeldSide.None,
+        definition.decorationColor,
+      );
       break;
     }
     case TileDecorationStyle.Piston:
@@ -1021,6 +1057,7 @@ function drawCircuitConnections(
   connections: WeldSide,
   portCharges: number,
   isolatePorts: boolean,
+  innerOffsetRatio: number,
 ): void {
   const centerX = left + size / 2;
   const centerY = top + size / 2;
@@ -1048,8 +1085,8 @@ function drawCircuitConnections(
           centerY + offsetY * size / 2,
         );
         context.lineTo(
-          centerX + offsetX * size * 0.26,
-          centerY + offsetY * size * 0.26,
+          centerX + offsetX * size * innerOffsetRatio,
+          centerY + offsetY * size * innerOffsetRatio,
         );
       } else {
         context.moveTo(centerX, centerY);
@@ -1065,6 +1102,51 @@ function drawCircuitConnections(
       context.stroke();
     }
   }
+}
+
+function drawPortArrows(
+  context: CanvasRenderingContext2D,
+  left: number,
+  top: number,
+  size: number,
+  orientation: Direction,
+  inputSides: WeldSide,
+  outputSides: WeldSide,
+  color: string,
+): void {
+  context.save();
+  context.translate(left + size / 2, top + size / 2);
+  context.rotate(orientation * Math.PI / 2);
+  context.strokeStyle = color;
+  context.lineWidth = Math.max(1, size * 0.035);
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  context.beginPath();
+  for (let value = Direction.Up; value <= Direction.Left; value += 1) {
+    const direction = value as Direction;
+    const side = 1 << direction;
+    if ((inputSides & side) === 0 && (outputSides & side) === 0) {
+      continue;
+    }
+    const sideX = directionX(direction);
+    const sideY = directionY(direction);
+    const flowSign = (outputSides & side) !== 0 ? 1 : -1;
+    const flowX = sideX * flowSign;
+    const flowY = sideY * flowSign;
+    const centerX = sideX * size * 0.33;
+    const centerY = sideY * size * 0.33;
+    const tipX = centerX + flowX * size * 0.045;
+    const tipY = centerY + flowY * size * 0.045;
+    const baseX = tipX - flowX * size * 0.09;
+    const baseY = tipY - flowY * size * 0.09;
+    const wingX = -flowY * size * 0.055;
+    const wingY = flowX * size * 0.055;
+    context.moveTo(baseX + wingX, baseY + wingY);
+    context.lineTo(tipX, tipY);
+    context.lineTo(baseX - wingX, baseY - wingY);
+  }
+  context.stroke();
+  context.restore();
 }
 
 /** Adds one filled circle to the current path without a connecting chord from the previous subpath. */

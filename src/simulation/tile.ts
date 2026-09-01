@@ -679,7 +679,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 24,
       category: PaletteCategory.Circuits,
-      description: "Delays the isolated rear input by a configurable number of ticks",
+      description: "Delays the isolated rear input by a configurable number of ticks. Press E to configure",
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -702,7 +702,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 25,
       category: PaletteCategory.Circuits,
-      description: "Adds signed rear inputs and pulses with the wrap direction",
+      description: "Adds signed rear inputs and pulses with the wrap direction. Press E to configure",
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -725,7 +725,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 26,
       category: PaletteCategory.Circuits,
-      description: "Moves a cursor with its rear input and outputs the selected stored ternary value",
+      description: "Left and rear inputs move a configurable 2D cursor; outputs the selected value. Press E to configure",
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -733,8 +733,8 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     excludesFacingWeld: false,
     usesOrientation: true,
     circuitPorts: WeldSide.All,
-    circuitInputPorts: WeldSide.Down,
-    circuitOutputPorts: WeldSide.Up | WeldSide.Right | WeldSide.Left,
+    circuitInputPorts: WeldSide.Left | WeldSide.Down,
+    circuitOutputPorts: WeldSide.Up | WeldSide.Right,
     magnetic: false,
     attractionRange: 0,
     fill: "#4f6865",

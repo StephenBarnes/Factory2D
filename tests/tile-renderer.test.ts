@@ -126,6 +126,8 @@ class RecordingCanvasContext {
   fillRect(x: number, y: number, width: number, height: number): void {
     this.fillRects.push({ x, y, width, height, fillStyle: this.fillStyle });
   }
+  strokeRect(_x: number, _y: number, _width: number, _height: number): void {}
+  fillText(_text: string, _x: number, _y: number): void {}
 }
 
 function stone(x: number, y: number, seamRight = false, seamDown = false): BodyCell {
@@ -450,6 +452,137 @@ describe("circuit rendering", () => {
       expect(inputSegment?.toY).toBeCloseTo(inputDirection === Direction.Down ? 24.32 : 16);
     },
   );
+
+  it("highlights the delay slot that produced the current output", () => {
+    const context = new RecordingCanvasContext();
+    const delay: BodyCell = {
+      x: 0,
+      y: 0,
+      kind: TileKind.Delay,
+      orientation: Direction.Up,
+      outputCharge: 1,
+      circuitConnections: WeldSide.None,
+      circuitPortCharges: 0,
+      componentState: {
+        type: "delay",
+        length: 3,
+        cursor: 0,
+        data: [1, 0, -1],
+      },
+      seamRight: false,
+      seamDown: false,
+    };
+
+    drawBody(
+      context as unknown as CanvasRenderingContext2D,
+      0,
+      0,
+      32,
+      [delay],
+      1,
+      new RecordingPath2D() as unknown as Path2D,
+    );
+
+    expect(context.circles.at(-1)).toMatchObject({
+      centerX: 12,
+      centerY: 20,
+    });
+  });
+
+  it.each([
+    { kind: TileKind.Delay, connections: WeldSide.Up | WeldSide.Down, traceCount: 2 },
+    { kind: TileKind.Counter, connections: WeldSide.Up | WeldSide.Down, traceCount: 2 },
+    { kind: TileKind.Rom, connections: WeldSide.All, traceCount: 4 },
+  ])(
+    "keeps $kind traces outside its display and marks its inputs",
+    ({ kind, connections, traceCount }) => {
+      const context = new RecordingCanvasContext();
+      const componentState = kind === TileKind.Delay
+        ? { type: "delay" as const, length: 3, cursor: 0, data: [0, 0, 0] as const }
+        : kind === TileKind.Counter
+          ? { type: "counter" as const, threshold: 4, count: 0 }
+          : {
+              type: "rom" as const,
+              width: 1,
+              height: 1,
+              cursor: 0,
+              values: [0] as const,
+            };
+      const component: BodyCell = {
+        x: 0,
+        y: 0,
+        kind,
+        orientation: Direction.Up,
+        outputCharge: 0,
+        circuitConnections: connections,
+        circuitPortCharges: 0,
+        componentState,
+        seamRight: false,
+        seamDown: false,
+      };
+
+      drawBody(
+        context as unknown as CanvasRenderingContext2D,
+        0,
+        0,
+        32,
+        [component],
+        1,
+        new RecordingPath2D() as unknown as Path2D,
+      );
+
+      const traceSegments = context.strokes
+        .filter((stroke) => stroke.strokeStyle === CIRCUIT_CHARGE_COLORS[0])
+        .flatMap((stroke) => stroke.segments)
+        .filter((segment) =>
+          segment.fromX === 0 ||
+          segment.fromX === 32 ||
+          segment.fromY === 0 ||
+          segment.fromY === 32
+        );
+      expect(traceSegments).toHaveLength(traceCount);
+      for (const segment of traceSegments) {
+        expect(Math.max(Math.abs(segment.toX - 16), Math.abs(segment.toY - 16))).toBeCloseTo(
+          32 * 0.39,
+        );
+      }
+      expect(context.strokes.at(-1)?.segments).toHaveLength(4);
+    },
+  );
+
+  it("uses visible dark purple for neutral ROM cells", () => {
+    const context = new RecordingCanvasContext();
+    const rom: BodyCell = {
+      x: 0,
+      y: 0,
+      kind: TileKind.Rom,
+      orientation: Direction.Up,
+      outputCharge: 0,
+      circuitConnections: WeldSide.None,
+      circuitPortCharges: 0,
+      componentState: {
+        type: "rom",
+        width: 2,
+        height: 1,
+        cursor: 0,
+        values: [0, 1],
+      },
+      seamRight: false,
+      seamDown: false,
+    };
+
+    drawBody(
+      context as unknown as CanvasRenderingContext2D,
+      0,
+      0,
+      32,
+      [rom],
+      1,
+      new RecordingPath2D() as unknown as Path2D,
+    );
+
+    expect(context.fillRects.some((command) => command.fillStyle === "#2b1838")).toBe(true);
+  });
 
   it("colors wire-crossing axes independently", () => {
     const context = new RecordingCanvasContext();

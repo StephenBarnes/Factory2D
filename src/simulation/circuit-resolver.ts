@@ -180,7 +180,7 @@ export class CircuitResolver {
           outputCharge = this.world.advanceCounterAtIndex(index, rearInput);
           break;
         case TileKind.Rom:
-          outputCharge = this.world.advanceRomAtIndex(index, rearInput);
+          outputCharge = this.world.advanceRomAtIndex(index, leftInput, rearInput);
           break;
         case TileKind.Furnace: {
           const disabled = rearInput !== 0;

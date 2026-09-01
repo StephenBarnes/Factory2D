@@ -591,7 +591,7 @@ describe("circuit networks", () => {
     });
   });
 
-  it("moves a ROM cursor with signed rear input and drives its other sides", () => {
+  it("moves a ROM cursor in two dimensions and drives its two output sides", () => {
     const world = new World(3, 3);
     world.place(1, 0, TileKind.Conduit);
     world.place(0, 1, TileKind.Conduit);
@@ -604,14 +604,23 @@ describe("circuit networks", () => {
     world.setWeld(1, 1, 1, 2, true);
     world.configureRom(1, 1, 2, 2, [0, 1, -1, 1]);
     const simulation = new Simulation(world);
-    const inputs = [1, 1, -1, 0] as const;
-    const outputs = [1, -1, 1, 1] as const;
+    const horizontalInputs = [1, 0, -1, 0] as const;
+    const verticalInputs = [0, 1, 0, -1] as const;
+    const outputs = [1, 1, -1, 0] as const;
 
-    for (let index = 0; index < inputs.length; index += 1) {
-      world.setCharge(1, 2, expectDefined(inputs[index], "ROM test input"));
+    for (let index = 0; index < horizontalInputs.length; index += 1) {
+      world.setCharge(
+        0,
+        1,
+        expectDefined(horizontalInputs[index], "ROM horizontal test input"),
+      );
+      world.setCharge(
+        1,
+        2,
+        expectDefined(verticalInputs[index], "ROM vertical test input"),
+      );
       simulation.step();
       expect(world.chargeAt(1, 0)).toBe(outputs[index]);
-      expect(world.chargeAt(0, 1)).toBe(outputs[index]);
       expect(world.chargeAt(2, 1)).toBe(outputs[index]);
     }
 
@@ -619,10 +628,40 @@ describe("circuit networks", () => {
       type: "rom",
       width: 2,
       height: 2,
-      cursor: 1,
+      cursor: 0,
       values: [0, 1, -1, 1],
     });
   });
+
+  it.each([
+    {
+      orientation: Direction.Up,
+      expectedCursors: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0],
+    },
+    {
+      orientation: Direction.Right,
+      expectedCursors: [4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15, 0],
+    },
+  ])(
+    "carries $orientation input overflow across both ROM dimensions",
+    ({ orientation, expectedCursors }) => {
+      const world = new World(3, 3);
+      world.place(0, 2, TileKind.FixedCharge);
+      world.place(1, 2, TileKind.Rom, orientation);
+      world.setWeld(0, 2, 1, 2, true);
+      world.configureRom(1, 2, 4, 4, Array.from({ length: 16 }, () => 0));
+      const simulation = new Simulation(world);
+      simulation.step();
+
+      for (const expectedCursor of expectedCursors) {
+        simulation.step();
+        expect(world.componentStateSnapshotAt(1, 2)).toMatchObject({
+          type: "rom",
+          cursor: expectedCursor,
+        });
+      }
+    },
+  );
 
   it("keeps horizontal and vertical wire-crossing networks independent", () => {
     const world = new World(4, 5);
