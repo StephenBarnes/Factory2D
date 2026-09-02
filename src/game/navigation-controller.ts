@@ -11,6 +11,7 @@ import {
 } from "./puzzle-progress";
 import { PUZZLES, puzzleById, type PuzzleId } from "./puzzles";
 import type { AppScreen } from "./screen";
+import type { SandboxPuzzleProperties } from "./sandbox-puzzle-authoring";
 import { SavedSolutionController } from "./saved-solution-controller";
 import type { PuzzleScores } from "./puzzle-scores";
 import { WorkshopSessionController } from "./workshop-session";
@@ -38,6 +39,7 @@ export interface NavigationCallbacks {
   readonly stopSimulation: () => void;
   readonly onWorkshopSessionChanged: () => void;
   readonly onWorkshopShown: () => void;
+  readonly onSandboxPropertiesChanged: (properties: SandboxPuzzleProperties) => void;
 }
 
 export class NavigationController {
@@ -123,12 +125,18 @@ export class NavigationController {
       sessionChanged = this.sessions.activateSandbox();
       this.elements.menuButton.textContent = "← MENU";
       this.elements.screenTitle.textContent = "SANDBOX";
+      this.elements.workshopInfoButton.setAttribute("aria-label", "Puzzle properties");
+      this.elements.workshopInfoButton.title = "Puzzle properties";
       this.elements.workshopInfoButton.onclick = () => {
-        this.workshopInfoDialog.show({
-          name: "Sandbox",
-          description: "Build freely with every available component.",
-          goal: null,
-        });
+        const session = this.sessions.active;
+        const authoring = session.puzzleAuthoring;
+        if (authoring === null) {
+          throw new Error("Sandbox puzzle authoring state is missing");
+        }
+        this.workshopInfoDialog.showProperties(
+          authoring.properties(session.world.width, session.world.height),
+          this.callbacks.onSandboxPropertiesChanged,
+        );
       };
       this.elements.gameScreen.setAttribute("aria-label", "Sandbox workshop");
     } else {
@@ -138,6 +146,8 @@ export class NavigationController {
       this.solutions.select(screen.puzzleId, screen.solutionId);
       this.elements.menuButton.textContent = "← PUZZLE";
       this.elements.screenTitle.textContent = puzzle.name.toUpperCase();
+      this.elements.workshopInfoButton.setAttribute("aria-label", "Workshop information");
+      this.elements.workshopInfoButton.title = "Workshop information";
       this.elements.workshopInfoButton.onclick = () => {
         this.workshopInfoDialog.show({
           name: puzzle.name,

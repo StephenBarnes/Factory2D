@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { EditableRegionAuthoringState } from "../src/game/editable-region-authoring";
+import { GridRegion } from "../src/game/grid-region";
 
 function addRectangle(
   state: EditableRegionAuthoringState,
@@ -49,5 +50,30 @@ describe("editable-region authoring", () => {
     expect(state.region.rectangles).toEqual([]);
     expect(state.draftRectangle).toBeNull();
     expect(() => state.beginRectangle(2, 0)).toThrow("outside the board");
+  });
+
+  it("loads imported regions and clips them when the board shrinks", () => {
+    const state = new EditableRegionAuthoringState(6, 5);
+    state.replaceForBoard(
+      6,
+      5,
+      new GridRegion([
+        { x: 1, y: 1, width: 4, height: 3 },
+        { x: 5, y: 4, width: 1, height: 1 },
+      ]),
+    );
+
+    state.resizeForBoard(4, 3);
+
+    expect(state.region.rectangles).toEqual([
+      { x: 1, y: 1, width: 3, height: 2 },
+    ]);
+    expect(() =>
+      state.replaceForBoard(
+        4,
+        3,
+        new GridRegion([{ x: 3, y: 2, width: 2, height: 1 }]),
+      )
+    ).toThrow("fit within");
   });
 });

@@ -106,6 +106,7 @@ function sessionFor(world: World): WorkshopSession {
     editableRegion: null,
     editableRegionAuthoring: null,
     availableComponents: null,
+    puzzleAuthoring: null,
     editingState: new WorkshopEditingState(false),
   };
 }

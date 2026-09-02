@@ -296,7 +296,7 @@
                 >SHARE PUZZLE</button>
               </div>
             </div>
-            <button id="import-button" type="button" title="Load a previously exported board">IMPORT</button>
+            <button id="import-button" type="button" title="Load a scene or puzzle file">IMPORT</button>
             <input id="import-file" type="file" accept="application/json,.json" hidden />
           </div>
           <div class="test-case-dropup" id="test-case-dropup" hidden>
@@ -342,17 +342,47 @@
         aria-labelledby="workshop-info-title"
         aria-describedby="workshop-info-description"
       >
-        <div class="workshop-info-status">WORKSHOP INFORMATION</div>
-        <div class="workshop-info-content">
-          <h2 id="workshop-info-title" data-workshop-info-title></h2>
-          <p id="workshop-info-description" data-workshop-info-description></p>
-          <div class="workshop-info-goal" data-workshop-info-goal-panel>
-            <span>OBJECTIVE</span>
-            <strong data-workshop-info-goal></strong>
+        <form data-workshop-info-form>
+          <div class="workshop-info-status" data-workshop-info-status>WORKSHOP INFORMATION</div>
+          <div class="workshop-info-content" data-workshop-info-static>
+            <h2 id="workshop-info-title" data-workshop-info-title></h2>
+            <p id="workshop-info-description" data-workshop-info-description></p>
+            <div class="workshop-info-goal" data-workshop-info-goal-panel>
+              <span>OBJECTIVE</span>
+              <strong data-workshop-info-goal></strong>
+            </div>
           </div>
-        </div>
-        <form class="workshop-info-actions" method="dialog">
-          <button type="submit">CLOSE</button>
+          <div class="workshop-properties" data-workshop-properties hidden>
+            <div class="workshop-properties-text">
+              <label>
+                <span>PUZZLE NAME</span>
+                <input type="text" required data-workshop-properties-name>
+              </label>
+              <label>
+                <span>DESCRIPTION</span>
+                <textarea rows="4" required data-workshop-properties-description></textarea>
+              </label>
+            </div>
+            <fieldset class="workshop-properties-dimensions">
+              <legend>GRID SIZE</legend>
+              <label>
+                <span>WIDTH</span>
+                <input type="number" step="1" required data-workshop-properties-width>
+              </label>
+              <label>
+                <span>HEIGHT</span>
+                <input type="number" step="1" required data-workshop-properties-height>
+              </label>
+            </fieldset>
+            <fieldset class="workshop-properties-components">
+              <legend>PLAYER-PLACEABLE COMPONENTS</legend>
+              <div data-workshop-properties-components></div>
+            </fieldset>
+          </div>
+          <div class="workshop-info-actions">
+            <button type="button" data-workshop-info-close>CLOSE</button>
+            <button type="submit" data-workshop-properties-save hidden>SAVE</button>
+          </div>
         </form>
       </dialog>
       <dialog

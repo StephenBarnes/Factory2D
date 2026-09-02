@@ -1,23 +1,81 @@
+import type {
+  SandboxPuzzleComponentProperty,
+  SandboxPuzzleProperties,
+} from "../game/sandbox-puzzle-authoring";
+import {
+  MAX_BOARD_HEIGHT,
+  MAX_BOARD_WIDTH,
+  MIN_BOARD_HEIGHT,
+  MIN_BOARD_WIDTH,
+} from "../simulation/board-export";
+import { TILE_DEFINITIONS, TILE_KINDS, type TileKind } from "../simulation/tile";
+
 export interface WorkshopInformation {
   readonly name: string;
   readonly description: string;
   readonly goal: string | null;
 }
 
+interface ComponentControls {
+  readonly checkbox: HTMLInputElement;
+  readonly price: HTMLInputElement;
+}
+
 export class WorkshopInfoDialog {
+  private readonly form: HTMLFormElement;
+  private readonly status: HTMLElement;
+  private readonly staticContent: HTMLElement;
+  private readonly propertiesContent: HTMLElement;
   private readonly title: HTMLElement;
   private readonly description: HTMLElement;
   private readonly goalPanel: HTMLElement;
   private readonly goal: HTMLElement;
+  private readonly nameInput: HTMLInputElement;
+  private readonly descriptionInput: HTMLTextAreaElement;
+  private readonly widthInput: HTMLInputElement;
+  private readonly heightInput: HTMLInputElement;
+  private readonly componentControls = new Map<TileKind, ComponentControls>();
+  private readonly saveButton: HTMLButtonElement;
+  private readonly closeButton: HTMLButtonElement;
+  private saveProperties: ((properties: SandboxPuzzleProperties) => void) | null = null;
 
   constructor(private readonly dialog: HTMLDialogElement) {
+    this.form = requiredDescendant(dialog, "[data-workshop-info-form]");
+    this.status = requiredDescendant(dialog, "[data-workshop-info-status]");
+    this.staticContent = requiredDescendant(dialog, "[data-workshop-info-static]");
+    this.propertiesContent = requiredDescendant(dialog, "[data-workshop-properties]");
     this.title = requiredDescendant(dialog, "[data-workshop-info-title]");
     this.description = requiredDescendant(dialog, "[data-workshop-info-description]");
     this.goalPanel = requiredDescendant(dialog, "[data-workshop-info-goal-panel]");
     this.goal = requiredDescendant(dialog, "[data-workshop-info-goal]");
+    this.nameInput = requiredDescendant(dialog, "[data-workshop-properties-name]");
+    this.descriptionInput = requiredDescendant(dialog, "[data-workshop-properties-description]");
+    this.widthInput = requiredDescendant(dialog, "[data-workshop-properties-width]");
+    this.heightInput = requiredDescendant(dialog, "[data-workshop-properties-height]");
+    this.saveButton = requiredDescendant(dialog, "[data-workshop-properties-save]");
+    this.closeButton = requiredDescendant(dialog, "[data-workshop-info-close]");
+
+    this.widthInput.min = String(MIN_BOARD_WIDTH);
+    this.widthInput.max = String(MAX_BOARD_WIDTH);
+    this.heightInput.min = String(MIN_BOARD_HEIGHT);
+    this.heightInput.max = String(MAX_BOARD_HEIGHT);
+    this.buildComponentControls(
+      requiredDescendant(dialog, "[data-workshop-properties-components]"),
+    );
+    this.form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      this.submitProperties();
+    });
+    this.closeButton.addEventListener("click", () => this.dialog.close());
   }
 
   show(information: WorkshopInformation): void {
+    this.saveProperties = null;
+    this.status.textContent = "WORKSHOP INFORMATION";
+    this.staticContent.hidden = false;
+    this.propertiesContent.hidden = true;
+    this.saveButton.hidden = true;
+    this.closeButton.textContent = "CLOSE";
     this.title.textContent = information.name;
     this.description.textContent = information.description;
     this.goalPanel.hidden = information.goal === null;
@@ -25,10 +83,115 @@ export class WorkshopInfoDialog {
     this.dialog.showModal();
   }
 
+  showProperties(
+    properties: SandboxPuzzleProperties,
+    onSave: (updated: SandboxPuzzleProperties) => void,
+  ): void {
+    this.saveProperties = onSave;
+    this.status.textContent = "PUZZLE PROPERTIES";
+    this.staticContent.hidden = true;
+    this.propertiesContent.hidden = false;
+    this.saveButton.hidden = false;
+    this.closeButton.textContent = "CANCEL";
+    this.nameInput.value = properties.name;
+    this.descriptionInput.value = properties.description;
+    this.widthInput.valueAsNumber = properties.width;
+    this.heightInput.valueAsNumber = properties.height;
+    for (const component of properties.components) {
+      const controls = this.componentControls.get(component.kind);
+      if (controls === undefined) {
+        throw new Error(`Missing puzzle property controls for tile kind ${component.kind}`);
+      }
+      controls.checkbox.checked = component.enabled;
+      controls.checkbox.setCustomValidity("");
+      controls.price.valueAsNumber = component.price;
+      controls.price.disabled = !component.enabled;
+    }
+    this.dialog.showModal();
+    this.nameInput.focus();
+  }
+
   close(): void {
     if (this.dialog.open) {
       this.dialog.close();
     }
+  }
+
+  private buildComponentControls(container: HTMLElement): void {
+    const kinds = TILE_KINDS
+      .filter((kind) => TILE_DEFINITIONS[kind].palette !== null)
+      .sort((left, right) => {
+        const leftPalette = TILE_DEFINITIONS[left].palette;
+        const rightPalette = TILE_DEFINITIONS[right].palette;
+        if (leftPalette === null || rightPalette === null) {
+          throw new Error("Puzzle component palette metadata is missing");
+        }
+        return leftPalette.order - rightPalette.order;
+      });
+    for (const kind of kinds) {
+      const row = document.createElement("div");
+      row.className = "workshop-properties-component";
+
+      const enabledLabel = document.createElement("label");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      const name = document.createElement("span");
+      name.textContent = TILE_DEFINITIONS[kind].name;
+      enabledLabel.append(checkbox, name);
+
+      const priceLabel = document.createElement("label");
+      priceLabel.className = "workshop-properties-price";
+      const priceText = document.createElement("span");
+      priceText.textContent = "PRICE";
+      const price = document.createElement("input");
+      price.type = "number";
+      price.setAttribute("aria-label", `${TILE_DEFINITIONS[kind].name} price`);
+      price.min = "0";
+      price.max = String(Number.MAX_SAFE_INTEGER);
+      price.step = "1";
+      price.required = true;
+      priceLabel.append(priceText, price);
+      checkbox.addEventListener("change", () => {
+        price.disabled = !checkbox.checked;
+        checkbox.setCustomValidity("");
+      });
+
+      row.append(enabledLabel, priceLabel);
+      container.append(row);
+      this.componentControls.set(kind, { checkbox, price });
+    }
+  }
+
+  private submitProperties(): void {
+    if (this.saveProperties === null || !this.form.reportValidity()) {
+      return;
+    }
+    const components: SandboxPuzzleComponentProperty[] = [];
+    let firstCheckbox: HTMLInputElement | null = null;
+    let anyEnabled = false;
+    for (const [kind, controls] of this.componentControls) {
+      firstCheckbox ??= controls.checkbox;
+      anyEnabled ||= controls.checkbox.checked;
+      components.push({
+        kind,
+        enabled: controls.checkbox.checked,
+        price: controls.price.valueAsNumber,
+      });
+    }
+    if (!anyEnabled) {
+      firstCheckbox?.setCustomValidity("Enable at least one player-placeable component");
+      firstCheckbox?.reportValidity();
+      return;
+    }
+    firstCheckbox?.setCustomValidity("");
+    this.saveProperties({
+      width: this.widthInput.valueAsNumber,
+      height: this.heightInput.valueAsNumber,
+      name: this.nameInput.value,
+      description: this.descriptionInput.value,
+      components,
+    });
+    this.dialog.close();
   }
 }
 

@@ -223,10 +223,12 @@ test("workshop identity exposes information and live puzzle metrics", async ({ p
   await page.goto("/sandbox");
   await expect(page.locator("#puzzle-metrics")).toBeHidden();
   await expect(page.locator("#screen-title")).toHaveText("SANDBOX");
-  await page.getByRole("button", { name: "Workshop information" }).click();
-  await expect(dialog.getByRole("heading", { name: "Sandbox" })).toBeVisible();
-  await expect(dialog.locator("[data-workshop-info-description]")).toHaveText(
-    "Build freely with every available component.",
+  await page.getByRole("button", { name: "Puzzle properties" }).click();
+  await expect(dialog.getByRole("textbox", { name: "PUZZLE NAME" })).toHaveValue(
+    "Untitled Puzzle",
+  );
+  await expect(dialog.getByRole("textbox", { name: "DESCRIPTION" })).toHaveValue(
+    "TODO: Describe the puzzle setup.",
   );
   await expect(dialog.locator("[data-workshop-info-goal-panel]")).toBeHidden();
 });
@@ -558,6 +560,19 @@ test("malformed storage falls back to a usable empty state", async ({ page }) =>
 test("export dropup exposes scene actions and sandbox puzzle authoring", async ({ page }) => {
   await seedBrowserStorage(page, "empty");
   await page.goto("/sandbox");
+  await page.getByRole("button", { name: "Puzzle properties" }).click();
+  const propertiesDialog = page.locator("#workshop-info-dialog");
+  await propertiesDialog.getByRole("textbox", { name: "PUZZLE NAME" }).fill("Authored Puzzle");
+  await propertiesDialog.getByRole("textbox", { name: "DESCRIPTION" }).fill(
+    "Authored in the sandbox.",
+  );
+  await propertiesDialog.getByRole("spinbutton", { name: "WIDTH" }).fill("22");
+  await propertiesDialog.getByRole("spinbutton", { name: "HEIGHT" }).fill("15");
+  await propertiesDialog.getByRole("checkbox", { name: "Sand" }).uncheck();
+  await propertiesDialog.getByRole("spinbutton", { name: "Stone price" }).fill("9");
+  await propertiesDialog.getByRole("button", { name: "SAVE" }).click();
+  expect((await diagnosticSnapshot(page)).view).toMatchObject({ width: 22, height: 15 });
+
 
   const editableRegionTool = page.getByRole("button", { name: "Editable region tool" });
   await editableRegionTool.click();
@@ -598,14 +613,27 @@ test("export dropup exposes scene actions and sandbox puzzle authoring", async (
   const puzzleDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "DOWNLOAD PUZZLE FILE" }).click();
   const puzzleDownload = await puzzleDownloadPromise;
-  expect(puzzleDownload.suggestedFilename()).toBe("factory2d-puzzle.json");
+  expect(puzzleDownload.suggestedFilename()).toBe("untitled-puzzle.json");
   const puzzleDownloadPath = await puzzleDownload.path();
   if (puzzleDownloadPath === null) {
     throw new Error("Puzzle download did not produce a local file");
   }
   const puzzleFile = JSON.parse(await readFile(puzzleDownloadPath, "utf8")) as {
+    readonly name: string;
+    readonly description: string;
+    readonly width: number;
+    readonly height: number;
+    readonly components: readonly { readonly code: string; readonly price: number }[];
     readonly editableRegions: readonly unknown[];
   };
+  expect(puzzleFile).toMatchObject({
+    name: "Authored Puzzle",
+    description: "Authored in the sandbox.",
+    width: 22,
+    height: 15,
+  });
+  expect(puzzleFile.components).not.toContainEqual({ code: ":", price: 1 });
+  expect(puzzleFile.components).toContainEqual({ code: "#", price: 9 });
   expect(puzzleFile.editableRegions).toEqual([{ x: 10, y: 1, width: 2, height: 2 }]);
 
   await exportButton.click();
@@ -614,6 +642,15 @@ test("export dropup exposes scene actions and sandbox puzzle authoring", async (
   await page.getByRole("button", { name: "DOWNLOAD SCENE FILE" }).click();
   expect((await downloadPromise).suggestedFilename()).toBe("factory2d-scene.json");
   await expect(exportButton).toHaveAttribute("aria-expanded", "false");
+  await page.locator("#import-file").setInputFiles(puzzleDownloadPath);
+  await page.getByRole("button", { name: "Puzzle properties" }).click();
+  await expect(propertiesDialog.getByRole("textbox", { name: "PUZZLE NAME" })).toHaveValue(
+    "Authored Puzzle",
+  );
+  await expect(propertiesDialog.getByRole("spinbutton", { name: "WIDTH" })).toHaveValue("22");
+  await expect(propertiesDialog.getByRole("spinbutton", { name: "HEIGHT" })).toHaveValue("15");
+  await propertiesDialog.getByRole("button", { name: "CANCEL" }).click();
+
 
   await page.goto("/puzzles/first-shift");
   await page.getByRole("button", { name: "+ NEW SOLUTION" }).click();

@@ -86,11 +86,36 @@ export class EditableRegionAuthoringState {
   }
 
   resetForBoard(width: number, height: number): void {
+    this.replaceForBoard(width, height, new GridRegion([]));
+  }
+
+  replaceForBoard(width: number, height: number, region: GridRegion): void {
     this.requireDimensions(width, height);
+    if (!region.fitsWithin(width, height)) {
+      throw new RangeError("Editable regions must fit within the authoring board");
+    }
     this.width = width;
     this.height = height;
-    this.committedRegion = new GridRegion([]);
+    this.committedRegion = region;
     this.cancelRectangle();
+  }
+
+  resizeForBoard(width: number, height: number): void {
+    this.requireDimensions(width, height);
+    const rectangles: GridRectangle[] = [];
+    for (const rectangle of this.committedRegion.rectangles) {
+      const clippedWidth = Math.min(rectangle.x + rectangle.width, width) - rectangle.x;
+      const clippedHeight = Math.min(rectangle.y + rectangle.height, height) - rectangle.y;
+      if (clippedWidth > 0 && clippedHeight > 0) {
+        rectangles.push({
+          x: rectangle.x,
+          y: rectangle.y,
+          width: clippedWidth,
+          height: clippedHeight,
+        });
+      }
+    }
+    this.replaceForBoard(width, height, new GridRegion(rectangles));
   }
 
   private requireCell(x: number, y: number): void {

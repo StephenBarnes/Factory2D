@@ -6,7 +6,7 @@ import type {
 import { NavigationController } from "./game/navigation-controller";
 import { SavedSolutionController } from "./game/saved-solution-controller";
 import { PuzzleTestController } from "./game/puzzle-test-controller";
-import { serializePuzzleTemplate } from "./game/puzzle-export";
+import { parseSandboxImport } from "./game/sandbox-puzzle-authoring";
 import { computePuzzleDesignMetrics } from "./game/puzzle-scores";
 import { createSandboxWorld, puzzleById } from "./game/puzzles";
 import { WorkshopSessionController } from "./game/workshop-session";
@@ -22,7 +22,7 @@ import { visitCrossedGridEdges } from "./render/grid-drag";
 import type { GridCell, GridEdge, GridPoint } from "./render/grid-drag";
 import { drawTile } from "./render/tile-renderer";
 import { componentConfigurationForKind } from "./simulation/configurable-components";
-import { deserializeBoard, serializeBoard } from "./simulation/board-export";
+import { serializeBoard } from "./simulation/board-export";
 import { PuzzleResult } from "./simulation/puzzle-result";
 import {
   directionX,
@@ -1194,6 +1194,25 @@ const navigation = new NavigationController(
       importButton.disabled = surface.session.editableRegion !== null;
       updateExportOptionsForSession();
     },
+    onSandboxPropertiesChanged: (properties) => {
+      const dimensionsChanged = properties.width !== surface.session.world.width ||
+        properties.height !== surface.session.world.height;
+      if (!dimensionsChanged) {
+        sessions.updateActiveSandboxProperties(properties);
+        return;
+      }
+      stopWorkshopActivity();
+      surface.mountActiveSession({
+        fitBoard: true,
+        cancelInteraction: true,
+        updateSession: () => {
+          sessions.updateActiveSandboxProperties(properties);
+        },
+      });
+      configureComponentPalette();
+      updateTransportState();
+      refreshPointerHover();
+    },
   },
   sessions,
   savedSolutions,
@@ -1513,12 +1532,16 @@ downloadPuzzleButton.addEventListener("click", () => {
     throw new Error("Puzzle files can only be exported from the sandbox");
   }
   closeExportOptions();
-  const authoring = surface.session.editableRegionAuthoring;
-  if (authoring === null) {
-    throw new Error("Sandbox editable-region authoring state is missing");
+  const regionAuthoring = surface.session.editableRegionAuthoring;
+  const puzzleAuthoring = surface.session.puzzleAuthoring;
+  if (regionAuthoring === null || puzzleAuthoring === null) {
+    throw new Error("Sandbox puzzle authoring state is missing");
   }
-  const source = serializePuzzleTemplate(surface.session.world, authoring.region);
-  downloadBlob(new Blob([source], { type: "application/json" }), "factory2d-puzzle.json");
+  const source = puzzleAuthoring.serialize(surface.session.world, regionAuthoring.region);
+  downloadBlob(
+    new Blob([source], { type: "application/json" }),
+    puzzleAuthoring.fileName,
+  );
 });
 
 document.addEventListener("click", (event) => {
@@ -1550,15 +1573,15 @@ importFile.addEventListener("change", async () => {
   importButton.disabled = true;
   try {
     finalizeActivePointerGesture();
-    const imported = deserializeBoard(await file.text());
+    const imported = parseSandboxImport(await file.text(), file.name);
     surface.mountActiveSession({
       fitBoard: true,
       cancelInteraction: true,
-      updateSession: () => sessions.replaceActiveWorld(imported.world, imported.tick),
+      updateSession: () => sessions.replaceActiveSandboxImport(imported),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    window.alert(`Could not import board: ${message}`);
+    window.alert(`Could not import file: ${message}`);
   } finally {
     importButton.disabled = surface.session.editableRegion !== null;
   }
