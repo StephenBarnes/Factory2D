@@ -247,7 +247,7 @@ The game is in early development. Currently implemented:
 
 ## Current TODOs
 
-Moved to `todos.md`.
+Moved to `docs/todos.md`.
 
 ## Development guidelines
 
