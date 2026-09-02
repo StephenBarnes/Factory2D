@@ -413,7 +413,8 @@ function drawDecoration(
     const hasComponentDisplay =
       definition.decorationStyle === TileDecorationStyle.Delay ||
       definition.decorationStyle === TileDecorationStyle.Counter ||
-      definition.decorationStyle === TileDecorationStyle.Rom;
+      definition.decorationStyle === TileDecorationStyle.Rom ||
+      definition.decorationStyle === TileDecorationStyle.Checker;
     drawCircuitConnections(
       context,
       left,
@@ -1071,6 +1072,76 @@ function drawDecoration(
         orientation,
         WeldSide.Left | WeldSide.Down,
         WeldSide.None,
+        definition.decorationColor,
+      );
+      break;
+    }
+    case TileDecorationStyle.Checker: {
+      const state = componentState?.type === "checker" ? componentState : null;
+      const width = state?.width ?? 3;
+      const height = state?.height ?? 3;
+      const valueCount = width * height;
+      const cursor = state?.cursor ?? 0;
+      const failed = state?.failed ?? false;
+      const gridSize = size * 0.46;
+      const cellSize = Math.min(gridSize / width, gridSize / height);
+      const gridLeft = left + size / 2 - width * cellSize / 2;
+      const gridTop = top + size * 0.46 - height * cellSize / 2;
+      const inset = Math.max(0.5, cellSize * 0.08);
+      for (let valueIndex = 0; valueIndex < valueCount; valueIndex += 1) {
+        const charge = state?.values[valueIndex] ?? 0;
+        const x = gridLeft + (valueIndex % width) * cellSize;
+        const y = gridTop + Math.floor(valueIndex / width) * cellSize;
+        context.fillStyle = charge === 0 ? "#3a2c1a" : CIRCUIT_CHARGE_COLORS[charge];
+        context.globalAlpha = valueIndex < cursor && !failed ? 0.45 : 1;
+        context.fillRect(
+          x + inset,
+          y + inset,
+          Math.max(1, cellSize - inset * 2),
+          Math.max(1, cellSize - inset * 2),
+        );
+        context.globalAlpha = 1;
+        if (valueIndex === cursor) {
+          context.strokeStyle = failed ? CIRCUIT_CHARGE_COLORS[-1] : "#f1cc38";
+          context.lineWidth = Math.max(1, size * 0.025);
+          context.strokeRect(
+            x + inset / 2,
+            y + inset / 2,
+            Math.max(1, cellSize - inset),
+            Math.max(1, cellSize - inset),
+          );
+        }
+      }
+      // Verdict badge below the grid: a check mark once passed, a cross once failed.
+      const badgeY = top + size * 0.8;
+      const badgeSize = size * 0.07;
+      context.save();
+      context.lineWidth = Math.max(1, size * 0.04);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.strokeStyle = outputCharge === 0 ? definition.decorationColor : CIRCUIT_CHARGE_COLORS[outputCharge];
+      context.beginPath();
+      if (outputCharge === -1) {
+        context.moveTo(left + size / 2 - badgeSize, badgeY - badgeSize);
+        context.lineTo(left + size / 2 + badgeSize, badgeY + badgeSize);
+        context.moveTo(left + size / 2 + badgeSize, badgeY - badgeSize);
+        context.lineTo(left + size / 2 - badgeSize, badgeY + badgeSize);
+      } else {
+        context.globalAlpha = outputCharge === 1 ? 1 : 0.55;
+        context.moveTo(left + size / 2 - badgeSize * 1.3, badgeY);
+        context.lineTo(left + size / 2 - badgeSize * 0.3, badgeY + badgeSize);
+        context.lineTo(left + size / 2 + badgeSize * 1.4, badgeY - badgeSize);
+      }
+      context.stroke();
+      context.restore();
+      drawPortArrows(
+        context,
+        left,
+        top,
+        size,
+        orientation,
+        WeldSide.Down,
+        WeldSide.Up,
         definition.decorationColor,
       );
       break;

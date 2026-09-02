@@ -211,6 +211,9 @@ export class CircuitResolver {
         case TileKind.Counter:
           outputCharge = this.world.advanceCounterAtIndex(index, rearInput);
           break;
+        case TileKind.Checker:
+          outputCharge = this.world.advanceCheckerAtIndex(index, rearInput);
+          break;
         case TileKind.Rom: {
           const leftInputSide = ((orientation + Direction.Left) & 3) as Direction;
           const rearInputSide = ((orientation + Direction.Down) & 3) as Direction;

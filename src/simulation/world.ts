@@ -311,14 +311,15 @@ export class World {
       state.threshold = value;
       state.count = 0;
     } else {
-      throw new Error(`ROM at (${x}, ${y}) does not have numeric configuration`);
+      throw new Error(`Tile at (${x}, ${y}) does not have numeric configuration`);
     }
     this.charges[index] = 0;
     this.revisionValue += 1;
     return true;
   }
 
-  configureRom(
+  /** Replaces a ROM's or sequence checker's value grid and rewinds its progress. */
+  configureTernaryGrid(
     x: number,
     y: number,
     width: number,
@@ -327,8 +328,8 @@ export class World {
   ): boolean {
     const index = this.indexOf(x, y);
     const state = this.requireComponentStateAtIndex(index);
-    if (state.type !== "rom") {
-      throw new Error(`Tile at (${x}, ${y}) is not a ROM`);
+    if (state.type !== "rom" && state.type !== "checker") {
+      throw new Error(`Tile at (${x}, ${y}) does not have a ternary value grid`);
     }
     if (
       !Number.isInteger(width) ||
@@ -339,15 +340,15 @@ export class World {
       height > MAX_ROM_DIMENSION
     ) {
       throw new RangeError(
-        `ROM dimensions must be integers from ${MIN_ROM_DIMENSION} through ${MAX_ROM_DIMENSION}`,
+        `Grid dimensions must be integers from ${MIN_ROM_DIMENSION} through ${MAX_ROM_DIMENSION}`,
       );
     }
     if (values.length !== width * height) {
-      throw new RangeError(`ROM values must contain exactly ${width * height} charges`);
+      throw new RangeError(`Grid values must contain exactly ${width * height} charges`);
     }
     for (const value of values) {
       if (!isCharge(value)) {
-        throw new RangeError(`ROM contains invalid charge ${value as number}`);
+        throw new RangeError(`Grid contains invalid charge ${value as number}`);
       }
     }
     let changed = state.width !== width || state.height !== height;
@@ -366,6 +367,9 @@ export class World {
     state.height = height;
     state.cursor = 0;
     state.values = Int8Array.from(values);
+    if (state.type === "checker") {
+      state.failed = false;
+    }
     this.charges[index] = 0;
     this.revisionValue += 1;
     return true;
@@ -465,6 +469,35 @@ export class World {
       this.revisionValue += 1;
     }
     return state.values[state.cursor] as Charge;
+  }
+
+  /**
+   * Advances a sequence checker with the rear input observed this tick and returns its
+   * verdict: 0 while waiting or matching, +1 once every value matched, -1 after a mismatch.
+   */
+  advanceCheckerAtIndex(index: number, input: Charge): Charge {
+    const state = this.requireComponentStateAtIndex(index);
+    if (state.type !== "checker") {
+      throw new Error(`Tile at index ${index} is not a sequence checker`);
+    }
+    if (state.failed) {
+      return -1;
+    }
+    const valueCount = state.values.length;
+    if (state.cursor >= valueCount) {
+      return 1;
+    }
+    if (state.cursor === 0 && input === 0) {
+      return 0;
+    }
+    if (state.values[state.cursor] !== input) {
+      state.failed = true;
+      this.revisionValue += 1;
+      return -1;
+    }
+    state.cursor += 1;
+    this.revisionValue += 1;
+    return state.cursor === valueCount ? 1 : 0;
   }
 
   furnaceProgressAt(x: number, y: number): number {

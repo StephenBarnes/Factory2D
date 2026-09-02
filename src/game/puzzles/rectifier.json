@@ -7,10 +7,11 @@
   "group": "runelore",
   "order": 3,
   "name": "Rectifier",
-  "description": "The input rune feeds a signal into your workshop. Emit +1 whenever the input is +1 and 0 otherwise, exactly two ticks after each input arrives. The signal panel shows the input, your output, and the expected output side by side.",
-  "goal": "Rectify the input signal with a two-tick delay",
+  "description": "The input rune feeds a signal into your workshop. Emit +1 whenever the input is +1 and 0 otherwise. Take as many ticks as you need: the sequence checker starts comparing at your first nonzero output, and the signal panel shows the input, your output, and the expected output side by side.",
+  "goal": "Rectify the input signal",
   "features": [
     "Signal panel",
+    "Sequence checker",
     "Multiplier rune",
     "Combiner rune"
   ],
@@ -47,7 +48,7 @@
   ],
   "initialBoard": {
     "format": "factory2d-board",
-    "version": 11,
+    "version": 12,
     "width": 24,
     "height": 14,
     "tick": 0,
@@ -58,41 +59,31 @@
       "=......................=",
       "=......................=",
       "=......................=",
-      "=.................VN1..=",
-      "=.................I....=",
-      "=................C*....=",
-      "=................CC....=",
-      "=.1UCCmC......mCC+-....=",
-      "========......====C....=",
-      "=.......======...gC....=",
-      "=...............1UC....=",
+      "=......................=",
+      "=......................=",
+      "=......................=",
+      "=......................=",
+      "=.1UCCmC......mCEV.....=",
+      "========......==g=======",
+      "=.......======.........=",
+      "=......................=",
       "========================"
     ],
     "orientations": [
-      {
-        "x": 19,
-        "y": 5,
-        "direction": "left"
-      },
       {
         "x": 3,
         "y": 9,
         "direction": "right"
       },
       {
-        "x": 17,
+        "x": 16,
         "y": 9,
         "direction": "right"
       },
       {
-        "x": 17,
-        "y": 11,
-        "direction": "down"
-      },
-      {
-        "x": 17,
-        "y": 12,
-        "direction": "right"
+        "x": 16,
+        "y": 10,
+        "direction": "up"
       }
     ],
     "charges": [],
@@ -100,13 +91,6 @@
     "isolatedOutputCharges": [],
     "furnaces": [],
     "components": [
-      {
-        "x": 19,
-        "y": 5,
-        "type": "counter",
-        "threshold": 28,
-        "count": 0
-      },
       {
         "x": 3,
         "y": 9,
@@ -157,22 +141,20 @@
         "label": "OUTPUT"
       },
       {
-        "x": 17,
-        "y": 11,
+        "x": 16,
+        "y": 10,
         "type": "grapher",
         "label": "EXPECTED"
       },
       {
-        "x": 17,
-        "y": 12,
-        "type": "rom",
+        "x": 16,
+        "y": 9,
+        "type": "checker",
         "width": 9,
         "height": 3,
         "cursor": 0,
+        "failed": false,
         "values": [
-          0,
-          0,
-          0,
           1,
           0,
           0,
@@ -188,6 +170,9 @@
           0,
           0,
           1,
+          0,
+          0,
+          0,
           0,
           0,
           0,
@@ -206,14 +191,14 @@
       "........................",
       "........................",
       "........................",
-      "..................+-....",
-      "..................|.....",
-      ".................+|.....",
-      ".................-|.....",
-      "..-----.......----|.....",
-      "..................|.....",
-      ".................||.....",
-      "................--......",
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      "..-----.......--+.......",
+      "........................",
+      "........................",
+      "........................",
       "........................"
     ]
   },
@@ -229,13 +214,6 @@
       "overrides": {
         "initialBoard": {
           "components": [
-            {
-              "x": 19,
-              "y": 5,
-              "type": "counter",
-              "threshold": 28,
-              "count": 0
-            },
             {
               "x": 3,
               "y": 9,
@@ -286,25 +264,20 @@
               "label": "OUTPUT"
             },
             {
-              "x": 17,
-              "y": 11,
+              "x": 16,
+              "y": 10,
               "type": "grapher",
               "label": "EXPECTED"
             },
             {
-              "x": 17,
-              "y": 12,
-              "type": "rom",
+              "x": 16,
+              "y": 9,
+              "type": "checker",
               "width": 9,
               "height": 3,
               "cursor": 0,
+              "failed": false,
               "values": [
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
                 1,
                 1,
                 1,
@@ -318,6 +291,12 @@
                 0,
                 1,
                 1,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
                 0,
                 0,
                 0,

@@ -133,10 +133,10 @@ describe("delivery boxes", () => {
   it("ignores configurable component contents when matching bodies", () => {
     const world = new World(4, 3);
     world.place(0, 1, TileKind.Rom);
-    world.configureRom(0, 1, 1, 1, [1]);
+    world.configureTernaryGrid(0, 1, 1, 1, [1]);
     world.place(1, 1, TileKind.Delivery, Direction.Right);
     world.place(2, 1, TileKind.Rom);
-    world.configureRom(2, 1, 1, 1, [-1]);
+    world.configureTernaryGrid(2, 1, 1, 1, [-1]);
     placeFloor(world, 2);
 
     new Simulation(world).step();

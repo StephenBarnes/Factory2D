@@ -34,6 +34,7 @@ export const enum TileKind {
   Duplicator = 32,
   Monitor = 33,
   Grapher = 34,
+  Checker = 35,
 }
 
 export const enum Direction {
@@ -85,6 +86,7 @@ export const enum TileDecorationStyle {
   Duplicator = 29,
   Monitor = 30,
   Grapher = 31,
+  Checker = 32,
 }
 
 export const enum PaletteCategory {
@@ -870,7 +872,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 34,
       category: PaletteCategory.Circuits,
-      description: "Shows every value of the ROM it points at on the signal panel, marking the cursor. Press E to name its line",
+      description: "Shows every value of the ROM or sequence checker it points at on the signal panel, marking the cursor. Press E to name its line",
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -886,6 +888,29 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     shadow: "#2e383c",
     decorationStyle: TileDecorationStyle.Grapher,
     decorationColor: "#d6ecea",
+  },
+  [TileKind.Checker]: {
+    name: "Sequence Checker",
+    boardCode: "E",
+    palette: {
+      order: 35,
+      category: PaletteCategory.PuzzleTools,
+      description: "Waits for the first nonzero rear input, then compares each input with its stored sequence: +1 after a complete match, -1 at the first mismatch. Press E to configure",
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Up | WeldSide.Down,
+    circuitInputPorts: WeldSide.Down,
+    circuitOutputPorts: WeldSide.Up,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#6a5a3c",
+    shadow: "#3a3121",
+    decorationStyle: TileDecorationStyle.Checker,
+    decorationColor: "#f2dea3",
   },
   [TileKind.Piston]: {
     name: "Piston",

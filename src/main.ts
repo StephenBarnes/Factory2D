@@ -729,7 +729,7 @@ function openComponentConfiguration(cell: GridCell): void {
         ? surface.world.configureNumericComponent(cell.x, cell.y, submission.value)
         : submission.type === "text"
         ? surface.world.configureSignalLabel(cell.x, cell.y, submission.value)
-        : surface.world.configureRom(
+        : surface.world.configureTernaryGrid(
             cell.x,
             cell.y,
             submission.width,

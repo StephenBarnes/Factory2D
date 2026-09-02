@@ -12,13 +12,19 @@ export interface MonitorSignalLine {
   readonly charges: readonly Charge[];
 }
 
-/** One ROM-grapher column: every stored value of the pointed ROM, or nothing when no ROM is ahead. */
+/**
+ * One grapher column: every stored value of the pointed ROM or sequence checker, or nothing
+ * when neither is ahead. `values[i]` is drawn at panel row `firstRow + i`: ROM contents start
+ * at row 0, while a checker's expected sequence is aligned with the tick whose input started
+ * it, or slides along with the current tick while it is still waiting.
+ */
 export interface GrapherSignalLine {
   readonly kind: "grapher";
   readonly id: number;
   readonly label: string;
   readonly values: readonly Charge[];
-  /** Index of the ROM's current cursor, or -1 when the grapher points at no ROM. */
+  readonly firstRow: number;
+  /** Index of the pointed component's cursor, or -1 when the grapher points at nothing. */
   readonly cursor: number;
 }
 
@@ -43,6 +49,8 @@ export class SignalTraceRecorder {
   private revision = -1;
   private versionValue = 0;
   private readonly histories = new Map<number, MonitorHistory>();
+  /** Tick whose input first started each checker, keyed by stable tile ID. */
+  private readonly checkerStartTicks = new Map<number, number>();
 
   /** Increments whenever recorded histories change, so panels can cache derived lines. */
   get version(): number {
@@ -110,19 +118,24 @@ export class SignalTraceRecorder {
     const x = index % world.width + directionX(orientation);
     const y = Math.floor(index / world.width) + directionY(orientation);
     let values: readonly Charge[] = [];
+    let firstRow = 0;
     let cursor = -1;
     if (x >= 0 && x < world.width && y >= 0 && y < world.height) {
       const targetIndex = y * world.width + x;
-      if (world.kindAtIndex(targetIndex) === TileKind.Rom) {
-        const rom = world.componentStateSnapshotAtIndex(targetIndex);
-        if (rom?.type !== "rom") {
-          throw new Error(`ROM at (${x}, ${y}) is missing its component state`);
+      const targetKind = world.kindAtIndex(targetIndex);
+      if (targetKind === TileKind.Rom || targetKind === TileKind.Checker) {
+        const target = world.componentStateSnapshotAtIndex(targetIndex);
+        if (target?.type !== "rom" && target?.type !== "checker") {
+          throw new Error(`Graphed component at (${x}, ${y}) is missing its component state`);
         }
-        values = rom.values;
-        cursor = rom.cursor;
+        values = target.values;
+        cursor = target.cursor;
+        if (target.type === "checker") {
+          firstRow = this.checkerStartTicks.get(world.idAtIndex(targetIndex)) ?? this.tick;
+        }
       }
     }
-    return { kind: "grapher", id, label: state.label, values, cursor };
+    return { kind: "grapher", id, label: state.label, values, firstRow, cursor };
   }
 
   private reset(world: World, tick: number): void {
@@ -130,12 +143,18 @@ export class SignalTraceRecorder {
     this.tick = tick;
     this.revision = world.revision;
     this.histories.clear();
+    this.checkerStartTicks.clear();
     this.sample(world, tick);
   }
 
   private sample(world: World, tick: number): void {
     for (let index = 0; index < world.cellCount; index += 1) {
-      if (world.kindAtIndex(index) !== TileKind.Monitor) {
+      const kind = world.kindAtIndex(index);
+      if (kind === TileKind.Checker) {
+        this.sampleChecker(world, index, tick);
+        continue;
+      }
+      if (kind !== TileKind.Monitor) {
         continue;
       }
       const id = world.idAtIndex(index);
@@ -154,13 +173,31 @@ export class SignalTraceRecorder {
     }
     this.versionValue += 1;
   }
+
+  /**
+   * Remembers the row of the input that started a checker: the state committed at `tick`
+   * consumed the charge recorded at `tick - 1`, so the expected sequence aligns with that row.
+   */
+  private sampleChecker(world: World, index: number, tick: number): void {
+    const id = world.idAtIndex(index);
+    if (this.checkerStartTicks.has(id)) {
+      return;
+    }
+    const state = world.componentStateSnapshotAtIndex(index);
+    if (state?.type !== "checker") {
+      throw new Error(`Sequence checker ${id} is missing its component state`);
+    }
+    if (state.cursor > 0 || state.failed) {
+      this.checkerStartTicks.set(id, tick - 1);
+    }
+  }
 }
 
 /** Longest row count any line needs, so panels can size their scroll range. */
 export function signalLineRowCount(line: SignalLine): number {
   return line.kind === "monitor"
     ? line.firstTick + line.charges.length
-    : line.values.length;
+    : line.firstRow + line.values.length;
 }
 
 /** Charge shown at a panel row, or null where the line has no data for that row. */
@@ -171,7 +208,15 @@ export function signalLineChargeAtRow(line: SignalLine, row: number): Charge | n
       ? expectDefined(line.charges[offset], "monitor charge")
       : null;
   }
-  return row >= 0 && row < line.values.length
-    ? expectDefined(line.values[row], "ROM value")
+  const valueIndex = row - line.firstRow;
+  return valueIndex >= 0 && valueIndex < line.values.length
+    ? expectDefined(line.values[valueIndex], "graphed value")
+    : null;
+}
+
+/** Panel row carrying a grapher's cursor marker, or null when the cursor is past its values. */
+export function grapherCursorRow(line: GrapherSignalLine): number | null {
+  return line.cursor >= 0 && line.cursor < line.values.length
+    ? line.firstRow + line.cursor
     : null;
 }

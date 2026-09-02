@@ -602,7 +602,7 @@ describe("circuit networks", () => {
     world.setWeld(0, 1, 1, 1, true);
     world.setWeld(1, 1, 2, 1, true);
     world.setWeld(1, 1, 1, 2, true);
-    world.configureRom(1, 1, 2, 2, [0, 1, -1, 1]);
+    world.configureTernaryGrid(1, 1, 2, 2, [0, 1, -1, 1]);
     const simulation = new Simulation(world);
     const horizontalInputs = [1, 0, -1, 0] as const;
     const verticalInputs = [0, 1, 0, -1] as const;
@@ -657,7 +657,7 @@ describe("circuit networks", () => {
       world.setWeld(0, 1, 1, 1, true);
       world.setWeld(1, 1, 2, 1, true);
       world.setWeld(1, 1, 1, 2, true);
-      world.configureRom(1, 1, 4, 4, Array.from({ length: 16 }, () => 0));
+      world.configureTernaryGrid(1, 1, 4, 4, Array.from({ length: 16 }, () => 0));
       const simulation = new Simulation(world);
 
       for (const expectedCursor of expectedCursors) {

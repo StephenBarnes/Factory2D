@@ -36,7 +36,7 @@ describe("duplicators", () => {
       const anchorX = inputSide === Direction.Left ? 5 : 3;
       world.place(anchorX, 5, TileKind.Platform);
       world.setWeld(4, 5, anchorX, 5, true);
-      world.configureRom(4, 5, 2, 2, [-1, 0, 1, -1]);
+      world.configureTernaryGrid(4, 5, 2, 2, [-1, 0, 1, -1]);
       world.advanceRomAtIndex(5 * world.width + 4, 1, 0);
       const sourceState = world.componentStateSnapshotAt(4, 5);
       const sourceId = world.idAt(4, 5);

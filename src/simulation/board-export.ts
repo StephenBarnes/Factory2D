@@ -25,7 +25,7 @@ import { World } from "./world";
 import { expectDefined } from "../util/assert";
 
 const FORMAT_NAME = "factory2d-board";
-const FORMAT_VERSION = 11;
+const FORMAT_VERSION = 12;
 export const MIN_BOARD_WIDTH = 1;
 export const MAX_BOARD_WIDTH = 400;
 export const MIN_BOARD_HEIGHT = 1;
@@ -125,6 +125,17 @@ interface ExportedRom {
   readonly values: readonly Charge[];
 }
 
+interface ExportedChecker {
+  readonly x: number;
+  readonly y: number;
+  readonly type: "checker";
+  readonly width: number;
+  readonly height: number;
+  readonly cursor: number;
+  readonly failed: boolean;
+  readonly values: readonly Charge[];
+}
+
 interface ExportedSignalLabel {
   readonly x: number;
   readonly y: number;
@@ -136,6 +147,7 @@ type ExportedComponent =
   | ExportedDelay
   | ExportedCounter
   | ExportedRom
+  | ExportedChecker
   | ExportedSignalLabel;
 
 
@@ -524,6 +536,7 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
       "width",
       "height",
       "values",
+      "failed",
       "label",
     ]);
     const type = requireString(entry.type, `${label} type`);
@@ -533,9 +546,11 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
         ? ["x", "y", "type", "threshold", "count"]
         : type === "rom"
           ? ["x", "y", "type", "width", "height", "cursor", "values"]
-          : type === "monitor" || type === "grapher"
-            ? ["x", "y", "type", "label"]
-            : null;
+          : type === "checker"
+            ? ["x", "y", "type", "width", "height", "cursor", "failed", "values"]
+            : type === "monitor" || type === "grapher"
+              ? ["x", "y", "type", "label"]
+              : null;
     if (fields === null) {
       throw new Error(`${label} has unknown type "${type}"`);
     }
@@ -595,13 +610,32 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
         MAX_ROM_DIMENSION,
       );
       const valueCount = componentWidth * componentHeight;
-      snapshot = {
-        type: "rom",
-        width: componentWidth,
-        height: componentHeight,
-        cursor: requireInteger(state.cursor, `${label} cursor`, 0, valueCount - 1),
-        values: requireChargeArray(state.values, valueCount, `${label} values`),
-      };
+      if (type === "checker") {
+        if (typeof state.failed !== "boolean") {
+          throw new Error(`${label} failed must be a boolean`);
+        }
+        snapshot = {
+          type: "checker",
+          width: componentWidth,
+          height: componentHeight,
+          cursor: requireInteger(
+            state.cursor,
+            `${label} cursor`,
+            0,
+            state.failed ? valueCount - 1 : valueCount,
+          ),
+          failed: state.failed,
+          values: requireChargeArray(state.values, valueCount, `${label} values`),
+        };
+      } else {
+        snapshot = {
+          type: "rom",
+          width: componentWidth,
+          height: componentHeight,
+          cursor: requireInteger(state.cursor, `${label} cursor`, 0, valueCount - 1),
+          values: requireChargeArray(state.values, valueCount, `${label} values`),
+        };
+      }
     }
     const expectedConfiguration = componentConfigurationForKind(kind);
     if (
@@ -609,6 +643,7 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
       (snapshot.type === "delay" && kind !== TileKind.Delay) ||
       (snapshot.type === "counter" && kind !== TileKind.Counter) ||
       (snapshot.type === "rom" && kind !== TileKind.Rom) ||
+      (snapshot.type === "checker" && kind !== TileKind.Checker) ||
       (snapshot.type === "monitor" && kind !== TileKind.Monitor) ||
       (snapshot.type === "grapher" && kind !== TileKind.Grapher)
     ) {

@@ -1,4 +1,5 @@
 import {
+  grapherCursorRow,
   signalLineChargeAtRow,
   signalLineRowCount,
   type SignalLine,
@@ -38,7 +39,7 @@ export interface SignalPanelElements {
 
 /**
  * Collapsible right-edge panel drawing every monitor and grapher line as a vertical
- * charge-colored strip, with time (or ROM index) flowing downward.
+ * charge-colored strip, with time (or ROM/checker index) flowing downward.
  */
 export class SignalPanel {
   private readonly context: CanvasRenderingContext2D;
@@ -208,8 +209,9 @@ export class SignalPanel {
         context.fillRect(centerX - barWidth / 2, y, barWidth, ROW_HEIGHT - ROW_GAP);
       }
 
-      if (line.kind === "grapher" && line.cursor >= this.firstRow && line.cursor < lastRow) {
-        const y = rowsTop + (line.cursor - this.firstRow) * ROW_HEIGHT;
+      const cursorRow = line.kind === "grapher" ? grapherCursorRow(line) : null;
+      if (cursorRow !== null && cursorRow >= this.firstRow && cursorRow < lastRow) {
+        const y = rowsTop + (cursorRow - this.firstRow) * ROW_HEIGHT;
         context.strokeStyle = CURSOR_COLOR;
         context.lineWidth = 1;
         context.strokeRect(

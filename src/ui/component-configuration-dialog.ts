@@ -12,7 +12,7 @@ export type ComponentConfigurationSubmission =
   | { readonly type: "number"; readonly value: number }
   | { readonly type: "text"; readonly value: string }
   | {
-      readonly type: "rom";
+      readonly type: "grid";
       readonly width: number;
       readonly height: number;
       readonly values: readonly Charge[];
@@ -78,11 +78,11 @@ export class ComponentConfigurationDialog {
     this.submit = submit;
     this.title.textContent = `CONFIGURE ${TILE_DEFINITIONS[kind].name.toUpperCase()}`;
     this.numericPanel.hidden = configuration.type !== "number";
-    this.romPanel.hidden = configuration.type !== "rom";
+    this.romPanel.hidden = configuration.type !== "grid";
     this.textPanel.hidden = configuration.type !== "text";
     this.numericInput.disabled = configuration.type !== "number";
-    this.romWidth.disabled = configuration.type !== "rom";
-    this.romHeight.disabled = configuration.type !== "rom";
+    this.romWidth.disabled = configuration.type !== "grid";
+    this.romHeight.disabled = configuration.type !== "grid";
     this.textInput.disabled = configuration.type !== "text";
 
     if (configuration.type === "number") {
@@ -108,14 +108,16 @@ export class ComponentConfigurationDialog {
         `Name the signal panel line, using at most ${configuration.maximumLength} characters. ` +
         "Leave it empty to show the line number.";
     } else {
-      if (state.type !== "rom") {
-        throw new Error("ROM is missing configuration state");
+      if (state.type !== "rom" && state.type !== "checker") {
+        throw new Error(`${TILE_DEFINITIONS[kind].name} is missing value grid state`);
       }
       this.romWidth.value = String(state.width);
       this.romHeight.value = String(state.height);
       this.romValues = [...state.values];
-      this.description.textContent =
-        "Left-click cells to alternate +1 and -1. Right-click clears a cell to 0.";
+      this.description.textContent = state.type === "checker"
+        ? "Expected values are read row by row. Left-click cells to alternate +1 and -1. " +
+          "Right-click clears a cell to 0."
+        : "Left-click cells to alternate +1 and -1. Right-click clears a cell to 0.";
       this.renderRomGrid(state.width, state.height);
     }
 
@@ -155,9 +157,9 @@ export class ComponentConfigurationDialog {
       const width = this.romWidth.valueAsNumber;
       const height = this.romHeight.valueAsNumber;
       if (this.romValues.length !== width * height) {
-        throw new Error("ROM draft dimensions do not match its values");
+        throw new Error("Grid draft dimensions do not match its values");
       }
-      submit({ type: "rom", width, height, values: [...this.romValues] });
+      submit({ type: "grid", width, height, values: [...this.romValues] });
     }
     this.close();
   }

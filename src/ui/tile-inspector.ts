@@ -221,6 +221,17 @@ export class TileInspector {
       } else if (componentState.type === "rom") {
         this.configuration.textContent =
           `${componentState.width} × ${componentState.height} · CELL ${componentState.cursor + 1}`;
+      } else if (componentState.type === "checker") {
+        const valueCount = componentState.width * componentState.height;
+        const status = componentState.failed
+          ? `FAILED AT ${componentState.cursor + 1}`
+          : componentState.cursor === 0
+            ? "WAITING"
+            : componentState.cursor === valueCount
+              ? "PASSED"
+              : `MATCHED ${componentState.cursor}`;
+        this.configuration.textContent =
+          `${componentState.width} × ${componentState.height} · ${valueCount} VALUES · ${status}`;
       } else {
         this.configuration.textContent = componentState.label === ""
           ? "UNNAMED SIGNAL"

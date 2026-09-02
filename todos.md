@@ -1,4 +1,4 @@
-Tasks that are NOT actionable yet due to prereqs, or are lower priority, are marked as DEFER below.
+Tasks not actionable yet due to prerequisites, or are lower priority, are marked as DEFER.
 
 Game flow:
 * Implement a text-box tool that places and edits text boxes on the game screen. Useful for tutorial puzzles, and also for players that want to label/annotate their designs. Model them separate from the component grid - they're not grid-aligned, don't occupy tiles, and have no prices. Include them the puzzle JSON format and scene JSON format. Need to decide how we handle pressing enter (finishes editing, or creates a line break?), whether to allow editing after placing them, whether to place as a rectangle or a point, etc. Probably LMB or LMB-drag places or edits, RMB removes.
@@ -10,7 +10,8 @@ Game flow:
 * If the player creates a test solution, but instead of pressing the "test" button they press "step" repeatedly until victory or loss, we currently never react to victory or loss. We should instead show the toast on failure, and show the success / score report modal on success (unless there was a failure on a previous step).
 * When the player presses test button or reset button, we currently change zoom and pan to fit the whole board. Rather don't do that - keep current zoom and pan.
 * Add a way to save specific sandbox configurations in the game, without needing to download files or use import/export. Maybe modify the sandbox to store multiple saved sandboxes, similar to the solutions stored for puzzles, and add a sandbox briefing screen that lists them.
-* Add a field to the puzzle group definitions that decides how many puzzles in the group we unlock, when the group is unlocked. I think it's currently 3, though not certain because both our groups only have 2 puzzles currently. For some groups like tutorials we'd prefer to unlock 1 at a time, while other groups should prefer 2, and collections of unrelated challenges should use 999 to unlock all of them immediately. In all cases, completing a puzzle in the group should unlock another puzzle in the group, if any are still locked.
+* Add a field to the puzzle group definitions that decides how many puzzles in the group we unlock, when the group is unlocked. I think it's currently 3, though not certain because both our groups only have 2 puzzles currently. For some groups like tutorials we'd prefer to unlock 1 at a time, while other groups should prefer 2, and collections of unrelated challenges should use 999 to unlock all of them immediately. In all cases, completing a puzzle in the group should the first still-locked puzzle in the group, if any.
+* Modify the puzzle briefing screen: Instead of needing to click on one of the saved solutions, and then click separate duplicate/edit/delete buttons, rather have 3 buttons on each saved solution. Make the saved solutions non-selectable. Although, the gradient we currently draw on the selected solution looks nice, so keep that - but apply it to the lowest-combined-score solution, if any solutions are confirmed successful. (Later, color it according to the mineral rank of the solution - stone, iron, gold, mithril ranks determined by score percentiles.)
 
 Storage format, import/export:
 * Allow importing puzzle files in the sandbox. Should be almost the same as importing a scene, but also create the player modifiable regions, and later (once sandbox has tools for setting name/descripton and test cases) import those from the test file as well.
@@ -32,10 +33,8 @@ Hardening:
 * Try to do some fuzzing to find crashes or undesirable behaviors. There may be edge cases involving things like pistons welded to other pistons and magnets, etc. Could also check for cases of machines that can fly/levitate, or produce blocks endlessly, though those should not be "fixed" until we've looked at them manually to decide whether they should be considered bugs or features.
 
 Components useful for designing puzzles in-world:
-* Signal panel follow-ups: an explicit per-line display order or grouping (IN / OUT headers) instead of board row-major order, per-line row offsets so a ROM grapher can be aligned with a monitor that lags it, and a "show expected" toggle that overlays an expected line onto the matching monitor column.
-* Signal puzzles currently require a fixed player latency because the expected ROM is compared tick by tick. Consider a harness component or pattern that accepts any latency (compare sequences rather than ticks), and a warm-up window that ignores mismatches during the first few ticks.
-* For many puzzles, we'll want to require an input-output relation, without enforcing a specific delay. For example, the rectifier puzzle currently requires an exactly 2-tick delay for a solution to be valid. We should rework the puzzle definition to allow any delay (say zero to ten) and pass all of them. If this is hard at all / requires many components, we should add new components to make it easier. This is actually the same as the previous bullet.
-* Carefully look at the current rectifier puzzle we have, and determine if there's any components we could add that would make the in-game test machinery more compact or understandable. Then add those components.
+* Signal panel follow-ups: an explicit per-line display order or grouping (IN / OUT headers) instead of board row-major order, and a "show expected" toggle that overlays a checker's expected line onto the matching monitor column. (Checker lines already align themselves with the tick that started them.)
+* Sequence checker follow-ups: the expected sequence must begin with a nonzero value because the checker starts on the player's first nonzero output, so the "bursts" rectifier case cannot verify silence during its leading negative burst. Consider an optional arm/start input port, or an explicit "expect silence for N ticks before the first value" configuration, if a puzzle needs it. Also consider a configurable maximum latency that fails a solution outright instead of relying on the cycle limit. DEFER until a puzzle actually needs this.
 
 Components:
 * A sensor that detects when the sensor's own tile moves, and outputs +1 on that side, -1 on the other side.
@@ -124,7 +123,7 @@ UI:
 Selection tool:
 * DEFER Maybe support selections that are a union of rectangles, created by shift-LMB-drag.
 * Add a way to save a selected region in a list of saved snippets/machines, and import from that. Make it usable for transferring partial machines from one puzzle solution to another. Requires a snippet manager button and collapsible panel. Store snippets globally per user, not per puzzle.
-* DEFER In the snippets panel, add buttons to delete a snippet, and import/export (maybe the same as the scene format, or a different format).
+* In the snippets panel, add buttons to delete a snippet, and import/export (maybe the same as the scene format, or a different format).
 
 Visuals:
 * Add backgrounds for puzzles, maybe with parallax as the player pans.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  grapherCursorRow,
   signalLineChargeAtRow,
   signalLineRowCount,
   SignalTraceRecorder,
@@ -169,8 +170,15 @@ describe("ROM graphers", () => {
 
     recorder.sync(world, 0);
     expect(recorder.lines(world)).toEqual([
-      { kind: "grapher", id: world.idAt(2, 0), label: "expected", values: [1, -1, 0, 1], cursor: 0 },
-      { kind: "grapher", id: world.idAt(3, 0), label: "", values: [], cursor: -1 },
+      {
+        kind: "grapher",
+        id: world.idAt(2, 0),
+        label: "expected",
+        values: [1, -1, 0, 1],
+        firstRow: 0,
+        cursor: 0,
+      },
+      { kind: "grapher", id: world.idAt(3, 0), label: "", values: [], firstRow: 0, cursor: -1 },
     ]);
 
     simulation.step();
@@ -182,6 +190,52 @@ describe("ROM graphers", () => {
     expect(line === undefined ? null : signalLineRowCount(line)).toBe(4);
     expect(line === undefined ? null : signalLineChargeAtRow(line, 1)).toBe(-1);
     expect(line === undefined ? null : signalLineChargeAtRow(line, 4)).toBeNull();
+  });
+
+  it("aligns a checker's expected sequence with the tick whose input started it", () => {
+    const world = new World(2, 3);
+    world.place(0, 0, TileKind.Conduit);
+    world.place(0, 1, TileKind.Checker, Direction.Down);
+    world.place(1, 1, TileKind.Grapher, Direction.Left);
+    world.place(0, 2, TileKind.Conduit);
+    world.setWeld(0, 0, 0, 1, true);
+    world.setWeld(0, 1, 0, 2, true);
+    world.setWeld(0, 1, 1, 1, true);
+    world.configureTernaryGrid(0, 1, 3, 1, [1, -1, 1]);
+    const simulation = new Simulation(world);
+    const recorder = new SignalTraceRecorder();
+
+    recorder.sync(world, 0);
+    expect(recorder.lines(world)[0]).toMatchObject({ firstRow: 0, cursor: 0 });
+    simulation.step();
+    recorder.sync(world, 1);
+    simulation.step();
+    recorder.sync(world, 2);
+    const waiting = recorder.lines(world)[0];
+    expect(waiting).toMatchObject({ kind: "grapher", firstRow: 2, cursor: 0 });
+    expect(waiting === undefined ? null : signalLineChargeAtRow(waiting, 2)).toBe(1);
+    expect(waiting === undefined ? null : signalLineRowCount(waiting)).toBe(5);
+
+    world.setCharge(0, 0, 1);
+    simulation.step();
+    recorder.sync(world, 3);
+    const started = recorder.lines(world)[0];
+    expect(started).toMatchObject({ firstRow: 2, cursor: 1 });
+    expect(started?.kind === "grapher" ? grapherCursorRow(started) : null).toBe(3);
+
+    world.setCharge(0, 0, -1);
+    simulation.step();
+    recorder.sync(world, 4);
+    world.setCharge(0, 0, 1);
+    simulation.step();
+    recorder.sync(world, 5);
+    const finished = recorder.lines(world)[0];
+    expect(finished).toMatchObject({ firstRow: 2, cursor: 3 });
+    expect(finished?.kind === "grapher" ? grapherCursorRow(finished) : null).toBeNull();
+
+    simulation.resetTo(new World(2, 3));
+    recorder.sync(world, 0);
+    expect(recorder.lines(world)).toEqual([]);
   });
 });
 

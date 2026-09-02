@@ -21,8 +21,9 @@ export interface NumericComponentConfiguration {
   readonly configureOnPlacement: boolean;
 }
 
-export interface RomComponentConfiguration {
-  readonly type: "rom";
+/** Two-dimensional ternary value grid shared by ROMs and sequence checkers. */
+export interface TernaryGridComponentConfiguration {
+  readonly type: "grid";
   readonly configureOnPlacement: boolean;
 }
 
@@ -35,7 +36,7 @@ export interface TextComponentConfiguration {
 
 export type ComponentConfiguration =
   | NumericComponentConfiguration
-  | RomComponentConfiguration
+  | TernaryGridComponentConfiguration
   | TextComponentConfiguration;
 
 const DELAY_CONFIGURATION: NumericComponentConfiguration = Object.freeze({
@@ -52,8 +53,8 @@ const COUNTER_CONFIGURATION: NumericComponentConfiguration = Object.freeze({
   maximum: MAX_COUNTER_THRESHOLD,
   configureOnPlacement: false,
 });
-const ROM_CONFIGURATION: RomComponentConfiguration = Object.freeze({
-  type: "rom",
+const TERNARY_GRID_CONFIGURATION: TernaryGridComponentConfiguration = Object.freeze({
+  type: "grid",
   configureOnPlacement: false,
 });
 const SIGNAL_LABEL_CONFIGURATION: TextComponentConfiguration = Object.freeze({
@@ -72,7 +73,8 @@ export function componentConfigurationForKind(
     case TileKind.Counter:
       return COUNTER_CONFIGURATION;
     case TileKind.Rom:
-      return ROM_CONFIGURATION;
+    case TileKind.Checker:
+      return TERNARY_GRID_CONFIGURATION;
     case TileKind.Monitor:
     case TileKind.Grapher:
       return SIGNAL_LABEL_CONFIGURATION;
@@ -102,6 +104,20 @@ export interface RomComponentState {
   values: Int8Array;
 }
 
+/**
+ * Expected-sequence checker. `values` are read in row-major order; `cursor` counts matched
+ * values (0 while waiting for the first nonzero input, `values.length` once complete) and
+ * stays on the mismatched value when `failed`.
+ */
+export interface CheckerComponentState {
+  readonly type: "checker";
+  width: number;
+  height: number;
+  cursor: number;
+  failed: boolean;
+  values: Int8Array;
+}
+
 export interface MonitorComponentState {
   readonly type: "monitor";
   label: string;
@@ -116,6 +132,7 @@ export type ConfigurableComponentState =
   | DelayComponentState
   | CounterComponentState
   | RomComponentState
+  | CheckerComponentState
   | MonitorComponentState
   | GrapherComponentState;
 
@@ -140,6 +157,15 @@ export interface RomComponentSnapshot {
   readonly values: readonly Charge[];
 }
 
+export interface CheckerComponentSnapshot {
+  readonly type: "checker";
+  readonly width: number;
+  readonly height: number;
+  readonly cursor: number;
+  readonly failed: boolean;
+  readonly values: readonly Charge[];
+}
+
 export interface MonitorComponentSnapshot {
   readonly type: "monitor";
   readonly label: string;
@@ -154,6 +180,7 @@ export type ConfigurableComponentSnapshot =
   | DelayComponentSnapshot
   | CounterComponentSnapshot
   | RomComponentSnapshot
+  | CheckerComponentSnapshot
   | MonitorComponentSnapshot
   | GrapherComponentSnapshot;
 
@@ -180,6 +207,15 @@ export function createDefaultComponentState(
         width: DEFAULT_ROM_WIDTH,
         height: DEFAULT_ROM_HEIGHT,
         cursor: 0,
+        values: new Int8Array(DEFAULT_ROM_WIDTH * DEFAULT_ROM_HEIGHT),
+      };
+    case TileKind.Checker:
+      return {
+        type: "checker",
+        width: DEFAULT_ROM_WIDTH,
+        height: DEFAULT_ROM_HEIGHT,
+        cursor: 0,
+        failed: false,
         values: new Int8Array(DEFAULT_ROM_WIDTH * DEFAULT_ROM_HEIGHT),
       };
     case TileKind.Monitor:
@@ -216,6 +252,15 @@ export function cloneComponentState(
         cursor: state.cursor,
         values: state.values.slice(),
       };
+    case "checker":
+      return {
+        type: "checker",
+        width: state.width,
+        height: state.height,
+        cursor: state.cursor,
+        failed: state.failed,
+        values: state.values.slice(),
+      };
     case "monitor":
     case "grapher":
       return { type: state.type, label: state.label };
@@ -245,6 +290,15 @@ export function snapshotComponentState(
         width: state.width,
         height: state.height,
         cursor: state.cursor,
+        values: Array.from(state.values) as Charge[],
+      };
+    case "checker":
+      return {
+        type: "checker",
+        width: state.width,
+        height: state.height,
+        cursor: state.cursor,
+        failed: state.failed,
         values: Array.from(state.values) as Charge[],
       };
     case "monitor":
@@ -277,6 +331,22 @@ export function validateComponentSnapshot(
       requireInteger(snapshot.cursor, "ROM cursor", 0, snapshot.width * snapshot.height - 1);
       requireCharges(snapshot.values, snapshot.width * snapshot.height, "ROM values");
       break;
+    case "checker": {
+      requireInteger(snapshot.width, "Checker width", MIN_ROM_DIMENSION, MAX_ROM_DIMENSION);
+      requireInteger(snapshot.height, "Checker height", MIN_ROM_DIMENSION, MAX_ROM_DIMENSION);
+      const valueCount = snapshot.width * snapshot.height;
+      if (typeof snapshot.failed !== "boolean") {
+        throw new RangeError("Checker failed flag must be a boolean");
+      }
+      requireInteger(
+        snapshot.cursor,
+        "Checker cursor",
+        0,
+        snapshot.failed ? valueCount - 1 : valueCount,
+      );
+      requireCharges(snapshot.values, valueCount, "Checker values");
+      break;
+    }
     case "monitor":
     case "grapher":
       validateSignalLabel(snapshot.label);
@@ -322,6 +392,15 @@ export function stateFromSnapshot(
         cursor: snapshot.cursor,
         values: Int8Array.from(snapshot.values),
       };
+    case "checker":
+      return {
+        type: "checker",
+        width: snapshot.width,
+        height: snapshot.height,
+        cursor: snapshot.cursor,
+        failed: snapshot.failed,
+        values: Int8Array.from(snapshot.values),
+      };
     case "monitor":
     case "grapher":
       return { type: snapshot.type, label: snapshot.label };
@@ -336,6 +415,7 @@ export function componentStateMatchesKind(
     (state.type === "delay" && kind === TileKind.Delay) ||
     (state.type === "counter" && kind === TileKind.Counter) ||
     (state.type === "rom" && kind === TileKind.Rom) ||
+    (state.type === "checker" && kind === TileKind.Checker) ||
     (state.type === "monitor" && kind === TileKind.Monitor) ||
     (state.type === "grapher" && kind === TileKind.Grapher)
   );
