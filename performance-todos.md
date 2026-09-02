@@ -298,3 +298,33 @@ Implemented topology/visual revision separation, the third rendering priority.
 - Browser smoke test placed a welded fixed-charge rune and conduit, stepped the live sandbox, and confirmed tick 1 serialized both charges as +1 and rendered the charged conduit center as `[58, 167, 255, 255]`.
 
 No comparative benchmark was rerun in this change. The next rendering work is chunk-level invalidation if topology-dirty frames remain expensive, then invalidation-driven redraws to reduce idle CPU.
+
+# Update 3
+
+Implemented localized body-cache invalidation and unchanged-frame suppression, covering the fourth and fifth rendering priorities without adding mutation bookkeeping to `World`.
+
+## Changes
+
+- `src/render/canvas-renderer.ts`
+  - Keeps compact snapshots of tile kinds and right/down welds for detailed-render cache entries.
+  - On a geometry revision, scans those snapshots once, invalidates only bodies touching changed cells, and rebuilds the affected welded components.
+  - Reuses vacated body-cache slots and releases obsolete body paths after merges and splits.
+  - Skips all canvas drawing when world state, interpolation, viewport, overlays, hover, and nested port charges are unchanged.
+  - Continues redrawing visible charged conveyors because their perimeter animation depends on wall-clock time.
+- `tests/canvas-renderer.test.ts`
+  - Verifies a local tile-kind change constructs one replacement body path rather than rebuilding unrelated bodies.
+  - Verifies unchanged static frames perform no second canvas clear.
+  - Verifies charged conveyors still redraw for time-based animation.
+
+## Verification
+
+- `npm test -- --run tests/canvas-renderer.test.ts`: 9 tests passed.
+- `npm test`: 41 files and 599 tests passed.
+- `npm run build`: TypeScript and the production Vite bundle passed.
+- Browser benchmark used a 400×300 board with 6,000 isolated tiles, zoomed to the detailed path at approximately 6.64 screen pixels per cell:
+  - Before this change, a one-cell geometry edit measured median **11.1 ms**, p95 **26.3 ms**.
+  - After localized invalidation, the same edit measured median **1.2 ms**, p95 **4.1 ms**.
+  - Unchanged static `render()` calls measured median **0 ms**, p95 **0.1 ms** after suppression.
+- Browser screenshot inspection confirmed the edited detailed tile remained visible on the benchmark canvas.
+
+The renderer still receives a `requestAnimationFrame` callback while a workshop is open, but static callbacks now perform only revision/input comparisons and no drawing. Fully event-driven frame scheduling would save the remaining callback overhead; simulation feature-presence tracking is the next higher-impact scalability task.

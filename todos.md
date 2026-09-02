@@ -45,11 +45,6 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * DEFER For community puzzles, organize them automatically by their set of allowed components. Unlock each after the earliest built-in progression point where all of those components have appeared in that group or an earlier group.
 * DEFER Add histograms on the puzzle solution result modal. Rate solutions by percentile as coal, iron, gold, mithril. On the puzzle briefing screen, show the player's best score and percentile-mineral rank on each of the 4 metrics - for each metric, take the min/best over all their solutions. Also, if they have 2 or more solutions, the result modal should show their best score and the current solution's score for each metric, on each histogram.
 
-## Puzzle infrastructure components
-
-* For the signal monitor and ROM grapher: in their configuration modals, add a text input for "category", defaulting to blank. Then on the signal panel, group each category together, instead of board row-major order. Show category names above the traces. Useful for grouping inputs vs outputs.
-* Sequence checker follow-ups: the expected sequence must begin with a nonzero value because the checker starts on the player's first nonzero output, so the "bursts" rectifier-puzzle case cannot verify silence during its leading negative burst. Consider an optional arm/start input port, or an explicit "expect silence for N ticks before the first value" configuration, if a puzzle needs it. Also consider a configurable maximum latency that fails a solution outright instead of relying on the cycle limit. DEFER until a puzzle actually needs this.
-
 # Hardening
 
 * For built-in puzzles, store a canonical solution in a separate file, produced by scene export from the browser. Add tests that run each of these solutions and check that they actually succeed. Helps avoid regressions that make puzzles unsolvable.
@@ -85,12 +80,14 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 
 # Performance
 
-* Profile to determine if there's any need to optimize, and if so, what to optimize.
+* Optimizations noted in `performance-todos.md` - some have been completed and greatly improved performance.
+* Profile again after doing those already-noted performance tasks, and determine if there's any need to optimize further, and if so, what to optimize.
 * Check if we're caching connected/welded bodies, or flood-filling every frame. Could cache it and update only on the infrequent weld/unweld operations. Also check if the simulation and rendering are tracking connected bodies separately - if so, consider adding a getter on simulation system to read information on multi-tile bodies, and call that from the renderer.
 * Mark some tiles or regions as asleep, if they have no updates. Wake up only regions where things are happening. E.g. a static structure made of only solid no-action blocks doesn't need to be processed every frame, doesn't need to re-check gravity every frame, etc.
 * Cache circuit networks instead of rebuilding every tick.
-* Maybe: Compute the next simulation step async, while the last update is still being animated. Would improve performance if simulation step time grows to exceed frame time.
+* Maybe: Compute the next simulation step async, while the last update is still being animated.
 * Optimization: For simulation, `Simulation.step()` does stages like `this.duplicatorResolver.collect();` even if there's no duplicators on the map, and each resolver iterates the entire grid. Could skip some of these if we can maintain a flag for whether any duplicators are present, or the counts of all components on the board. Or we could walk the grid once in `Simulation.step()` and collect all candidates - each TileKind in `TILE_DEFINITIONS` could define which resolvers need to be aware of it. Then only call the relevant resolver if it has nonzero relevant blocks, and pass it the list of relevant blocks.
+* Potential issue later: we may have very large connected bodies. For example a puzzle in a 400x300 map almost entirely filled with welded stone blocks, where the player needs to build a mining machine. Every time they mine one block, that entire welded body changes and may trigger work to update its entire border. We might need to split the body into chunks and make separate paths for their borders, meeting at the chunk boundary, or something like that.
 
 # Circuit network
 
@@ -99,9 +96,15 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * A sensor that detects when the sensor's own tile moves, and outputs +1 on that side, -1 on the other side.
 * Add comparer component that compares front neighbor to back neighbor, outputs +1 on sides if they're equal, else output 0. Make it compare entire bodies, exactly like the delivery box but without consuming.
 * Maybe add min() and max() gates.
-* Show signal monitors placed inside rune arrays on the signal panel. `SignalTraceRecorder` and the panel only walk the root board today; nested monitors would need composite keys (array ID path plus inner tile ID) and a label showing which array they sit in.
 * Add a ternary LUT component. Two input lines, two identical outputs, similar to the ROM. Make it configurable (via E-key config modal) using a 3x3 grid, similar to the grids we have for ROMs but with fixed size. Each tick, it should read its two inputs and map them to a unique configured cell in the 3x3 grid, then output the value stored there. We probably won't allow this for most puzzles, or make it expensive, since it subsumes various other components (rectifier, combiner, inverter), but it could still be useful. This is overall similar to the ROM, except that (1) it doesn't have a cursor moved in (0, 1) or (1, 0) increments but instead uses direct addresses given by the two inputs; and (2) it has a fixed 3x3 grid size for the possible 2-trit input combinations. We also don't need to support the ROM grapher component for this LUT.
 * Add a "rune engine" component that's like a programmable logic array / gate array, but more native to signed ternary than binary. Details: probably take 2 inputs and produce 2 outputs. The rune engine has a grid of ternary bits which determine the I/O relation. Details to be determined. Could include an internal latch for feedback, like the PGA in Shenzhen IO.
+
+## Circuit component modifications
+
+* Show signal monitors placed inside rune arrays on the signal panel. `SignalTraceRecorder` and the panel only walk the root board today; nested monitors would need composite keys (array ID path plus inner tile ID) and a label showing which array they sit in.
+* For signal traces drawn in the signals panel, allow click and drag to reorder them. Probably store ordering on the signal monitor and ROM-grapher components, but hide that number - don't add a box to edit the number directly in the config modal. Only allow reordering inside each category, once categories are added.
+* For the signal monitor and ROM grapher: in their configuration modals, add a text input for "category", defaulting to blank. Then on the signal panel, group each category together, instead of board row-major order. Show category names above the traces. Useful for grouping inputs vs outputs.
+* Sequence checker follow-ups: the expected sequence must begin with a nonzero value because the checker starts on the player's first nonzero output, so the "bursts" rectifier-puzzle case cannot verify silence during its leading negative burst. Consider an optional arm/start input port, or an explicit "expect silence for N ticks before the first value" configuration, if a puzzle needs it. Also consider a configurable maximum latency that fails a solution outright instead of relying on the cycle limit. DEFER until a puzzle actually needs this.
 
 ## Circuit design problems to try, to decide whether we should add components or change behavior
 
@@ -162,7 +165,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 ## Shortcuts
 
 * Add shift + mousewheel to scroll through palette entries.
-* Modify block placement. Currently shift + LMB (or LMB drag) places welded. Add ctrl + shift + LMB drag to place and weld only the edges that you dragged over. So dragging a boustrophedon pattern with ctrl+shift will weld in the same snake pattern, not weld all blocks to all neighbors.
+* Modify block placement: when using LMB-drag to place multiple blocks, automatically weld them together (if allowed) along the edge that was dragged. So e.g. dragging a boustrophedon pattern will weld in the same snake pattern. This is different from shift+LMB which welds along all edges.
 * Add hotkeys for game controls: step-forward, step-back, reset, clear, and speed controls.
 * Allow pressing enter to commit selection to its position and unselect.
 * Add a shortcut for the selection tool. Maybe alt key, similar to how we have ctrl for the weld tool.
@@ -218,4 +221,4 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 # Puzzle ideas
 
 * Count up to N pulses from two separate sources and decide which source gave more pulses in total. One solution idea: use a counter block, with an inverter on one of the two inputs, and then check whether final value is positive or negative? But wrap-arounds are possible, so maybe use spark blocks to initialize it to N. Also we can't read the value of the counter block directly, would need to decrement it until it reaches zero and compare number of decrements to initial value; but that seems like almost the same problem we started with?
-* A suite of basic circuit problems, where you only have: conduit, combiner, inverter, and fixed source. Add puzzles to build most of the more advanced circuit components out of these. The combiner is effectively a sum or vote/majority rune. Combiner also gives a 1-tick delay, so you can chain them to make the delay rune with arbitrary memory size. Combiner with duplicate inputs, one delayed, gives edge detection. Spark is fixed value plus edge detection. For the rectifier/diode, we have a puzzle and reference solution, which needs two combiners and a multiplier. Rectifier could also be built using two combiners, fixed source, and inverter: use fixed source and inverter to get -1, then compute `Combiner(x, x, -1)` which takes (-1, 0, 1) to (-1, -1, 1), and then combine that with +1.
+* A suite of basic circuit problems, where you only have: conduit, combiner, inverter, and fixed source. Add puzzles to build most of the more advanced circuit components out of these. The combiner is effectively a sum or vote/majority rune. Combiner also gives a 1-tick delay, so you can chain them to make the delay rune with arbitrary memory size. Combiner with duplicate inputs, one delayed and inverted, gives edge detection. Spark is fixed value plus edge detection. For the rectifier/diode, we have a puzzle and reference solution, which needs two combiners and a multiplier. Rectifier could also be built using two combiners, fixed source, and inverter: use fixed source and inverter to get -1, then compute `Combiner(x, x, -1)` which takes (-1, 0, 1) to (-1, -1, 1), and then combine that with +1.

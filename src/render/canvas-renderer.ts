@@ -88,11 +88,18 @@ export class CanvasRenderer {
   /** Per-cell body stamp: 0 = unvisited, otherwise the body's start index + 1. */
   private bodyStamps = new Int32Array(0);
   private bodyStack = new Int32Array(0);
+  /** Current cached body index + 1 for each occupied cell; 0 means uncached. */
+  private bodyIndexByCell = new Int32Array(0);
+  private cachedKinds = new Uint8Array(0);
+  private cachedRightWelds = new Uint8Array(0);
+  private cachedDownWelds = new Uint8Array(0);
+  private dirtyCellIndices = new Int32Array(0);
   private readonly bodyCells: BodyCell[] = [];
   private cachedWorldRevision = -1;
   private cachedWorldGeometryRevision = -1;
   private cachedCellSize = 0;
-  private readonly cachedBodies: CachedBody[] = [];
+  private readonly cachedBodies: Array<CachedBody | null> = [];
+  private readonly freeCachedBodyIndices: number[] = [];
   private readonly cachedSelectionBodies: CachedBodyGeometry[] = [];
   private cachedSelectionOverlay: TileSelectionOverlay | null = null;
   private cachedSelectionCellSize = 0;
@@ -109,6 +116,13 @@ export class CanvasRenderer {
   private hoverEdge: GridEdge | null = null;
   private hoverKind = TileKind.Empty;
   private hoverOrientation = Direction.Up;
+  private renderInvalidated = true;
+  private renderedWorldRevision = -1;
+  private renderedPreviousWorld: World | null = null;
+  private renderedPreviousWorldRevision = -1;
+  private renderedProgress = -1;
+  private renderedNestedPortCharges = -1;
+  private hasTimeDependentVisuals = false;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -135,15 +149,24 @@ export class CanvasRenderer {
     region: GridRegion | null,
     draftRectangle: GridRectangle | null,
   ): void {
-    this.authoredEditableRegion = region;
-    this.authoredEditableRegionDraft = draftRectangle;
+    if (
+      this.authoredEditableRegion !== region ||
+      this.authoredEditableRegionDraft !== draftRectangle
+    ) {
+      this.renderInvalidated = true;
+      this.authoredEditableRegion = region;
+      this.authoredEditableRegionDraft = draftRectangle;
+    }
   }
   setTileSelection(
     overlay: TileSelectionOverlay | null,
     draft: GridRegion | null,
   ): void {
-    this.tileSelectionOverlay = overlay;
-    this.tileSelectionDraft = draft;
+    if (this.tileSelectionOverlay !== overlay || this.tileSelectionDraft !== draft) {
+      this.renderInvalidated = true;
+      this.tileSelectionOverlay = overlay;
+      this.tileSelectionDraft = draft;
+    }
   }
 
   screenBoundsForGridRegion(region: GridRegion): GridRegionScreenBounds | null {
@@ -170,6 +193,7 @@ export class CanvasRenderer {
     this.fitViewToViewport();
     this.viewInitialized = true;
     this.viewModified = false;
+    this.renderInvalidated = true;
   }
 
   zoomAtClientPoint(clientX: number, clientY: number, wheelDeltaY: number): void {
@@ -193,6 +217,7 @@ export class CanvasRenderer {
     this.viewCenterY = gridY - (localY - this.viewportHeight / 2) / nextSize;
     this.viewModified = true;
     this.updateOrigin();
+    this.renderInvalidated = true;
   }
 
   /** Moves the rendered board by the supplied screen-space delta. */
@@ -201,11 +226,27 @@ export class CanvasRenderer {
     this.viewCenterY -= deltaY / this.cellSize;
     this.viewModified = true;
     this.updateOrigin();
+    this.renderInvalidated = true;
   }
 
   render(previousWorld: World | null = null, progress = 1, animationTime = 0): void {
     this.resizeBackingStore();
+    const boundedProgress = Math.max(0, Math.min(1, progress));
+    const previousWorldRevision = previousWorld?.revision ?? -1;
+    const nestedPortCharges = this.nestedPortChargeKey();
+    if (
+      !this.renderInvalidated &&
+      !this.hasTimeDependentVisuals &&
+      this.renderedWorldRevision === this.world.revision &&
+      this.renderedPreviousWorld === previousWorld &&
+      this.renderedPreviousWorldRevision === previousWorldRevision &&
+      this.renderedProgress === boundedProgress &&
+      this.renderedNestedPortCharges === nestedPortCharges
+    ) {
+      return;
+    }
 
+    this.hasTimeDependentVisuals = false;
     const { context } = this;
     context.clearRect(0, 0, this.viewportWidth, this.viewportHeight);
     context.fillStyle = "#0d0a07";
@@ -213,11 +254,29 @@ export class CanvasRenderer {
 
     this.drawGrid();
     this.drawNestedPorts(animationTime);
-    this.drawTiles(previousWorld, Math.max(0, Math.min(1, progress)), animationTime);
+    this.drawTiles(previousWorld, boundedProgress, animationTime);
     this.drawEditableRegion();
     this.drawEditableRegionAuthoring();
     this.drawTileSelection(animationTime);
     this.drawHover(animationTime);
+
+    this.renderInvalidated = false;
+    this.renderedWorldRevision = this.world.revision;
+    this.renderedPreviousWorld = previousWorld;
+    this.renderedPreviousWorldRevision = previousWorldRevision;
+    this.renderedProgress = boundedProgress;
+    this.renderedNestedPortCharges = nestedPortCharges;
+  }
+
+  private nestedPortChargeKey(): number {
+    if (this.nestedView === null) {
+      return 0;
+    }
+    let key = 0;
+    for (let value = Direction.Up; value <= Direction.Left; value += 1) {
+      key |= (this.nestedView.portCharge(value as Direction) + 1) << (value * 2);
+    }
+    return key;
   }
 
   gridPointFromClientPoint(clientX: number, clientY: number): GridPoint {
@@ -278,17 +337,35 @@ export class CanvasRenderer {
     kind: TileKind = TileKind.Empty,
     orientation: Direction = Direction.Up,
   ): void {
-    this.hoverX = cell?.x ?? -1;
-    this.hoverY = cell?.y ?? -1;
-    this.hoverKind = kind;
-    this.hoverOrientation = orientation;
-    this.hoverEdge = null;
+    const x = cell?.x ?? -1;
+    const y = cell?.y ?? -1;
+    if (
+      this.hoverX !== x ||
+      this.hoverY !== y ||
+      this.hoverKind !== kind ||
+      this.hoverOrientation !== orientation ||
+      this.hoverEdge !== null
+    ) {
+      this.renderInvalidated = true;
+      this.hoverX = x;
+      this.hoverY = y;
+      this.hoverKind = kind;
+      this.hoverOrientation = orientation;
+      this.hoverEdge = null;
+    }
   }
 
   setHoverEdge(edge: GridEdge | null): void {
-    this.hoverEdge = edge;
-    this.hoverX = -1;
-    this.hoverY = -1;
+    const edgeChanged = this.hoverEdge?.x1 !== edge?.x1 ||
+      this.hoverEdge?.y1 !== edge?.y1 ||
+      this.hoverEdge?.x2 !== edge?.x2 ||
+      this.hoverEdge?.y2 !== edge?.y2;
+    if (edgeChanged || this.hoverX !== -1 || this.hoverY !== -1) {
+      this.renderInvalidated = true;
+      this.hoverEdge = edge;
+      this.hoverX = -1;
+      this.hoverY = -1;
+    }
   }
 
   private resizeBackingStore(): void {
@@ -298,8 +375,10 @@ export class CanvasRenderer {
     const devicePixelRatio = window.devicePixelRatio || 1;
     const backingWidth = Math.round(width * devicePixelRatio);
     const backingHeight = Math.round(height * devicePixelRatio);
+    const backingSizeChanged =
+      this.canvas.width !== backingWidth || this.canvas.height !== backingHeight;
 
-    if (this.canvas.width !== backingWidth || this.canvas.height !== backingHeight) {
+    if (backingSizeChanged) {
       this.canvas.width = backingWidth;
       this.canvas.height = backingHeight;
     }
@@ -314,6 +393,9 @@ export class CanvasRenderer {
       this.viewInitialized = true;
     } else if (sizeChanged) {
       this.updateOrigin();
+    }
+    if (sizeChanged || backingSizeChanged) {
+      this.renderInvalidated = true;
     }
   }
 
@@ -760,6 +842,9 @@ export class CanvasRenderer {
     const visibleRight = (this.viewportWidth - this.originX) / this.cellSize + 1;
     const visibleBottom = (this.viewportHeight - this.originY) / this.cellSize + 1;
     for (const body of this.cachedBodies) {
+      if (body === null) {
+        continue;
+      }
       if (
         body.maxX <= visibleLeft ||
         body.minX >= visibleRight ||
@@ -773,6 +858,9 @@ export class CanvasRenderer {
       const remainingProgress = 1 - progress;
       let hasPistonTransition = false;
       for (const cell of body.cells) {
+        if (cell.kind === TileKind.Conveyor && cell.outputCharge !== 0) {
+          this.hasTimeDependentVisuals = true;
+        }
         cell.pistonTransition = 0;
         cell.pistonTransitionProgress = 1;
         if (previousWorld === null || remainingProgress <= 0) {
@@ -936,62 +1024,192 @@ export class CanvasRenderer {
   }
 
   private rebuildBodyCache(): void {
-    if (
-      this.cachedWorldGeometryRevision === this.world.geometryRevision &&
-      this.cachedCellSize === this.cellSize
-    ) {
-      if (this.cachedWorldRevision !== this.world.revision) {
-        this.refreshCachedBodyState();
-        this.cachedWorldRevision = this.world.revision;
+    const geometryChanged =
+      this.cachedWorldGeometryRevision !== this.world.geometryRevision ||
+      this.cachedCellSize !== this.cellSize;
+    if (geometryChanged) {
+      if (
+        this.cachedCellSize !== this.cellSize ||
+        this.bodyIndexByCell.length !== this.world.cellCount
+      ) {
+        this.rebuildCompleteBodyCache();
+      } else {
+        this.rebuildChangedBodyGeometry();
       }
-      return;
+      this.cachedWorldGeometryRevision = this.world.geometryRevision;
+      this.cachedCellSize = this.cellSize;
     }
 
-    this.cachedWorldRevision = this.world.revision;
-    this.cachedWorldGeometryRevision = this.world.geometryRevision;
-    this.cachedCellSize = this.cellSize;
-    this.cachedBodies.length = 0;
+    if (this.cachedWorldRevision !== this.world.revision) {
+      this.refreshCachedBodyState();
+      this.cachedWorldRevision = this.world.revision;
+    }
+  }
 
+  private rebuildCompleteBodyCache(): void {
     const cellCount = this.world.cellCount;
     if (this.bodyStamps.length !== cellCount) {
       this.bodyStamps = new Int32Array(cellCount);
       this.bodyStack = new Int32Array(cellCount);
+      this.bodyIndexByCell = new Int32Array(cellCount);
+      this.cachedKinds = new Uint8Array(cellCount);
+      this.cachedRightWelds = new Uint8Array(cellCount);
+      this.cachedDownWelds = new Uint8Array(cellCount);
+      this.dirtyCellIndices = new Int32Array(cellCount);
     } else {
       this.bodyStamps.fill(0);
+      this.bodyIndexByCell.fill(0);
     }
+    this.cachedBodies.length = 0;
+    this.freeCachedBodyIndices.length = 0;
 
     for (let index = 0; index < cellCount; index += 1) {
-      if (this.bodyStamps[index] !== 0 || this.world.kindAtIndex(index) === TileKind.Empty) {
+      this.snapshotCellGeometry(index);
+      if (this.world.kindAtIndex(index) !== TileKind.Empty && this.bodyIndexByCell[index] === 0) {
+        this.cacheBody(index);
+      }
+    }
+  }
+
+  private rebuildChangedBodyGeometry(): void {
+    let dirtyCellCount = 0;
+    for (let index = 0; index < this.world.cellCount; index += 1) {
+      const kind = this.world.kindAtIndex(index);
+      const rightWeld = this.world.hasRightWeldAtIndex(index) ? 1 : 0;
+      const downWeld = this.world.hasDownWeldAtIndex(index) ? 1 : 0;
+      if (
+        this.cachedKinds[index] === kind &&
+        this.cachedRightWelds[index] === rightWeld &&
+        this.cachedDownWelds[index] === downWeld
+      ) {
         continue;
       }
+      this.cachedKinds[index] = kind;
+      this.cachedRightWelds[index] = rightWeld;
+      this.cachedDownWelds[index] = downWeld;
+      this.dirtyCellIndices[dirtyCellCount] = index;
+      dirtyCellCount += 1;
+    }
 
-      const count = this.collectBody(index);
-      const cells = new Array<BodyCell>(count);
-      let minX = this.world.width;
-      let minY = this.world.height;
-      let maxX = 0;
-      let maxY = 0;
-      for (let cellIndex = 0; cellIndex < count; cellIndex += 1) {
-        const cell = expectDefined(this.bodyCells[cellIndex], "cached body cell");
-        cells[cellIndex] = { ...cell };
-        minX = Math.min(minX, cell.x);
-        minY = Math.min(minY, cell.y);
-        maxX = Math.max(maxX, cell.x + 1);
-        maxY = Math.max(maxY, cell.y + 1);
+    for (let dirtyIndex = 0; dirtyIndex < dirtyCellCount; dirtyIndex += 1) {
+      const index = expectDefined(this.dirtyCellIndices[dirtyIndex], "dirty body cell index");
+      this.invalidateBodyNeighborhood(index);
+    }
+    for (let dirtyIndex = 0; dirtyIndex < dirtyCellCount; dirtyIndex += 1) {
+      const index = expectDefined(this.dirtyCellIndices[dirtyIndex], "dirty body cell index");
+      this.rebuildBodyNeighborhood(index);
+    }
+  }
+
+  private snapshotCellGeometry(index: number): void {
+    this.cachedKinds[index] = this.world.kindAtIndex(index);
+    this.cachedRightWelds[index] = this.world.hasRightWeldAtIndex(index) ? 1 : 0;
+    this.cachedDownWelds[index] = this.world.hasDownWeldAtIndex(index) ? 1 : 0;
+  }
+
+  private invalidateBodyNeighborhood(index: number): void {
+    const x = index % this.world.width;
+    this.invalidateCachedBodyAt(index);
+    if (x > 0) {
+      this.invalidateCachedBodyAt(index - 1);
+    }
+    if (x + 1 < this.world.width) {
+      this.invalidateCachedBodyAt(index + 1);
+    }
+    if (index >= this.world.width) {
+      this.invalidateCachedBodyAt(index - this.world.width);
+    }
+    if (index + this.world.width < this.world.cellCount) {
+      this.invalidateCachedBodyAt(index + this.world.width);
+    }
+  }
+
+  private invalidateCachedBodyAt(index: number): void {
+    const storedBodyIndex = expectDefined(this.bodyIndexByCell[index], "cached body index");
+    if (storedBodyIndex === 0) {
+      return;
+    }
+    const bodyIndex = storedBodyIndex - 1;
+    const body = this.cachedBodies[bodyIndex];
+    if (body === null || body === undefined) {
+      throw new Error("Cached body cell points to a missing body");
+    }
+    this.cachedBodies[bodyIndex] = null;
+    this.freeCachedBodyIndices.push(bodyIndex);
+    for (const cell of body.cells) {
+      const cellIndex = cell.y * this.world.width + cell.x;
+      this.bodyIndexByCell[cellIndex] = 0;
+      this.bodyStamps[cellIndex] = 0;
+    }
+  }
+
+  private rebuildBodyNeighborhood(index: number): void {
+    const x = index % this.world.width;
+    this.cacheBodyIfNeeded(index);
+    if (x > 0) {
+      this.cacheBodyIfNeeded(index - 1);
+    }
+    if (x + 1 < this.world.width) {
+      this.cacheBodyIfNeeded(index + 1);
+    }
+    if (index >= this.world.width) {
+      this.cacheBodyIfNeeded(index - this.world.width);
+    }
+    if (index + this.world.width < this.world.cellCount) {
+      this.cacheBodyIfNeeded(index + this.world.width);
+    }
+  }
+
+  private cacheBodyIfNeeded(index: number): void {
+    if (
+      this.world.kindAtIndex(index) !== TileKind.Empty &&
+      this.bodyIndexByCell[index] === 0
+    ) {
+      this.cacheBody(index);
+    }
+  }
+
+  private cacheBody(startIndex: number): void {
+    const count = this.collectBody(startIndex);
+    const cells = new Array<BodyCell>(count);
+    let minX = this.world.width;
+    let minY = this.world.height;
+    let maxX = 0;
+    let maxY = 0;
+    for (let cellIndex = 0; cellIndex < count; cellIndex += 1) {
+      const cell = expectDefined(this.bodyCells[cellIndex], "cached body cell");
+      const worldIndex = cell.y * this.world.width + cell.x;
+      if (this.bodyIndexByCell[worldIndex] !== 0) {
+        throw new Error("New body geometry overlaps an unchanged cached body");
       }
-      this.cachedBodies.push({
-        cells,
-        path: createBodyPath(0, 0, this.cellSize, cells, count),
-        minX,
-        minY,
-        maxX,
-        maxY,
-      });
+      cells[cellIndex] = { ...cell };
+      minX = Math.min(minX, cell.x);
+      minY = Math.min(minY, cell.y);
+      maxX = Math.max(maxX, cell.x + 1);
+      maxY = Math.max(maxY, cell.y + 1);
+    }
+
+    const freeBodyIndex = this.freeCachedBodyIndices.pop();
+    const bodyIndex = freeBodyIndex ?? this.cachedBodies.length;
+    const body: CachedBody = {
+      cells,
+      path: createBodyPath(0, 0, this.cellSize, cells, count),
+      minX,
+      minY,
+      maxX,
+      maxY,
+    };
+    this.cachedBodies[bodyIndex] = body;
+    for (const cell of cells) {
+      this.bodyIndexByCell[cell.y * this.world.width + cell.x] = bodyIndex + 1;
     }
   }
 
   private refreshCachedBodyState(): void {
     for (const body of this.cachedBodies) {
+      if (body === null) {
+        continue;
+      }
       for (const cell of body.cells) {
         const index = cell.y * this.world.width + cell.x;
         if (this.world.kindAtIndex(index) === TileKind.Empty) {

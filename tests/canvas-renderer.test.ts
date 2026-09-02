@@ -206,4 +206,55 @@ describe("CanvasRenderer scalable tile rendering", () => {
     renderer.render();
     expect(pathConstructionCount).toBeGreaterThan(initialPathCount);
   });
+
+  it("rebuilds only bodies neighboring a changed geometry cell", () => {
+    vi.stubGlobal("window", { devicePixelRatio: 1 });
+    vi.stubGlobal("Path2D", RecordingPath2D);
+    const world = new World(6, 1);
+    world.place(0, 0, TileKind.Platform);
+    world.place(2, 0, TileKind.Platform);
+    world.place(5, 0, TileKind.Platform);
+    const { canvas } = createRecordingCanvas(600, 100);
+    const renderer = new CanvasRenderer(canvas, world);
+
+    renderer.render();
+    const initialPathCount = pathConstructionCount;
+
+    world.place(2, 0, TileKind.Stone);
+    renderer.render();
+
+    expect(pathConstructionCount).toBe(initialPathCount + 1);
+  });
+
+  it("skips canvas drawing for an unchanged static frame", () => {
+    vi.stubGlobal("window", { devicePixelRatio: 1 });
+    vi.stubGlobal("Path2D", RecordingPath2D);
+    const world = new World(1, 1);
+    world.place(0, 0, TileKind.Platform);
+    const { canvas, context } = createRecordingCanvas(100, 100);
+    const renderer = new CanvasRenderer(canvas, world);
+
+    renderer.render();
+    renderer.render();
+    expect(context.clearRect).toHaveBeenCalledTimes(1);
+
+    world.place(0, 0, TileKind.Stone);
+    renderer.render();
+    expect(context.clearRect).toHaveBeenCalledTimes(2);
+  });
+
+  it("redraws unchanged charged conveyors for their time-based animation", () => {
+    vi.stubGlobal("window", { devicePixelRatio: 1 });
+    vi.stubGlobal("Path2D", RecordingPath2D);
+    const world = new World(1, 1);
+    world.place(0, 0, TileKind.Conveyor);
+    world.setCharge(0, 0, 1);
+    const { canvas, context } = createRecordingCanvas(100, 100);
+    const renderer = new CanvasRenderer(canvas, world);
+
+    renderer.render(null, 1, 0);
+    renderer.render(null, 1, 16);
+
+    expect(context.clearRect).toHaveBeenCalledTimes(2);
+  });
 });
