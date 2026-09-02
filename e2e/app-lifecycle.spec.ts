@@ -318,7 +318,11 @@ test("puzzle groups show gemstone progression and default collapse states", asyn
   await expect(basics).toHaveJSProperty("open", true);
   await expect(runelore).toHaveJSProperty("open", false);
   await expect(page.getByRole("button", { name: /First Shift/ })).toBeEnabled();
-  await expect(runelore.locator("button")).toBeDisabled();
+  const runeloreButtons = runelore.locator("button");
+  await expect(runeloreButtons).not.toHaveCount(0);
+  for (const button of await runeloreButtons.all()) {
+    await expect(button).toBeDisabled();
+  }
 });
 
 test("unlocked fixture opens a gemstone-gated group and puzzle", async ({ page }) => {

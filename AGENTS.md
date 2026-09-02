@@ -6,19 +6,21 @@ This is a Zachtronics-like game about 2D machines built out of square tiles, usi
 
 At each line between two non-empty blocks, they can be either welded together, or separate. Welded groups move as one rigid body. The simulation runs in discrete time steps and blocks move in discrete one-block increments; no continuous physics. Blocks can rotate in 90-degree increments. Blocks have different types, like stone or sand or pistons or conveyor belts or wires. This is a side view, so unsupported blocks fall down one space every one time step. Some blocks have internal state.
 
-Game flow: On the main menu, the player selects a puzzle to view a briefing and create a new solution. The puzzle defines the initial screen state, which includes a region for the player to place blocks. Outside that region, the puzzle has in-world machinery like dispensers to supply inputs, delivery boxes to consume outputs, and a victory block which marks the puzzle solved when triggered by circuitry. The player selects and places blocks in the allowed region, building a machine to solve the puzzle, then presses play to see if their solution succeeds. They can also weld or unweld blocks. We also have a sandbox. The game starts on the sandbox screen currently for fast testing during development.
+Game flow: On the main menu, the player selects a puzzle to view a briefing and create a new solution. The puzzle defines the initial screen state, which includes a region for the player to place blocks. Outside that region, the puzzle has in-world machinery like duplicators to supply inputs, delivery boxes to consume outputs, and a victory block which marks the puzzle solved when triggered by circuitry. The player selects and places blocks in the allowed region, and welds/unwelds blocks, building a machine to solve the puzzle, then plays the simulation to see if they succeeded. The game starts on a sandbox screen for fast testing during development.
+
+The game has a dwarven engineering theme. Magnets are lodestones, electrical components are glowing runes. Puzzles will include moving and processing minerals, bottling beer, circuit puzzles with runes and conduits, and designing missiles and mechs to defeat elves.
 
 Implemented components:
-* Solid blocks like sand, stone, and iron, with gravity downward or diagonally (sand).
-* Conduits instantly share signed-ternary charge across welded circuit connections; wire crossings keep horizontal and vertical networks separate.
+* Solid blocks like sand, stone, and iron, with gravity downward or diagonally (sand). Platform blocks are not affected by gravity.
+* Conduits instantly share signed-ternary charge across welded circuit connections. Wire crossing blocks keep horizontal and vertical networks separate.
 * Directional sensor runes emit +1 when forward neighbor is occupied.
 * Spark runes emit +1 across their welded circuit network on the first simulation tick, then remain neutral until reset. Fixed charge runes emit +1 on every tick.
 * Several runes combine up to 3 inputs to produce an output: inverter, combiner, subtractor, rectifier, multiplier, and selector.
 * Magnets attract a magnetic block in the direction they're facing. Magnetic contacts hold connected bodies together against gravity, couple conveyor movement along the contact normal, and allow conveyor-driven sliding tangent to the contact.
 * Conveyor belts use one all-side circuit network: +1 rolls clockwise, -1 counterclockwise, and 0 stops. Each active belt applies tangential force to every unwelded occupied neighbor and the opposite reaction force to its own body.
 * Furnace blocks transform one neighbor cell into a different one after a delay: sand to glass, ore to metal.
-* Directional delivery boxes compare the complete welded bodies in front and behind under translation only, including tile kinds, orientations for directional tile kinds, and weld topology. A match atomically consumes the front body and emits a one-tick +1 pulse; configurable and runtime state do not affect matching.
-* Directional duplicators mirror the complete welded body behind them across their left-right centerline onto the pointed side when either shared side circuit receives +1. They jam overlapping output intents, require every destination cell to be empty, preserve mirrored internal welds and tile state with fresh stable IDs, and copy configurable runtime state such as ROM contents and cursors.
+* Directional delivery boxes compare the complete welded bodies in front and behind under translation only, including tile kinds, orientations for directional tile kinds, and weld topology. A match atomically consumes the front body and emits a one-tick +1 pulse. Used for detecting if a puzzle solution has created a valid product.
+* Directional duplicators mirror the complete welded body behind them across their left-right centerline onto the pointed side when either shared side circuit receives +1. They jam overlapping output intents, require every destination cell to be empty, preserve mirrored internal welds and tile state with fresh stable IDs, and copy configurable runtime state such as ROM contents and cursors. Used in puzzles to supply inputs.
 * Directional pistons use one retracted tile and separate welded base/arm tiles while extended. +1 prefers extending the arm and pushing complete obstruction chains forward; when that is blocked, it instead recoils the base and pushes the rear obstruction chain. The solid world boundary can brace the same recoil. -1 retracts and pulls a head-welded body; 0 holds state. The head weld follows the arm, while the base retains its other three welds and circuit connections.
 * Directional welders and splitters weld or remove the two transverse edges of the block ahead. Their left and right circuit links form one disable network, where -1 inhibits operation, and the isolated rear output pulses +1 after changing at least one edge.
 * Signal monitors join their welded circuit like conduits and have no simulation behavior of their own; the workshop records each monitor's charge once per committed tick for the signal panel. Directional ROM graphers read the ROM they point at without a weld and show its complete contents, marking the cursor. Both carry a configurable signal name.
@@ -26,29 +28,27 @@ Implemented components:
 Planned components:
 * Welder/splitter variants: laser splitters, riveters.
 * More circuit components like miniaturized rune arrays.
-* Mechanical chain drives and gears - similar to the circuit system, ternary (clockwise/counterclockwise/still) but with more difficult mechanics.
+* Mechanical chain drives and gears - similar to the circuit system but with different mechanics.
 * Assemblers that convert a group of blocks welded in a specific way into one block.
-* Flippers and rotators that flip or rotate welded groups of blocks.
+* Flippers and rotators that flip/rotate welded bodies.
 * Fragility flag for blocks like glass, which makes them shatter when they fall.
 
 Example planned puzzles:
 * Implement circuit behaviors with runes.
 * Sort blocks into bins based on a circuit signal.
 * Build a 4-bit adder using circuit components; or without circuit components, by pushing blocks around.
-* Minecraft-style mob farming.
 * Depalletizing - unweld a 5x5 chunk of iron blocks and drop them down a 1-wide chute.
 * Given inputs, weld them together and use an assembler to make intermediates; then weld together those intermediates and use an assembler to make a final product.
 * Tree farms - trees grow in irregular patterns, and once grown high enough, their leaves must be removed and wood blocks unwelded.
 * Build a vehicle that drives back and forth to evade the arms of a giant crushing contraption.
 * Build a corridor that allows dwarves to walk through, but traps elves.
 * Puzzles that require multiplexing a single welder or furnace.
-* The player is given an impossible task. The only way to win is by instead building a machine that drills into the ground to reach the in-world puzzle infrastructure and triggers the victory block directly.
+* Bar challenges - remove this block without spilling the mug of ale on top.
+* The player is given an impossible task. The only way to win is by ignoring it and instead building a machine that drills into the ground to trigger the victory block directly.
 
 While the simulation has movement in discrete time steps and one-tile steps, we animate the tiles moving from one state to the next.
 
-We'll make puzzles and solutions shareable, exportable as images, GIFs, and JSON files. The sandbox allows creating and sharing puzzles. Histogram screen to compare performance on each metric with other players. This will require eventually adding a backend server and database.
-
-The game has a dwarven engineering theme. Magnets are lodestones, electrical components are glowing runes. Puzzles range from heavy industry based on moving around big chunks of stone/metal, bottling beer, circuit puzzles (runes and conduits), minecart control systems, bar challenges (remove this block without spilling the mug of ale on top), destroying elven defenses by building missiles or dwarven mechs.
+We'll make puzzles and solutions shareable, exportable as images, GIFs, and JSON files. The sandbox will allow sharing created puzzles, and we'll show histograms to compare performance with other players, using a database server - not implemented yet.
 
 ## Stack
 
@@ -191,6 +191,7 @@ The game is in early development. Currently implemented:
 * `tests/tile-renderer.test.ts` — Rounded body-outline and mixed-kind fill stability regression tests.
 * `tests/tile.test.ts` — Directional and non-directional tile orientation resolution regression tests.
 * `tests/puzzles.test.ts` — Group threshold and sequence unlocking, deterministic puzzle ordering, priced component-catalog validation, and independent initial-world factory tests.
+* `tests/rectifier-puzzle.test.ts` — Shipped rectifier puzzle reference-solution success, passthrough failure, and signal-panel line ordering tests.
 * `tests/signal-traces.test.ts` — Monitor circuit sharing, per-tick history recording, restart and skipped-tick rules, late monitors, grapher ROM reading, signal-name validation, and board-format round-trip tests.
 * `tests/puzzle-test-runner.test.ts` — Editable-design and configuration transfer, incremental case transitions, first-failure stopping, all-case success scores, loss, and cycle-limit tests.
 * `tests/puzzle-format.test.ts` — Production shipped-puzzle loading, strict field validation, group membership and order tie handling, sparse test-case overrides, dimension invariants, and independent world-factory tests.

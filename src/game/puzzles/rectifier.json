@@ -1,0 +1,336 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 4,
+  "width": 24,
+  "height": 14,
+  "id": "rectifier",
+  "group": "runelore",
+  "order": 3,
+  "name": "Rectifier",
+  "description": "The input rune feeds a signal into your workshop. Emit +1 whenever the input is +1 and 0 otherwise, exactly two ticks after each input arrives. The signal panel shows the input, your output, and the expected output side by side.",
+  "goal": "Rectify the input signal with a two-tick delay",
+  "features": [
+    "Signal panel",
+    "Multiplier rune",
+    "Combiner rune"
+  ],
+  "cycleLimit": 200,
+  "components": [
+    {
+      "code": "C",
+      "price": 1
+    },
+    {
+      "code": "+",
+      "price": 3
+    },
+    {
+      "code": "*",
+      "price": 3
+    },
+    {
+      "code": "I",
+      "price": 3
+    },
+    {
+      "code": "W",
+      "price": 2
+    }
+  ],
+  "editableRegions": [
+    {
+      "x": 8,
+      "y": 5,
+      "width": 6,
+      "height": 6
+    }
+  ],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 11,
+    "width": 24,
+    "height": 14,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "========================",
+      "=......................=",
+      "=......................=",
+      "=......................=",
+      "=......................=",
+      "=.................VN1..=",
+      "=.................I....=",
+      "=................C*....=",
+      "=................CC....=",
+      "=.1UCCmC......mCC+-....=",
+      "========......====C....=",
+      "=.......======...gC....=",
+      "=...............1UC....=",
+      "========================"
+    ],
+    "orientations": [
+      {
+        "x": 19,
+        "y": 5,
+        "direction": "left"
+      },
+      {
+        "x": 3,
+        "y": 9,
+        "direction": "right"
+      },
+      {
+        "x": 17,
+        "y": 9,
+        "direction": "right"
+      },
+      {
+        "x": 17,
+        "y": 11,
+        "direction": "down"
+      },
+      {
+        "x": 17,
+        "y": 12,
+        "direction": "right"
+      }
+    ],
+    "charges": [],
+    "crossingCharges": [],
+    "isolatedOutputCharges": [],
+    "furnaces": [],
+    "components": [
+      {
+        "x": 19,
+        "y": 5,
+        "type": "counter",
+        "threshold": 28,
+        "count": 0
+      },
+      {
+        "x": 3,
+        "y": 9,
+        "type": "rom",
+        "width": 9,
+        "height": 3,
+        "cursor": 0,
+        "values": [
+          1,
+          -1,
+          0,
+          1,
+          1,
+          -1,
+          -1,
+          0,
+          0,
+          1,
+          -1,
+          1,
+          0,
+          -1,
+          1,
+          0,
+          0,
+          -1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "x": 6,
+        "y": 9,
+        "type": "monitor",
+        "label": "INPUT"
+      },
+      {
+        "x": 14,
+        "y": 9,
+        "type": "monitor",
+        "label": "OUTPUT"
+      },
+      {
+        "x": 17,
+        "y": 11,
+        "type": "grapher",
+        "label": "EXPECTED"
+      },
+      {
+        "x": 17,
+        "y": 12,
+        "type": "rom",
+        "width": 9,
+        "height": 3,
+        "cursor": 0,
+        "values": [
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          1,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "welds": [
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      "..................+-....",
+      "..................|.....",
+      ".................+|.....",
+      ".................-|.....",
+      "..-----.......----|.....",
+      "..................|.....",
+      ".................||.....",
+      "................--......",
+      "........................"
+    ]
+  },
+  "testCases": [
+    {
+      "id": "mixed",
+      "name": "Mixed signal",
+      "overrides": {}
+    },
+    {
+      "id": "bursts",
+      "name": "Bursts",
+      "overrides": {
+        "initialBoard": {
+          "components": [
+            {
+              "x": 19,
+              "y": 5,
+              "type": "counter",
+              "threshold": 28,
+              "count": 0
+            },
+            {
+              "x": 3,
+              "y": 9,
+              "type": "rom",
+              "width": 9,
+              "height": 3,
+              "cursor": 0,
+              "values": [
+                -1,
+                -1,
+                -1,
+                1,
+                1,
+                1,
+                0,
+                0,
+                0,
+                1,
+                -1,
+                1,
+                -1,
+                0,
+                1,
+                1,
+                -1,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "x": 6,
+              "y": 9,
+              "type": "monitor",
+              "label": "INPUT"
+            },
+            {
+              "x": 14,
+              "y": 9,
+              "type": "monitor",
+              "label": "OUTPUT"
+            },
+            {
+              "x": 17,
+              "y": 11,
+              "type": "grapher",
+              "label": "EXPECTED"
+            },
+            {
+              "x": 17,
+              "y": 12,
+              "type": "rom",
+              "width": 9,
+              "height": 3,
+              "cursor": 0,
+              "values": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1,
+                1,
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                1,
+                0,
+                0,
+                1,
+                1,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
