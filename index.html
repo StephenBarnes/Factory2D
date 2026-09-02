@@ -25,6 +25,10 @@
           </button>
           <nav class="puzzle-map" id="puzzle-map" aria-label="Puzzle groups"></nav>
           <p class="main-menu-note">Select an available puzzle to review its briefing and saved solutions.</p>
+          <nav class="main-menu-actions" aria-label="Game information">
+            <button id="settings-button" type="button">SETTINGS</button>
+            <button id="credits-button" type="button">CREDITS</button>
+          </nav>
         </div>
       </section>
 
@@ -56,13 +60,8 @@
                 </div>
                 <button class="solution-primary-action" id="new-solution-button" type="button">+ NEW SOLUTION</button>
               </div>
-              <div class="solution-list" id="solution-list" role="listbox" aria-label="Saved solutions"></div>
+              <div class="solution-list" id="solution-list" role="list" aria-label="Saved solutions"></div>
               <p class="empty-solutions" id="empty-solutions">No saved solutions. Create one to enter the workshop.</p>
-              <div class="solution-actions">
-                <button id="duplicate-solution-button" type="button">DUPLICATE</button>
-                <button class="solution-primary-action" id="edit-solution-button" type="button">EDIT SELECTED</button>
-                <button class="solution-delete-action" id="delete-solution-button" type="button">DELETE</button>
-              </div>
             </section>
           </div>
         </div>
@@ -336,6 +335,33 @@
         </div>
       </footer>
       </section>
+      <dialog class="main-menu-dialog" id="settings-dialog" aria-labelledby="settings-title">
+        <form method="dialog">
+          <div class="main-menu-dialog-status">SETTINGS</div>
+          <div class="main-menu-dialog-content">
+            <h2 id="settings-title">SETTINGS</h2>
+            <p>TODO: Add settings.</p>
+          </div>
+          <div class="main-menu-dialog-actions">
+            <button type="submit">CLOSE</button>
+          </div>
+        </form>
+      </dialog>
+      <dialog class="main-menu-dialog" id="credits-dialog" aria-labelledby="credits-title">
+        <form method="dialog">
+          <div class="main-menu-dialog-status">CREDITS</div>
+          <div class="main-menu-dialog-content">
+            <h2 id="credits-title">CREDITS</h2>
+            <p>TODO: Add credits and architecture overview.</p>
+            <a href="https://github.com/StephenBarnes/Factory2D" target="_blank" rel="noopener noreferrer">
+              VIEW SOURCE ON GITHUB
+            </a>
+          </div>
+          <div class="main-menu-dialog-actions">
+            <button type="submit">CLOSE</button>
+          </div>
+        </form>
+      </dialog>
       <dialog
         class="workshop-info-dialog"
         id="workshop-info-dialog"

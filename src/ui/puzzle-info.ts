@@ -4,10 +4,8 @@ import type { PuzzleDefinition } from "../game/puzzles";
 export interface PuzzleInfoOptions {
   readonly puzzle: PuzzleDefinition;
   readonly solutions: readonly SavedPuzzleSolution[];
-  readonly selectedSolutionId: string | null;
   readonly onBack: () => void;
   readonly onCreate: () => void;
-  readonly onSelect: (solutionId: string) => void;
   readonly onDuplicate: (solutionId: string) => void;
   readonly onEdit: (solutionId: string) => void;
   readonly onDelete: (solutionId: string) => void;
@@ -30,9 +28,6 @@ export class PuzzleInfoView {
   private readonly emptySolutions: HTMLElement;
   private readonly backButton: HTMLButtonElement;
   private readonly newButton: HTMLButtonElement;
-  private readonly duplicateButton: HTMLButtonElement;
-  private readonly editButton: HTMLButtonElement;
-  private readonly deleteButton: HTMLButtonElement;
 
   constructor(root: HTMLElement) {
     this.title = requiredDescendant(root, "#puzzle-info-title");
@@ -43,9 +38,6 @@ export class PuzzleInfoView {
     this.emptySolutions = requiredDescendant(root, "#empty-solutions");
     this.backButton = requiredDescendant(root, "#puzzle-info-back-button");
     this.newButton = requiredDescendant(root, "#new-solution-button");
-    this.duplicateButton = requiredDescendant(root, "#duplicate-solution-button");
-    this.editButton = requiredDescendant(root, "#edit-solution-button");
-    this.deleteButton = requiredDescendant(root, "#delete-solution-button");
   }
 
   render(options: PuzzleInfoOptions): void {
@@ -60,48 +52,39 @@ export class PuzzleInfoView {
       }),
     );
 
+    let bestSolution: SavedPuzzleSolution | null = null;
+    let bestCombinedScore = Number.POSITIVE_INFINITY;
+    for (const solution of options.solutions) {
+      if (solution.scores !== null && solution.scores.combined < bestCombinedScore) {
+        bestSolution = solution;
+        bestCombinedScore = solution.scores.combined;
+      }
+    }
+
     const solutionRows = options.solutions.map((solution) =>
-      this.createSolutionRow(solution, solution.id === options.selectedSolutionId, options),
+      this.createSolutionRow(solution, solution === bestSolution, options),
     );
     this.solutionList.replaceChildren(...solutionRows);
     this.emptySolutions.hidden = solutionRows.length !== 0;
 
-    const hasSelection = options.selectedSolutionId !== null;
-    this.duplicateButton.disabled = !hasSelection;
-    this.editButton.disabled = !hasSelection;
-    this.deleteButton.disabled = !hasSelection;
-
     this.backButton.onclick = options.onBack;
     this.newButton.onclick = options.onCreate;
-    this.duplicateButton.onclick = () => {
-      if (options.selectedSolutionId !== null) {
-        options.onDuplicate(options.selectedSolutionId);
-      }
-    };
-    this.editButton.onclick = () => {
-      if (options.selectedSolutionId !== null) {
-        options.onEdit(options.selectedSolutionId);
-      }
-    };
-    this.deleteButton.onclick = () => {
-      if (options.selectedSolutionId !== null) {
-        options.onDelete(options.selectedSolutionId);
-      }
-    };
   }
 
   private createSolutionRow(
     solution: SavedPuzzleSolution,
-    selected: boolean,
+    isBest: boolean,
     options: PuzzleInfoOptions,
-  ): HTMLButtonElement {
-    const row = document.createElement("button");
-    row.type = "button";
+  ): HTMLElement {
+    const row = document.createElement("article");
     row.className = "solution-row";
-    row.setAttribute("role", "option");
-    row.setAttribute("aria-selected", String(selected));
+    row.setAttribute("role", "listitem");
+    if (isBest) {
+      row.classList.add("best-score");
+      row.dataset.bestScore = "true";
+    }
 
-    const identity = document.createElement("span");
+    const identity = document.createElement("div");
     identity.className = "solution-identity";
     const name = document.createElement("strong");
     name.textContent = solution.name;
@@ -112,7 +95,7 @@ export class PuzzleInfoView {
       : "Confirmed successful";
     identity.append(name, status);
 
-    const scores = document.createElement("span");
+    const scores = document.createElement("div");
     scores.className = "solution-scores";
     scores.append(
       this.createScore("PRICE", solution.scores?.price),
@@ -121,10 +104,39 @@ export class PuzzleInfoView {
       this.createScore("COMBINED", solution.scores?.combined),
     );
 
-    row.append(identity, scores);
-    row.addEventListener("click", () => options.onSelect(solution.id));
-    row.addEventListener("dblclick", () => options.onEdit(solution.id));
+    const actions = document.createElement("div");
+    actions.className = "solution-row-actions";
+    actions.append(
+      this.createAction("DUPLICATE", `Duplicate ${solution.name}`, () =>
+        options.onDuplicate(solution.id)
+      ),
+      this.createAction("EDIT", `Edit ${solution.name}`, () =>
+        options.onEdit(solution.id)
+      , "solution-primary-action"),
+      this.createAction("DELETE", `Delete ${solution.name}`, () =>
+        options.onDelete(solution.id)
+      , "solution-delete-action"),
+    );
+
+    row.append(identity, scores, actions);
     return row;
+  }
+
+  private createAction(
+    label: string,
+    accessibleLabel: string,
+    onClick: () => void,
+    className?: string,
+  ): HTMLButtonElement {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+    button.ariaLabel = accessibleLabel;
+    if (className !== undefined) {
+      button.className = className;
+    }
+    button.addEventListener("click", onClick);
+    return button;
   }
 
   private createScore(label: string, scoreValue: number | undefined): HTMLElement {

@@ -8,12 +8,10 @@ import {
 import type { PuzzleScores } from "./puzzle-scores";
 import { serializeBoard } from "../simulation/board-export";
 import type { World } from "../simulation/world";
-import { expectDefined } from "../util/assert";
 
 type PuzzleSolutionStorage = Pick<Storage, "getItem" | "setItem">;
 
 export class SavedSolutionController {
-  private readonly selectedSolutionIds = new Map<PuzzleId, string>();
   private readonly dirtySolutionIds = new Set<string>();
   private readonly puzzleSolutions: PuzzleSolutions;
 
@@ -38,44 +36,16 @@ export class SavedSolutionController {
     return this.puzzleSolutions.byId(solutionId);
   }
 
-  selectedForPuzzle(puzzleId: PuzzleId): string | null {
-    const solutions = this.forPuzzle(puzzleId);
-    let selectedSolutionId = this.selectedSolutionIds.get(puzzleId) ?? null;
-    if (
-      selectedSolutionId !== null &&
-      !solutions.some((solution) => solution.id === selectedSolutionId)
-    ) {
-      selectedSolutionId = null;
-    }
-    if (selectedSolutionId === null && solutions.length !== 0) {
-      selectedSolutionId = expectDefined(
-        solutions[0],
-        "Missing first puzzle solution",
-      ).id;
-      this.selectedSolutionIds.set(puzzleId, selectedSolutionId);
-    }
-    return selectedSolutionId;
-  }
-
-  select(puzzleId: PuzzleId, solutionId: string): void {
-    const solution = this.byId(solutionId);
-    if (solution.puzzleId !== puzzleId) {
-      throw new Error(`Solution ${solutionId} does not belong to puzzle ${puzzleId}`);
-    }
-    this.selectedSolutionIds.set(puzzleId, solutionId);
-  }
 
   create(puzzle: PuzzleDefinition): SavedPuzzleSolution {
     const board = serializeBoard(puzzle.createInitialWorld(), 0);
     const solution = this.puzzleSolutions.create(puzzle.id, board);
-    this.selectedSolutionIds.set(puzzle.id, solution.id);
     this.persist();
     return solution;
   }
 
   duplicate(solutionId: string): SavedPuzzleSolution {
     const duplicate = this.puzzleSolutions.duplicate(solutionId);
-    this.selectedSolutionIds.set(duplicate.puzzleId, duplicate.id);
     this.persist();
     return duplicate;
   }
@@ -84,9 +54,6 @@ export class SavedSolutionController {
     const solution = this.byId(solutionId);
     this.puzzleSolutions.delete(solutionId);
     this.dirtySolutionIds.delete(solutionId);
-    if (this.selectedSolutionIds.get(solution.puzzleId) === solutionId) {
-      this.selectedSolutionIds.delete(solution.puzzleId);
-    }
     this.persist();
     return solution;
   }

@@ -143,7 +143,6 @@ export class NavigationController {
       const puzzle = puzzleById(screen.puzzleId);
       const solution = this.solutions.byId(screen.solutionId);
       sessionChanged = this.sessions.activateSolution(solution, puzzle);
-      this.solutions.select(screen.puzzleId, screen.solutionId);
       this.elements.menuButton.textContent = "← PUZZLE";
       this.elements.screenTitle.textContent = puzzle.name.toUpperCase();
       this.elements.workshopInfoButton.setAttribute("aria-label", "Workshop information");
@@ -217,7 +216,6 @@ export class NavigationController {
   }
 
   private openSolution(puzzleId: PuzzleId, solutionId: string): void {
-    this.solutions.select(puzzleId, solutionId);
     this.navigate({ kind: "puzzle", puzzleId, solutionId });
   }
 
@@ -226,15 +224,10 @@ export class NavigationController {
     this.puzzleInfoView.render({
       puzzle,
       solutions: this.solutions.forPuzzle(puzzleId),
-      selectedSolutionId: this.solutions.selectedForPuzzle(puzzleId),
       onBack: () => this.navigate({ kind: "main-menu" }),
       onCreate: () => {
         const solution = this.solutions.create(puzzle);
         this.openSolution(puzzleId, solution.id);
-      },
-      onSelect: (solutionId) => {
-        this.solutions.select(puzzleId, solutionId);
-        this.renderPuzzleInfo(puzzleId);
       },
       onDuplicate: (solutionId) => {
         this.solutions.duplicate(solutionId);

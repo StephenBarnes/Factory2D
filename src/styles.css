@@ -357,6 +357,29 @@ canvas:focus-visible {
   letter-spacing: 0.04em;
 }
 
+.main-menu-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 8px;
+}
+
+.main-menu-actions button {
+  min-height: 36px;
+  padding: 0 13px;
+  border: 1px solid var(--border-strong);
+  color: var(--text-mid);
+  background: var(--raised);
+  font-family: var(--font-mono);
+  font-size: 0.61rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.main-menu-actions button:hover {
+  border-color: var(--gold-bright);
+  color: #ffe9bb;
+}
+
 .puzzle-info-screen {
   position: absolute;
   z-index: 4;
@@ -512,7 +535,7 @@ canvas:focus-visible {
 }
 
 .solution-primary-action,
-.solution-actions button {
+.solution-row-actions button {
   min-height: 36px;
   padding: 0 13px;
   border: 1px solid var(--border-strong);
@@ -531,7 +554,7 @@ canvas:focus-visible {
 }
 
 .solution-primary-action:hover,
-.solution-actions button:hover:not(:disabled) {
+.solution-row-actions button:hover {
   border-color: var(--gold-bright);
   color: #ffe9bb;
 }
@@ -562,7 +585,7 @@ canvas:focus-visible {
   background: #241b10;
 }
 
-.solution-row[aria-selected="true"] {
+.solution-row.best-score {
   border-color: var(--gold);
   background: linear-gradient(90deg, rgb(84 62 24 / 60%), #1c1509 48%);
   box-shadow: inset 3px 0 var(--gold);
@@ -627,25 +650,21 @@ canvas:focus-visible {
   text-align: center;
 }
 
-.solution-actions {
-  margin-top: 18px;
+.solution-row-actions {
+  grid-column: 1 / -1;
+  padding-top: 10px;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+  border-top: 1px solid var(--border-faint);
 }
 
-.solution-actions button:disabled {
-  cursor: not-allowed;
-  opacity: 0.38;
-}
-
-.solution-actions .solution-delete-action {
-  margin-left: auto;
+.solution-row-actions .solution-delete-action {
   border-color: #684044;
   color: #bd777d;
 }
 
-.solution-actions .solution-delete-action:hover:not(:disabled) {
+.solution-row-actions .solution-delete-action:hover {
   border-color: #c66a71;
   color: #f1a1a7;
 }
@@ -1669,6 +1688,98 @@ kbd {
   color: var(--text-mid);
 }
 
+.main-menu-dialog {
+  width: min(520px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  padding: 0;
+  overflow: auto;
+  border: 1px solid var(--bronze);
+  border-radius: 2px;
+  color: var(--text-body);
+  background: #1a130c;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 68%);
+}
+
+.main-menu-dialog::backdrop {
+  background: rgb(5 3 1 / 78%);
+  backdrop-filter: blur(3px);
+}
+
+.main-menu-dialog form {
+  display: grid;
+}
+
+.main-menu-dialog-status {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border-faint);
+  color: var(--gold);
+  background: var(--inset);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.main-menu-dialog-content {
+  min-height: 150px;
+  padding: 24px;
+}
+
+.main-menu-dialog-content h2 {
+  margin: 0 0 14px;
+  color: var(--gold-bright);
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  letter-spacing: 0.04em;
+}
+
+.main-menu-dialog-content p {
+  margin: 0;
+  color: var(--text-mid);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.main-menu-dialog-content a {
+  width: fit-content;
+  margin-top: 22px;
+  display: block;
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.main-menu-dialog-content a:hover {
+  color: var(--gold-bright);
+}
+
+.main-menu-dialog-actions {
+  padding: 15px 20px;
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border-faint);
+  background: var(--inset);
+}
+
+.main-menu-dialog-actions button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  color: var(--text-body);
+  background: var(--raised);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.main-menu-dialog-actions button:hover {
+  border-color: var(--gold);
+  background: var(--raised-hover);
+}
+
 .workshop-info-dialog {
   width: min(560px, calc(100% - 32px));
   max-height: calc(100% - 32px);
@@ -2522,11 +2633,7 @@ kbd {
     text-align: left;
   }
 
-  .solution-actions {
+  .solution-row-actions {
     flex-wrap: wrap;
-  }
-
-  .solution-actions .solution-delete-action {
-    margin-left: 0;
   }
 }

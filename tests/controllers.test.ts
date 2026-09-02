@@ -72,13 +72,12 @@ describe("workshop session controller", () => {
 });
 
 describe("saved solution controller", () => {
-  it("owns selection, dirty-board persistence, duplication, and deletion", () => {
+  it("owns dirty-board persistence, duplication, and deletion", () => {
     const storage = createStorage();
     const controller = new SavedSolutionController(storage);
     const puzzle = puzzleById("first-shift");
     const solution = controller.create(puzzle);
 
-    expect(controller.selectedForPuzzle(puzzle.id)).toBe(solution.id);
 
     const edited = puzzle.createInitialWorld();
     edited.place(8, 2, TileKind.Stone);
@@ -89,8 +88,11 @@ describe("saved solution controller", () => {
     expect(loaded.byId(solution.id).board).toBe(serializeBoard(edited, 0));
 
     const duplicate = controller.duplicate(solution.id);
-    expect(controller.selectedForPuzzle(puzzle.id)).toBe(duplicate.id);
+    expect(controller.forPuzzle(puzzle.id).map(({ id }) => id)).toEqual([
+      solution.id,
+      duplicate.id,
+    ]);
     controller.delete(duplicate.id);
-    expect(controller.selectedForPuzzle(puzzle.id)).toBe(solution.id);
+    expect(controller.forPuzzle(puzzle.id).map(({ id }) => id)).toEqual([solution.id]);
   });
 });

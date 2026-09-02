@@ -3,9 +3,9 @@ export interface PuzzleGroupDefinition {
   readonly name: string;
   readonly displayOrder: number;
   readonly gemstoneThreshold: number;
+  readonly initialUnlockedPuzzleCount: number;
 }
 
-export const INITIAL_UNLOCKED_PUZZLES_PER_GROUP = 3;
 
 export const PUZZLE_GROUPS: readonly PuzzleGroupDefinition[] = Object.freeze([
   Object.freeze({
@@ -13,24 +13,28 @@ export const PUZZLE_GROUPS: readonly PuzzleGroupDefinition[] = Object.freeze([
     name: "Basics",
     displayOrder: 0,
     gemstoneThreshold: 0,
+    initialUnlockedPuzzleCount: 1,
   }),
   Object.freeze({
     id: "runelore",
     name: "Runelore",
     displayOrder: 1,
     gemstoneThreshold: 2,
+    initialUnlockedPuzzleCount: 2,
   }),
   Object.freeze({
     id: "advanced-runelore",
     name: "Advanced Runelore",
     displayOrder: 2,
     gemstoneThreshold: 8,
+    initialUnlockedPuzzleCount: 2,
   }),
   Object.freeze({
     id: "elves",
     name: "Elves",
     displayOrder: 3,
     gemstoneThreshold: 15,
+    initialUnlockedPuzzleCount: 999,
   }),
 ]);
 
@@ -45,6 +49,12 @@ for (const group of PUZZLE_GROUPS) {
   }
   if (!Number.isSafeInteger(group.gemstoneThreshold) || group.gemstoneThreshold < 0) {
     throw new Error(`Puzzle group "${group.id}" has an invalid gemstone threshold`);
+  }
+  if (
+    !Number.isSafeInteger(group.initialUnlockedPuzzleCount) ||
+    group.initialUnlockedPuzzleCount < 1
+  ) {
+    throw new Error(`Puzzle group "${group.id}" has an invalid initial puzzle count`);
   }
   groupsById[group.id] = group;
   displayOrders.add(group.displayOrder);

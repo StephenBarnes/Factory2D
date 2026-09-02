@@ -129,6 +129,26 @@ test("routes only to accessible canonical screens", async ({ page }) => {
   await expect(page).toHaveURL(/\/$/);
 });
 
+test("opens settings and credits from the main menu", async ({ page }) => {
+  await seedBrowserStorage(page, "empty");
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "SETTINGS" }).click();
+  const settings = page.getByRole("dialog", { name: "SETTINGS" });
+  await expect(settings).toBeVisible();
+  await expect(settings).toContainText("TODO: Add settings.");
+  await settings.getByRole("button", { name: "CLOSE" }).click();
+
+  await page.getByRole("button", { name: "CREDITS" }).click();
+  const credits = page.getByRole("dialog", { name: "CREDITS" });
+  await expect(credits).toBeVisible();
+  await expect(credits).toContainText("TODO: Add credits and architecture overview.");
+  await expect(credits.getByRole("link", { name: "VIEW SOURCE ON GITHUB" })).toHaveAttribute(
+    "href",
+    "https://github.com/StephenBarnes/Factory2D",
+  );
+});
+
 test("edge panels reserve a non-overlapping canvas region", async ({ page }) => {
   await seedBrowserStorage(page, "empty");
   await page.goto("/sandbox");
@@ -507,26 +527,67 @@ test("persists successful solution scores on the puzzle briefing", async ({ page
   await expect(report.locator("[data-test-report-combined]")).toHaveText("11");
 
   await report.getByRole("button", { name: "BACK TO PUZZLE" }).click();
-  const scoredSolution = page.getByRole("option", {
-    name: "Solution 1 Confirmed successful PRICE 1 CYCLES 9 FOOTPRINT 1 COMBINED 11",
+  const scoredSolution = page.locator("#solution-list").getByRole("listitem").filter({
+    has: page.locator(".solution-identity strong", { hasText: "Solution 1" }),
   });
   await expect(scoredSolution).toBeVisible();
+  await expect(scoredSolution).toContainText("Confirmed successful");
+  await expect(scoredSolution.locator(".solution-scores strong")).toHaveText(["1", "9", "1", "11"]);
+  await expect(scoredSolution).toHaveClass(/best-score/);
   await page.reload();
   await expect(scoredSolution).toBeVisible();
+  await expect(scoredSolution).toHaveClass(/best-score/);
+});
+
+test("highlights only the confirmed solution with the lowest combined score", async ({ page }) => {
+  await seedBrowserStorage(page, "populated");
+  await page.goto("/puzzles/first-shift");
+  await page.evaluate((storageKey) => {
+    const serialized = window.localStorage.getItem(storageKey);
+    if (serialized === null) {
+      throw new Error("Saved-solution storage is missing");
+    }
+    const stored = JSON.parse(serialized) as {
+      solutions: Array<{
+        id: string;
+        scores: {
+          price: number;
+          cycles: number;
+          footprint: number;
+          combined: number;
+        } | null;
+      }>;
+    };
+    const first = stored.solutions.find(({ id }) => id === "solution-1");
+    const second = stored.solutions.find(({ id }) => id === "solution-2");
+    if (first === undefined || second === undefined) {
+      throw new Error("Scored-solution fixture is incomplete");
+    }
+    first.scores = { price: 4, cycles: 10, footprint: 2, combined: 16 };
+    second.scores = { price: 3, cycles: 5, footprint: 1, combined: 9 };
+    window.localStorage.setItem(storageKey, JSON.stringify(stored));
+  }, PUZZLE_SOLUTIONS_STORAGE_KEY);
+  await page.reload();
+
+  const rows = page.locator("#solution-list").getByRole("listitem");
+  await expect(rows.filter({ hasText: "Solution 1" })).not.toHaveClass(/best-score/);
+  await expect(rows.filter({ hasText: "Solution 2" })).toHaveClass(/best-score/);
 });
 
 
 test("duplicates an edited board into an independent restorable solution", async ({ page }) => {
   const fixture = await seedBrowserStorage(page, "edited-board");
   await page.goto("/puzzles/first-shift");
-  await page.getByRole("button", { name: "DUPLICATE" }).click();
-  await expect(page.getByRole("option")).toHaveCount(2);
-  await expect(page.getByRole("option", { name: /Solution 1 Copy/ })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
+  const firstSolution = page.locator("#solution-list").getByRole("listitem").filter({
+    hasText: "Solution 1",
+  });
+  await firstSolution.getByRole("button", { name: "Duplicate Solution 1" }).click();
 
-  await page.getByRole("button", { name: "EDIT SELECTED" }).click();
+  const solutionRows = page.locator("#solution-list").getByRole("listitem");
+  await expect(solutionRows).toHaveCount(2);
+  const duplicateRow = solutionRows.filter({ hasText: "Solution 1 Copy" });
+  await expect(duplicateRow).toBeVisible();
+  await duplicateRow.getByRole("button", { name: "Edit Solution 1 Copy" }).click();
   const duplicate = await diagnosticSnapshot(page);
   expect(duplicate.activeSolutionId).toBe("solution-2");
   expect(duplicate.serializedBoard).toBe(fixture.editedBoard);
@@ -535,18 +596,20 @@ test("duplicates an edited board into an independent restorable solution", async
   expect((await diagnosticSnapshot(page)).serializedBoard).toBe(fixture.editedBoard);
 });
 
-test("deletes the selected solution and keeps it deleted after reload", async ({ page }) => {
+test("deletes a solution from its row and keeps it deleted after reload", async ({ page }) => {
   await seedBrowserStorage(page, "populated");
   page.on("dialog", (dialog) => dialog.accept());
   await page.goto("/puzzles/first-shift");
-  await expect(page.getByRole("option")).toHaveCount(2);
-  await page.getByRole("button", { name: "DELETE" }).click();
-  await expect(page.getByRole("option")).toHaveCount(1);
-  await expect(page.getByRole("option", { name: /Solution 2/ })).toBeVisible();
+  const solutionRows = page.locator("#solution-list").getByRole("listitem");
+  await expect(solutionRows).toHaveCount(2);
+  const firstSolution = solutionRows.filter({ hasText: "Solution 1" });
+  await firstSolution.getByRole("button", { name: "Delete Solution 1" }).click();
+  await expect(solutionRows).toHaveCount(1);
+  await expect(solutionRows.filter({ hasText: "Solution 2" })).toBeVisible();
 
   await page.reload();
-  await expect(page.getByRole("option")).toHaveCount(1);
-  await expect(page.getByRole("option", { name: /Solution 1$/ })).toHaveCount(0);
+  await expect(solutionRows).toHaveCount(1);
+  await expect(solutionRows.filter({ hasText: /^Solution 1$/ })).toHaveCount(0);
 });
 
 test("malformed storage falls back to a usable empty state", async ({ page }) => {
@@ -668,7 +731,9 @@ test("puzzle info remains horizontally contained and vertically reachable", asyn
 
   const overflow = await page.evaluate(() => {
     const screen = document.querySelector<HTMLElement>("#puzzle-info-screen");
-    const deleteButton = document.querySelector<HTMLElement>("#delete-solution-button");
+    const deleteButton = document.querySelector<HTMLElement>(
+      ".solution-row-actions .solution-delete-action",
+    );
     if (screen === null || deleteButton === null) {
       throw new Error("Puzzle info layout is incomplete");
     }

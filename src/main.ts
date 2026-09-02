@@ -80,6 +80,10 @@ const mainMenuScreen = requiredElement<HTMLElement>("main-menu-screen");
 const puzzleInfoScreen = requiredElement<HTMLElement>("puzzle-info-screen");
 const puzzleMap = requiredElement<HTMLElement>("puzzle-map");
 const sandboxButton = requiredElement<HTMLButtonElement>("sandbox-button");
+const settingsButton = requiredElement<HTMLButtonElement>("settings-button");
+const settingsDialog = requiredElement<HTMLDialogElement>("settings-dialog");
+const creditsButton = requiredElement<HTMLButtonElement>("credits-button");
+const creditsDialog = requiredElement<HTMLDialogElement>("credits-dialog");
 const menuButton = requiredElement<HTMLButtonElement>("menu-button");
 const screenTitle = requiredElement<HTMLElement>("screen-title");
 const workshopInfoButton = requiredElement<HTMLButtonElement>("workshop-info-button");
@@ -1279,6 +1283,12 @@ puzzlePrice.addEventListener("pointerleave", () => {
 
 sandboxButton.addEventListener("click", () => {
   navigation.navigate({ kind: "sandbox" });
+});
+settingsButton.addEventListener("click", () => {
+  settingsDialog.showModal();
+});
+creditsButton.addEventListener("click", () => {
+  creditsDialog.showModal();
 });
 
 sidebarControls.addEventListener("click", (event) => {

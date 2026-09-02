@@ -4,23 +4,16 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 
 ## Main menu
 
-* Add two buttons on the main menu that open modals or move to special screens: a credits screen/modal (which also includes an explanation of the game's architecture and link to GitHub repo - leave text as TODO for now so we don't need to keep updating it), and a settings menu (blank for now - some features for that are listed below, like colorblindness support and deleting saved data).
-
-## Unlocking puzzles
-
-* Add a field to the puzzle group definitions that decides how many puzzles in the group we unlock, when the group is unlocked. I think it's currently 3. For some groups like tutorials we'd prefer to unlock 1 at a time, while other groups should prefer 2, and collections of unrelated challenges should use 999 to unlock all of them immediately. In all cases, completing a puzzle in the group should the first still-locked puzzle in the group, if any.
-
-## Puzzle briefing screen
-
-* Modify the puzzle briefing screen: Instead of needing to click on one of the saved solutions, and then click separate duplicate/edit/delete buttons, rather have 3 buttons on each saved solution. Make the saved solutions non-selectable. Although, the gradient we currently draw on the selected solution looks nice, so keep that - but apply it to the lowest-combined-score solution, if any solutions are confirmed successful. (Later, color it according to the mineral rank of the solution - stone, iron, gold, mithril ranks determined by score percentiles.)
+* Move gemstone count in the main menu to be around top-right instead, and show it larger and more concisely as "3◈" instead of text ("3 gemstones"). Add title/mouseover text saying that gemstones are earned by completing puzzles and used automatically to unlock new puzzle groups.
+* Show lock icon / unicode character next to locked puzzles and puzzle groups. On groups, add text saying "Solve 2 more puzzles to unlock" replacing "2 gemstones required", and make that text more visible.
 
 ## Sim test/play flow
 
 * When the player presses test button or reset button, we currently change zoom and pan to fit the whole board. Rather don't do that - keep current zoom and pan.
 * Bug: If the player creates a test solution, but instead of pressing the "test" button they press "step" repeatedly until victory or loss, we currently never react to victory or loss. We should instead show the toast on failure, and show the success / score report modal on success (unless there was a failure on a previous step).
 * Add tick speeds above 60 ticks per second; for those, step the simulation multiple times between renders. This is useful for testing solutions fast while still showing what's going on.
-* Add step-forward and step-back to the control panel at the bottom. Requires keeping previous state in memory, or several so we can step back multiple ticks.
-* Add a mechanism to detect if previous state is exactly equal to current state. Some false negatives are acceptable. The goal is to detect loops, and interrupt execution when testing puzzle solutions. (For example: the puzzle is to drop one stone block on a delivery block. The player drops it in some other location, where it sits indefinitely. We don't want to make them sit through N ticks or have to press fast-forward button.) We could combine this with the "active/asleep regions" optimization pointed out elsewhere in this file.
+* DEFER Add a step-back button to the control panel at the bottom, maybe? Requires keeping previous state in memory, or several so we can step back multiple ticks.
+* DEFER If we do the "asleep vs active regions" change below, or if we store previous state for step-back, then as a follow-up: when testing a solution, check for loops (no active regions, or previous state equals current state) and end the test early.
 
 ## New puzzle types
 
@@ -33,6 +26,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * Edit format for scenes and puzzles: make the fields `orientations`, `charges`, `crossingCharges`, `furnaces`, `components` all optional, with default value of `[]`. When exporting, don't specify those fields if they're the empty list, which is often the case. This will reduce incompatibility when we add new block types and de-bloats the format.
 * Similarly, remove the "standard" test case with no overrides, from the stored format - treat that as a given and only list additional test cases in the file.
 * Further compact orientations and charges in the export/import format, possibly storing charges per network instead of per tile. More complex per-tile state (e.g. furnace stored ticks or target/delivery-block configuration) can remain verbose. Only include full ASCII grids for fields that aren't the default value.
+* Remove the `features` field on puzzles, and the features display on the puzzle briefing screen.
 
 # Authoring tools, player-created puzzles, histograms
 
@@ -48,7 +42,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 # Hardening
 
 * For built-in puzzles, store a canonical solution in a separate file, produced by scene export from the browser. Add tests that run each of these solutions and check that they actually succeed. Helps avoid regressions that make puzzles unsolvable.
-* Try to do some fuzzing to find crashes or undesirable behaviors. There may be edge cases involving things like pistons welded to other pistons and magnets, etc. Could also check for cases of machines that can fly/levitate, or produce blocks endlessly, though those should not be "fixed" until we've looked at them manually to decide whether they should be considered bugs or features.
+* DEFER Try to do some fuzzing to find crashes or undesirable behaviors. There may be edge cases involving things like pistons welded to other pistons and magnets, etc. Could also check for cases of machines that can fly/levitate, or produce blocks endlessly, though those should not be "fixed" until we've looked at them manually to decide whether they should be considered bugs or features.
 
 # New non-circuit components
 
@@ -124,9 +118,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 
 # UI
 
-* Modify the overall layout when solving a puzzle, and in the sandbox. Add a section at the top of the palette panel, always visible even when the palette is scrolled. Move the "back" button (back to puzzle or main menu), the puzzle title, and the info button to that top-left region - currently they're all in the bottom-left `workshop-identity` region. Keep the total price and the footprint readout in that workshop-identity region. Increase display size of the puzzle title (unless the name is long), and increase display size of the live puzzle metrics (cost and footprint readouts). Add the decorated border (`src/styles.css:178`) to the top-left region.
 * For each tile, in addition to the description, add an extended, potentially multi-paragraph description. Include things like details of how ROM rune's cursor movement works, and a color-coded truth table for the combiner rune, etc. Display these in the inspector, when the mouse is over the palette. When the mouse is over the tile grid, instead only show the short description.
-* UI for creating multiple test cases for a puzzle. Needed so that we can create and export puzzles efficiently.
 * When saving an image using the image button, crop out parts of the screen that are over the background, outside the grid, if this can be implemented easily.
 * Implement undo and redo when editing.
 * Check for any potential bugs caused by listening only to mouse-up and mouse-down events, and assuming the mouse button is held down until a mouse-up is received. Can cause accidental deletion or placing of tiles if the mouse-up event is hidden by other window events.
@@ -135,25 +127,31 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * Add support for mobile and touch screens. Check if it's playable.
 * Modify sizing to make things more visible on 4k monitors. For example the prices of components are currently displayed very small in the inspector. Might also be an issue on 1080p though, so this may be a general sizing issue rather than UI scaling.
 * In the sandbox, instead of showing `0 (gear symbol)` next to components, show nothing, because prices don't make sense for the sandbox.
-* Add a settings menu accessed from the main menu.
-* Settings menu: Add color-blindness options for people who can't distinguish red and blue circuit wires. Maybe just let them specify colors (from a short menu) for charges +1 and -1.
-* Settings menu: Add option to clear all puzzle solutions and other saved state. Keep the user's UUID.
-* Settings menu: Add a button to download all player data (everything in localStorage), and a button to import that, so players could transfer data to another device.
 * On the puzzle results screen, add a button to go directly to the next puzzle's briefing screen - if the solution succeeded, and there's a defined next puzzle, and it's unlocked. Display the next puzzle's name. This is meant to help reduce menu navigation needed when we have several easy tutorial puzzles in rapid succession.
-* Show a small icon to the right of the cursor, for the currently-selected tile or tool - the weld icon, the "place player-modifiable regions" tool icon, and the icon for a tile. When ctrl is held down (to weld), it should switch to the weld icon.
-* Make the palette panel resizable. Modify the icon sizes, shrinking them as the palette becomes narrower.
 * For the ROM's configuration modal, allow click and drag to set multiple cells. Add three buttons to fill with red, blue, or black.
 * Allow mirroring components with some hotkey. Because we allow mirroring selections, and we'll add components like flippers. But this probably currently breaks things like ROMs which do not have mirror symmetry. Also check all components for any that have rotational asymmetry that may cause a rotated machine to behave differently, e.g. ROM cursor's wrapping behavior may break rotational symmetry. Actually, I think ROMs could be made to work with only rotation - a flip is equivalent to some rotation for them, as long as we keep the two input sides in the correct positions.
-* If the player tries to place a block, or weld, and we don't allow it, indicate the reason. (1) If it's because they're testing a puzzle, flash the reset button. (2) If it's a weld or tile edit outside the allowed region, flash the region red. (3) If they're trying to weld a block that can't be 
-* Currently, if I change the tick speed, and then try to use space key to run/pause, it instead opens/closes the tick speed dropup menu.
+* Currently, if I change the tick speed, and then try to use space key to run/pause, it instead opens/closes the tick speed dropup menu. Same for animation checkbox. Modify it to instead do test/play and pause.
 * Modify the tick speed menu to use our own drop-up widget (like the export button).
 * When using selection tool, on the line of buttons (flip, rotate, save snippet) add a delete button. It's already possible by pressing the delete key, but this would make it more visible, and it's necessary for devices that don't have keyboards.
 * Allow opening the configuration modal on blocks outside the player's modifiable region, but ban actually changing any of the config values - just to see the values.
-* Add an option to the export menu to open the current puzzle in the sandbox.
+* Add an option to the export menu, in puzzles, to open the current puzzle in the sandbox.
 * DEFER Maybe support selections that are a union of rectangles, created by shift-LMB-drag.
 * When a region is selected using the selection tool, in the sandbox, add a new tool that will crop the board to that selection. (Currently it requires using the puzzle properties modal to set the grid size to specific numbers; this selection path would be easier and more intuitive.)
 * If the player clicks and drags from a palette tile, treat it as a left-click - select that palette tile. Ideally also place the tile on mouse up on the grid, as though they clicked. So they can click and drag components from palette to grid, in addition to the current flow (click on palette, then click on grid).
 * Middle-click on palette should act like left-click on palette.
+
+## Settings menu
+
+* Add color-blindness options for people who can't distinguish red and blue circuit wires. Maybe just let them specify colors (from a short menu) for charges +1 and -1.
+* Add option to clear all puzzle solutions and other saved state. Keep the user's UUID.
+* Add a button to download all player data (everything in localStorage), and a button to import that, so players could transfer data to another device.
+
+## Workshop (puzzle/sandbox) screen
+
+* Show a small icon to the right of the cursor, for the currently-selected tile or tool - the weld icon, the "place player-modifiable regions" tool icon, and the icon for a tile. When ctrl is held down (to weld), it should switch to the weld icon.
+* Make the palette panel resizable. Modify the icon sizes, shrinking them as the palette becomes narrower.
+* Modify the overall layout when solving a puzzle, and in the sandbox. Add a section at the top of the palette panel, always visible even when the palette is scrolled. Move the "back" button (back to puzzle or main menu), the puzzle title, and the info button to that top-left region - currently they're all in the bottom-left `workshop-identity` region. Keep the total price and the footprint readout in that workshop-identity region. Increase display size of the puzzle title (unless the name is long), and increase display size of the live puzzle metrics (cost and footprint readouts). Add the decorated border (`src/styles.css:178`) to the top-left region.
+* If the player tries to place a block, or weld, and we don't allow it, indicate the reason. (1) If it's because they're testing a puzzle, flash the reset button. (2) If it's a weld or tile edit outside the allowed region, flash the region red. (3) If they're trying to weld a block that can't be 
 
 ## Shortcuts
 
@@ -166,11 +164,9 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 
 # Visuals
 
-* Bug: ROMs in the selected region don't show their configured values - they show black for all cells. Seems to be a general issue - delay runes also don't show values.
+* Bug: When using the selection tool, ROMs in the selected region don't show their configured values - they show black for all cells. Seems to be a general issue with not tracking or rendering the configuration details - delay runes also don't show values.
 * Add backgrounds for puzzles, maybe with parallax as the player pans.
 * Rename runes; prefer metaphorical, arcane, or Anglish-style names. ROM rune -> rune of wisdom, sensor rune -> watchful rune, inverter -> gainsayer rune, delay rune -> recall rune, rectifier -> rightener, etc. Maybe rename +1, -1, and 0 to right, left, and center, or some other natural ternary system, if we can find a way to explain sum, multiply, and subtraction concisely in that system. Also rename the assembler - anvil or forge or something else?
-* Move gemstone count in the main menu to be around top-right instead, and show it larger and more concisely as "3◈" instead of text. Add title text saying that gemstones are earned by completing puzzles and used automatically to unlock new puzzle groups.
-* Main menu: show lock icon / unicode character next to locked puzzles and puzzle groups. On groups, add text saying "Solve 2 more puzzles to unlock" replacing "2 gemstones required", and make that text more visible.
 * Swap the symbols used for the selection tool and the player-modifiable region tool, but keep them with the same colors. (Selection should be dotted line, cyan, while modifiable-region tool should be two 90-degree lines, yellow.)
 * Consider letting the rune array modal show a read-only thumbnail of the inner board next to the dimension inputs, so players can judge what a shrink will crop before saving.
 

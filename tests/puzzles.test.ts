@@ -44,7 +44,7 @@ describe("puzzle definitions", () => {
     )).toBe(true);
   });
 
-  it("unlocks three puzzles per group plus one for each group completion", () => {
+  it("uses the group's initial count and unlocks one more puzzle per completion", () => {
     const puzzles = Array.from(
       { length: 6 },
       (_, index) => progressionPuzzle(`sequence-${index}`, index),
@@ -52,8 +52,8 @@ describe("puzzle definitions", () => {
     const completed = new Set<PuzzleId>();
     expect(puzzles.map((puzzle) => isPuzzleUnlocked(puzzle, completed, puzzles))).toEqual([
       true,
-      true,
-      true,
+      false,
+      false,
       false,
       false,
       false,
@@ -63,8 +63,8 @@ describe("puzzle definitions", () => {
     expect(puzzles.map((puzzle) => isPuzzleUnlocked(puzzle, completed, puzzles))).toEqual([
       true,
       true,
-      true,
-      true,
+      false,
+      false,
       false,
       false,
     ]);

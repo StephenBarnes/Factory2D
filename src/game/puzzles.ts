@@ -1,7 +1,6 @@
 import type { GridRegion } from "./grid-region";
 import { parsePuzzleFile, type ParsedPuzzleFile } from "./puzzle-format";
 import {
-  INITIAL_UNLOCKED_PUZZLES_PER_GROUP,
   puzzleGroupById,
   type PuzzleGroupDefinition,
 } from "./puzzle-groups";
@@ -218,5 +217,5 @@ export function isPuzzleUnlocked(
   if (puzzleIndex < 0) {
     throw new Error(`Puzzle "${puzzle.id}" is missing from its progression list`);
   }
-  return puzzleIndex < INITIAL_UNLOCKED_PUZZLES_PER_GROUP + completedInGroup;
+  return puzzleIndex < group.initialUnlockedPuzzleCount + completedInGroup;
 }
