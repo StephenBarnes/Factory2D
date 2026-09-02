@@ -1,9 +1,13 @@
 import { GridRegion, type GridRectangle } from "./grid-region";
-import type { ConfigurableComponentSnapshot } from "../simulation/configurable-components";
+import {
+  transformComponentSnapshot,
+  type ConfigurableComponentSnapshot,
+} from "../simulation/configurable-components";
 import {
   Direction,
   flipDirectionHorizontally,
   flipDirectionVertically,
+  orientationForKind,
   TileKind,
 } from "../simulation/tile";
 import { World } from "../simulation/world";
@@ -546,7 +550,10 @@ function mapOccupiedCells(active: ActiveSelection): MappedSelectionCell[] {
     if (active.flippedVertically) {
       orientation = flipDirectionVertically(orientation);
     }
-    orientation = ((orientation + active.quarterTurns) & 3) as Direction;
+    orientation = orientationForKind(
+      cell.kind,
+      ((orientation + active.quarterTurns) & 3) as Direction,
+    );
     return {
       ...cell,
       sourceX: cell.x,
@@ -554,6 +561,14 @@ function mapOccupiedCells(active: ActiveSelection): MappedSelectionCell[] {
       destinationX: destination.x,
       destinationY: destination.y,
       orientation,
+      componentState: cell.componentState === null
+        ? null
+        : transformComponentSnapshot(
+          cell.componentState,
+          active.quarterTurns,
+          active.flippedHorizontally,
+          active.flippedVertically,
+        ),
     };
   });
 }

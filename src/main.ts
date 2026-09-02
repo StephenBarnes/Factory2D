@@ -134,6 +134,9 @@ const selectionRotateButton = requiredElement<HTMLButtonElement>("selection-rota
 const selectionSaveSnippetButton = requiredElement<HTMLButtonElement>(
   "selection-save-snippet-button",
 );
+const nestedViewBar = requiredElement<HTMLElement>("nested-view-bar");
+const nestedViewBackButton = requiredElement<HTMLButtonElement>("nested-view-back-button");
+const nestedViewTrail = requiredElement<HTMLElement>("nested-view-trail");
 const componentsTab = requiredElement<HTMLButtonElement>("components-tab");
 const snippetsTab = requiredElement<HTMLButtonElement>("snippets-tab");
 const snippetCount = requiredElement<HTMLElement>("snippet-count");
@@ -287,19 +290,69 @@ function setRunning(nextRunning: boolean): void {
 }
 
 surface.setMountListener(() => {
+  if (selectedTool === "editable-region" && surface.editableRegionAuthoring === null) {
+    selectedTool = "tile";
+    configureComponentPalette();
+  }
   syncTileSelectionOverlay();
   syncEditableRegionAuthoringOverlay();
   refreshSnippetPanel();
+  refreshNestedViewBar();
   renderedTick = -1;
   animationDuration = 0;
   updateTransportState();
   refreshPointerHover();
 });
 
+function refreshNestedViewBar(): void {
+  const trail = surface.viewTrail;
+  nestedViewBar.hidden = trail.length === 0;
+  if (trail.length === 0) {
+    nestedViewTrail.replaceChildren();
+    return;
+  }
+  const parts: (string | HTMLElement)[] = ["BOARD"];
+  for (const entry of trail) {
+    parts.push(" › ");
+    const label = document.createElement("em");
+    label.textContent = `RUNE ARRAY #${entry.id.toString().padStart(4, "0")} ` +
+      `${entry.width}×${entry.height}`;
+    parts.push(label);
+    if (entry.description !== "") {
+      parts.push(` “${entry.description}”`);
+    }
+  }
+  nestedViewTrail.replaceChildren(...parts);
+}
+
+/** Opens the rune array under the pointer on the displayed board, if any. */
+function enterHoveredRuneArray(cell: GridCell): boolean {
+  if (surface.world.kindAt(cell.x, cell.y) !== TileKind.RuneArray) {
+    return false;
+  }
+  finalizeActivePointerGesture();
+  if (surface.selection.active) {
+    commitTileSelection();
+  }
+  return surface.enterRuneArray(cell);
+}
+
+function exitRuneArray(): boolean {
+  finalizeActivePointerGesture();
+  if (surface.selection.active) {
+    commitTileSelection();
+  }
+  return surface.exitRuneArray();
+}
+
+nestedViewBackButton.addEventListener("click", () => {
+  exitRuneArray();
+});
+
 
 
 function finishAnimation(): void {
-  surface.previousWorld.copyFrom(surface.world);
+  surface.session.previousWorld.copyFrom(surface.session.world);
   animationDuration = 0;
 }
 function animationsEnabled(ticksPerSecond = Number(speedSelect.value)): boolean {
@@ -322,9 +375,10 @@ function advanceSimulation(duration: number, startedAt = performance.now()): voi
     updateTransportState();
     refreshPointerHover();
   }
-  surface.previousWorld.copyFrom(surface.world);
-  surface.simulation.step(duration > 0 ? surface.previousWorld : undefined);
-  signalTraces.sync(surface.world, surface.simulation.tick);
+  const session = surface.session;
+  session.previousWorld.copyFrom(session.world);
+  surface.simulation.step(duration > 0 ? session.previousWorld : undefined);
+  signalTraces.sync(session.world, surface.simulation.tick);
 
   animationStartedAt = startedAt;
   animationDuration = duration;
@@ -411,7 +465,7 @@ function refreshPointerHover(): void {
 
 function syncEditableRegionAuthoringOverlay(): void {
   const authoring = selectedTool === "editable-region"
-    ? surface.session.editableRegionAuthoring
+    ? surface.editableRegionAuthoring
     : null;
   surface.renderer.setEditableRegionAuthoring(
     authoring?.region ?? null,
@@ -425,7 +479,7 @@ function syncTileSelectionOverlay(): void {
     : null;
   surface.renderer.setTileSelection(
     overlay,
-    selectionActive ? surface.selection.draftRegion(surface.session.editableRegion) : null,
+    selectionActive ? surface.selection.draftRegion(surface.editableRegion) : null,
   );
   selectionActions.hidden = overlay === null;
   selectionPasteButton.disabled = !surface.selection.hasClipboard;
@@ -455,7 +509,7 @@ function positionSelectionActions(): void {
 
 function configureComponentPalette(): void {
   surface.hoveredPaletteButton = null;
-  if (selectedTool === "editable-region" && surface.session.editableRegionAuthoring === null) {
+  if (selectedTool === "editable-region" && surface.editableRegionAuthoring === null) {
     selectedTool = "tile";
   }
   const availableComponents = surface.session.availableComponents;
@@ -776,7 +830,7 @@ function selectSelectionTool(): void {
 
 
 function selectEditableRegionTool(): void {
-  if (surface.session.editableRegionAuthoring === null) {
+  if (surface.editableRegionAuthoring === null) {
     return;
   }
   if (selectedTool === "selection") {
@@ -792,6 +846,9 @@ function selectEditableRegionTool(): void {
 }
 
 function commitEditedWorld(): void {
+  if (surface.viewDepth > 0) {
+    surface.session.world.touchRevision();
+  }
   sessions.saveEditedBaseline();
   finishAnimation();
   navigation.markActiveSolutionDirty();
@@ -804,15 +861,15 @@ function componentIsAvailable(kind: TileKind): boolean {
 }
 
 function canEditCell(x: number, y: number): boolean {
-  return surface.session.editableRegion?.contains(x, y) ?? true;
+  return surface.editableRegion?.contains(x, y) ?? true;
 }
 
 function canEditEdge(x1: number, y1: number, x2: number, y2: number): boolean {
-  return surface.session.editableRegion?.containsEdge(x1, y1, x2, y2) ?? true;
+  return surface.editableRegion?.containsEdge(x1, y1, x2, y2) ?? true;
 }
 
 function weldEligibleEditableNeighbors(x: number, y: number): boolean {
-  if (surface.session.editableRegion === null) {
+  if (surface.editableRegion === null) {
     return surface.world.weldEligibleNeighbors(x, y);
   }
 
@@ -915,6 +972,14 @@ function openComponentConfiguration(cell: GridCell): void {
         ? surface.world.configureNumericComponent(cell.x, cell.y, submission.value)
         : submission.type === "text"
         ? surface.world.configureSignalLabel(cell.x, cell.y, submission.value)
+        : submission.type === "array"
+        ? surface.world.configureRuneArray(
+            cell.x,
+            cell.y,
+            submission.width,
+            submission.height,
+            submission.description,
+          )
         : surface.world.configureTernaryGrid(
             cell.x,
             cell.y,
@@ -925,6 +990,9 @@ function openComponentConfiguration(cell: GridCell): void {
       if (changed) {
         commitEditedWorld();
         refreshPointerHover();
+      }
+      if (submission.type === "array" && submission.open) {
+        enterHoveredRuneArray(cell);
       }
     },
   );
@@ -1074,8 +1142,9 @@ const puzzleTests = new PuzzleTestController(
       });
     },
     beforeStep: () => {
-      surface.previousWorld.copyFrom(surface.world);
-      return surface.previousWorld;
+      const session = surface.session;
+      session.previousWorld.copyFrom(session.world);
+      return session.previousWorld;
     },
     afterStep: (world, tick) => signalTraces.sync(world, tick),
     setStepAnimation: (startedAt, duration) => {
@@ -1135,9 +1204,10 @@ const navigation = new NavigationController(
 if (import.meta.env.DEV) {
   const getDiagnosticSnapshot = (): DevelopmentDiagnosticSnapshot => {
     const screen = navigation.screen;
-    const puzzleResult = surface.world.puzzleResult === PuzzleResult.InProgress
+    const rootWorld = surface.session.world;
+    const puzzleResult = rootWorld.puzzleResult === PuzzleResult.InProgress
       ? "in-progress"
-      : surface.world.puzzleResult === PuzzleResult.Won ? "won" : "lost";
+      : rootWorld.puzzleResult === PuzzleResult.Won ? "won" : "lost";
     return {
       screen: { ...screen },
       activePuzzleId: screen.kind === "puzzle-info" || screen.kind === "puzzle"
@@ -1162,8 +1232,14 @@ if (import.meta.env.DEV) {
           orientation: DIAGNOSTIC_DIRECTIONS[selectedOrientation],
         },
       hoveredCell: surface.hoveredCell === null ? null : { ...surface.hoveredCell },
-      worldRevision: surface.world.revision,
-      serializedBoard: serializeBoard(surface.world, surface.simulation.tick),
+      view: {
+        depth: surface.viewDepth,
+        width: surface.world.width,
+        height: surface.world.height,
+        editable: surface.editableRegion === null,
+      },
+      worldRevision: rootWorld.revision,
+      serializedBoard: serializeBoard(rootWorld, surface.simulation.tick),
     };
   };
   void import("./dev/diagnostic-snapshot").then(({ installDevelopmentDiagnostics }) => {
@@ -1354,7 +1430,7 @@ clearButton.addEventListener("click", () => {
   if (surface.selection.active) {
     commitTileSelection();
   }
-  if (surface.session.editableRegion === null) {
+  if (surface.editableRegion === null) {
     surface.world.clear();
   } else {
     for (let y = 0; y < surface.world.height; y += 1) {
@@ -1404,13 +1480,13 @@ exportButton.addEventListener("click", () => {
 
 downloadSceneButton.addEventListener("click", () => {
   closeExportOptions();
-  const source = serializeBoard(surface.world, surface.simulation.tick);
+  const source = serializeBoard(surface.session.world, surface.simulation.tick);
   downloadBlob(new Blob([source], { type: "application/json" }), "factory2d-scene.json");
 });
 
 copySceneButton.addEventListener("click", () => {
   closeExportOptions();
-  const source = serializeBoard(surface.world, surface.simulation.tick);
+  const source = serializeBoard(surface.session.world, surface.simulation.tick);
   if (source.length > MAX_CLIPBOARD_EXPORT_CHARACTERS) {
     window.alert(
       "This scene is too large to copy to the clipboard. Download the scene file instead.",
@@ -1441,7 +1517,7 @@ downloadPuzzleButton.addEventListener("click", () => {
   if (authoring === null) {
     throw new Error("Sandbox editable-region authoring state is missing");
   }
-  const source = serializePuzzleTemplate(surface.world, authoring.region);
+  const source = serializePuzzleTemplate(surface.session.world, authoring.region);
   downloadBlob(new Blob([source], { type: "application/json" }), "factory2d-puzzle.json");
 });
 
@@ -1552,7 +1628,7 @@ document.addEventListener("keydown", (event) => {
         commitTileSelection();
       }
       selectSelectionTool();
-      surface.selection.selectOccupiedBounds(surface.world, surface.session.editableRegion);
+      surface.selection.selectOccupiedBounds(surface.world, surface.editableRegion);
       syncTileSelectionOverlay();
       refreshPointerHover();
       return;
@@ -1605,6 +1681,18 @@ document.addEventListener("keydown", (event) => {
     event.preventDefault();
     if (surface.hoveredCell !== null) {
       pickTileAt(surface.hoveredCell);
+    }
+    return;
+  }
+  if (event.code === "Enter" || event.code === "NumpadEnter") {
+    if (surface.hoveredCell !== null && enterHoveredRuneArray(surface.hoveredCell)) {
+      event.preventDefault();
+    }
+    return;
+  }
+  if (event.key === "Escape") {
+    if (exitRuneArray()) {
+      event.preventDefault();
     }
     return;
   }
@@ -1744,9 +1832,10 @@ function frame(currentTime: number): void {
     tickCounter.textContent = `TICK ${surface.simulation.tick.toString().padStart(4, "0")}`;
     renderedTick = surface.simulation.tick;
   }
+  surface.refreshView();
   refreshTileInspector();
-  signalTraces.sync(surface.world, surface.simulation.tick);
-  signalPanel.update(signalTraces, surface.world, surface.simulation.tick);
+  signalTraces.sync(surface.session.world, surface.simulation.tick);
+  signalPanel.update(signalTraces, surface.session.world, surface.simulation.tick);
   const animationProgress = easedAnimationProgress(currentTime);
   surface.renderer.render(
     animationDuration === 0 ? null : surface.previousWorld,

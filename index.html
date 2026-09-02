@@ -74,6 +74,10 @@
           id="game-canvas"
           aria-label="Editable tile simulation grid. Use the mouse wheel to zoom, middle-button drag or Alt-right-drag to pan, and middle-click to pick a tile."
         ></canvas>
+        <div class="nested-view-bar floating-panel" id="nested-view-bar" hidden>
+          <button id="nested-view-back-button" type="button" title="Leave this rune array (Escape)">◀ BACK</button>
+          <span class="nested-view-trail" id="nested-view-trail"></span>
+        </div>
         <div class="selection-actions floating-panel" id="selection-actions" hidden>
           <button id="selection-copy-button" type="button" title="Copy selection (Ctrl+C)" aria-label="Copy selection">⧉</button>
           <button id="selection-paste-button" type="button" title="Paste selection (Ctrl+V)" aria-label="Paste selection">▣</button>
@@ -391,6 +395,45 @@
               </label>
             </div>
             <div class="rom-configuration-grid" data-component-rom-grid></div>
+          </div>
+          <div class="component-rom-panel component-array-panel" data-component-array-panel hidden>
+            <div class="component-rom-dimensions">
+              <label>
+                WIDTH
+                <input
+                  data-component-array-width
+                  type="number"
+                  min="1"
+                  max="15"
+                  step="2"
+                  required
+                />
+              </label>
+              <label>
+                HEIGHT
+                <input
+                  data-component-array-height
+                  type="number"
+                  min="1"
+                  max="15"
+                  step="2"
+                  required
+                />
+              </label>
+            </div>
+            <label class="component-numeric-panel component-array-description">
+              <span>DESCRIPTION</span>
+              <input
+                data-component-array-description
+                type="text"
+                autocomplete="off"
+                spellcheck="true"
+                placeholder="What this array does"
+              />
+            </label>
+            <button class="component-array-open" type="button" data-component-array-open>
+              ▣ SAVE AND OPEN CONTENTS
+            </button>
           </div>
           <div class="component-configuration-actions">
             <button type="button" data-component-configuration-cancel>CANCEL</button>

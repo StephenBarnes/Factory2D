@@ -258,27 +258,57 @@ export function restrictSnippetWorld(
   canPlaceKind: (kind: TileKind) => boolean,
 ): RestrictedSnippetWorld {
   const removedKinds: TileKind[] = [];
-  let restricted: World | null = null;
-  for (let y = 0; y < world.height; y += 1) {
-    for (let x = 0; x < world.width; x += 1) {
-      const kind = world.kindAt(x, y);
-      if (kind === TileKind.Empty || canPlaceKind(kind)) {
-        continue;
-      }
-      if (!removedKinds.includes(kind)) {
-        removedKinds.push(kind);
-      }
-      restricted ??= world.clone();
-      restricted.place(x, y, TileKind.Empty);
-    }
-  }
-  if (restricted === null) {
+  const restricted = restrictWorldRecursively(world, canPlaceKind, removedKinds);
+  if (restricted === world) {
     return { world, removedKinds };
   }
   return {
     world: worldHasOccupiedCell(restricted) ? restricted : null,
     removedKinds,
   };
+}
+
+/**
+ * Returns `world` itself when every tile is allowed, otherwise a restricted clone. Rune
+ * array contents are restricted the same way, keeping the array itself when it is allowed.
+ */
+function restrictWorldRecursively(
+  world: World,
+  canPlaceKind: (kind: TileKind) => boolean,
+  removedKinds: TileKind[],
+): World {
+  let restricted: World | null = null;
+  for (let y = 0; y < world.height; y += 1) {
+    for (let x = 0; x < world.width; x += 1) {
+      const kind = world.kindAt(x, y);
+      if (kind === TileKind.Empty) {
+        continue;
+      }
+      if (!canPlaceKind(kind)) {
+        if (!removedKinds.includes(kind)) {
+          removedKinds.push(kind);
+        }
+        restricted ??= world.clone();
+        restricted.place(x, y, TileKind.Empty);
+        continue;
+      }
+      if (kind !== TileKind.RuneArray) {
+        continue;
+      }
+      const inner = world.runeArrayWorldAt(x, y);
+      const restrictedInner = restrictWorldRecursively(inner, canPlaceKind, removedKinds);
+      if (restrictedInner === inner) {
+        continue;
+      }
+      restricted ??= world.clone();
+      const snapshot = restricted.componentStateSnapshotAt(x, y);
+      if (snapshot?.type !== "array") {
+        throw new Error(`Rune array at (${x}, ${y}) is missing its component state`);
+      }
+      restricted.restoreComponentState(x, y, { ...snapshot, world: restrictedInner });
+    }
+  }
+  return restricted ?? world;
 }
 
 /** Human-readable names for a list of tile kinds, in the given order. */

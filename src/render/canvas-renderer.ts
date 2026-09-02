@@ -1,9 +1,12 @@
 import type { GridRectangle, GridRegion } from "../game/grid-region";
 import type { TileSelectionOverlay } from "../game/tile-selection";
+import type { Charge } from "../simulation/circuit";
+import { runeArrayPortCellIndex } from "../simulation/rune-array";
 import {
   Direction,
   directionX,
   directionY,
+  oppositeDirection,
   TileKind,
   WeldSide,
 } from "../simulation/tile";
@@ -16,6 +19,7 @@ import {
   createBodyPath,
   drawBody,
   drawTile,
+  setCircuitPortCharge,
 } from "./tile-renderer";
 
 
@@ -23,6 +27,14 @@ const MAX_TILE_SIZE = 64;
 const MIN_MANUAL_TILE_SIZE = 2;
 const GRID_EDGE_EPSILON = 1e-6;
 const EDITABLE_REGION_DASH_PATTERN = [4, 4];
+const PORT_CELL_DASH_PATTERN = [3, 3];
+const NESTED_FRAME_COLOR = "#7a88c4";
+const PORT_CELL_COLOR = "rgb(199 211 244 / 55%)";
+
+/** Supplies the containing rune array's side charges while its inner board is displayed. */
+export interface NestedBoardView {
+  portCharge(side: Direction): Charge;
+}
 
 
 interface CachedBody {
@@ -42,6 +54,9 @@ export class CanvasRenderer {
   private readonly context: CanvasRenderingContext2D;
   private readonly world: World;
   private readonly editableRegion: GridRegion | null;
+  private readonly nestedView: NestedBoardView | null;
+  /** Cells of margin kept around the board when fitting, so nested port conduits stay visible. */
+  private readonly fitMargin: number;
   private authoredEditableRegion: GridRegion | null = null;
   private authoredEditableRegionDraft: GridRectangle | null = null;
   private tileSelectionOverlay: TileSelectionOverlay | null = null;
@@ -80,6 +95,7 @@ export class CanvasRenderer {
     canvas: HTMLCanvasElement,
     world: World,
     editableRegion: GridRegion | null = null,
+    nestedView: NestedBoardView | null = null,
   ) {
     const context = canvas.getContext("2d");
     if (context === null) {
@@ -90,6 +106,8 @@ export class CanvasRenderer {
     this.context = context;
     this.world = world;
     this.editableRegion = editableRegion;
+    this.nestedView = nestedView;
+    this.fitMargin = nestedView === null ? 0 : 1;
     this.viewCenterX = world.width / 2;
     this.viewCenterY = world.height / 2;
   }
@@ -175,6 +193,7 @@ export class CanvasRenderer {
     context.fillRect(0, 0, this.viewportWidth, this.viewportHeight);
 
     this.drawGrid();
+    this.drawNestedPorts(animationTime);
     this.drawTiles(previousWorld, Math.max(0, Math.min(1, progress)), animationTime);
     this.drawEditableRegion();
     this.drawEditableRegionAuthoring();
@@ -281,8 +300,8 @@ export class CanvasRenderer {
 
   private fitViewToViewport(): void {
     this.cellSize = Math.min(
-      this.viewportWidth / this.world.width,
-      this.viewportHeight / this.world.height,
+      this.viewportWidth / (this.world.width + this.fitMargin * 2),
+      this.viewportHeight / (this.world.height + this.fitMargin * 2),
       MAX_TILE_SIZE,
     );
     this.viewCenterX = this.world.width / 2;
@@ -326,8 +345,53 @@ export class CanvasRenderer {
     }
     context.stroke();
 
-    context.strokeStyle = "#4c3d24";
+    context.strokeStyle = this.nestedView === null ? "#4c3d24" : NESTED_FRAME_COLOR;
     context.strokeRect(this.originX + 0.5, this.originY + 0.5, boardWidth, boardHeight);
+  }
+
+  /**
+   * Draws the four virtual conduits just outside a nested board's edge centers, colored by
+   * the containing array's side charges, and marks the inner port cells they connect to.
+   */
+  private drawNestedPorts(animationTime: number): void {
+    const view = this.nestedView;
+    if (view === null) {
+      return;
+    }
+    const { context, cellSize, world } = this;
+    context.save();
+    context.strokeStyle = PORT_CELL_COLOR;
+    context.lineWidth = Math.max(1, Math.min(2, cellSize * 0.05));
+    context.setLineDash(PORT_CELL_DASH_PATTERN);
+    for (let value = Direction.Up; value <= Direction.Left; value += 1) {
+      const side = value as Direction;
+      const charge = view.portCharge(side);
+      const portIndex = runeArrayPortCellIndex(world.width, world.height, side);
+      const portX = portIndex % world.width;
+      const portY = (portIndex - portX) / world.width;
+      const conduitX = portX + directionX(side);
+      const conduitY = portY + directionY(side);
+      const inward = oppositeDirection(side);
+      drawTile(
+        context,
+        this.originX + conduitX * cellSize,
+        this.originY + conduitY * cellSize,
+        cellSize,
+        TileKind.Conduit,
+        Direction.Up,
+        animationTime,
+        charge,
+        (1 << inward) as WeldSide,
+        setCircuitPortCharge(0, inward, charge),
+      );
+      context.strokeRect(
+        this.originX + portX * cellSize + 2.5,
+        this.originY + portY * cellSize + 2.5,
+        cellSize - 5,
+        cellSize - 5,
+      );
+    }
+    context.restore();
   }
 
   private drawEditableRegion(): void {
@@ -565,6 +629,7 @@ export class CanvasRenderer {
           circuitConnections: WeldSide.None,
           circuitPortCharges: 0,
           componentState: null,
+          nestedWorld: null,
           seamRight: false,
           seamDown: false,
         };
@@ -579,6 +644,7 @@ export class CanvasRenderer {
       cell.circuitConnections = WeldSide.None;
       cell.circuitPortCharges = 0;
       cell.componentState = null;
+      cell.nestedWorld = null;
       cell.seamRight = false;
       cell.seamDown = false;
 

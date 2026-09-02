@@ -36,11 +36,7 @@ export function computePuzzleDesignMetrics(
         continue;
       }
 
-      const componentPrice = expectDefined(
-        puzzle.availableComponents.priceOf(kind) ?? undefined,
-        `Missing price for solution component ${kind}`,
-      );
-      price += componentPrice;
+      price += componentPrice(puzzle, solution, x, y);
       if (!Number.isSafeInteger(price)) {
         throw new RangeError("Puzzle solution price exceeds the safe integer range");
       }
@@ -56,6 +52,30 @@ export function computePuzzleDesignMetrics(
     footprintWidth: right < left ? 0 : right - left + 1,
     footprintHeight: bottom < top ? 0 : bottom - top + 1,
   });
+}
+
+/**
+ * Price of one placed component. Rune arrays cost their own price plus the full price of
+ * every component on their inner board, recursively, so they tidy circuits without making
+ * them cheaper.
+ */
+function componentPrice(puzzle: PuzzleDefinition, world: World, x: number, y: number): number {
+  const kind = world.kindAt(x, y);
+  let price = expectDefined(
+    puzzle.availableComponents.priceOf(kind) ?? undefined,
+    `Missing price for solution component ${kind}`,
+  );
+  if (kind === TileKind.RuneArray) {
+    const inner = world.runeArrayWorldAt(x, y);
+    for (let innerY = 0; innerY < inner.height; innerY += 1) {
+      for (let innerX = 0; innerX < inner.width; innerX += 1) {
+        if (inner.kindAt(innerX, innerY) !== TileKind.Empty) {
+          price += componentPrice(puzzle, inner, innerX, innerY);
+        }
+      }
+    }
+  }
+  return price;
 }
 
 export function computePuzzleScores(

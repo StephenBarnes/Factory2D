@@ -69,6 +69,30 @@ describe("tile selection", () => {
     expect(world.kindAt(2, 1)).toBe(TileKind.Empty);
   });
 
+  it("rotates and flips the contents of selected rune arrays with the tile", () => {
+    const world = new World(4, 4);
+    world.place(1, 1, TileKind.RuneArray);
+    world.configureRuneArray(1, 1, 3, 1, "");
+    world.runeArrayWorldAt(1, 1).place(0, 0, TileKind.Sensor, Direction.Right);
+    const selection = new TileSelectionState(world.width, world.height);
+    selectRectangle(selection, world, 1, 1, 1, 1);
+
+    expect(selection.rotateTo(Direction.Right)).toBe(true);
+    expect(selection.flipHorizontally()).toBe(true);
+    expect(selection.commit(world, ALLOW_CELL, ALLOW_KIND)).toEqual({
+      accepted: true,
+      changed: true,
+    });
+
+    expect(world.kindAt(1, 1)).toBe(TileKind.RuneArray);
+    expect(world.orientationAt(1, 1)).toBe(Direction.Up);
+    const inner = world.runeArrayWorldAt(1, 1);
+    expect(inner.width).toBe(1);
+    expect(inner.height).toBe(3);
+    expect(inner.kindAt(0, 2)).toBe(TileKind.Sensor);
+    expect(inner.orientationAt(0, 2)).toBe(Direction.Up);
+  });
+
   it("clips the initial selection to editable regions and rejects an invalid destination", () => {
     const world = new World(6, 3);
     world.place(1, 0, TileKind.Stone);

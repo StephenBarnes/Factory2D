@@ -1884,6 +1884,75 @@ kbd {
   border-radius: 1px;
 }
 
+.component-array-description {
+  margin: 16px 0 0;
+}
+
+.component-array-open {
+  width: 100%;
+  margin-top: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  color: var(--gold-bright);
+  background: var(--raised);
+  font: 700 0.7rem var(--font-mono);
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+
+.component-array-open:hover {
+  border-color: var(--gold);
+  background: var(--raised-hover);
+}
+
+.nested-view-bar {
+  top: 10px;
+  left: 50%;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 24px);
+  padding: 5px 10px 5px 5px;
+  transform: translateX(-50%);
+  border-color: #566494;
+  color: var(--text-mid);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.nested-view-bar[hidden] {
+  display: none;
+}
+
+.nested-view-bar button {
+  padding: 5px 9px;
+  border: 1px solid #566494;
+  border-radius: 2px;
+  color: #c7d3f4;
+  background: var(--raised);
+  font: inherit;
+  cursor: pointer;
+}
+
+.nested-view-bar button:hover {
+  background: var(--raised-hover);
+}
+
+.nested-view-trail {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.nested-view-trail em {
+  color: #c7d3f4;
+  font-style: normal;
+}
+
 .component-configuration-actions {
   padding: 16px 24px;
   display: flex;

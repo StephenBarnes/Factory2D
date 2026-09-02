@@ -24,7 +24,15 @@ export interface DevelopmentDiagnosticSnapshot {
   };
   readonly selectedTool: DiagnosticSelectedTool;
   readonly hoveredCell: { readonly x: number; readonly y: number } | null;
+  /** Displayed board: the root board at depth 0, or an entered rune array's inner board. */
+  readonly view: {
+    readonly depth: number;
+    readonly width: number;
+    readonly height: number;
+    readonly editable: boolean;
+  };
   readonly worldRevision: number;
+  /** Root board, whichever rune array is currently displayed. */
   readonly serializedBoard: string;
 }
 
@@ -44,6 +52,7 @@ function frozenSnapshot(
   Object.freeze(snapshot.screen);
   Object.freeze(snapshot.simulation);
   Object.freeze(snapshot.selectedTool);
+  Object.freeze(snapshot.view);
   if (snapshot.hoveredCell !== null) {
     Object.freeze(snapshot.hoveredCell);
   }

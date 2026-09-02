@@ -13,6 +13,13 @@ import { furnaceRecipeFor } from "./furnace";
 import { isCharge, type Charge } from "./circuit";
 import { PuzzleResult } from "./puzzle-result";
 import {
+  MAX_RUNE_ARRAY_DEPTH,
+  MAX_RUNE_ARRAY_DIMENSION,
+  MIN_RUNE_ARRAY_DIMENSION,
+  requireRuneArrayDimension,
+  validateRuneArrayDescription,
+} from "./rune-array";
+import {
   Direction,
   directionX,
   directionY,
@@ -25,7 +32,7 @@ import { World } from "./world";
 import { expectDefined } from "../util/assert";
 
 const FORMAT_NAME = "factory2d-board";
-const FORMAT_VERSION = 12;
+const FORMAT_VERSION = 13;
 export const MIN_BOARD_WIDTH = 1;
 export const MAX_BOARD_WIDTH = 400;
 export const MIN_BOARD_HEIGHT = 1;
@@ -143,21 +150,28 @@ interface ExportedSignalLabel {
   readonly label: string;
 }
 
+/** Rune array whose inner board nests the same contents format without tick or result. */
+interface ExportedRuneArray {
+  readonly x: number;
+  readonly y: number;
+  readonly type: "array";
+  readonly description: string;
+  readonly ports: readonly Charge[];
+  readonly board: ExportedBoardContents;
+}
+
 type ExportedComponent =
   | ExportedDelay
   | ExportedCounter
   | ExportedRom
   | ExportedChecker
-  | ExportedSignalLabel;
+  | ExportedSignalLabel
+  | ExportedRuneArray;
 
-
-interface ExportedBoard {
-  readonly format: typeof FORMAT_NAME;
-  readonly version: typeof FORMAT_VERSION;
+/** Tile, state, and weld grids shared by the top-level board and nested rune array boards. */
+interface ExportedBoardContents {
   readonly width: number;
   readonly height: number;
-  readonly tick: number;
-  readonly result: string;
   readonly grid: readonly string[];
   readonly orientations: readonly ExportedOrientation[];
   readonly charges: readonly ExportedCharge[];
@@ -166,6 +180,26 @@ interface ExportedBoard {
   readonly furnaces: readonly ExportedFurnace[];
   readonly components: readonly ExportedComponent[];
   readonly welds: readonly string[];
+}
+
+const BOARD_CONTENTS_FIELDS = [
+  "width",
+  "height",
+  "grid",
+  "orientations",
+  "charges",
+  "crossingCharges",
+  "isolatedOutputCharges",
+  "furnaces",
+  "components",
+  "welds",
+] as const;
+
+interface ExportedBoard extends ExportedBoardContents {
+  readonly format: typeof FORMAT_NAME;
+  readonly version: typeof FORMAT_VERSION;
+  readonly tick: number;
+  readonly result: string;
 }
 
 export interface ImportedBoard {
@@ -181,6 +215,27 @@ export function serializeBoard(world: World, tick: number): string {
     throw new RangeError("Board tick must be a non-negative integer");
   }
 
+  const contents = exportBoardContents(world);
+  const board: ExportedBoard = {
+    format: FORMAT_NAME,
+    version: FORMAT_VERSION,
+    width: contents.width,
+    height: contents.height,
+    tick,
+    result: PUZZLE_RESULT_NAMES[world.puzzleResult],
+    grid: contents.grid,
+    orientations: contents.orientations,
+    charges: contents.charges,
+    crossingCharges: contents.crossingCharges,
+    isolatedOutputCharges: contents.isolatedOutputCharges,
+    furnaces: contents.furnaces,
+    components: contents.components,
+    welds: contents.welds,
+  };
+  return `${JSON.stringify(board, null, 2)}\n`;
+}
+
+function exportBoardContents(world: World): ExportedBoardContents {
   const grid: string[] = [];
   const orientations: ExportedOrientation[] = [];
   const charges: ExportedCharge[] = [];
@@ -214,7 +269,7 @@ export function serializeBoard(world: World, tick: number): string {
         if (horizontal !== 0 || vertical !== 0) {
           crossingCharges.push({ x, y, horizontal, vertical });
         }
-      } else {
+      } else if (kind !== TileKind.RuneArray) {
         const charge = world.chargeAt(x, y);
         if (charge !== 0) {
           charges.push({ x, y, charge });
@@ -249,20 +304,27 @@ export function serializeBoard(world: World, tick: number): string {
 
       const componentState = world.componentStateSnapshotAt(x, y);
       if (componentState !== null) {
-        components.push({ x, y, ...componentState });
+        if (componentState.type === "array") {
+          components.push({
+            x,
+            y,
+            type: "array",
+            description: componentState.description,
+            ports: componentState.ports,
+            board: exportBoardContents(componentState.world),
+          });
+        } else {
+          components.push({ x, y, ...componentState });
+        }
       }
     }
     grid.push(row);
     welds.push(weldRow);
   }
 
-  const board: ExportedBoard = {
-    format: FORMAT_NAME,
-    version: FORMAT_VERSION,
+  return {
     width: world.width,
     height: world.height,
-    tick,
-    result: PUZZLE_RESULT_NAMES[world.puzzleResult],
     grid,
     orientations,
     charges,
@@ -272,7 +334,6 @@ export function serializeBoard(world: World, tick: number): string {
     components,
     welds,
   };
-  return `${JSON.stringify(board, null, 2)}\n`;
 }
 
 export function deserializeBoard(source: string): ImportedBoard {
@@ -315,46 +376,71 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
   if (result === undefined) {
     throw new Error(`Board result must be \"in-progress\", \"won\", or \"lost\"`);
   }
-  const width = requireInteger(
-    board.width,
-    "Board width",
+  const world = importBoardContents(
+    board,
+    "Board",
     MIN_BOARD_WIDTH,
     MAX_BOARD_WIDTH,
-  );
-  const height = requireInteger(
-    board.height,
-    "Board height",
     MIN_BOARD_HEIGHT,
     MAX_BOARD_HEIGHT,
+    0,
   );
-  const grid = requireArray(board.grid, "Board grid");
+  if (result !== PuzzleResult.InProgress) {
+    world.markPuzzleResult(result);
+  }
+  return { world, tick };
+}
+
+/**
+ * Builds a world from the shared board-contents fields. `label` prefixes every error so
+ * nested rune array boards report their owning component; `depth` counts nesting levels.
+ */
+function importBoardContents(
+  board: Record<string, unknown>,
+  label: string,
+  minimumWidth: number,
+  maximumWidth: number,
+  minimumHeight: number,
+  maximumHeight: number,
+  depth: number,
+): World {
+  if (depth > MAX_RUNE_ARRAY_DEPTH) {
+    throw new Error(`${label} nests rune arrays deeper than ${MAX_RUNE_ARRAY_DEPTH} levels`);
+  }
+  const width = requireInteger(board.width, `${label} width`, minimumWidth, maximumWidth);
+  const height = requireInteger(board.height, `${label} height`, minimumHeight, maximumHeight);
+  if (depth > 0) {
+    requireRuneArrayDimension(width, `${label} width`);
+    requireRuneArrayDimension(height, `${label} height`);
+  }
+  const grid = requireArray(board.grid, `${label} grid`);
   if (grid.length !== height) {
-    throw new Error(`Board grid must contain exactly ${height} rows`);
+    throw new Error(`${label} grid must contain exactly ${height} rows`);
   }
 
   const kinds = new Uint8Array(width * height);
 
   for (let y = 0; y < height; y += 1) {
-    const row = requireString(grid[y], `Board grid row ${y}`);
+    const row = requireString(grid[y], `${label} grid row ${y}`);
     if (row.length !== width) {
-      throw new Error(`Board grid row ${y} must contain exactly ${width} cells`);
+      throw new Error(`${label} grid row ${y} must contain exactly ${width} cells`);
     }
 
     for (let x = 0; x < width; x += 1) {
       const code = expectDefined(row[x], `tile code at (${x}, ${y})`);
       const kind = TILE_KINDS_BY_CODE[code];
       if (kind === undefined) {
-        throw new Error(`Board grid cell (${x}, ${y}) has unknown tile code "${code}"`);
+        throw new Error(`${label} grid cell (${x}, ${y}) has unknown tile code "${code}"`);
       }
       kinds[y * width + x] = kind;
     }
   }
 
-  const orientations = requireArray(board.orientations, "Board orientations");
+  const orientations = requireArray(board.orientations, `${label} orientations`);
   const orientationByCell = new Uint8Array(width * height);
   const hasOrientation = new Uint8Array(width * height);
   for (let index = 0; index < orientations.length; index += 1) {
-    const state = requireObject(orientations[index], `Orientation ${index}`, [
+    const state = requireObject(orientations[index], entryLabel(label, depth, "Orientation", index), [
       "x",
       "y",
       "direction",
@@ -379,11 +465,11 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
     hasOrientation[cellIndex] = 1;
   }
 
-  const furnaces = requireArray(board.furnaces, "Board furnaces");
+  const furnaces = requireArray(board.furnaces, `${label} furnaces`);
   const furnaceProgressByCell = new Uint16Array(width * height);
   const hasFurnaceState = new Uint8Array(width * height);
   for (let index = 0; index < furnaces.length; index += 1) {
-    const state = requireObject(furnaces[index], `Furnace ${index}`, [
+    const state = requireObject(furnaces[index], entryLabel(label, depth, "Furnace", index), [
       "x",
       "y",
       "progress",
@@ -424,11 +510,11 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
     hasFurnaceState[cellIndex] = 1;
   }
 
-  const charges = requireArray(board.charges, "Board charges");
+  const charges = requireArray(board.charges, `${label} charges`);
   const chargeByCell = new Int8Array(width * height);
   const hasCharge = new Uint8Array(width * height);
   for (let index = 0; index < charges.length; index += 1) {
-    const state = requireObject(charges[index], `Charge ${index}`, ["x", "y", "charge"]);
+    const state = requireObject(charges[index], entryLabel(label, depth, "Charge", index), ["x", "y", "charge"]);
     const x = requireInteger(state.x, `Charge ${index} x`, 0, width - 1);
     const y = requireInteger(state.y, `Charge ${index} y`, 0, height - 1);
     const cellIndex = y * width + x;
@@ -447,12 +533,12 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
     chargeByCell[cellIndex] = charge;
     hasCharge[cellIndex] = 1;
   }
-  const crossingCharges = requireArray(board.crossingCharges, "Board crossing charges");
+  const crossingCharges = requireArray(board.crossingCharges, `${label} crossing charges`);
   const horizontalChargeByCell = new Int8Array(width * height);
   const verticalChargeByCell = new Int8Array(width * height);
   const hasCrossingCharge = new Uint8Array(width * height);
   for (let index = 0; index < crossingCharges.length; index += 1) {
-    const state = requireObject(crossingCharges[index], `Crossing charge ${index}`, [
+    const state = requireObject(crossingCharges[index], entryLabel(label, depth, "Crossing charge", index), [
       "x",
       "y",
       "horizontal",
@@ -489,25 +575,25 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
   }
   const isolatedOutputCharges = board.isolatedOutputCharges === undefined
     ? []
-    : requireArray(board.isolatedOutputCharges, "Board isolated output charges");
+    : requireArray(board.isolatedOutputCharges, `${label} isolated output charges`);
   const isolatedOutputChargeByCell = new Int8Array(width * height);
   const hasIsolatedOutputCharge = new Uint8Array(width * height);
   for (let index = 0; index < isolatedOutputCharges.length; index += 1) {
-    const label = `Isolated output charge ${index}`;
-    const state = requireObject(isolatedOutputCharges[index], label, ["x", "y", "charge"]);
-    const x = requireInteger(state.x, `${label} x`, 0, width - 1);
-    const y = requireInteger(state.y, `${label} y`, 0, height - 1);
+    const chargeLabel = entryLabel(label, depth, "Isolated output charge", index);
+    const state = requireObject(isolatedOutputCharges[index], chargeLabel, ["x", "y", "charge"]);
+    const x = requireInteger(state.x, `${chargeLabel} x`, 0, width - 1);
+    const y = requireInteger(state.y, `${chargeLabel} y`, 0, height - 1);
     const cellIndex = y * width + x;
     if (hasIsolatedOutputCharge[cellIndex] === 1) {
-      throw new Error(`${label} duplicates cell (${x}, ${y})`);
+      throw new Error(`${chargeLabel} duplicates cell (${x}, ${y})`);
     }
     const kind = expectDefined(kinds[cellIndex], `tile kind at (${x}, ${y})`) as TileKind;
     if (kind !== TileKind.Welder && kind !== TileKind.Splitter) {
-      throw new Error(`${label} targets a tile without a separate isolated output`);
+      throw new Error(`${chargeLabel} targets a tile without a separate isolated output`);
     }
-    const charge = requireInteger(state.charge, `${label} value`, -1, 1) as Charge;
+    const charge = requireInteger(state.charge, `${chargeLabel} value`, -1, 1) as Charge;
     if (charge === 0) {
-      throw new Error(`${label} value must be -1 or 1`);
+      throw new Error(`${chargeLabel} value must be -1 or 1`);
     }
     isolatedOutputChargeByCell[cellIndex] = charge;
     hasIsolatedOutputCharge[cellIndex] = 1;
@@ -517,14 +603,14 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
 
   const components = board.components === undefined
     ? []
-    : requireArray(board.components, "Board components");
+    : requireArray(board.components, `${label} components`);
   const componentStatesByCell = new Array<ConfigurableComponentSnapshot | undefined>(
     width * height,
   );
   const hasComponentState = new Uint8Array(width * height);
   for (let index = 0; index < components.length; index += 1) {
-    const label = `Component ${index}`;
-    const entry = requireObject(components[index], label, [
+    const componentLabel = entryLabel(label, depth, "Component", index);
+    const entry = requireObject(components[index], componentLabel, [
       "x",
       "y",
       "type",
@@ -538,8 +624,11 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
       "values",
       "failed",
       "label",
+      "description",
+      "ports",
+      "board",
     ]);
-    const type = requireString(entry.type, `${label} type`);
+    const type = requireString(entry.type, `${componentLabel} type`);
     const fields = type === "delay"
       ? ["x", "y", "type", "length", "cursor", "data"]
       : type === "counter"
@@ -550,69 +639,97 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
             ? ["x", "y", "type", "width", "height", "cursor", "failed", "values"]
             : type === "monitor" || type === "grapher"
               ? ["x", "y", "type", "label"]
-              : null;
+              : type === "array"
+                ? ["x", "y", "type", "description", "ports", "board"]
+                : null;
     if (fields === null) {
-      throw new Error(`${label} has unknown type "${type}"`);
+      throw new Error(`${componentLabel} has unknown type "${type}"`);
     }
-    const state = requireObject(components[index], label, fields);
-    const x = requireInteger(state.x, `${label} x`, 0, width - 1);
-    const y = requireInteger(state.y, `${label} y`, 0, height - 1);
+    const state = requireObject(components[index], componentLabel, fields);
+    const x = requireInteger(state.x, `${componentLabel} x`, 0, width - 1);
+    const y = requireInteger(state.y, `${componentLabel} y`, 0, height - 1);
     const cellIndex = y * width + x;
     if (hasComponentState[cellIndex] === 1) {
-      throw new Error(`${label} duplicates cell (${x}, ${y})`);
+      throw new Error(`${componentLabel} duplicates cell (${x}, ${y})`);
     }
     const kind = expectDefined(kinds[cellIndex], `tile kind at (${x}, ${y})`) as TileKind;
     let snapshot: ConfigurableComponentSnapshot;
     if (type === "delay") {
       const length = requireInteger(
         state.length,
-        `${label} length`,
+        `${componentLabel} length`,
         MIN_DELAY_LENGTH,
         MAX_DELAY_LENGTH,
       );
       snapshot = {
         type,
         length,
-        cursor: requireInteger(state.cursor, `${label} cursor`, 0, length - 1),
-        data: requireChargeArray(state.data, length, `${label} data`),
+        cursor: requireInteger(state.cursor, `${componentLabel} cursor`, 0, length - 1),
+        data: requireChargeArray(state.data, length, `${componentLabel} data`),
       };
     } else if (type === "counter") {
       const threshold = requireInteger(
         state.threshold,
-        `${label} threshold`,
+        `${componentLabel} threshold`,
         MIN_COUNTER_THRESHOLD,
         MAX_COUNTER_THRESHOLD,
       );
       snapshot = {
         type,
         threshold,
-        count: requireInteger(state.count, `${label} count`, 0, threshold - 1),
+        count: requireInteger(state.count, `${componentLabel} count`, 0, threshold - 1),
+      };
+    } else if (type === "array") {
+      const description = requireString(state.description, `${componentLabel} description`);
+      try {
+        validateRuneArrayDescription(description);
+      } catch (error) {
+        throw new Error(`${componentLabel} description is invalid: ${error instanceof Error ? error.message : String(error)}`);
+      }
+      const innerBoard = requireObject(
+        state.board,
+        `${componentLabel} board`,
+        BOARD_CONTENTS_FIELDS,
+      );
+      snapshot = {
+        type: "array",
+        description,
+        ports: requireChargeArray(state.ports, 4, `${componentLabel} ports`),
+        world: importBoardContents(
+          innerBoard,
+          `${componentLabel} board`,
+          MIN_RUNE_ARRAY_DIMENSION,
+          MAX_RUNE_ARRAY_DIMENSION,
+          MIN_RUNE_ARRAY_DIMENSION,
+          MAX_RUNE_ARRAY_DIMENSION,
+          depth + 1,
+        ),
       };
     } else if (type === "monitor" || type === "grapher") {
-      const signalLabel = requireString(state.label, `${label} label`);
+      const signalLabel = requireString(state.label, `${componentLabel} label`);
       try {
         validateSignalLabel(signalLabel);
       } catch (error) {
-        throw new Error(`${label} label is invalid: ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(`${componentLabel} label is invalid: ${error instanceof Error ? error.message : String(error)}`);
       }
       snapshot = { type, label: signalLabel };
     } else {
       const componentWidth = requireInteger(
         state.width,
-        `${label} width`,
+        `${componentLabel} width`,
         MIN_ROM_DIMENSION,
         MAX_ROM_DIMENSION,
       );
       const componentHeight = requireInteger(
         state.height,
-        `${label} height`,
+        `${componentLabel} height`,
         MIN_ROM_DIMENSION,
         MAX_ROM_DIMENSION,
       );
       const valueCount = componentWidth * componentHeight;
       if (type === "checker") {
         if (typeof state.failed !== "boolean") {
-          throw new Error(`${label} failed must be a boolean`);
+          throw new Error(`${componentLabel} failed must be a boolean`);
         }
         snapshot = {
           type: "checker",
@@ -620,20 +737,20 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
           height: componentHeight,
           cursor: requireInteger(
             state.cursor,
-            `${label} cursor`,
+            `${componentLabel} cursor`,
             0,
             state.failed ? valueCount - 1 : valueCount,
           ),
           failed: state.failed,
-          values: requireChargeArray(state.values, valueCount, `${label} values`),
+          values: requireChargeArray(state.values, valueCount, `${componentLabel} values`),
         };
       } else {
         snapshot = {
           type: "rom",
           width: componentWidth,
           height: componentHeight,
-          cursor: requireInteger(state.cursor, `${label} cursor`, 0, valueCount - 1),
-          values: requireChargeArray(state.values, valueCount, `${label} values`),
+          cursor: requireInteger(state.cursor, `${componentLabel} cursor`, 0, valueCount - 1),
+          values: requireChargeArray(state.values, valueCount, `${componentLabel} values`),
         };
       }
     }
@@ -645,9 +762,10 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
       (snapshot.type === "rom" && kind !== TileKind.Rom) ||
       (snapshot.type === "checker" && kind !== TileKind.Checker) ||
       (snapshot.type === "monitor" && kind !== TileKind.Monitor) ||
-      (snapshot.type === "grapher" && kind !== TileKind.Grapher)
+      (snapshot.type === "grapher" && kind !== TileKind.Grapher) ||
+      (snapshot.type === "array" && kind !== TileKind.RuneArray)
     ) {
-      throw new Error(`${label} does not match the tile at (${x}, ${y})`);
+      throw new Error(`${componentLabel} does not match the tile at (${x}, ${y})`);
     }
     componentStatesByCell[cellIndex] = snapshot;
     hasComponentState[cellIndex] = 1;
@@ -664,15 +782,15 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
     }
   }
 
-  const welds = requireArray(board.welds, "Board weld grid");
+  const welds = requireArray(board.welds, `${label} weld grid`);
   if (welds.length !== height) {
-    throw new Error(`Board weld grid must contain exactly ${height} rows`);
+    throw new Error(`${label} weld grid must contain exactly ${height} rows`);
   }
   const weldDirectionsByCell = new Uint8Array(width * height);
   for (let y = 0; y < height; y += 1) {
-    const row = requireString(welds[y], `Board weld grid row ${y}`);
+    const row = requireString(welds[y], `${label} weld grid row ${y}`);
     if (row.length !== width) {
-      throw new Error(`Board weld grid row ${y} must contain exactly ${width} cells`);
+      throw new Error(`${label} weld grid row ${y} must contain exactly ${width} cells`);
     }
 
     for (let x = 0; x < width; x += 1) {
@@ -692,13 +810,13 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
           directions = 3;
           break;
         default:
-          throw new Error(`Board weld grid cell (${x}, ${y}) has unknown weld code "${code}"`);
+          throw new Error(`${label} weld grid cell (${x}, ${y}) has unknown weld code "${code}"`);
       }
       if ((directions & 1) !== 0 && x + 1 >= width) {
-        throw new Error(`Board weld grid cell (${x}, ${y}) points right outside the board`);
+        throw new Error(`${label} weld grid cell (${x}, ${y}) points right outside the board`);
       }
       if ((directions & 2) !== 0 && y + 1 >= height) {
-        throw new Error(`Board weld grid cell (${x}, ${y}) points down outside the board`);
+        throw new Error(`${label} weld grid cell (${x}, ${y}) points down outside the board`);
       }
       weldDirectionsByCell[y * width + x] = directions;
     }
@@ -772,19 +890,22 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
         `weld directions at (${x}, ${y})`,
       );
       if ((directions & 1) !== 0 && !world.setWeld(x, y, x + 1, y, true)) {
-        throw new Error(`Board weld grid cell (${x}, ${y}) cannot weld right`);
+        throw new Error(`${label} weld grid cell (${x}, ${y}) cannot weld right`);
       }
       if ((directions & 2) !== 0 && !world.setWeld(x, y, x, y + 1, true)) {
-        throw new Error(`Board weld grid cell (${x}, ${y}) cannot weld down`);
+        throw new Error(`${label} weld grid cell (${x}, ${y}) cannot weld down`);
       }
     }
   }
 
-  if (result !== PuzzleResult.InProgress) {
-    world.markPuzzleResult(result);
-  }
+  return world;
+}
 
-  return { world, tick };
+/** Root boards keep their historical entry labels; nested boards prefix their owner. */
+function entryLabel(label: string, depth: number, name: string, index: number): string {
+  return depth === 0
+    ? `${name} ${index}`
+    : `${label} ${name.charAt(0).toLowerCase()}${name.slice(1)} ${index}`;
 }
 
 function requireObject(

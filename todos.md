@@ -56,7 +56,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * A rotator component. It has a circuit input on one back side. It faces in a specific direction, but stores an internal direction that's either forward, left, or right, indicated on the rendered block; cannot face back to the circuit input. Signals of +1 and -1 rotate that internal direction by 90 degrees at a time. Each time it rotates, it also attaches to the block in that direction, and then rotates that block's entire body to keep that edge against its new internal direction. If the body can't be moved like that due to collisions, instead block rotation.
 * Add blocks that play a chime or other sound when charged.
 * Add a component that has no gravity, and moves forward one tile every time step; when blocked, attempt to push the tile in front. Could be useful as a model for many later components: arrows fired by elves, thrusters, etc.
-* Add a "box" component that has an internal grid of miniature components. Similar to the rune array mentioned elsewhere, but instead of circuit signal ports, add holes where blocks can fall in/out or be pushed in/out. A miniature block that falls out through a hole becomes a full block on that side of the box; a full block that falls in becomes a miniature block. Similar to Factorio's warehouse mods, or Patrick's Parabox.
+* Add a "box" component that has an internal grid of miniature components. Similar to the implemented rune array (reuse its nested `World` state, `WorldRuntime` tree, entering/leaving view, and nested board format), but instead of circuit signal ports, add holes where blocks can fall in/out or be pushed in/out. A miniature block that falls out through a hole becomes a full block on that side of the box; a full block that falls in becomes a miniature block. Similar to Factorio's warehouse mods, or Patrick's Parabox.
 
 # New component behaviors
 
@@ -83,11 +83,11 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * A sensor that detects when the sensor's own tile moves, and outputs +1 on that side, -1 on the other side.
 * Add comparer component that compares front neighbor to back neighbor, outputs +1 on sides if they're equal, else output 0. Make it compare entire bodies, exactly like the delivery box but without consuming.
 * Maybe add min() and max() gates.
-* Implement a "rune array" component for miniaturizing circuits. Configure it by placing miniature components on a 5x5 grid inside the array. The 4 edge-center tiles of the array's grid are logically connected to the rune array's 4 sides. Display the E-key configuration modal as a small grid where any component enabled in the puzzle can be placed, using the same palette panel used for the main grid. In the configuration modal, show the 5x5 grid, plus 4 conduits just outside it at the edge centers to show the external connection. For prices in puzzles, make all internal components cost full price - so it's useful for cleaning up circuits, but not for micro-optimizing costs.
+* Show signal monitors placed inside rune arrays on the signal panel. `SignalTraceRecorder` and the panel only walk the root board today; nested monitors would need composite keys (array ID path plus inner tile ID) and a label showing which array they sit in.
 
 ## Circuit design problems to try, to decide whether we should add components or change behavior
 
-* Figure out how hard it is to do check if two ternary inputs are different, or check whether a set of 3 inputs contains both +1 and -1. If it's hard
+* Figure out how hard it is to check if two ternary inputs are different or equal, or check whether a set of 3 inputs contains both +1 and -1.
 * Check whether we can compute a min or max of 2 or 3 inputs, compactly.
 * Write a script (TypeScript or Python) that enumerates possible combinations of a given set of components and checks whether all functions of up to N ternary inputs to M outputs can be realized using up to T components, and lowest delay with which it can be realized. Assume no connectivity or planarity constraints (so don't worry about needing wire-crossings), treating components as functions where anything can be wired to anything. Later maybe extend to mark planarity requirements, or extend to sequential logic patterns that care about timing.
 
@@ -100,7 +100,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * Absolute-value, i.e. mapping +1 to +1, 0 to 0, and -1 to +1. Because a multiplier `X * X` does this.
 * Don't extend the set of charges (0, +1, -1) to add orthogonal +i and -i charges, or add a 2-wire tile with components for reading the different wires. We'll rather keep the current ternary system since it creates interesting challenges for signal routing.
 * Mapping (+1, 0, -1) to (+1, -1, anything) - can be done with `Combine(x, x, -1)`, or if -1 isn't available then `Combine(x, x, Invert(Combine(x, 1)))`.
-* Don't add a block that's programmable in assembly or some other text language. Because we're already planning to implement the "rune array" which does the same thing but fits better with our theme and the rest of the game.
+* Don't add a block that's programmable in assembly or some other text language. The implemented "rune array" covers that role and fits better with our theme and the rest of the game.
 
 # Game feel
 
@@ -149,6 +149,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * Move gemstone count in the main menu to be around top-right instead, and show it larger and more concisely as "3◈" instead of text. Add title text saying that gemstones are earned by completing puzzles and used automatically to unlock new puzzle groups.
 * Main menu: show lock icon / unicode character next to locked puzzles and puzzle groups. On groups, add text saying "Solve 2 more puzzles to unlock" replacing "2 gemstones required", and make that text more visible.
 * Swap the symbols used for the selection tool and the player-modifiable region tool, but keep them with the same colors. (Selection should be dotted line, cyan, while modifiable-region tool should be two 90-degree lines, yellow.)
+* Consider letting the rune array modal show a read-only thumbnail of the inner board next to the dimension inputs, so players can judge what a shrink will crop before saving.
 
 ## Specific block appearance changes
 
@@ -177,6 +178,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * Improve piston extension/retraction animation.
 * Add animation for the delivery box - animate tiles moving into it, and shrinking, as they're absorbed.
 * Animate fragile blocks shattering.
+* Interpolate movement inside a rune array while its contents are displayed and the array itself moved in the same tick: the nested previous world is matched by ID path, which works, but a resized array yields no interpolation source for that tick.
 
 # Larger projects, DEFER to later or never, and break up into tasks:
 

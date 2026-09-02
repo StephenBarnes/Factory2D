@@ -5,6 +5,11 @@ import {
   type ConfigurableComponentSnapshot,
 } from "../simulation/configurable-components";
 import { CIRCUIT_CHARGE_COLORS, type Charge } from "../simulation/circuit";
+import {
+  MAX_RUNE_ARRAY_DESCRIPTION_LENGTH,
+  MAX_RUNE_ARRAY_DIMENSION,
+  MIN_RUNE_ARRAY_DIMENSION,
+} from "../simulation/rune-array";
 import { TILE_DEFINITIONS, TileKind } from "../simulation/tile";
 import { expectDefined } from "../util/assert";
 
@@ -16,6 +21,14 @@ export type ComponentConfigurationSubmission =
       readonly width: number;
       readonly height: number;
       readonly values: readonly Charge[];
+    }
+  | {
+      readonly type: "array";
+      readonly width: number;
+      readonly height: number;
+      readonly description: string;
+      /** Whether the player asked to open the array's inner board after saving. */
+      readonly open: boolean;
     };
 
 export class ComponentConfigurationDialog {
@@ -32,9 +45,15 @@ export class ComponentConfigurationDialog {
   private readonly textPanel: HTMLElement;
   private readonly textLabel: HTMLElement;
   private readonly textInput: HTMLInputElement;
+  private readonly arrayPanel: HTMLElement;
+  private readonly arrayWidth: HTMLInputElement;
+  private readonly arrayHeight: HTMLInputElement;
+  private readonly arrayDescription: HTMLInputElement;
+  private readonly arrayOpenButton: HTMLButtonElement;
   private submit: ((submission: ComponentConfigurationSubmission) => void) | null = null;
   private romValues: Charge[] = [];
   private currentKind = TileKind.Empty;
+  private openArrayAfterSave = false;
 
   constructor(private readonly dialog: HTMLDialogElement) {
     this.form = requiredDescendant(dialog, "[data-component-configuration-form]");
@@ -50,6 +69,21 @@ export class ComponentConfigurationDialog {
     this.textPanel = requiredDescendant(dialog, "[data-component-text-panel]");
     this.textLabel = requiredDescendant(dialog, "[data-component-text-label]");
     this.textInput = requiredDescendant(dialog, "[data-component-text-input]");
+    this.arrayPanel = requiredDescendant(dialog, "[data-component-array-panel]");
+    this.arrayWidth = requiredDescendant(dialog, "[data-component-array-width]");
+    this.arrayHeight = requiredDescendant(dialog, "[data-component-array-height]");
+    this.arrayDescription = requiredDescendant(dialog, "[data-component-array-description]");
+    this.arrayOpenButton = requiredDescendant(dialog, "[data-component-array-open]");
+    for (const input of [this.arrayWidth, this.arrayHeight]) {
+      input.min = String(MIN_RUNE_ARRAY_DIMENSION);
+      input.max = String(MAX_RUNE_ARRAY_DIMENSION);
+      input.step = "2";
+    }
+    this.arrayDescription.maxLength = MAX_RUNE_ARRAY_DESCRIPTION_LENGTH;
+    this.arrayOpenButton.addEventListener("click", () => {
+      this.openArrayAfterSave = true;
+      this.form.requestSubmit();
+    });
 
     requiredDescendant<HTMLButtonElement>(dialog, "[data-component-configuration-cancel]")
       .addEventListener("click", () => this.close());
@@ -80,10 +114,15 @@ export class ComponentConfigurationDialog {
     this.numericPanel.hidden = configuration.type !== "number";
     this.romPanel.hidden = configuration.type !== "grid";
     this.textPanel.hidden = configuration.type !== "text";
+    this.arrayPanel.hidden = configuration.type !== "array";
     this.numericInput.disabled = configuration.type !== "number";
     this.romWidth.disabled = configuration.type !== "grid";
     this.romHeight.disabled = configuration.type !== "grid";
     this.textInput.disabled = configuration.type !== "text";
+    this.arrayWidth.disabled = configuration.type !== "array";
+    this.arrayHeight.disabled = configuration.type !== "array";
+    this.arrayDescription.disabled = configuration.type !== "array";
+    this.openArrayAfterSave = false;
 
     if (configuration.type === "number") {
       if (state.type !== "delay" && state.type !== "counter") {
@@ -107,6 +146,18 @@ export class ComponentConfigurationDialog {
       this.description.textContent =
         `Name the signal panel line, using at most ${configuration.maximumLength} characters. ` +
         "Leave it empty to show the line number.";
+    } else if (configuration.type === "array") {
+      if (state.type !== "array") {
+        throw new Error(`${TILE_DEFINITIONS[kind].name} is missing array state`);
+      }
+      this.arrayWidth.value = String(state.world.width);
+      this.arrayHeight.value = String(state.world.height);
+      this.arrayDescription.value = state.description;
+      this.description.textContent =
+        `Choose odd dimensions from ${MIN_RUNE_ARRAY_DIMENSION} through ` +
+        `${MAX_RUNE_ARRAY_DIMENSION}; existing contents stay centered. The four edge-center ` +
+        "cells connect to the array's sides. Open the array to place components inside it " +
+        "with the usual tools, or press Enter while hovering it on the board.";
     } else {
       if (state.type !== "rom" && state.type !== "checker") {
         throw new Error(`${TILE_DEFINITIONS[kind].name} is missing value grid state`);
@@ -128,6 +179,8 @@ export class ComponentConfigurationDialog {
     } else if (configuration.type === "text") {
       this.textInput.focus();
       this.textInput.select();
+    } else if (configuration.type === "array") {
+      this.arrayDescription.focus();
     } else {
       this.romWidth.focus();
     }
@@ -146,6 +199,7 @@ export class ComponentConfigurationDialog {
       throw new Error("Configuration dialog has no active component");
     }
     if (!this.form.reportValidity()) {
+      this.openArrayAfterSave = false;
       return;
     }
     const submit = this.submit;
@@ -153,6 +207,16 @@ export class ComponentConfigurationDialog {
       submit({ type: "number", value: this.numericInput.valueAsNumber });
     } else if (configuration.type === "text") {
       submit({ type: "text", value: this.textInput.value.trim() });
+    } else if (configuration.type === "array") {
+      const open = this.openArrayAfterSave;
+      this.openArrayAfterSave = false;
+      submit({
+        type: "array",
+        width: this.arrayWidth.valueAsNumber,
+        height: this.arrayHeight.valueAsNumber,
+        description: this.arrayDescription.value.trim(),
+        open,
+      });
     } else {
       const width = this.romWidth.valueAsNumber;
       const height = this.romHeight.valueAsNumber;

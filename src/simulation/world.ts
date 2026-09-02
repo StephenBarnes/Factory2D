@@ -7,14 +7,21 @@ import {
   MIN_ROM_DIMENSION,
   snapshotComponentState,
   stateFromSnapshot,
+  transformComponentSnapshot,
   validateComponentSnapshot,
   validateSignalLabel,
   type ConfigurableComponentSnapshot,
   type ConfigurableComponentState,
+  type RuneArrayComponentState,
 } from "./configurable-components";
 import { isCharge, type Charge } from "./circuit";
 import { furnaceRecipeFor } from "./furnace";
 import { PuzzleResult } from "./puzzle-result";
+import {
+  requireRuneArrayDimension,
+  transformRuneArrayPorts,
+  validateRuneArrayDescription,
+} from "./rune-array";
 import {
   Direction,
   directionX,
@@ -99,6 +106,14 @@ export class World {
     return this.revisionValue;
   }
 
+  /**
+   * Records an external change to state this world owns indirectly, such as an edit inside
+   * a rune array's inner board, so revision-keyed caches of this world rebuild.
+   */
+  touchRevision(): void {
+    this.revisionValue += 1;
+  }
+
   get puzzleResult(): PuzzleResult {
     return this.puzzleResultValue;
   }
@@ -134,6 +149,9 @@ export class World {
     if (this.kinds[index] === TileKind.WireCrossing) {
       throw new Error("Wire crossing charges must be read from a circuit port");
     }
+    if (this.kinds[index] === TileKind.RuneArray) {
+      throw new Error("Rune array charges must be read from a circuit port");
+    }
     return this.charges[index] as Charge;
   }
 
@@ -156,6 +174,9 @@ export class World {
     }
     if (kind === TileKind.WireCrossing && charge !== 0) {
       throw new Error("Wire crossing charges must specify a circuit axis");
+    }
+    if (kind === TileKind.RuneArray && charge !== 0) {
+      throw new Error("Rune array charges must specify a side port");
     }
     if (
       this.charges[index] !== charge ||
@@ -200,21 +221,42 @@ export class World {
   }
 
 
+  /**
+   * Commits resolved circuit charges. `portCharges` holds four charges per cell in
+   * direction order and is applied only to rune arrays, whose side networks are stored
+   * on their component state instead of the shared per-cell charge.
+   */
   applyCircuitCharges(
     charges: Int8Array,
     crossingVerticalCharges: Int8Array,
     isolatedOutputCharges: Int8Array,
+    portCharges: Int8Array,
   ): void {
     if (
       charges.length !== this.cellCount ||
       crossingVerticalCharges.length !== this.cellCount ||
-      isolatedOutputCharges.length !== this.cellCount
+      isolatedOutputCharges.length !== this.cellCount ||
+      portCharges.length !== this.cellCount * 4
     ) {
       throw new RangeError("Circuit charge buffers must match the world cell count");
     }
 
     let changed = false;
     for (let index = 0; index < this.cellCount; index += 1) {
+      const kind = this.kinds[index] as TileKind;
+      if (kind === TileKind.RuneArray) {
+        const state = this.requireRuneArrayStateAtIndex(index);
+        for (let side = 0; side < 4; side += 1) {
+          const portCharge = expectDefined(portCharges[index * 4 + side], "rune array port charge");
+          if (!isCharge(portCharge)) {
+            throw new RangeError(`Invalid rune array port charge ${portCharge}`);
+          }
+          if (state.ports[side] !== portCharge) {
+            state.ports[side] = portCharge;
+            changed = true;
+          }
+        }
+      }
       const charge = expectDefined(charges[index], "circuit charge");
       const verticalCharge = expectDefined(
         crossingVerticalCharges[index],
@@ -233,9 +275,11 @@ export class World {
           `Invalid circuit charges ${charge}, ${verticalCharge}, ${isolatedOutputCharge}`,
         );
       }
-      const kind = this.kinds[index] as TileKind;
-      if (charge !== 0 && TILE_DEFINITIONS[kind].circuitPorts === 0) {
-        throw new Error(`Non-circuit tile at index ${index} cannot hold charge`);
+      if (
+        charge !== 0 &&
+        (TILE_DEFINITIONS[kind].circuitPorts === 0 || kind === TileKind.RuneArray)
+      ) {
+        throw new Error(`Tile at index ${index} cannot hold a shared charge`);
       }
       if (verticalCharge !== 0 && kind !== TileKind.WireCrossing) {
         throw new Error(`Non-crossing tile at index ${index} cannot hold vertical charge`);
@@ -373,6 +417,51 @@ export class World {
     this.charges[index] = 0;
     this.revisionValue += 1;
     return true;
+  }
+
+  /** Live inner board of the rune array at `index`; callers must not retain it across edits. */
+  runeArrayWorldAtIndex(index: number): World {
+    return this.requireRuneArrayStateAtIndex(index).world;
+  }
+
+  runeArrayWorldAt(x: number, y: number): World {
+    return this.runeArrayWorldAtIndex(this.indexOf(x, y));
+  }
+
+  /**
+   * Resizes a rune array's inner board, keeping existing contents centered so the
+   * edge-center ports stay on the same centerlines, and updates its description.
+   * Returns whether anything changed.
+   */
+  configureRuneArray(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    description: string,
+  ): boolean {
+    const index = this.indexOf(x, y);
+    const state = this.requireRuneArrayStateAtIndex(index);
+    requireRuneArrayDimension(width, "Rune array width");
+    requireRuneArrayDimension(height, "Rune array height");
+    validateRuneArrayDescription(description);
+    let changed = false;
+    if (state.description !== description) {
+      state.description = description;
+      changed = true;
+    }
+    if (state.world.width !== width || state.world.height !== height) {
+      const previous = state.world;
+      const next = new World(width, height);
+      next.copyCenteredFrom(previous);
+      state.world = next;
+      state.ports.fill(0);
+      changed = true;
+    }
+    if (changed) {
+      this.revisionValue += 1;
+    }
+    return changed;
   }
 
   configureSignalLabel(x: number, y: number, label: string): boolean {
@@ -780,10 +869,20 @@ export class World {
       this.furnaceProgress[destination] = 0;
       this.furnaceTargetIds[destination] = 0;
       if (componentConfigurationForKind(kind) !== null) {
-        this.componentStates.set(
-          id,
-          cloneComponentState(this.requireComponentStateAtIndex(source)),
-        );
+        const copiedState = cloneComponentState(this.requireComponentStateAtIndex(source));
+        if (copiedState.type === "array") {
+          const mirrorVertically = ownerOrientation === Direction.Up ||
+            ownerOrientation === Direction.Down;
+          copiedState.world = copiedState.world.transformed(
+            0,
+            !mirrorVertically,
+            mirrorVertically,
+          );
+          copiedState.ports = Int8Array.from(
+            transformRuneArrayPorts(copiedState.ports, 0, !mirrorVertically, mirrorVertically),
+          );
+        }
+        this.componentStates.set(id, copiedState);
       }
     }
 
@@ -1062,7 +1161,10 @@ export class World {
     this.furnaceProgress[index] = 0;
     this.furnaceTargetIds[index] = 0;
     this.orientations[index] = orientation;
-    const componentState = createDefaultComponentState(kind);
+    const componentState = createDefaultComponentState(
+      kind,
+      (width, height) => new World(width, height),
+    );
     if (componentState !== null) {
       this.componentStates.set(id, componentState);
     }
@@ -1107,9 +1209,24 @@ export class World {
     this.furnaceTargetIds.set(source.furnaceTargetIds);
     this.rightWelds.set(source.rightWelds);
     this.downWelds.set(source.downWelds);
+    const previousStates = new Map(this.componentStates);
     this.componentStates.clear();
     for (const [id, state] of source.componentStates) {
-      this.componentStates.set(id, cloneComponentState(state));
+      const existing = previousStates.get(id);
+      if (
+        state.type === "array" &&
+        existing?.type === "array" &&
+        existing.world.width === state.world.width &&
+        existing.world.height === state.world.height &&
+        existing.world !== state.world
+      ) {
+        existing.world.copyFrom(state.world);
+        existing.ports.set(state.ports);
+        existing.description = state.description;
+        this.componentStates.set(id, existing);
+      } else {
+        this.componentStates.set(id, cloneComponentState(state));
+      }
     }
     this.puzzleResultValue = source.puzzleResultValue;
     this.nextTileId = source.nextTileId;
@@ -1139,6 +1256,9 @@ export class World {
       throw new RangeError(`Invalid circuit direction ${direction as number}`);
     }
     const kind = this.kinds[index] as TileKind;
+    if (kind === TileKind.RuneArray) {
+      return this.requireRuneArrayStateAtIndex(index).ports[direction] as Charge;
+    }
     const definition = TILE_DEFINITIONS[kind];
     const outputSides = orientedSides(
       definition.circuitOutputPorts,
@@ -1419,6 +1539,177 @@ export class World {
 
 
 
+  /**
+   * Builds a new world holding this board flipped, then rotated clockwise by
+   * `quarterTurns`, with tile orientations, nested rune arrays, circuit charges, and welds
+   * mapped along. Furnace progress is dropped and tiles receive fresh identities.
+   */
+  transformed(
+    quarterTurns: number,
+    flippedHorizontally: boolean,
+    flippedVertically: boolean,
+  ): World {
+    const turns = ((quarterTurns % 4) + 4) % 4;
+    const swapAxes = (turns & 1) === 1;
+    const result = new World(
+      swapAxes ? this.height : this.width,
+      swapAxes ? this.width : this.height,
+    );
+    const mapCell = (x: number, y: number): { x: number; y: number } => {
+      let sourceX = flippedHorizontally ? this.width - 1 - x : x;
+      let sourceY = flippedVertically ? this.height - 1 - y : y;
+      for (let turn = 0; turn < turns; turn += 1) {
+        const rotatedHeight = (turn & 1) === 0 ? this.height : this.width;
+        const rotatedX = rotatedHeight - 1 - sourceY;
+        sourceY = sourceX;
+        sourceX = rotatedX;
+      }
+      return { x: sourceX, y: sourceY };
+    };
+    const mapDirection = (direction: Direction): Direction => {
+      let mapped = direction;
+      if (flippedHorizontally) {
+        mapped = flipDirectionHorizontally(mapped);
+      }
+      if (flippedVertically) {
+        mapped = flipDirectionVertically(mapped);
+      }
+      return ((mapped + turns) & 3) as Direction;
+    };
+
+    for (let y = 0; y < this.height; y += 1) {
+      for (let x = 0; x < this.width; x += 1) {
+        const index = y * this.width + x;
+        const kind = this.kinds[index] as TileKind;
+        if (kind === TileKind.Empty) {
+          continue;
+        }
+        const destination = mapCell(x, y);
+        const orientation = orientationForKind(
+          kind,
+          mapDirection(this.orientations[index] as Direction),
+        );
+        result.place(destination.x, destination.y, kind, orientation);
+        const snapshot = this.componentStateSnapshotAtIndex(index);
+        if (snapshot !== null) {
+          result.restoreComponentState(
+            destination.x,
+            destination.y,
+            transformComponentSnapshot(snapshot, turns, flippedHorizontally, flippedVertically),
+          );
+        }
+        if (kind === TileKind.WireCrossing) {
+          const horizontal = this.charges[index] as Charge;
+          const vertical = this.crossingVerticalCharges[index] as Charge;
+          if (swapAxes) {
+            result.setCrossingCharges(destination.x, destination.y, vertical, horizontal);
+          } else {
+            result.setCrossingCharges(destination.x, destination.y, horizontal, vertical);
+          }
+        } else if (kind !== TileKind.RuneArray && this.charges[index] !== 0) {
+          result.setCharge(destination.x, destination.y, this.charges[index] as Charge);
+        }
+        if (this.isolatedOutputCharges[index] !== 0) {
+          result.setIsolatedOutputCharge(
+            destination.x,
+            destination.y,
+            this.isolatedOutputCharges[index] as Charge,
+          );
+        }
+      }
+    }
+    for (let y = 0; y < this.height; y += 1) {
+      for (let x = 0; x < this.width; x += 1) {
+        const index = y * this.width + x;
+        const source = mapCell(x, y);
+        if (x < this.width - 1 && this.rightWelds[index] === 1) {
+          const neighbor = mapCell(x + 1, y);
+          result.setWeld(source.x, source.y, neighbor.x, neighbor.y, true);
+        }
+        if (y < this.height - 1 && this.downWelds[index] === 1) {
+          const neighbor = mapCell(x, y + 1);
+          result.setWeld(source.x, source.y, neighbor.x, neighbor.y, true);
+        }
+      }
+    }
+    result.puzzleResultValue = this.puzzleResultValue;
+    return result;
+  }
+
+  /**
+   * Copies every tile, component state, charge, and weld of `source` into this world with
+   * both centers aligned, dropping whatever falls outside. Both dimensions must share the
+   * source's parity so the centers coincide on whole cells.
+   */
+  copyCenteredFrom(source: World): void {
+    const offsetX = (this.width - source.width) / 2;
+    const offsetY = (this.height - source.height) / 2;
+    if (!Number.isInteger(offsetX) || !Number.isInteger(offsetY)) {
+      throw new RangeError("Centered copies require dimensions of matching parity");
+    }
+    const inside = (x: number, y: number): boolean =>
+      x >= 0 && x < this.width && y >= 0 && y < this.height;
+    for (let y = 0; y < source.height; y += 1) {
+      for (let x = 0; x < source.width; x += 1) {
+        const targetX = x + offsetX;
+        const targetY = y + offsetY;
+        if (!inside(targetX, targetY)) {
+          continue;
+        }
+        const index = y * source.width + x;
+        const kind = source.kinds[index] as TileKind;
+        if (kind === TileKind.Empty) {
+          continue;
+        }
+        this.place(targetX, targetY, kind, source.orientations[index] as Direction);
+        const snapshot = source.componentStateSnapshotAtIndex(index);
+        if (snapshot !== null) {
+          this.restoreComponentState(targetX, targetY, snapshot);
+        }
+        if (kind === TileKind.WireCrossing) {
+          this.setCrossingCharges(
+            targetX,
+            targetY,
+            source.charges[index] as Charge,
+            source.crossingVerticalCharges[index] as Charge,
+          );
+        } else if (kind !== TileKind.RuneArray && source.charges[index] !== 0) {
+          this.setCharge(targetX, targetY, source.charges[index] as Charge);
+        }
+        if (source.isolatedOutputCharges[index] !== 0) {
+          this.setIsolatedOutputCharge(
+            targetX,
+            targetY,
+            source.isolatedOutputCharges[index] as Charge,
+          );
+        }
+      }
+    }
+    for (let y = 0; y < source.height; y += 1) {
+      for (let x = 0; x < source.width; x += 1) {
+        const index = y * source.width + x;
+        const targetX = x + offsetX;
+        const targetY = y + offsetY;
+        if (
+          x < source.width - 1 &&
+          source.rightWelds[index] === 1 &&
+          inside(targetX, targetY) &&
+          inside(targetX + 1, targetY)
+        ) {
+          this.setWeld(targetX, targetY, targetX + 1, targetY, true);
+        }
+        if (
+          y < source.height - 1 &&
+          source.downWelds[index] === 1 &&
+          inside(targetX, targetY) &&
+          inside(targetX, targetY + 1)
+        ) {
+          this.setWeld(targetX, targetY, targetX, targetY + 1, true);
+        }
+      }
+    }
+  }
+
   private indexOf(x: number, y: number): number {
     if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || x >= this.width || y < 0 || y >= this.height) {
       throw new RangeError(`Cell (${x}, ${y}) is outside the world`);
@@ -1597,6 +1888,17 @@ export class World {
     const kind = this.kinds[index] as TileKind;
     if (!componentStateMatchesKind(state, kind)) {
       throw new Error(`Component state at index ${index} does not match ${TILE_DEFINITIONS[kind].name}`);
+    }
+    return state;
+  }
+
+  private requireRuneArrayStateAtIndex(index: number): RuneArrayComponentState {
+    if (this.kinds[index] !== TileKind.RuneArray) {
+      throw new Error(`Tile at index ${index} is not a rune array`);
+    }
+    const state = this.requireComponentStateAtIndex(index);
+    if (state.type !== "array") {
+      throw new Error(`Rune array at index ${index} has mismatched component state`);
     }
     return state;
   }

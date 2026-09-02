@@ -1,94 +1,51 @@
 import { CircuitResolver } from "./circuit-resolver";
-import { DeliveryResolver } from "./delivery-resolver";
-import { DuplicatorResolver } from "./duplicator-resolver";
-import { FurnaceResolver } from "./furnace-resolver";
-import { MotionWorkspace } from "./motion-workspace";
-import { PuzzleResult } from "./puzzle-result";
-import { WeldOperationResolver } from "./weld-operation-resolver";
-import { Direction, oppositeDirection, TileKind } from "./tile";
-import { World } from "./world";
-import { WeldedBodyIndex } from "./welded-body-index";
+import { MAX_RUNE_ARRAY_DEPTH } from "./rune-array";
+import { TileKind } from "./tile";
+import type { World } from "./world";
+import { WorldRuntime } from "./world-runtime";
 
 /**
  * Advances a world in discrete ticks. Every movement decision is collected from
  * the start-of-tick state, then committed as a separate phase.
+ *
+ * Rune arrays nest complete boards inside single tiles. Each tick first collects intents
+ * in every world of that tree, then resolves all circuits together so signals cross array
+ * boundaries without delay, and finally commits the remaining phases in every world with
+ * children before their parents, so a duplicated array copies its fully advanced contents.
  */
 export class Simulation {
   readonly world: World;
-  private readonly circuitResolver: CircuitResolver;
-  private readonly weldedBodies: WeldedBodyIndex;
-  private readonly deliveryResolver: DeliveryResolver;
-  private readonly duplicatorResolver: DuplicatorResolver;
-  private readonly furnaceResolver: FurnaceResolver;
-  private readonly motionWorkspace: MotionWorkspace;
-  private readonly weldOperationResolver: WeldOperationResolver;
+  private readonly circuitResolver = new CircuitResolver();
+  private readonly rootRuntime: WorldRuntime;
+  private readonly runtimesByWorld = new WeakMap<World, WorldRuntime>();
+  private readonly runtimes: WorldRuntime[] = [];
   tick = 0;
 
   constructor(world: World) {
     this.world = world;
-    this.circuitResolver = new CircuitResolver(world);
-    this.weldedBodies = new WeldedBodyIndex(world);
-    this.deliveryResolver = new DeliveryResolver(world, this.weldedBodies);
-    this.duplicatorResolver = new DuplicatorResolver(world, this.weldedBodies);
-    this.furnaceResolver = new FurnaceResolver(world);
-    this.motionWorkspace = new MotionWorkspace(world);
-    this.weldOperationResolver = new WeldOperationResolver(world);
+    this.rootRuntime = new WorldRuntime(world);
+    this.runtimesByWorld.set(world, this.rootRuntime);
   }
 
   step(interpolationSource?: World): number {
-    this.resolveVictoryBlocks();
-    this.weldedBodies.collect();
-    this.deliveryResolver.collect();
-    this.duplicatorResolver.collect();
-    this.weldOperationResolver.collect();
-    this.circuitResolver.resolve(
-      this.tick,
-      this.deliveryResolver.absorptionTargetIndices,
-      this.weldOperationResolver.successfulOperationIndices,
-    );
-    this.duplicatorResolver.commit(interpolationSource);
-    this.weldOperationResolver.commit();
-    this.furnaceResolver.resolve(this.circuitResolver.furnaceDisabled);
-    this.deliveryResolver.commit();
-    const movementCount = this.motionWorkspace.resolveOrdinaryMovements(this.tick);
-    const pistonMovementCount = this.motionWorkspace.resolvePistons();
+    this.collectRuntimes();
+    for (const runtime of this.runtimes) {
+      runtime.collectIntents();
+    }
+    this.circuitResolver.resolve(this.tick, this.runtimes);
+    let movementCount = 0;
+    for (let position = this.runtimes.length - 1; position >= 0; position -= 1) {
+      const runtime = this.runtimes[position];
+      if (runtime === undefined) {
+        throw new Error(`Missing world runtime at position ${position}`);
+      }
+      movementCount += runtime.commitPhases(
+        this.tick,
+        position === 0 ? interpolationSource : undefined,
+      );
+    }
     this.tick += 1;
-    return movementCount + pistonMovementCount;
-  }
-
-  private resolveVictoryBlocks(): void {
-    if (this.world.puzzleResult !== PuzzleResult.InProgress) {
-      return;
-    }
-
-    let hasWinIntent = false;
-    let hasLossIntent = false;
-    for (let index = 0; index < this.world.cellCount; index += 1) {
-      if (this.world.kindAtIndex(index) !== TileKind.Victory) {
-        continue;
-      }
-
-      for (let value = Direction.Up; value <= Direction.Left; value += 1) {
-        const direction = value as Direction;
-        if (!this.world.hasCircuitConnectionAtIndex(index, direction)) {
-          continue;
-        }
-        const inputIndex = this.neighborIndex(index, direction);
-        if (inputIndex < 0) {
-          throw new Error(`Connected victory input at index ${index} has no neighbor`);
-        }
-        const inputCharge = this.world.chargeAtPortIndex(
-          inputIndex,
-          oppositeDirection(direction),
-        );
-        hasWinIntent ||= inputCharge === 1;
-        hasLossIntent ||= inputCharge === -1;
-      }
-    }
-
-    if (hasWinIntent !== hasLossIntent) {
-      this.world.markPuzzleResult(hasWinIntent ? PuzzleResult.Won : PuzzleResult.Lost);
-    }
+    return movementCount;
   }
 
   resetTo(snapshot: World): void {
@@ -96,22 +53,37 @@ export class Simulation {
     this.tick = 0;
   }
 
-  private neighborIndex(index: number, direction: Direction): number {
-    const x = index % this.world.width;
-    switch (direction) {
-      case Direction.Up:
-        return index >= this.world.width ? index - this.world.width : -1;
-      case Direction.Right:
-        return x < this.world.width - 1 ? index + 1 : -1;
-      case Direction.Down:
-        return index < this.world.cellCount - this.world.width
-          ? index + this.world.width
-          : -1;
-      case Direction.Left:
-        return x > 0 ? index - 1 : -1;
-      default:
-        throw new RangeError(`Invalid direction ${direction as number}`);
+  /** Lists the root runtime followed by every nested world, parents before children. */
+  private collectRuntimes(): void {
+    this.runtimes.length = 0;
+    this.rootRuntime.parent = null;
+    this.rootRuntime.parentIndex = -1;
+    this.rootRuntime.depth = 0;
+    this.runtimes.push(this.rootRuntime);
+    for (let position = 0; position < this.runtimes.length; position += 1) {
+      const runtime = this.runtimes[position];
+      if (runtime === undefined) {
+        throw new Error(`Missing world runtime at position ${position}`);
+      }
+      const world = runtime.world;
+      for (let index = 0; index < world.cellCount; index += 1) {
+        if (world.kindAtIndex(index) !== TileKind.RuneArray) {
+          continue;
+        }
+        if (runtime.depth >= MAX_RUNE_ARRAY_DEPTH) {
+          throw new Error(`Rune arrays nest deeper than ${MAX_RUNE_ARRAY_DEPTH} levels`);
+        }
+        const innerWorld = world.runeArrayWorldAtIndex(index);
+        let inner = this.runtimesByWorld.get(innerWorld);
+        if (inner === undefined) {
+          inner = new WorldRuntime(innerWorld);
+          this.runtimesByWorld.set(innerWorld, inner);
+        }
+        inner.parent = runtime;
+        inner.parentIndex = index;
+        inner.depth = runtime.depth + 1;
+        this.runtimes.push(inner);
+      }
     }
   }
-
 }

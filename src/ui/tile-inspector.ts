@@ -232,6 +232,17 @@ export class TileInspector {
               : `MATCHED ${componentState.cursor}`;
         this.configuration.textContent =
           `${componentState.width} × ${componentState.height} · ${valueCount} VALUES · ${status}`;
+      } else if (componentState.type === "array") {
+        const inner = componentState.world;
+        let occupied = 0;
+        for (let index = 0; index < inner.cellCount; index += 1) {
+          if (inner.kindAtIndex(index) !== TileKind.Empty) {
+            occupied += 1;
+          }
+        }
+        this.configuration.textContent =
+          `${inner.width} × ${inner.height} · ${occupied} COMPONENT${occupied === 1 ? "" : "S"}` +
+          (componentState.description === "" ? "" : ` · "${componentState.description}"`);
       } else {
         this.configuration.textContent = componentState.label === ""
           ? "UNNAMED SIGNAL"
@@ -239,7 +250,9 @@ export class TileInspector {
       }
       this.configurationControls.textContent = componentConfiguration.type === "number"
         ? "E EDIT · SHIFT + WHEEL ADJUST"
-        : "E EDIT";
+        : componentConfiguration.type === "array"
+          ? "E CONFIGURE · ENTER OPEN"
+          : "E EDIT";
     }
     this.attractionRow.hidden = definition.attractionRange === 0;
     if (definition.attractionRange > 0) {

@@ -23,6 +23,7 @@ export function createBodyCell(): BodyCell {
     circuitConnections: WeldSide.None,
     circuitPortCharges: 0,
     componentState: null,
+    nestedWorld: null,
     seamRight: false,
     seamDown: false,
   };
@@ -47,7 +48,13 @@ export function populateBodyCell(world: World, index: number, cell: BodyCell): v
     : networkCharge;
   cell.circuitConnections = WeldSide.None;
   cell.circuitPortCharges = 0;
-  cell.componentState = world.componentStateSnapshotAtIndex(index);
+  if (cell.kind === TileKind.RuneArray) {
+    cell.componentState = null;
+    cell.nestedWorld = world.runeArrayWorldAtIndex(index);
+  } else {
+    cell.componentState = world.componentStateSnapshotAtIndex(index);
+    cell.nestedWorld = null;
+  }
   const inputPorts = orientedSides(
     TILE_DEFINITIONS[cell.kind].circuitInputPorts,
     cell.orientation,

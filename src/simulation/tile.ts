@@ -35,6 +35,7 @@ export const enum TileKind {
   Monitor = 33,
   Grapher = 34,
   Checker = 35,
+  RuneArray = 36,
 }
 
 export const enum Direction {
@@ -87,6 +88,7 @@ export const enum TileDecorationStyle {
   Monitor = 30,
   Grapher = 31,
   Checker = 32,
+  RuneArray = 33,
 }
 
 export const enum PaletteCategory {
@@ -911,6 +913,29 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     shadow: "#3a3121",
     decorationStyle: TileDecorationStyle.Checker,
     decorationColor: "#f2dea3",
+  },
+  [TileKind.RuneArray]: {
+    name: "Rune Array",
+    boardCode: "A",
+    palette: {
+      order: 36,
+      category: PaletteCategory.Circuits,
+      description: "Holds a miniature board whose four edge-center cells connect to its sides with no delay. Press E to configure, Enter to open",
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.All,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#3d4770",
+    shadow: "#212642",
+    decorationStyle: TileDecorationStyle.RuneArray,
+    decorationColor: "#c7d3f4",
   },
   [TileKind.Piston]: {
     name: "Piston",

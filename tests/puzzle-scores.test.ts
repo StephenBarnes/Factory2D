@@ -55,6 +55,31 @@ describe("puzzle scores", () => {
     });
   });
 
+  it("charges full price for every component inside a rune array without widening the footprint", () => {
+    const puzzle: PuzzleDefinition = {
+      ...scoringPuzzle(),
+      availableComponents: new PuzzleComponents([
+        { kind: TileKind.FixedCharge, price: 3 },
+        { kind: TileKind.Stone, price: 7 },
+        { kind: TileKind.RuneArray, price: 10 },
+      ]),
+    };
+    const solution = new World(6, 5);
+    solution.place(1, 1, TileKind.RuneArray);
+    solution.configureRuneArray(1, 1, 3, 3, "");
+    const inner = solution.runeArrayWorldAt(1, 1);
+    inner.place(0, 2, TileKind.Stone);
+    inner.place(1, 2, TileKind.RuneArray);
+    inner.runeArrayWorldAt(1, 2).place(2, 4, TileKind.FixedCharge);
+    solution.place(0, 0, TileKind.Stone);
+
+    expect(computePuzzleDesignMetrics(puzzle, solution)).toEqual({
+      price: 10 + 7 + 10 + 3,
+      footprintWidth: 1,
+      footprintHeight: 1,
+    });
+  });
+
   it("gives an empty editable design zero price and footprint", () => {
     expect(computePuzzleDesignMetrics(scoringPuzzle(), new World(6, 5))).toEqual({
       price: 0,

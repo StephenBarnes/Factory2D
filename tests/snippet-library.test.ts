@@ -235,6 +235,39 @@ describe("snippet restriction", () => {
     expect(world.kindAt(1, 0)).toBe(TileKind.Delay);
   });
 
+  it("restricts the contents of rune arrays recursively while keeping allowed arrays", () => {
+    const world = new World(2, 1);
+    world.place(0, 0, TileKind.RuneArray);
+    world.place(1, 0, TileKind.Stone);
+    world.configureRuneArray(0, 0, 3, 1, "kept");
+    const inner = world.runeArrayWorldAt(0, 0);
+    inner.place(0, 0, TileKind.Conduit);
+    inner.place(1, 0, TileKind.Delay, Direction.Left);
+    inner.place(2, 0, TileKind.RuneArray);
+    inner.configureRuneArray(2, 0, 1, 1, "");
+    inner.runeArrayWorldAt(2, 0).place(0, 0, TileKind.Delay);
+
+    const unchanged = restrictSnippetWorld(world, () => true);
+    expect(unchanged.world).toBe(world);
+
+    const restricted = restrictSnippetWorld(world, (kind) => kind !== TileKind.Delay);
+    expect(restricted.removedKinds).toEqual([TileKind.Delay]);
+    expect(restricted.world).not.toBe(world);
+    const restrictedInner = restricted.world?.runeArrayWorldAt(0, 0);
+    expect(restrictedInner?.kindAt(0, 0)).toBe(TileKind.Conduit);
+    expect(restrictedInner?.kindAt(1, 0)).toBe(TileKind.Empty);
+    expect(restrictedInner?.kindAt(2, 0)).toBe(TileKind.RuneArray);
+    expect(restrictedInner?.runeArrayWorldAt(2, 0).kindAt(0, 0)).toBe(TileKind.Empty);
+    const state = restricted.world?.componentStateSnapshotAt(0, 0);
+    expect(state?.type === "array" && state.description).toBe("kept");
+    expect(inner.kindAt(1, 0)).toBe(TileKind.Delay);
+
+    const withoutArrays = restrictSnippetWorld(world, (kind) => kind !== TileKind.RuneArray);
+    expect(withoutArrays.removedKinds).toEqual([TileKind.RuneArray]);
+    expect(withoutArrays.world?.kindAt(0, 0)).toBe(TileKind.Empty);
+    expect(withoutArrays.world?.kindAt(1, 0)).toBe(TileKind.Stone);
+  });
+
   it("reports a null world when nothing remains", () => {
     const world = deserializeSnippetBoard(requireBoard(machineWorld()));
     const restricted = restrictSnippetWorld(world, () => false);

@@ -1,5 +1,7 @@
 import type { ConfigurableComponentSnapshot } from "../simulation/configurable-components";
 import { CIRCUIT_CHARGE_COLORS, type Charge } from "../simulation/circuit";
+import { runeArrayPortCellIndex } from "../simulation/rune-array";
+import type { World } from "../simulation/world";
 import {
   Direction,
   directionX,
@@ -9,7 +11,7 @@ import {
   TileDecorationStyle,
   type TileDefinition,
   WeldSide,
-  type TileKind,
+  TileKind,
 } from "../simulation/tile";
 import { expectDefined } from "../util/assert";
 
@@ -25,6 +27,8 @@ export interface BodyCell {
   circuitPortCharges: number;
   circuitConnections: WeldSide;
   componentState?: ConfigurableComponentSnapshot | null;
+  /** Live inner board of a rune array, read only while drawing; never a snapshot. */
+  nestedWorld?: World | null;
   /** The right neighbor belongs to the same body but this edge is not welded. */
   seamRight: boolean;
   /** The down neighbor belongs to the same body but this edge is not welded. */
@@ -146,6 +150,7 @@ export function drawBody(
       cell.circuitConnections,
       cell.circuitPortCharges,
       cell.componentState ?? null,
+      cell.nestedWorld ?? null,
       animationTime,
       cell.pistonTransition ?? 0,
       cell.pistonTransitionProgress ?? 1,
@@ -180,7 +185,10 @@ const SINGLE_CELL: [BodyCell] = [
   },
 ];
 
-/** Draws a lone tile (palette previews and placement hover). */
+/**
+ * Draws a lone tile (palette previews, placement hover, and the virtual port conduits
+ * around a nested rune array board), optionally with a charge and connected sides.
+ */
 export function drawTile(
   context: CanvasRenderingContext2D,
   left: number,
@@ -189,9 +197,15 @@ export function drawTile(
   kind: TileKind,
   orientation: Direction = Direction.Up,
   animationTime = 0,
+  outputCharge: Charge = 0,
+  circuitConnections: WeldSide = WeldSide.None,
+  circuitPortCharges = 0,
 ): void {
   SINGLE_CELL[0].kind = kind;
   SINGLE_CELL[0].orientation = orientation;
+  SINGLE_CELL[0].outputCharge = outputCharge;
+  SINGLE_CELL[0].circuitConnections = circuitConnections;
+  SINGLE_CELL[0].circuitPortCharges = circuitPortCharges;
   drawBody(context, left, top, size, SINGLE_CELL, 1, undefined, animationTime);
 }
 
@@ -405,6 +419,7 @@ function drawDecoration(
   circuitConnections: WeldSide,
   circuitPortCharges: number,
   componentState: ConfigurableComponentSnapshot | null,
+  nestedWorld: World | null,
   animationTime: number,
   pistonTransition: -1 | 0 | 1,
   pistonTransitionProgress: number,
@@ -414,7 +429,8 @@ function drawDecoration(
       definition.decorationStyle === TileDecorationStyle.Delay ||
       definition.decorationStyle === TileDecorationStyle.Counter ||
       definition.decorationStyle === TileDecorationStyle.Rom ||
-      definition.decorationStyle === TileDecorationStyle.Checker;
+      definition.decorationStyle === TileDecorationStyle.Checker ||
+      definition.decorationStyle === TileDecorationStyle.RuneArray;
     drawCircuitConnections(
       context,
       left,
@@ -426,7 +442,8 @@ function drawDecoration(
         (definition.circuitInputPorts | definition.circuitOutputPorts) as WeldSide,
         orientation,
       ) |
-        (definition.decorationStyle === TileDecorationStyle.WireCrossing
+        (definition.decorationStyle === TileDecorationStyle.WireCrossing ||
+            definition.decorationStyle === TileDecorationStyle.RuneArray
           ? WeldSide.All
           : WeldSide.None)) as WeldSide,
       hasComponentDisplay ? 0.39 : 0.26,
@@ -1076,6 +1093,10 @@ function drawDecoration(
       );
       break;
     }
+    case TileDecorationStyle.RuneArray: {
+      drawRuneArrayGlyph(context, left, top, size, definition, nestedWorld);
+      break;
+    }
     case TileDecorationStyle.Checker: {
       const state = componentState?.type === "checker" ? componentState : null;
       const width = state?.width ?? 3;
@@ -1254,6 +1275,89 @@ function drawDecoration(
     case TileDecorationStyle.None:
       break;
   }
+}
+
+/**
+ * Miniature map of a rune array's inner board: a dark panel with one cell per inner tile,
+ * occupied cells filled with their tile color, and notches marking the four side ports.
+ * Without an inner board (palette previews) it shows the default empty 5x5 grid.
+ */
+function drawRuneArrayGlyph(
+  context: CanvasRenderingContext2D,
+  left: number,
+  top: number,
+  size: number,
+  definition: TileDefinition,
+  nestedWorld: World | null,
+): void {
+  const width = nestedWorld?.width ?? 5;
+  const height = nestedWorld?.height ?? 5;
+  const panelSize = size * 0.6;
+  const panelLeft = left + (size - panelSize) / 2;
+  const panelTop = top + (size - panelSize) / 2;
+  context.fillStyle = "#10131f";
+  context.fillRect(panelLeft, panelTop, panelSize, panelSize);
+
+  const cellSize = panelSize / Math.max(width, height);
+  const gridLeft = panelLeft + (panelSize - width * cellSize) / 2;
+  const gridTop = panelTop + (panelSize - height * cellSize) / 2;
+  const inset = Math.max(0.35, cellSize * 0.12);
+  if (nestedWorld !== null) {
+    for (let index = 0; index < nestedWorld.cellCount; index += 1) {
+      const kind = nestedWorld.kindAtIndex(index);
+      if (kind === TileKind.Empty) {
+        continue;
+      }
+      const x = gridLeft + (index % width) * cellSize;
+      const y = gridTop + Math.floor(index / width) * cellSize;
+      context.fillStyle = TILE_DEFINITIONS[kind].fill;
+      context.fillRect(
+        x + inset,
+        y + inset,
+        Math.max(1, cellSize - inset * 2),
+        Math.max(1, cellSize - inset * 2),
+      );
+    }
+  }
+  if (cellSize >= 4) {
+    context.strokeStyle = "rgb(199 211 244 / 14%)";
+    context.lineWidth = 1;
+    context.beginPath();
+    for (let column = 1; column < width; column += 1) {
+      const x = Math.round(gridLeft + column * cellSize) + 0.5;
+      context.moveTo(x, gridTop);
+      context.lineTo(x, gridTop + height * cellSize);
+    }
+    for (let row = 1; row < height; row += 1) {
+      const y = Math.round(gridTop + row * cellSize) + 0.5;
+      context.moveTo(gridLeft, y);
+      context.lineTo(gridLeft + width * cellSize, y);
+    }
+    context.stroke();
+  }
+
+  context.fillStyle = definition.decorationColor;
+  const notch = Math.max(1.5, size * 0.07);
+  for (let value = Direction.Up; value <= Direction.Left; value += 1) {
+    const side = value as Direction;
+    const portIndex = runeArrayPortCellIndex(width, height, side);
+    const centerX = gridLeft + ((portIndex % width) + 0.5) * cellSize;
+    const centerY = gridTop + (Math.floor(portIndex / width) + 0.5) * cellSize;
+    const edgeX = side === Direction.Left
+      ? panelLeft
+      : side === Direction.Right
+        ? panelLeft + panelSize
+        : centerX;
+    const edgeY = side === Direction.Up
+      ? panelTop
+      : side === Direction.Down
+        ? panelTop + panelSize
+        : centerY;
+    context.fillRect(edgeX - notch / 2, edgeY - notch / 2, notch, notch);
+  }
+  context.strokeStyle = definition.decorationColor;
+  context.lineWidth = Math.max(1, size * 0.03);
+  context.strokeRect(panelLeft + 0.5, panelTop + 0.5, panelSize - 1, panelSize - 1);
 }
 
 function drawCircuitConnections(

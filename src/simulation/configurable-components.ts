@@ -1,5 +1,12 @@
 import { isCharge, type Charge } from "./circuit";
+import {
+  DEFAULT_RUNE_ARRAY_DIMENSION,
+  requireRuneArrayDimension,
+  transformRuneArrayPorts,
+  validateRuneArrayDescription,
+} from "./rune-array";
 import { TileKind } from "./tile";
+import type { World } from "./world";
 
 export const MIN_DELAY_LENGTH = 1;
 export const MAX_DELAY_LENGTH = 27;
@@ -34,10 +41,17 @@ export interface TextComponentConfiguration {
   readonly configureOnPlacement: boolean;
 }
 
+/** Odd inner-board dimensions plus a free-text description for rune arrays. */
+export interface RuneArrayComponentConfiguration {
+  readonly type: "array";
+  readonly configureOnPlacement: boolean;
+}
+
 export type ComponentConfiguration =
   | NumericComponentConfiguration
   | TernaryGridComponentConfiguration
-  | TextComponentConfiguration;
+  | TextComponentConfiguration
+  | RuneArrayComponentConfiguration;
 
 const DELAY_CONFIGURATION: NumericComponentConfiguration = Object.freeze({
   type: "number",
@@ -63,6 +77,10 @@ const SIGNAL_LABEL_CONFIGURATION: TextComponentConfiguration = Object.freeze({
   maximumLength: MAX_SIGNAL_LABEL_LENGTH,
   configureOnPlacement: false,
 });
+const RUNE_ARRAY_CONFIGURATION: RuneArrayComponentConfiguration = Object.freeze({
+  type: "array",
+  configureOnPlacement: false,
+});
 
 export function componentConfigurationForKind(
   kind: TileKind,
@@ -78,6 +96,8 @@ export function componentConfigurationForKind(
     case TileKind.Monitor:
     case TileKind.Grapher:
       return SIGNAL_LABEL_CONFIGURATION;
+    case TileKind.RuneArray:
+      return RUNE_ARRAY_CONFIGURATION;
     default:
       return null;
   }
@@ -128,13 +148,26 @@ export interface GrapherComponentState {
   label: string;
 }
 
+/**
+ * Rune array: an exclusively owned inner board whose edge-center cells are wired to the
+ * array's outer sides. `ports[direction]` holds the committed charge of each side's
+ * circuit network, which the inner board sees as a virtual conduit beyond its edge.
+ */
+export interface RuneArrayComponentState {
+  readonly type: "array";
+  description: string;
+  ports: Int8Array;
+  world: World;
+}
+
 export type ConfigurableComponentState =
   | DelayComponentState
   | CounterComponentState
   | RomComponentState
   | CheckerComponentState
   | MonitorComponentState
-  | GrapherComponentState;
+  | GrapherComponentState
+  | RuneArrayComponentState;
 
 export interface DelayComponentSnapshot {
   readonly type: "delay";
@@ -176,16 +209,30 @@ export interface GrapherComponentSnapshot {
   readonly label: string;
 }
 
+/** Snapshot of a rune array; `world` is an independent copy of the inner board. */
+export interface RuneArrayComponentSnapshot {
+  readonly type: "array";
+  readonly description: string;
+  readonly ports: readonly Charge[];
+  readonly world: World;
+}
+
 export type ConfigurableComponentSnapshot =
   | DelayComponentSnapshot
   | CounterComponentSnapshot
   | RomComponentSnapshot
   | CheckerComponentSnapshot
   | MonitorComponentSnapshot
-  | GrapherComponentSnapshot;
+  | GrapherComponentSnapshot
+  | RuneArrayComponentSnapshot;
 
+/**
+ * Creates the initial state for a configurable tile. Rune arrays need an inner board, which
+ * `createWorld` supplies so this module never constructs worlds itself.
+ */
 export function createDefaultComponentState(
   kind: TileKind,
+  createWorld: (width: number, height: number) => World,
 ): ConfigurableComponentState | null {
   switch (kind) {
     case TileKind.Delay:
@@ -222,6 +269,13 @@ export function createDefaultComponentState(
       return { type: "monitor", label: "" };
     case TileKind.Grapher:
       return { type: "grapher", label: "" };
+    case TileKind.RuneArray:
+      return {
+        type: "array",
+        description: "",
+        ports: new Int8Array(4),
+        world: createWorld(DEFAULT_RUNE_ARRAY_DIMENSION, DEFAULT_RUNE_ARRAY_DIMENSION),
+      };
     default:
       return null;
   }
@@ -264,6 +318,13 @@ export function cloneComponentState(
     case "monitor":
     case "grapher":
       return { type: state.type, label: state.label };
+    case "array":
+      return {
+        type: "array",
+        description: state.description,
+        ports: state.ports.slice(),
+        world: state.world.clone(),
+      };
   }
 }
 
@@ -304,6 +365,13 @@ export function snapshotComponentState(
     case "monitor":
     case "grapher":
       return { type: state.type, label: state.label };
+    case "array":
+      return {
+        type: "array",
+        description: state.description,
+        ports: Array.from(state.ports) as Charge[],
+        world: state.world.clone(),
+      };
   }
 }
 
@@ -350,6 +418,12 @@ export function validateComponentSnapshot(
     case "monitor":
     case "grapher":
       validateSignalLabel(snapshot.label);
+      break;
+    case "array":
+      validateRuneArrayDescription(snapshot.description);
+      requireCharges(snapshot.ports, 4, "Rune array ports");
+      requireRuneArrayDimension(snapshot.world.width, "Rune array width");
+      requireRuneArrayDimension(snapshot.world.height, "Rune array height");
       break;
   }
 }
@@ -404,7 +478,40 @@ export function stateFromSnapshot(
     case "monitor":
     case "grapher":
       return { type: snapshot.type, label: snapshot.label };
+    case "array":
+      return {
+        type: "array",
+        description: snapshot.description,
+        ports: Int8Array.from(snapshot.ports),
+        world: snapshot.world.clone(),
+      };
   }
+}
+
+/**
+ * Applies a selection-style transform (flips, then clockwise quarter turns) to a
+ * component snapshot. Only rune arrays carry oriented state: their inner board and side
+ * ports rotate with the tile so gravity inside always stays downward.
+ */
+export function transformComponentSnapshot(
+  snapshot: ConfigurableComponentSnapshot,
+  quarterTurns: number,
+  flippedHorizontally: boolean,
+  flippedVertically: boolean,
+): ConfigurableComponentSnapshot {
+  if (snapshot.type !== "array") {
+    return snapshot;
+  }
+  const turns = ((quarterTurns % 4) + 4) % 4;
+  if (turns === 0 && !flippedHorizontally && !flippedVertically) {
+    return snapshot;
+  }
+  return {
+    type: "array",
+    description: snapshot.description,
+    ports: transformRuneArrayPorts(snapshot.ports, turns, flippedHorizontally, flippedVertically),
+    world: snapshot.world.transformed(turns, flippedHorizontally, flippedVertically),
+  };
 }
 
 export function componentStateMatchesKind(
@@ -417,7 +524,8 @@ export function componentStateMatchesKind(
     (state.type === "rom" && kind === TileKind.Rom) ||
     (state.type === "checker" && kind === TileKind.Checker) ||
     (state.type === "monitor" && kind === TileKind.Monitor) ||
-    (state.type === "grapher" && kind === TileKind.Grapher)
+    (state.type === "grapher" && kind === TileKind.Grapher) ||
+    (state.type === "array" && kind === TileKind.RuneArray)
   );
 }
 
