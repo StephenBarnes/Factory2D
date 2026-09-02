@@ -1,5 +1,6 @@
 import {
-  componentConfigurationForKind,
+  hasComponentState,
+  MAX_ASSEMBLER_OUTPUTS,
   MAX_COUNTER_THRESHOLD,
   MAX_DELAY_LENGTH,
   MAX_ROM_DIMENSION,
@@ -24,36 +25,20 @@ import {
   directionX,
   directionY,
   oppositeDirection,
+  orientationForKind,
   TILE_DEFINITIONS,
-  TILE_KINDS,
+  tileKindForBoardCode,
   TileKind,
 } from "./tile";
 import { World } from "./world";
 import { expectDefined } from "../util/assert";
 
 const FORMAT_NAME = "factory2d-board";
-const FORMAT_VERSION = 13;
+const FORMAT_VERSION = 14;
 export const MIN_BOARD_WIDTH = 1;
 export const MAX_BOARD_WIDTH = 400;
 export const MIN_BOARD_HEIGHT = 1;
 export const MAX_BOARD_HEIGHT = 300;
-
-function buildTileKindsByCode(): Readonly<Record<string, TileKind | undefined>> {
-  const kindsByCode = Object.create(null) as Record<string, TileKind | undefined>;
-  for (const kind of TILE_KINDS) {
-    const definition = TILE_DEFINITIONS[kind];
-    if (definition.boardCode.length !== 1) {
-      throw new Error(`Board code for ${definition.name} must be one character`);
-    }
-    if (Object.hasOwn(kindsByCode, definition.boardCode)) {
-      throw new Error(`Duplicate board tile code "${definition.boardCode}"`);
-    }
-    kindsByCode[definition.boardCode] = kind;
-  }
-  return kindsByCode;
-}
-
-const TILE_KINDS_BY_CODE = buildTileKindsByCode();
 
 const DIRECTION_NAMES: Readonly<Record<Direction, string>> = {
   [Direction.Up]: "up",
@@ -150,6 +135,19 @@ interface ExportedSignalLabel {
   readonly label: string;
 }
 
+interface ExportedAssemblerOutput {
+  readonly code: string;
+  readonly direction: string;
+}
+
+/** Assembler output queue: the outputs still to be emitted, in emission order. */
+interface ExportedAssembler {
+  readonly x: number;
+  readonly y: number;
+  readonly type: "assembler";
+  readonly pending: readonly ExportedAssemblerOutput[];
+}
+
 /** Rune array whose inner board nests the same contents format without tick or result. */
 interface ExportedRuneArray {
   readonly x: number;
@@ -161,6 +159,7 @@ interface ExportedRuneArray {
 }
 
 type ExportedComponent =
+  | ExportedAssembler
   | ExportedDelay
   | ExportedCounter
   | ExportedRom
@@ -313,6 +312,16 @@ function exportBoardContents(world: World): ExportedBoardContents {
             ports: componentState.ports,
             board: exportBoardContents(componentState.world),
           });
+        } else if (componentState.type === "assembler") {
+          components.push({
+            x,
+            y,
+            type: "assembler",
+            pending: componentState.pending.map((output) => ({
+              code: TILE_DEFINITIONS[output.kind].boardCode,
+              direction: DIRECTION_NAMES[output.orientation],
+            })),
+          });
         } else {
           components.push({ x, y, ...componentState });
         }
@@ -428,7 +437,7 @@ function importBoardContents(
 
     for (let x = 0; x < width; x += 1) {
       const code = expectDefined(row[x], `tile code at (${x}, ${y})`);
-      const kind = TILE_KINDS_BY_CODE[code];
+      const kind = tileKindForBoardCode(code);
       if (kind === undefined) {
         throw new Error(`${label} grid cell (${x}, ${y}) has unknown tile code "${code}"`);
       }
@@ -607,7 +616,7 @@ function importBoardContents(
   const componentStatesByCell = new Array<ConfigurableComponentSnapshot | undefined>(
     width * height,
   );
-  const hasComponentState = new Uint8Array(width * height);
+  const componentStateAtCell = new Uint8Array(width * height);
   for (let index = 0; index < components.length; index += 1) {
     const componentLabel = entryLabel(label, depth, "Component", index);
     const entry = requireObject(components[index], componentLabel, [
@@ -627,9 +636,12 @@ function importBoardContents(
       "description",
       "ports",
       "board",
+      "pending",
     ]);
     const type = requireString(entry.type, `${componentLabel} type`);
-    const fields = type === "delay"
+    const fields = type === "assembler"
+      ? ["x", "y", "type", "pending"]
+      : type === "delay"
       ? ["x", "y", "type", "length", "cursor", "data"]
       : type === "counter"
         ? ["x", "y", "type", "threshold", "count"]
@@ -649,12 +661,37 @@ function importBoardContents(
     const x = requireInteger(state.x, `${componentLabel} x`, 0, width - 1);
     const y = requireInteger(state.y, `${componentLabel} y`, 0, height - 1);
     const cellIndex = y * width + x;
-    if (hasComponentState[cellIndex] === 1) {
+    if (componentStateAtCell[cellIndex] === 1) {
       throw new Error(`${componentLabel} duplicates cell (${x}, ${y})`);
     }
     const kind = expectDefined(kinds[cellIndex], `tile kind at (${x}, ${y})`) as TileKind;
     let snapshot: ConfigurableComponentSnapshot;
-    if (type === "delay") {
+    if (type === "assembler") {
+      const pending = requireArray(state.pending, `${componentLabel} pending`);
+      if (pending.length > MAX_ASSEMBLER_OUTPUTS) {
+        throw new Error(
+          `${componentLabel} pending must contain at most ${MAX_ASSEMBLER_OUTPUTS} outputs`,
+        );
+      }
+      snapshot = {
+        type: "assembler",
+        pending: pending.map((value, outputIndex) => {
+          const outputLabel = `${componentLabel} pending output ${outputIndex}`;
+          const output = requireObject(value, outputLabel, ["code", "direction"]);
+          const code = requireString(output.code, `${outputLabel} code`);
+          const outputKind = tileKindForBoardCode(code);
+          if (outputKind === undefined || outputKind === TileKind.Empty) {
+            throw new Error(`${outputLabel} has invalid tile code "${code}"`);
+          }
+          const directionName = requireString(output.direction, `${outputLabel} direction`);
+          const direction = DIRECTIONS_BY_NAME[directionName];
+          if (direction === undefined) {
+            throw new Error(`${outputLabel} has unknown direction "${directionName}"`);
+          }
+          return { kind: outputKind, orientation: orientationForKind(outputKind, direction) };
+        }),
+      };
+    } else if (type === "delay") {
       const length = requireInteger(
         state.length,
         `${componentLabel} length`,
@@ -754,9 +791,9 @@ function importBoardContents(
         };
       }
     }
-    const expectedConfiguration = componentConfigurationForKind(kind);
     if (
-      expectedConfiguration === null ||
+      !hasComponentState(kind) ||
+      (snapshot.type === "assembler" && kind !== TileKind.Assembler) ||
       (snapshot.type === "delay" && kind !== TileKind.Delay) ||
       (snapshot.type === "counter" && kind !== TileKind.Counter) ||
       (snapshot.type === "rom" && kind !== TileKind.Rom) ||
@@ -768,14 +805,11 @@ function importBoardContents(
       throw new Error(`${componentLabel} does not match the tile at (${x}, ${y})`);
     }
     componentStatesByCell[cellIndex] = snapshot;
-    hasComponentState[cellIndex] = 1;
+    componentStateAtCell[cellIndex] = 1;
   }
   for (let cellIndex = 0; cellIndex < kinds.length; cellIndex += 1) {
     const kind = expectDefined(kinds[cellIndex], `tile kind at index ${cellIndex}`) as TileKind;
-    if (
-      componentConfigurationForKind(kind) !== null &&
-      hasComponentState[cellIndex] !== 1
-    ) {
+    if (hasComponentState(kind) && componentStateAtCell[cellIndex] !== 1) {
       const x = cellIndex % width;
       const y = (cellIndex - x) / width;
       throw new Error(`Configurable component at (${x}, ${y}) is missing state`);

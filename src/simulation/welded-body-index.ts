@@ -95,6 +95,18 @@ export class WeldedBodyIndex {
     return head;
   }
 
+  memberCountAtRoot(root: number): number {
+    return expectDefined(this.bodyMemberCounts[root], "welded body member count");
+  }
+
+  minXAtRoot(root: number): number {
+    return expectDefined(this.bodyMinXs[root], "welded body minimum x");
+  }
+
+  minYAtRoot(root: number): number {
+    return expectDefined(this.bodyMinYs[root], "welded body minimum y");
+  }
+
   nextMember(index: number): number {
     return expectDefined(this.nextBodyMembers[index], "next welded body member");
   }

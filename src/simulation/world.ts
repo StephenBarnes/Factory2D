@@ -3,6 +3,8 @@ import {
   componentConfigurationForKind,
   componentStateMatchesKind,
   createDefaultComponentState,
+  hasComponentState,
+  MAX_ASSEMBLER_OUTPUTS,
   MAX_ROM_DIMENSION,
   MIN_ROM_DIMENSION,
   snapshotComponentState,
@@ -10,6 +12,7 @@ import {
   transformComponentSnapshot,
   validateComponentSnapshot,
   validateSignalLabel,
+  type AssemblerComponentState,
   type ConfigurableComponentSnapshot,
   type ConfigurableComponentState,
   type RuneArrayComponentState,
@@ -317,7 +320,7 @@ export class World {
   componentStateSnapshotAtIndex(index: number): ConfigurableComponentSnapshot | null {
     this.assertIndex(index);
     const kind = this.kinds[index] as TileKind;
-    if (componentConfigurationForKind(kind) === null) {
+    if (!hasComponentState(kind)) {
       return null;
     }
     return snapshotComponentState(this.requireComponentStateAtIndex(index));
@@ -713,6 +716,121 @@ export class World {
     }
   }
 
+  /** Number of outputs an assembler still has to emit. */
+  assemblerPendingCountAtIndex(index: number): number {
+    const state = this.requireAssemblerStateAtIndex(index);
+    return state.pendingKinds.length - state.cursor;
+  }
+
+  /**
+   * Commits one assembler phase. Each assembler with a consume target atomically removes
+   * every cell owned by it in `bodyOwners` and replaces its empty queue with the
+   * `queuedCounts[assembler]` outputs stored at `assembler * MAX_ASSEMBLER_OUTPUTS` in the
+   * queued buffers. Each assembler with an emit target then places its next queued output
+   * there with a fresh identity and no welds. Callers resolve conflicts beforehand; any
+   * inconsistency here is an error.
+   */
+  applyAssemblerResults(
+    consumeTargetIndices: Int32Array,
+    bodyOwners: Int32Array,
+    queuedCounts: Uint8Array,
+    queuedKinds: Uint8Array,
+    queuedOrientations: Uint8Array,
+    emitTargetIndices: Int32Array,
+  ): void {
+    if (
+      consumeTargetIndices.length !== this.cellCount ||
+      bodyOwners.length !== this.cellCount ||
+      queuedCounts.length !== this.cellCount ||
+      queuedKinds.length !== this.cellCount * MAX_ASSEMBLER_OUTPUTS ||
+      queuedOrientations.length !== this.cellCount * MAX_ASSEMBLER_OUTPUTS ||
+      emitTargetIndices.length !== this.cellCount
+    ) {
+      throw new RangeError("Assembler buffers must match the world cell count");
+    }
+
+    let changed = false;
+    for (let assembler = 0; assembler < this.cellCount; assembler += 1) {
+      const target = expectDefined(consumeTargetIndices[assembler], "assembler consume target");
+      if (target < 0) {
+        continue;
+      }
+      this.assertIndex(target);
+      if (this.kinds[assembler] !== TileKind.Assembler) {
+        throw new Error(`Non-assembler tile at index ${assembler} cannot consume a body`);
+      }
+      const state = this.requireAssemblerStateAtIndex(assembler);
+      if (state.cursor < state.pendingKinds.length) {
+        throw new Error(`Assembler at index ${assembler} consumed while outputs were pending`);
+      }
+      const outputCount = expectDefined(queuedCounts[assembler], "assembler queued count");
+      if (outputCount < 1 || outputCount > MAX_ASSEMBLER_OUTPUTS) {
+        throw new RangeError(`Assembler at index ${assembler} queues ${outputCount} outputs`);
+      }
+      if (this.kinds[target] === TileKind.Empty || bodyOwners[target] !== assembler) {
+        throw new Error(`Assembler at index ${assembler} lost its input body`);
+      }
+      let removed = 0;
+      for (let index = 0; index < this.cellCount; index += 1) {
+        if (bodyOwners[index] !== assembler) {
+          continue;
+        }
+        if (this.kinds[index] === TileKind.Empty) {
+          throw new Error(`Assembler at index ${assembler} has an empty body member`);
+        }
+        this.clearIndex(index);
+        removed += 1;
+      }
+      if (removed === 0) {
+        throw new Error(`Assembler at index ${assembler} consumed no cells`);
+      }
+      const base = assembler * MAX_ASSEMBLER_OUTPUTS;
+      state.pendingKinds = queuedKinds.slice(base, base + outputCount);
+      state.pendingOrientations = queuedOrientations.slice(base, base + outputCount);
+      state.cursor = 0;
+      for (let slot = 0; slot < outputCount; slot += 1) {
+        const kind = state.pendingKinds[slot] as TileKind;
+        if (kind === TileKind.Empty || TILE_DEFINITIONS[kind] === undefined) {
+          throw new Error(`Assembler at index ${assembler} queued invalid tile kind ${kind}`);
+        }
+        state.pendingOrientations[slot] = orientationForKind(
+          kind,
+          state.pendingOrientations[slot] as Direction,
+        );
+      }
+      changed = true;
+    }
+
+    for (let assembler = 0; assembler < this.cellCount; assembler += 1) {
+      const target = expectDefined(emitTargetIndices[assembler], "assembler emit target");
+      if (target < 0) {
+        continue;
+      }
+      this.assertIndex(target);
+      if (this.kinds[assembler] !== TileKind.Assembler) {
+        throw new Error(`Non-assembler tile at index ${assembler} cannot emit an output`);
+      }
+      if (this.kinds[target] !== TileKind.Empty) {
+        throw new Error(`Assembler output cell at index ${target} is occupied`);
+      }
+      const state = this.requireAssemblerStateAtIndex(assembler);
+      if (state.cursor >= state.pendingKinds.length) {
+        throw new Error(`Assembler at index ${assembler} has nothing to emit`);
+      }
+      const kind = state.pendingKinds[state.cursor] as TileKind;
+      const orientation = state.pendingOrientations[state.cursor] as Direction;
+      state.cursor += 1;
+      const targetX = target % this.width;
+      const targetY = (target - targetX) / this.width;
+      this.place(targetX, targetY, kind, orientation);
+      changed = true;
+    }
+
+    if (changed) {
+      this.revisionValue += 1;
+    }
+  }
+
   applyDeliveryAbsorptions(
     targetIndices: Int32Array,
     bodyOwners: Int32Array,
@@ -868,11 +986,11 @@ export class World {
       );
       this.furnaceProgress[destination] = 0;
       this.furnaceTargetIds[destination] = 0;
-      if (componentConfigurationForKind(kind) !== null) {
+      if (hasComponentState(kind)) {
         const copiedState = cloneComponentState(this.requireComponentStateAtIndex(source));
+        const mirrorVertically = ownerOrientation === Direction.Up ||
+          ownerOrientation === Direction.Down;
         if (copiedState.type === "array") {
-          const mirrorVertically = ownerOrientation === Direction.Up ||
-            ownerOrientation === Direction.Down;
           copiedState.world = copiedState.world.transformed(
             0,
             !mirrorVertically,
@@ -881,6 +999,17 @@ export class World {
           copiedState.ports = Int8Array.from(
             transformRuneArrayPorts(copiedState.ports, 0, !mirrorVertically, mirrorVertically),
           );
+        } else if (copiedState.type === "assembler") {
+          for (let slot = 0; slot < copiedState.pendingOrientations.length; slot += 1) {
+            const pendingKind = copiedState.pendingKinds[slot] as TileKind;
+            const pendingOrientation = copiedState.pendingOrientations[slot] as Direction;
+            copiedState.pendingOrientations[slot] = orientationForKind(
+              pendingKind,
+              mirrorVertically
+                ? flipDirectionVertically(pendingOrientation)
+                : flipDirectionHorizontally(pendingOrientation),
+            );
+          }
         }
         this.componentStates.set(id, copiedState);
       }
@@ -1888,6 +2017,17 @@ export class World {
     const kind = this.kinds[index] as TileKind;
     if (!componentStateMatchesKind(state, kind)) {
       throw new Error(`Component state at index ${index} does not match ${TILE_DEFINITIONS[kind].name}`);
+    }
+    return state;
+  }
+
+  private requireAssemblerStateAtIndex(index: number): AssemblerComponentState {
+    if (this.kinds[index] !== TileKind.Assembler) {
+      throw new Error(`Tile at index ${index} is not an assembler`);
+    }
+    const state = this.requireComponentStateAtIndex(index);
+    if (state.type !== "assembler") {
+      throw new Error(`Assembler at index ${index} has mismatched component state`);
     }
     return state;
   }

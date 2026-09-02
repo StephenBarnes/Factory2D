@@ -43,8 +43,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 
 # New non-circuit components
 
-* Assemblers that convert a group of blocks welded in a specific way into one block. For example iron and copper blocks welded in a specific way are converted to a piston block. We also want this to be able to convert one block to multiple (unwelded) blocks - so need to store a queue of blocks to emit, emit them one-by-one when the output tile is empty, and prevent the assembler from consuming more inputs when the queue is non-empty.
-* Assembler should match output rotation (relative to recipe's output) to input rotation (relative to recipe's defined input). For example if a recipe says that an "L" shape of welded blocks is assembled to a right-facing magnet, then a rotated "L" shape should produce a magnet with corresponding rotation relative to the recipe's "right-facing".
+* Assembler follow-ups: the recipe table is a placeholder (sensor pair, piston, lodestone, conduits) and needs real game recipes once copper and other materials exist. Consider mirrored inputs (maybe just adding a mirrored recipe), a side circuit pulse on consumption or emission like the delivery box, a side disable input, and per-recipe output welds.
 * Flipper: attaches to one block, then flips the entire connected/welded group of blocks around that line horizontally or vertically, if it would not collide/overlap other blocks. Similar to Kaizen game's rotation.
 * Laser splitter: splits everything in a line.
 * Add a press/stamper/crusher. Behaves similarly to the piston, but (1) if piston extension is blocked by another tile, and that tile can't be moved, it instead unwelds and destroys that tile; and (2) we have a list of recipes for transforming the tile that the extended arm touches, on extension.
@@ -61,7 +60,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 # New component behaviors
 
 * Add a fragility flag to tile kinds, and set it to true for glass blocks. A fragile block with no welds that drops and then stops falling should be deleted (later animated with a shatter effect). Maybe don't break if it fell only one tile before stopping; would require storing I think two bits per fragile block, for whether it fell in the previous tick and whether it'll shatter on stopping. Could create interesting puzzles like lowering them one block at a time with pistons, or welding before dropping and then unwelding.
-* Make the glass block look transparent. Add a transparent flag in the tile definition. Make the sensor not detect transparent blocks.
+* Make the glass block look more like transparent glass. (By adding some specular, and making it darker in the middle and brighter on the rim to simulate Fresnel, I think. We don't need actual transparency since the background is a fixed color.) Add a transparent flag in the tile definition. Make the sensor not detect transparent blocks.
 * Add an indestructible flag. Blocks like crushers and drills should not be able to destroy these. Needed to prevent some exploits when solving puzzles, e.g. by drilling into the ground and activating the victory block.
 * Furnaces could have special behavior if said neighbor is surrounded by certain other neighbors. Add this to furnace recipes.
 * Furnaces could trigger a block to weld to neighbors after cooking it. Add to furnace recipes.

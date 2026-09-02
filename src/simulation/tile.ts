@@ -36,6 +36,7 @@ export const enum TileKind {
   Grapher = 34,
   Checker = 35,
   RuneArray = 36,
+  Assembler = 37,
 }
 
 export const enum Direction {
@@ -89,6 +90,7 @@ export const enum TileDecorationStyle {
   Grapher = 31,
   Checker = 32,
   RuneArray = 33,
+  Assembler = 34,
 }
 
 export const enum PaletteCategory {
@@ -937,6 +939,29 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationStyle: TileDecorationStyle.RuneArray,
     decorationColor: "#c7d3f4",
   },
+  [TileKind.Assembler]: {
+    name: "Assembler",
+    boardCode: "H",
+    palette: {
+      order: 30,
+      category: PaletteCategory.Mechanisms,
+      description: "Consumes a welded body ahead that matches a recipe in any rotation, then emits the recipe's outputs one per tick behind it",
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.Right | WeldSide.Left,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.None,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#5f5347",
+    shadow: "#342c25",
+    decorationStyle: TileDecorationStyle.Assembler,
+    decorationColor: "#e2b96a",
+  },
   [TileKind.Piston]: {
     name: "Piston",
     boardCode: "P",
@@ -1003,6 +1028,28 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
 export const TILE_KINDS: readonly TileKind[] = Object.freeze(
   Object.keys(TILE_DEFINITIONS).map((value) => Number(value) as TileKind),
 );
+
+function buildTileKindsByBoardCode(): Readonly<Record<string, TileKind | undefined>> {
+  const kindsByCode = Object.create(null) as Record<string, TileKind | undefined>;
+  for (const kind of TILE_KINDS) {
+    const definition = TILE_DEFINITIONS[kind];
+    if (definition.boardCode.length !== 1) {
+      throw new Error(`Board code for ${definition.name} must be one character`);
+    }
+    if (Object.hasOwn(kindsByCode, definition.boardCode)) {
+      throw new Error(`Duplicate board tile code "${definition.boardCode}"`);
+    }
+    kindsByCode[definition.boardCode] = kind;
+  }
+  return kindsByCode;
+}
+
+const TILE_KINDS_BY_BOARD_CODE = buildTileKindsByBoardCode();
+
+/** Tile kind for a compact board code, or undefined for an unknown code. */
+export function tileKindForBoardCode(code: string): TileKind | undefined {
+  return TILE_KINDS_BY_BOARD_CODE[code];
+}
 
 export function isTileKind(value: number): value is TileKind {
   return Number.isInteger(value) && Object.hasOwn(TILE_DEFINITIONS, value);

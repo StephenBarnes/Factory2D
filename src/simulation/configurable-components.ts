@@ -5,7 +5,14 @@ import {
   transformRuneArrayPorts,
   validateRuneArrayDescription,
 } from "./rune-array";
-import { TileKind } from "./tile";
+import {
+  Direction,
+  flipDirectionHorizontally,
+  flipDirectionVertically,
+  isTileKind,
+  orientationForKind,
+  TileKind,
+} from "./tile";
 import type { World } from "./world";
 
 export const MIN_DELAY_LENGTH = 1;
@@ -19,6 +26,8 @@ export const MAX_ROM_DIMENSION = 9;
 export const DEFAULT_ROM_WIDTH = 3;
 export const DEFAULT_ROM_HEIGHT = 3;
 export const MAX_SIGNAL_LABEL_LENGTH = 12;
+/** Upper bound on the outputs one assembler recipe emits, and on a pending queue. */
+export const MAX_ASSEMBLER_OUTPUTS = 9;
 
 export interface NumericComponentConfiguration {
   readonly type: "number";
@@ -81,6 +90,15 @@ const RUNE_ARRAY_CONFIGURATION: RuneArrayComponentConfiguration = Object.freeze(
   type: "array",
   configureOnPlacement: false,
 });
+
+/**
+ * Whether a tile kind carries sparse per-identity component state. Every configurable
+ * component does; assemblers do too, for their pending output queue, without offering
+ * any player-editable configuration.
+ */
+export function hasComponentState(kind: TileKind): boolean {
+  return kind === TileKind.Assembler || componentConfigurationForKind(kind) !== null;
+}
 
 export function componentConfigurationForKind(
   kind: TileKind,
@@ -160,7 +178,25 @@ export interface RuneArrayComponentState {
   world: World;
 }
 
+export interface AssemblerOutput {
+  readonly kind: TileKind;
+  readonly orientation: Direction;
+}
+
+/**
+ * Assembler output queue. `pendingKinds` and `pendingOrientations` hold every output of
+ * the consumed recipe; `cursor` counts the outputs already emitted, so the queue is empty
+ * once `cursor` reaches the length.
+ */
+export interface AssemblerComponentState {
+  readonly type: "assembler";
+  pendingKinds: Uint8Array;
+  pendingOrientations: Uint8Array;
+  cursor: number;
+}
+
 export type ConfigurableComponentState =
+  | AssemblerComponentState
   | DelayComponentState
   | CounterComponentState
   | RomComponentState
@@ -217,7 +253,14 @@ export interface RuneArrayComponentSnapshot {
   readonly world: World;
 }
 
+/** Snapshot of an assembler's queue holding only the outputs still to be emitted. */
+export interface AssemblerComponentSnapshot {
+  readonly type: "assembler";
+  readonly pending: readonly AssemblerOutput[];
+}
+
 export type ConfigurableComponentSnapshot =
+  | AssemblerComponentSnapshot
   | DelayComponentSnapshot
   | CounterComponentSnapshot
   | RomComponentSnapshot
@@ -235,6 +278,13 @@ export function createDefaultComponentState(
   createWorld: (width: number, height: number) => World,
 ): ConfigurableComponentState | null {
   switch (kind) {
+    case TileKind.Assembler:
+      return {
+        type: "assembler",
+        pendingKinds: new Uint8Array(0),
+        pendingOrientations: new Uint8Array(0),
+        cursor: 0,
+      };
     case TileKind.Delay:
       return {
         type: "delay",
@@ -285,6 +335,13 @@ export function cloneComponentState(
   state: ConfigurableComponentState,
 ): ConfigurableComponentState {
   switch (state.type) {
+    case "assembler":
+      return {
+        type: "assembler",
+        pendingKinds: state.pendingKinds.slice(),
+        pendingOrientations: state.pendingOrientations.slice(),
+        cursor: state.cursor,
+      };
     case "delay":
       return {
         type: "delay",
@@ -332,6 +389,16 @@ export function snapshotComponentState(
   state: ConfigurableComponentState,
 ): ConfigurableComponentSnapshot {
   switch (state.type) {
+    case "assembler": {
+      const pending: AssemblerOutput[] = [];
+      for (let index = state.cursor; index < state.pendingKinds.length; index += 1) {
+        pending.push({
+          kind: state.pendingKinds[index] as TileKind,
+          orientation: state.pendingOrientations[index] as Direction,
+        });
+      }
+      return { type: "assembler", pending };
+    }
     case "delay":
       return {
         type: "delay",
@@ -379,6 +446,19 @@ export function validateComponentSnapshot(
   snapshot: ConfigurableComponentSnapshot,
 ): void {
   switch (snapshot.type) {
+    case "assembler":
+      if (!Array.isArray(snapshot.pending) || snapshot.pending.length > MAX_ASSEMBLER_OUTPUTS) {
+        throw new RangeError(
+          `Assembler queue must hold at most ${MAX_ASSEMBLER_OUTPUTS} pending outputs`,
+        );
+      }
+      for (const output of snapshot.pending) {
+        if (!isTileKind(output.kind) || output.kind === TileKind.Empty) {
+          throw new RangeError("Assembler queue contains an invalid tile kind");
+        }
+        requireInteger(output.orientation, "Assembler output orientation", Direction.Up, Direction.Left);
+      }
+      break;
     case "delay":
       requireInteger(snapshot.length, "Delay length", MIN_DELAY_LENGTH, MAX_DELAY_LENGTH);
       requireInteger(snapshot.cursor, "Delay cursor", 0, snapshot.length - 1);
@@ -445,6 +525,16 @@ export function stateFromSnapshot(
 ): ConfigurableComponentState {
   validateComponentSnapshot(snapshot);
   switch (snapshot.type) {
+    case "assembler":
+      return {
+        type: "assembler",
+        pendingKinds: Uint8Array.from(snapshot.pending, (output) => output.kind),
+        pendingOrientations: Uint8Array.from(
+          snapshot.pending,
+          (output) => orientationForKind(output.kind, output.orientation),
+        ),
+        cursor: 0,
+      };
     case "delay":
       return {
         type: "delay",
@@ -490,8 +580,9 @@ export function stateFromSnapshot(
 
 /**
  * Applies a selection-style transform (flips, then clockwise quarter turns) to a
- * component snapshot. Only rune arrays carry oriented state: their inner board and side
- * ports rotate with the tile so gravity inside always stays downward.
+ * component snapshot. Rune arrays rotate their inner board and side ports with the tile
+ * so gravity inside always stays downward, and assemblers rotate the orientations of
+ * their pending outputs. Other components carry no oriented state.
  */
 export function transformComponentSnapshot(
   snapshot: ConfigurableComponentSnapshot,
@@ -499,11 +590,22 @@ export function transformComponentSnapshot(
   flippedHorizontally: boolean,
   flippedVertically: boolean,
 ): ConfigurableComponentSnapshot {
-  if (snapshot.type !== "array") {
-    return snapshot;
-  }
   const turns = ((quarterTurns % 4) + 4) % 4;
   if (turns === 0 && !flippedHorizontally && !flippedVertically) {
+    return snapshot;
+  }
+  if (snapshot.type === "assembler") {
+    return {
+      type: "assembler",
+      pending: snapshot.pending.map((output) => transformAssemblerOutput(
+        output,
+        turns,
+        flippedHorizontally,
+        flippedVertically,
+      )),
+    };
+  }
+  if (snapshot.type !== "array") {
     return snapshot;
   }
   return {
@@ -514,11 +616,30 @@ export function transformComponentSnapshot(
   };
 }
 
+/** Flips, then rotates clockwise, the orientation of one queued assembler output. */
+export function transformAssemblerOutput(
+  output: AssemblerOutput,
+  quarterTurns: number,
+  flippedHorizontally: boolean,
+  flippedVertically: boolean,
+): AssemblerOutput {
+  let orientation = output.orientation;
+  if (flippedHorizontally) {
+    orientation = flipDirectionHorizontally(orientation);
+  }
+  if (flippedVertically) {
+    orientation = flipDirectionVertically(orientation);
+  }
+  orientation = ((orientation + quarterTurns) & 3) as Direction;
+  return { kind: output.kind, orientation: orientationForKind(output.kind, orientation) };
+}
+
 export function componentStateMatchesKind(
   state: ConfigurableComponentState | ConfigurableComponentSnapshot,
   kind: TileKind,
 ): boolean {
   return (
+    (state.type === "assembler" && kind === TileKind.Assembler) ||
     (state.type === "delay" && kind === TileKind.Delay) ||
     (state.type === "counter" && kind === TileKind.Counter) ||
     (state.type === "rom" && kind === TileKind.Rom) ||

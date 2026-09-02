@@ -610,6 +610,62 @@ function drawDecoration(
       context.restore();
       break;
     }
+    case TileDecorationStyle.Assembler: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.lineWidth = Math.max(1.5, size * 0.055);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      // Intake hopper on the pointed side narrowing into the anvil body.
+      context.fillStyle = "#2a2019";
+      context.strokeStyle = definition.decorationColor;
+      context.beginPath();
+      context.moveTo(-size * 0.3, -size * 0.32);
+      context.lineTo(size * 0.3, -size * 0.32);
+      context.lineTo(size * 0.12, -size * 0.08);
+      context.lineTo(-size * 0.12, -size * 0.08);
+      context.closePath();
+      context.fill();
+      context.stroke();
+      // Anvil.
+      context.beginPath();
+      context.moveTo(-size * 0.28, size * 0.0);
+      context.lineTo(size * 0.28, size * 0.0);
+      context.lineTo(size * 0.16, size * 0.1);
+      context.lineTo(size * 0.08, size * 0.1);
+      context.lineTo(size * 0.08, size * 0.2);
+      context.lineTo(size * 0.2, size * 0.28);
+      context.lineTo(-size * 0.2, size * 0.28);
+      context.lineTo(-size * 0.08, size * 0.2);
+      context.lineTo(-size * 0.08, size * 0.1);
+      context.lineTo(-size * 0.16, size * 0.1);
+      context.closePath();
+      context.fill();
+      context.stroke();
+      // Pending-output pips along the rear edge.
+      const pendingCount = componentState?.type === "assembler"
+        ? componentState.pending.length
+        : 0;
+      if (pendingCount > 0) {
+        const pipRadius = Math.max(1, size * 0.035);
+        const pipSpacing = size * 0.09;
+        const shown = Math.min(pendingCount, 5);
+        context.fillStyle = "#ffd27a";
+        context.beginPath();
+        for (let pip = 0; pip < shown; pip += 1) {
+          drawDot(
+            context,
+            (pip - (shown - 1) / 2) * pipSpacing,
+            size * 0.38,
+            pipRadius,
+          );
+        }
+        context.fill();
+      }
+      context.restore();
+      break;
+    }
     case TileDecorationStyle.Delivery: {
       context.save();
       context.translate(left + size / 2, top + size / 2);

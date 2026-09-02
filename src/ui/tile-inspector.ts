@@ -76,6 +76,8 @@ export class TileInspector {
   private readonly toolDetails: HTMLElement;
   private readonly toolDescription: HTMLElement;
   private readonly toolControls: HTMLElement;
+  private readonly assemblerRow: HTMLElement;
+  private readonly assembler: HTMLElement;
   private readonly furnaceRow: HTMLElement;
   private readonly configurationRow: HTMLElement;
   private readonly configuration: HTMLElement;
@@ -106,6 +108,8 @@ export class TileInspector {
     this.toolDetails = requiredDescendant(root, "[data-inspector-tool]");
     this.toolDescription = requiredDescendant(root, "[data-inspector-tool-description]");
     this.toolControls = requiredDescendant(root, "[data-inspector-tool-controls]");
+    this.assemblerRow = requiredDescendant(root, "[data-inspector-assembler-row]");
+    this.assembler = requiredDescendant(root, "[data-inspector-assembler]");
     this.furnaceRow = requiredDescendant(root, "[data-inspector-furnace-row]");
     this.configurationRow = requiredDescendant(root, "[data-inspector-configuration-row]");
     this.configuration = requiredDescendant(root, "[data-inspector-configuration]");
@@ -243,10 +247,12 @@ export class TileInspector {
         this.configuration.textContent =
           `${inner.width} × ${inner.height} · ${occupied} COMPONENT${occupied === 1 ? "" : "S"}` +
           (componentState.description === "" ? "" : ` · "${componentState.description}"`);
-      } else {
+      } else if (componentState.type === "monitor" || componentState.type === "grapher") {
         this.configuration.textContent = componentState.label === ""
           ? "UNNAMED SIGNAL"
           : `SIGNAL "${componentState.label}"`;
+      } else {
+        throw new Error(`${definition.name} has no configuration presentation`);
       }
       this.configurationControls.textContent = componentConfiguration.type === "number"
         ? "E EDIT · SHIFT + WHEEL ADJUST"
@@ -257,6 +263,14 @@ export class TileInspector {
     this.attractionRow.hidden = definition.attractionRange === 0;
     if (definition.attractionRange > 0) {
       this.attraction.textContent = `${DIRECTION_NAMES[orientation]} · ${definition.attractionRange} CELL`;
+    }
+    this.assemblerRow.hidden = kind !== TileKind.Assembler;
+    if (kind === TileKind.Assembler) {
+      const pending = componentState?.type === "assembler" ? componentState.pending : [];
+      this.assembler.textContent = pending.length === 0
+        ? "IDLE · CONSUMES A MATCHING BODY AHEAD"
+        : `${pending.length} QUEUED · ` +
+          pending.map((output) => TILE_DEFINITIONS[output.kind].name.toUpperCase()).join(", ");
     }
     this.furnaceRow.hidden = kind !== TileKind.Furnace;
     if (kind === TileKind.Furnace) {

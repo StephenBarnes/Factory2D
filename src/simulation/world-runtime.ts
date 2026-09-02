@@ -1,3 +1,4 @@
+import { AssemblerResolver } from "./assembler-resolver";
 import { DeliveryResolver } from "./delivery-resolver";
 import { DuplicatorResolver } from "./duplicator-resolver";
 import { FurnaceResolver } from "./furnace-resolver";
@@ -14,6 +15,7 @@ import type { World } from "./world";
 export class WorldRuntime {
   readonly world: World;
   readonly weldedBodies: WeldedBodyIndex;
+  readonly assemblerResolver: AssemblerResolver;
   readonly deliveryResolver: DeliveryResolver;
   readonly duplicatorResolver: DuplicatorResolver;
   readonly furnaceResolver: FurnaceResolver;
@@ -37,6 +39,7 @@ export class WorldRuntime {
   constructor(world: World) {
     this.world = world;
     this.weldedBodies = new WeldedBodyIndex(world);
+    this.assemblerResolver = new AssemblerResolver(world, this.weldedBodies);
     this.deliveryResolver = new DeliveryResolver(world, this.weldedBodies);
     this.duplicatorResolver = new DuplicatorResolver(world, this.weldedBodies);
     this.furnaceResolver = new FurnaceResolver(world);
@@ -54,6 +57,7 @@ export class WorldRuntime {
     this.weldedBodies.collect();
     this.deliveryResolver.collect();
     this.duplicatorResolver.collect();
+    this.assemblerResolver.collect();
     this.weldOperationResolver.collect();
   }
 
@@ -63,6 +67,7 @@ export class WorldRuntime {
     this.weldOperationResolver.commit();
     this.furnaceResolver.resolve(this.furnaceDisabled);
     this.deliveryResolver.commit();
+    this.assemblerResolver.commit(interpolationSource);
     const movementCount = this.motionWorkspace.resolveOrdinaryMovements(tick);
     return movementCount + this.motionWorkspace.resolvePistons();
   }
