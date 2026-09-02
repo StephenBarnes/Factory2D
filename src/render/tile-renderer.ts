@@ -976,6 +976,42 @@ function drawDecoration(
       context.restore();
       break;
     }
+    case TileDecorationStyle.Equality:
+    case TileDecorationStyle.Minimum:
+    case TileDecorationStyle.Maximum: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.lineWidth = Math.max(1.5, size * 0.055);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.beginPath();
+      if (definition.decorationStyle === TileDecorationStyle.Equality) {
+        context.moveTo(-size * 0.12, -size * 0.04);
+        context.lineTo(size * 0.12, -size * 0.04);
+        context.moveTo(-size * 0.12, size * 0.1);
+        context.lineTo(size * 0.12, size * 0.1);
+      } else {
+        const tipY = definition.decorationStyle === TileDecorationStyle.Minimum
+          ? size * 0.11
+          : -size * 0.08;
+        const armY = definition.decorationStyle === TileDecorationStyle.Minimum
+          ? -size * 0.08
+          : size * 0.11;
+        context.moveTo(-size * 0.14, armY);
+        context.lineTo(0, tipY);
+        context.lineTo(size * 0.14, armY);
+      }
+      context.stroke();
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
+      context.beginPath();
+      context.moveTo(-size * 0.14, -size * 0.14);
+      context.lineTo(0, -size * 0.22);
+      context.lineTo(size * 0.14, -size * 0.14);
+      context.stroke();
+      context.restore();
+      break;
+    }
     case TileDecorationStyle.WireCrossing: {
       const visibleConnections = circuitConnections === WeldSide.None
         ? WeldSide.All

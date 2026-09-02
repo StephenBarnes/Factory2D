@@ -229,6 +229,11 @@ export class CircuitResolver {
       let leftInput: Charge = 0;
       let rightInput: Charge = 0;
       let rearInput: Charge = 0;
+      let firstInput: Charge = 0;
+      let allInputsEqual = true;
+      let hasInput = false;
+      let minimumInput: Charge = 1;
+      let maximumInput: Charge = -1;
       for (let value = Direction.Up; value <= Direction.Left; value += 1) {
         const direction = value as Direction;
         if (
@@ -240,7 +245,17 @@ export class CircuitResolver {
         const inputCharge = this.neighborPortCharge(runtime, index, direction);
         if (kind === TileKind.Multiplier) {
           inputProduct *= inputCharge;
+        } else if (kind === TileKind.Equality) {
+          if (hasInput && inputCharge !== firstInput) {
+            allInputsEqual = false;
+          }
+          firstInput = inputCharge;
+        } else if (kind === TileKind.Minimum && inputCharge < minimumInput) {
+          minimumInput = inputCharge;
+        } else if (kind === TileKind.Maximum && inputCharge > maximumInput) {
+          maximumInput = inputCharge;
         }
+        hasInput = true;
         inputSum += inputCharge;
         const relativeDirection = ((direction - orientation + 4) & 3) as Direction;
         if (relativeDirection === Direction.Left) {
@@ -271,6 +286,15 @@ export class CircuitResolver {
           break;
         case TileKind.Selector:
           outputCharge = rearInput === 1 ? leftInput : rearInput === -1 ? rightInput : 0;
+          break;
+        case TileKind.Equality:
+          outputCharge = allInputsEqual ? 1 : 0;
+          break;
+        case TileKind.Minimum:
+          outputCharge = minimumInput;
+          break;
+        case TileKind.Maximum:
+          outputCharge = maximumInput;
           break;
         case TileKind.Delay:
           outputCharge = world.advanceDelayAtIndex(index, rearInput);

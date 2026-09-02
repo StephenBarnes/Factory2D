@@ -446,6 +446,15 @@ describe("circuit rendering", () => {
     { kind: TileKind.Selector, inputDirection: Direction.Right },
     { kind: TileKind.Selector, inputDirection: Direction.Down },
     { kind: TileKind.Selector, inputDirection: Direction.Left },
+    { kind: TileKind.Equality, inputDirection: Direction.Right },
+    { kind: TileKind.Equality, inputDirection: Direction.Down },
+    { kind: TileKind.Equality, inputDirection: Direction.Left },
+    { kind: TileKind.Minimum, inputDirection: Direction.Right },
+    { kind: TileKind.Minimum, inputDirection: Direction.Down },
+    { kind: TileKind.Minimum, inputDirection: Direction.Left },
+    { kind: TileKind.Maximum, inputDirection: Direction.Right },
+    { kind: TileKind.Maximum, inputDirection: Direction.Down },
+    { kind: TileKind.Maximum, inputDirection: Direction.Left },
   ])(
     "keeps $kind input $inputDirection and output traces separate and individually colored",
     ({ kind, inputDirection }) => {

@@ -4,11 +4,11 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 
 ## Main menu
 
-* Add collapsible sections (default collapsed) on the main menu: a credits section, and a technical info section to explain the video game architecture and link to GitHub repo.
+* Add two buttons on the main menu that open modals or move to special screens: a credits screen/modal (which also includes an explanation of the game's architecture and link to GitHub repo - leave text as TODO for now so we don't need to keep updating it), and a settings menu (blank for now - some features for that are listed below, like colorblindness support and deleting saved data).
 
 ## Unlocking puzzles
 
-* Add a field to the puzzle group definitions that decides how many puzzles in the group we unlock, when the group is unlocked. I think it's currently 3, though not certain because both our groups only have 2 puzzles currently. For some groups like tutorials we'd prefer to unlock 1 at a time, while other groups should prefer 2, and collections of unrelated challenges should use 999 to unlock all of them immediately. In all cases, completing a puzzle in the group should the first still-locked puzzle in the group, if any.
+* Add a field to the puzzle group definitions that decides how many puzzles in the group we unlock, when the group is unlocked. I think it's currently 3. For some groups like tutorials we'd prefer to unlock 1 at a time, while other groups should prefer 2, and collections of unrelated challenges should use 999 to unlock all of them immediately. In all cases, completing a puzzle in the group should the first still-locked puzzle in the group, if any.
 
 ## Puzzle briefing screen
 
@@ -97,8 +97,6 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * Add comparer component that compares front neighbor to back neighbor, outputs +1 on sides if they're equal, else output 0. Make it compare entire bodies, exactly like the delivery box but without consuming.
 * Add a ternary LUT component. Two input lines, two identical outputs, similar to the ROM. Make it configurable (via E-key config modal) using a 3x3 grid, similar to the grids we have for ROMs but with fixed size. Each tick, it should read its two inputs and map them to a unique configured cell in the 3x3 grid, then output the value stored there. We probably won't allow this for most puzzles, or make it expensive, since it subsumes various other components (rectifier, combiner, inverter), but it could still be useful. This is overall similar to the ROM, except that (1) it doesn't have a cursor moved in (0, 1) or (1, 0) increments but instead uses direct addresses given by the two inputs; and (2) it has a fixed 3x3 grid size for the possible 2-trit input combinations. We also don't need to support the ROM grapher component for this LUT.
 * Add a "rune engine" component that's like a programmable logic array / gate array, but more native to signed ternary than binary. Details: probably take 2 inputs and produce 2 outputs. The rune engine has a grid of ternary bits which determine the I/O relation. Details to be determined. Could include an internal latch for feedback, like the PGA in Shenzhen IO.
-* Add a component that checks whether all of up to 3 connected inputs are equal, and if so, outputs 1, else 0. For any side that's not connected to anything, don't consider it in the equality check - but if it's connected to e.g. a conduit tile, even if that's not connected to anything else, then do consider it (as a zero-value input). Building this from existing basic components (inverter, combiner, multiplier, and even including subtractor and selector) requires more than 3 components (confirmed via the circuit synthesis script) even if we guarantee exactly 2 connected inputs; the 3-input case might need twice that many.
-* Add min() and max() gates - return min/max of up to 3 connected components. Use a  Building this from other components needs 2 moderately-complex components for the 2-input case (a subtractor and selector), and probably needs 4 for the 3-input case. Use the same rule as for the equality rune above - unconnected input sides aren't considered as terms in the min/max operation.
 
 ## Circuit component modifications
 
@@ -159,11 +157,12 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 
 ## Shortcuts
 
-* Add shift + mousewheel to scroll through palette entries.
+* Add shift + mousewheel to scroll through palette entries, when mouse is not over a number configurable component (because in that case shift+mousewheel configures the number).
 * Modify block placement: when using LMB-drag to place multiple blocks, automatically weld them together (if allowed) along the edge that was dragged. So e.g. dragging a boustrophedon pattern will weld in the same snake pattern. This is different from shift+LMB which welds along all edges.
 * Add hotkeys for game controls: step-forward, step-back, reset, clear, and speed controls.
 * Allow pressing enter to commit selection to its position and unselect.
 * Add a shortcut for the selection tool. Maybe alt key, similar to how we have ctrl for the weld tool.
+* With a rune array opened, pressing enter key should exit out of it (analogous to pressing enter to go inside it). Exception if there's a current selection to be committed (so enter-to-commit takes precedence) or if the player's mouse is over a nested rune array (in which case enter key enters that rune array).
 
 # Visuals
 

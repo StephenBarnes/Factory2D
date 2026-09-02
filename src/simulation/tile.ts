@@ -37,6 +37,9 @@ export const enum TileKind {
   Checker = 35,
   RuneArray = 36,
   Assembler = 37,
+  Equality = 38,
+  Minimum = 39,
+  Maximum = 40,
 }
 
 export const enum Direction {
@@ -91,6 +94,9 @@ export const enum TileDecorationStyle {
   Checker = 32,
   RuneArray = 33,
   Assembler = 34,
+  Equality = 35,
+  Minimum = 36,
+  Maximum = 37,
 }
 
 export const enum PaletteCategory {
@@ -548,11 +554,80 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationStyle: TileDecorationStyle.Selector,
     decorationColor: "#e2dcfa",
   },
+  [TileKind.Equality]: {
+    name: "Equality Rune",
+    boardCode: "e",
+    palette: {
+      order: 20,
+      category: PaletteCategory.Circuits,
+      description: "Outputs +1 when all connected isolated inputs are equal",
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.All,
+    circuitInputPorts: WeldSide.Right | WeldSide.Down | WeldSide.Left,
+    circuitOutputPorts: WeldSide.Up,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#685b78",
+    shadow: "#3a3147",
+    decorationStyle: TileDecorationStyle.Equality,
+    decorationColor: "#e7dcf5",
+  },
+  [TileKind.Minimum]: {
+    name: "Minimum Rune",
+    boardCode: "<",
+    palette: {
+      order: 21,
+      category: PaletteCategory.Circuits,
+      description: "Outputs the minimum charge among its connected isolated inputs",
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.All,
+    circuitInputPorts: WeldSide.Right | WeldSide.Down | WeldSide.Left,
+    circuitOutputPorts: WeldSide.Up,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#4c6871",
+    shadow: "#293d43",
+    decorationStyle: TileDecorationStyle.Minimum,
+    decorationColor: "#d1edf0",
+  },
+  [TileKind.Maximum]: {
+    name: "Maximum Rune",
+    boardCode: ">",
+    palette: {
+      order: 22,
+      category: PaletteCategory.Circuits,
+      description: "Outputs the maximum charge among its connected isolated inputs",
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.All,
+    circuitInputPorts: WeldSide.Right | WeldSide.Down | WeldSide.Left,
+    circuitOutputPorts: WeldSide.Up,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#715447",
+    shadow: "#412e26",
+    decorationStyle: TileDecorationStyle.Maximum,
+    decorationColor: "#f0d3c1",
+  },
   [TileKind.WireCrossing]: {
     name: "Wire Crossing",
     boardCode: "W",
     palette: {
-      order: 20,
+      order: 23,
       category: PaletteCategory.Circuits,
       description: "Keeps horizontal and vertical circuit networks separate",
     },
@@ -667,7 +742,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Delivery Box",
     boardCode: "D",
     palette: {
-      order: 21,
+      order: 24,
       category: PaletteCategory.PuzzleTools,
       description: "Absorbs a front welded body exactly matching the body behind it and pulses +1 sideways",
     },
@@ -690,7 +765,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Victory Block",
     boardCode: "V",
     palette: {
-      order: 22,
+      order: 25,
       category: PaletteCategory.PuzzleTools,
       description: "Wins on +1 input or loses on -1 input; opposing inputs jam",
     },
@@ -713,7 +788,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Delay Rune",
     boardCode: "Z",
     palette: {
-      order: 24,
+      order: 27,
       category: PaletteCategory.Circuits,
       description: "Delays the isolated rear input by a configurable number of ticks. Press E to configure",
     },
@@ -736,7 +811,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Charge Counter",
     boardCode: "N",
     palette: {
-      order: 25,
+      order: 28,
       category: PaletteCategory.Circuits,
       description: "Adds signed rear inputs and pulses with the wrap direction. Press E to configure",
     },
@@ -759,7 +834,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "ROM Rune",
     boardCode: "U",
     palette: {
-      order: 26,
+      order: 29,
       category: PaletteCategory.Circuits,
       description: "Positive left/rear inputs move the 2D cursor away from their side; negative inputs reverse it. Outputs the selected value. Press E to configure",
     },
@@ -782,7 +857,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Welder",
     boardCode: "J",
     palette: {
-      order: 27,
+      order: 30,
       category: PaletteCategory.Mechanisms,
       description: "Welds both transverse edges of the block ahead; -1 side charge disables it",
     },
@@ -805,7 +880,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Splitter",
     boardCode: "X",
     palette: {
-      order: 28,
+      order: 31,
       category: PaletteCategory.Mechanisms,
       description: "Splits both transverse edges of the block ahead; -1 side charge disables it",
     },
@@ -828,7 +903,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Duplicator",
     boardCode: "Y",
     palette: {
-      order: 29,
+      order: 32,
       category: PaletteCategory.Mechanisms,
       description: "Mirrors the welded body behind it across itself on +1 side charge",
     },
@@ -851,7 +926,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Signal Monitor",
     boardCode: "m",
     palette: {
-      order: 33,
+      order: 36,
       category: PaletteCategory.Circuits,
       description: "Joins its welded circuit like a conduit and records that charge every tick on the signal panel. Press E to name its line",
     },
@@ -874,7 +949,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "ROM Grapher",
     boardCode: "g",
     palette: {
-      order: 34,
+      order: 37,
       category: PaletteCategory.Circuits,
       description: "Shows every value of the ROM or sequence checker it points at on the signal panel, marking the cursor. Press E to name its line",
     },
@@ -897,7 +972,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Sequence Checker",
     boardCode: "E",
     palette: {
-      order: 35,
+      order: 38,
       category: PaletteCategory.PuzzleTools,
       description: "Waits for the first nonzero rear input, then compares each input with its stored sequence: +1 after a complete match, -1 at the first mismatch. Press E to configure",
     },
@@ -920,7 +995,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Rune Array",
     boardCode: "A",
     palette: {
-      order: 36,
+      order: 39,
       category: PaletteCategory.Circuits,
       description: "Holds a miniature board whose four edge-center cells connect to its sides with no delay. Press E to configure, Enter to open",
     },
@@ -943,7 +1018,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Assembler",
     boardCode: "H",
     palette: {
-      order: 30,
+      order: 33,
       category: PaletteCategory.Mechanisms,
       description: "Consumes a welded body ahead that matches a recipe in any rotation, then emits the recipe's outputs one per tick behind it",
     },
@@ -966,7 +1041,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     name: "Piston",
     boardCode: "P",
     palette: {
-      order: 23,
+      order: 26,
       category: PaletteCategory.Mechanisms,
       description: "Extends on +1 and retracts on -1; its pointed side is the arm head",
     },

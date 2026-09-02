@@ -5,6 +5,33 @@ import { Simulation } from "../src/simulation/simulation";
 import { Direction, TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
 
+type GateInput = {
+  readonly direction: Direction.Right | Direction.Down | Direction.Left;
+  readonly charge: -1 | 0 | 1;
+};
+
+function resolveGateOutput(kind: TileKind, inputs: readonly GateInput[]): -1 | 0 | 1 {
+  const world = new World(3, 3);
+  world.place(1, 0, TileKind.Conduit);
+  world.place(1, 1, kind, Direction.Up);
+  world.setWeld(1, 0, 1, 1, true);
+  for (const input of inputs) {
+    const x = input.direction === Direction.Left
+      ? 0
+      : input.direction === Direction.Right
+        ? 2
+        : 1;
+    const y = input.direction === Direction.Down ? 2 : 1;
+    world.place(x, y, TileKind.Conduit);
+    world.setWeld(1, 1, x, y, true);
+    world.setCharge(x, y, input.charge);
+  }
+
+  new Simulation(world).step();
+
+  return world.chargeAt(1, 1);
+}
+
 describe("circuit networks", () => {
   it("propagates a sensor charge across every welded conduit in one tick", () => {
     const world = new World(5, 2);
@@ -458,6 +485,96 @@ describe("circuit networks", () => {
 
     expect(world.chargeAt(1, 1)).toBe(-1);
     expect(world.chargeAt(1, 0)).toBe(-1);
+  });
+
+  it.each(
+    ([-1, 0, 1] as const).flatMap((left) =>
+      ([-1, 0, 1] as const).flatMap((rear) =>
+        ([-1, 0, 1] as const).map((right) => ({
+          left,
+          rear,
+          right,
+          output: left === rear && rear === right ? 1 : 0,
+        })),
+      ),
+    ),
+  )(
+    "tests equality of isolated inputs $left, $rear, and $right as $output",
+    ({ left, rear, right, output }) => {
+      expect(resolveGateOutput(TileKind.Equality, [
+        { direction: Direction.Left, charge: left },
+        { direction: Direction.Down, charge: rear },
+        { direction: Direction.Right, charge: right },
+      ])).toBe(output);
+    },
+  );
+
+  it.each(
+    ([-1, 0, 1] as const).flatMap((left) =>
+      ([-1, 0, 1] as const).flatMap((rear) =>
+        ([-1, 0, 1] as const).map((right) => ({
+          left,
+          rear,
+          right,
+          output: Math.min(left, rear, right),
+        })),
+      ),
+    ),
+  )(
+    "takes minimum of isolated inputs $left, $rear, and $right as $output",
+    ({ left, rear, right, output }) => {
+      expect(resolveGateOutput(TileKind.Minimum, [
+        { direction: Direction.Left, charge: left },
+        { direction: Direction.Down, charge: rear },
+        { direction: Direction.Right, charge: right },
+      ])).toBe(output);
+    },
+  );
+
+  it.each(
+    ([-1, 0, 1] as const).flatMap((left) =>
+      ([-1, 0, 1] as const).flatMap((rear) =>
+        ([-1, 0, 1] as const).map((right) => ({
+          left,
+          rear,
+          right,
+          output: Math.max(left, rear, right),
+        })),
+      ),
+    ),
+  )(
+    "takes maximum of isolated inputs $left, $rear, and $right as $output",
+    ({ left, rear, right, output }) => {
+      expect(resolveGateOutput(TileKind.Maximum, [
+        { direction: Direction.Left, charge: left },
+        { direction: Direction.Down, charge: rear },
+        { direction: Direction.Right, charge: right },
+      ])).toBe(output);
+    },
+  );
+
+  it.each([
+    { kind: TileKind.Equality, charge: -1 as const, alone: 1, withZero: 0 },
+    { kind: TileKind.Minimum, charge: 1 as const, alone: 1, withZero: 0 },
+    { kind: TileKind.Maximum, charge: -1 as const, alone: -1, withZero: 0 },
+  ])(
+    "gate $kind ignores an absent side but includes a connected zero input",
+    ({ kind, charge, alone, withZero }) => {
+      const loneInput = [{ direction: Direction.Left as const, charge }];
+      expect(resolveGateOutput(kind, loneInput)).toBe(alone);
+      expect(resolveGateOutput(kind, [
+        ...loneInput,
+        { direction: Direction.Down, charge: 0 },
+      ])).toBe(withZero);
+    },
+  );
+
+  it.each([
+    { kind: TileKind.Equality, output: 1 },
+    { kind: TileKind.Minimum, output: 1 },
+    { kind: TileKind.Maximum, output: -1 },
+  ])("uses the empty-input identity for gate $kind", ({ kind, output }) => {
+    expect(resolveGateOutput(kind, [])).toBe(output);
   });
 
   it.each(
