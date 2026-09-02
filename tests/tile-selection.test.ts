@@ -207,3 +207,92 @@ describe("tile selection", () => {
     expect(selection.active).toBe(false);
   });
 });
+
+describe("snippet capture and placement", () => {
+  it("captures the transformed selection cropped to its occupied cells", () => {
+    const world = new World(7, 6);
+    world.place(2, 2, TileKind.Sensor, Direction.Up);
+    world.place(3, 2, TileKind.Stone);
+    world.place(3, 3, TileKind.Delay, Direction.Right);
+    world.configureNumericComponent(3, 3, 4);
+    world.setWeld(2, 2, 3, 2, true);
+    world.setWeld(3, 2, 3, 3, true);
+    const selection = new TileSelectionState(world.width, world.height);
+    selectRectangle(selection, world, 0, 0, 5, 5);
+    expect(selection.rotateTo(Direction.Right)).toBe(true);
+
+    const captured = selection.captureWorld();
+    expect(captured).not.toBeNull();
+    if (captured === null) {
+      return;
+    }
+    expect(captured.width).toBe(2);
+    expect(captured.height).toBe(2);
+    expect(captured.kindAt(1, 0)).toBe(TileKind.Sensor);
+    expect(captured.orientationAt(1, 0)).toBe(Direction.Right);
+    expect(captured.kindAt(1, 1)).toBe(TileKind.Stone);
+    expect(captured.kindAt(0, 1)).toBe(TileKind.Delay);
+    expect(captured.orientationAt(0, 1)).toBe(Direction.Down);
+    expect(captured.componentStateSnapshotAt(0, 1)).toMatchObject({ type: "delay", length: 4 });
+    expect(captured.isWelded(1, 0, 1, 1)).toBe(true);
+    expect(captured.isWelded(0, 1, 1, 1)).toBe(true);
+    expect(captured.kindAt(0, 0)).toBe(TileKind.Empty);
+    expect(world.kindAt(2, 2)).toBe(TileKind.Sensor);
+    expect(selection.active).toBe(true);
+  });
+
+  it("returns null without an active selection or occupied cells", () => {
+    const world = new World(4, 4);
+    const selection = new TileSelectionState(world.width, world.height);
+    expect(selection.captureWorld()).toBeNull();
+    selection.beginSelection(0, 0);
+    selection.updateSelection(1, 1);
+    expect(selection.finishSelection(world, null)).toBe(true);
+    expect(selection.captureWorld()).toBeNull();
+  });
+
+  it("floats a world as a pasted selection that commits without clearing a source", () => {
+    const snippet = new World(2, 1);
+    snippet.place(0, 0, TileKind.Stone);
+    snippet.place(1, 0, TileKind.Iron);
+    snippet.setWeld(0, 0, 1, 0, true);
+    const world = new World(5, 4);
+    world.place(0, 0, TileKind.Sand);
+    const selection = new TileSelectionState(world.width, world.height);
+
+    expect(selection.pasteWorld(snippet, 4, 3)).toBe(true);
+    const overlay = selection.overlay(ALLOW_CELL, ALLOW_KIND);
+    expect(overlay?.sourceRegion).toBeNull();
+    expect(overlay?.region.rectangles).toEqual([{ x: 3, y: 3, width: 2, height: 1 }]);
+
+    expect(selection.beginMove(4, 3)).toBe(true);
+    expect(selection.updateMove(3, 2)).toBe(true);
+    selection.finishMove();
+    expect(selection.commit(world, ALLOW_CELL, ALLOW_KIND)).toEqual({
+      accepted: true,
+      changed: true,
+    });
+    expect(world.kindAt(0, 0)).toBe(TileKind.Sand);
+    expect(world.kindAt(2, 2)).toBe(TileKind.Stone);
+    expect(world.kindAt(3, 2)).toBe(TileKind.Iron);
+    expect(world.isWelded(2, 2, 3, 2)).toBe(true);
+  });
+
+  it("rejects empty or oversized worlds and rotations that would not fit", () => {
+    const wide = new World(4, 1);
+    wide.place(0, 0, TileKind.Stone);
+    wide.place(3, 0, TileKind.Stone);
+    const selection = new TileSelectionState(4, 2);
+    expect(selection.pasteWorld(new World(2, 2), 0, 0)).toBe(false);
+    expect(selection.pasteWorld(new World(5, 1), 0, 0)).toBe(false);
+    expect(selection.active).toBe(false);
+
+    expect(selection.pasteWorld(wide, 0, 0)).toBe(true);
+    expect(selection.rotateClockwise()).toBe(false);
+    expect(selection.rotateTo(Direction.Left)).toBe(false);
+    expect(selection.rotateTo(Direction.Down)).toBe(true);
+    expect(selection.overlay(ALLOW_CELL, ALLOW_KIND)?.region.rectangles).toEqual([
+      { x: 0, y: 0, width: 4, height: 1 },
+    ]);
+  });
+});

@@ -80,6 +80,7 @@
           <button id="selection-flip-horizontal-button" type="button" title="Flip selection horizontally" aria-label="Flip selection horizontally">↔</button>
           <button id="selection-flip-vertical-button" type="button" title="Flip selection vertically" aria-label="Flip selection vertically">↕</button>
           <button id="selection-rotate-button" type="button" title="Rotate selection clockwise" aria-label="Rotate selection clockwise">↻</button>
+          <button id="selection-save-snippet-button" type="button" title="Save selection as a snippet" aria-label="Save selection as a snippet">★</button>
         </div>
       </section>
 
@@ -118,11 +119,42 @@
             <span class="swatch editable-region-swatch"></span>
           </button>
         </div>
-        <div class="panel-heading">
-          <span>COMPONENTS</span>
+        <div class="panel-heading panel-tabs" role="tablist" aria-label="Palette panels">
+          <button
+            class="panel-tab"
+            id="components-tab"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            aria-controls="component-palette"
+          >COMPONENTS</button>
+          <button
+            class="panel-tab"
+            id="snippets-tab"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="snippet-panel"
+          >SNIPPETS<span class="panel-tab-count" id="snippet-count" hidden></span></button>
           <span class="panel-number">02</span>
         </div>
-        <div class="palette" id="component-palette"></div>
+        <div class="palette" id="component-palette" role="tabpanel" aria-labelledby="components-tab"></div>
+        <div class="snippet-panel" id="snippet-panel" role="tabpanel" aria-labelledby="snippets-tab" hidden>
+          <div class="snippet-panel-actions">
+            <button
+              id="save-snippet-button"
+              type="button"
+              title="Save the current selection as a snippet"
+            >+ SAVE SELECTION</button>
+            <button id="import-snippets-button" type="button" title="Import snippets from a scene or snippet file">IMPORT</button>
+            <button id="export-snippets-button" type="button" title="Download every snippet as one file">EXPORT ALL</button>
+            <input id="import-snippets-file" type="file" accept="application/json,.json" hidden />
+          </div>
+          <p class="snippet-empty" id="snippet-empty">
+            No saved snippets. Select tiles with the selection tool and press ★ to save a reusable machine.
+          </p>
+          <div class="snippet-list" id="snippet-list" aria-label="Saved snippets"></div>
+        </div>
         <div class="instructions">
           <p><span>PLACE / WELD</span> Left click or drag</p>
           <p><span>PLACE WELDED</span> Shift + left click or drag</p>

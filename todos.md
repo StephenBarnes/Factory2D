@@ -119,11 +119,10 @@ UI:
 * If the player tries to place a block, or weld, and we don't allow it, indicate the reason. (1) If it's because they're testing a puzzle, flash the reset button. (2) If it's a weld or tile edit outside the allowed region, flash the region red. (3) If they're trying to weld a block that can't be 
 * Currently, if I change the tick speed, and then try to use space key to run/pause, it instead opens/closes the tick speed dropup menu.
 * Modify the tick speed menu to use our own drop-up widget (like the export button).
+* When using selection tool, on the line of buttons (flip, rotate, save snippet) add a delete button. It's already possible by pressing the delete key, but this would make it more visible, and it's necessary for devices that don't have keyboards.
 
 Selection tool:
 * DEFER Maybe support selections that are a union of rectangles, created by shift-LMB-drag.
-* Add a way to save a selected region in a list of saved snippets/machines, and import from that. Make it usable for transferring partial machines from one puzzle solution to another. Requires a snippet manager button and collapsible panel. Store snippets globally per user, not per puzzle.
-* In the snippets panel, add buttons to delete a snippet, and import/export (maybe the same as the scene format, or a different format).
 
 Visuals:
 * Add backgrounds for puzzles, maybe with parallax as the player pans.

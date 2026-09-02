@@ -10,6 +10,12 @@ import { serializePuzzleTemplate } from "./game/puzzle-export";
 import { computePuzzleDesignMetrics } from "./game/puzzle-scores";
 import { createSandboxWorld, puzzleById } from "./game/puzzles";
 import { WorkshopSessionController } from "./game/workshop-session";
+import {
+  MAX_SNIPPET_NAME_LENGTH,
+  restrictSnippetWorld,
+  tileKindNames,
+} from "./game/snippet-library";
+import { SnippetLibraryController } from "./game/snippet-library-controller";
 import { WorkshopSurfaceController } from "./game/workshop-surface-controller";
 
 import { visitCrossedGridEdges } from "./render/grid-drag";
@@ -38,6 +44,11 @@ import {
 } from "./ui/canvas-interaction-controller";
 import type { InspectorComponentReference } from "./ui/tile-inspector";
 import { SignalPanel } from "./ui/signal-panel";
+import {
+  SnippetPanel,
+  type SnippetCardModel,
+  type SnippetPlacementPointer,
+} from "./ui/snippet-panel";
 import { SignalTraceRecorder } from "./game/signal-traces";
 import { populateComponentPalette } from "./ui/component-palette";
 
@@ -120,6 +131,17 @@ const selectionVerticalFlipButton = requiredElement<HTMLButtonElement>(
   "selection-flip-vertical-button",
 );
 const selectionRotateButton = requiredElement<HTMLButtonElement>("selection-rotate-button");
+const selectionSaveSnippetButton = requiredElement<HTMLButtonElement>(
+  "selection-save-snippet-button",
+);
+const componentsTab = requiredElement<HTMLButtonElement>("components-tab");
+const snippetsTab = requiredElement<HTMLButtonElement>("snippets-tab");
+const snippetCount = requiredElement<HTMLElement>("snippet-count");
+const snippetPanelElement = requiredElement<HTMLElement>("snippet-panel");
+const saveSnippetButton = requiredElement<HTMLButtonElement>("save-snippet-button");
+const importSnippetsButton = requiredElement<HTMLButtonElement>("import-snippets-button");
+const exportSnippetsButton = requiredElement<HTMLButtonElement>("export-snippets-button");
+const importSnippetsFile = requiredElement<HTMLInputElement>("import-snippets-file");
 const signalTraces = new SignalTraceRecorder();
 const signalPanel = new SignalPanel(
   {
@@ -161,6 +183,9 @@ function isInspectorTool(value: string | undefined): value is InspectorTool {
 }
 
 
+type PaletteTab = "components" | "snippets";
+
+let paletteTab: PaletteTab = "components";
 let selectedKind = TileKind.Sand;
 let previousSelectedKind: TileKind = selectedKind;
 let selectedOrientation = Direction.Up;
@@ -204,6 +229,7 @@ function updateTransportState(): void {
   for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
     item.disabled = !editingEnabled || testingPuzzleSolution;
   }
+  snippetPanel.setEditable(editingEnabled && !testingPuzzleSolution);
 }
 
 function markSimulationStarted(): boolean {
@@ -263,6 +289,7 @@ function setRunning(nextRunning: boolean): void {
 surface.setMountListener(() => {
   syncTileSelectionOverlay();
   syncEditableRegionAuthoringOverlay();
+  refreshSnippetPanel();
   renderedTick = -1;
   animationDuration = 0;
   updateTransportState();
@@ -402,6 +429,7 @@ function syncTileSelectionOverlay(): void {
   );
   selectionActions.hidden = overlay === null;
   selectionPasteButton.disabled = !surface.selection.hasClipboard;
+  saveSnippetButton.disabled = !surface.selection.active;
 }
 
 function positionSelectionActions(): void {
@@ -470,7 +498,164 @@ function configureComponentPalette(): void {
   editableRegionButton.classList.toggle("selected", selectedTool === "editable-region");
   syncEditableRegionAuthoringOverlay();
   syncTileSelectionOverlay();
+  setPaletteTab(paletteTab);
+  refreshSnippetPanel();
+}
+
+function setPaletteTab(tab: PaletteTab): void {
+  paletteTab = tab;
+  const showSnippets = tab === "snippets";
+  componentsTab.setAttribute("aria-selected", String(!showSnippets));
+  snippetsTab.setAttribute("aria-selected", String(showSnippets));
+  componentPalette.hidden = showSnippets;
+  snippetPanelElement.hidden = !showSnippets;
   renderPalettePreviews();
+}
+
+function refreshSnippetPanel(highlightId: string | null = null): void {
+  const boardWidth = surface.world.width;
+  const boardHeight = surface.world.height;
+  const cards: SnippetCardModel[] = snippets.entries.map(({ snippet, world }) => {
+    const warnings: string[] = [];
+    let placeable = true;
+    if (world.width > boardWidth || world.height > boardHeight) {
+      warnings.push(`Larger than this ${boardWidth}×${boardHeight} board.`);
+      placeable = false;
+    }
+    const restricted = restrictSnippetWorld(world, componentIsAvailable);
+    if (restricted.world === null) {
+      warnings.push("None of its components are available in this workshop.");
+      placeable = false;
+    } else if (restricted.removedKinds.length > 0) {
+      warnings.push(
+        `Not available here, placed as empty: ${tileKindNames(restricted.removedKinds).join(", ")}.`,
+      );
+    }
+    return { id: snippet.id, name: snippet.name, world, warnings, placeable };
+  });
+  snippetCount.textContent = String(cards.length);
+  snippetCount.hidden = cards.length === 0;
+  exportSnippetsButton.disabled = cards.length === 0;
+  snippetPanel.render(cards, highlightId);
+}
+
+function saveSelectionAsSnippet(): void {
+  const world = surface.selection.captureWorld();
+  if (world === null) {
+    return;
+  }
+  const saved = snippets.saveWorld(world);
+  if (saved === null) {
+    throw new Error("Captured selection unexpectedly contains no tiles");
+  }
+  setPaletteTab("snippets");
+  refreshSnippetPanel(saved.id);
+}
+
+function boardCenterGridPoint(): GridPoint {
+  const bounds = canvas.getBoundingClientRect();
+  return surface.renderer.gridPointFromClientPoint(
+    bounds.left + bounds.width / 2,
+    bounds.top + bounds.height / 2,
+  );
+}
+
+/** Floats a snippet as a pasted selection, centered under the pointer or on the visible board. */
+function beginSnippetPlacement(id: string, pointer: SnippetPlacementPointer | null): boolean {
+  if (!surface.session.editingState.editable) {
+    return false;
+  }
+  const world = restrictSnippetWorld(snippets.byId(id).world, componentIsAvailable).world;
+  if (
+    world === null ||
+    world.width > surface.world.width ||
+    world.height > surface.world.height
+  ) {
+    return false;
+  }
+  canvasInteraction.cancel();
+  if (surface.selection.active) {
+    commitTileSelection();
+  }
+  selectSelectionTool();
+  const point = pointer === null
+    ? boardCenterGridPoint()
+    : surface.renderer.gridPointFromClientPoint(pointer.clientX, pointer.clientY);
+  const pointerX = Math.floor(point.x);
+  const pointerY = Math.floor(point.y);
+  if (!surface.selection.pasteWorld(
+    world,
+    pointerX - Math.floor(world.width / 2),
+    pointerY - Math.floor(world.height / 2),
+  )) {
+    return false;
+  }
+  if (pointer !== null) {
+    const region = expectDefined(
+      surface.selection.overlay(canEditCell, componentIsAvailable)?.region.rectangles[0],
+      "Floated snippet region",
+    );
+    const grabX = Math.max(region.x, Math.min(region.x + region.width - 1, pointerX));
+    const grabY = Math.max(region.y, Math.min(region.y + region.height - 1, pointerY));
+    if (!surface.selection.beginMove(grabX, grabY)) {
+      throw new Error("Floated snippet does not contain its grab cell");
+    }
+  }
+  syncTileSelectionOverlay();
+  refreshPointerHover();
+  return true;
+}
+
+function moveSnippetPlacement(pointer: SnippetPlacementPointer): void {
+  const point = surface.renderer.gridPointFromClientPoint(pointer.clientX, pointer.clientY);
+  surface.hoveredCell = surface.renderer.cellFromGridPoint(point);
+  surface.hoveredEdge = null;
+  surface.selection.updateMove(Math.floor(point.x), Math.floor(point.y));
+  syncTileSelectionOverlay();
+  refreshPointerHover();
+}
+
+function finishSnippetPlacement(): void {
+  surface.selection.finishMove();
+  surface.clearPointerHover();
+  syncTileSelectionOverlay();
+  refreshPointerHover();
+}
+
+function renameSnippet(id: string): void {
+  const entry = snippets.byId(id);
+  const name = window.prompt(
+    `Rename ${entry.snippet.name} (up to ${MAX_SNIPPET_NAME_LENGTH} characters):`,
+    entry.snippet.name,
+  );
+  if (name === null || name === entry.snippet.name) {
+    return;
+  }
+  try {
+    snippets.rename(id, name);
+  } catch (error) {
+    window.alert(error instanceof Error ? error.message : String(error));
+    return;
+  }
+  refreshSnippetPanel();
+}
+
+function deleteSnippet(id: string): void {
+  const entry = snippets.byId(id);
+  if (!window.confirm(`Delete ${entry.snippet.name}? This cannot be undone.`)) {
+    return;
+  }
+  snippets.delete(id);
+  refreshSnippetPanel();
+}
+
+function exportSnippet(id: string): void {
+  const entry = snippets.byId(id);
+  const slug = entry.snippet.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  downloadBlob(
+    new Blob([snippets.exportSnippet(id)], { type: "application/json" }),
+    `factory2d-snippet-${slug.length === 0 ? entry.snippet.id : slug}.json`,
+  );
 }
 
 function selectTile(kind: TileKind): void {
@@ -520,6 +705,7 @@ function renderPalettePreviews(): void {
   const devicePixelRatio = window.devicePixelRatio || 1;
   const pixelRatio = devicePixelRatio * PALETTE_PREVIEW_SUPERSAMPLING;
   renderedPaletteDevicePixelRatio = devicePixelRatio;
+  snippetPanel.redrawThumbnails();
 
   for (const preview of sidebarControls.querySelectorAll<HTMLCanvasElement>(".tile-preview")) {
     const logicalWidth = preview.clientWidth;
@@ -834,7 +1020,24 @@ const canvasInteraction = new CanvasInteractionController(surface, {
 });
 surface.setInteractionCanceler(() => {
   canvasInteraction.cancel();
+  snippetPanel.cancelPlacement();
 });
+const snippets = new SnippetLibraryController(window.localStorage);
+const snippetPanel = new SnippetPanel(
+  {
+    root: snippetPanelElement,
+    list: requiredElement<HTMLElement>("snippet-list"),
+    emptyMessage: requiredElement<HTMLElement>("snippet-empty"),
+  },
+  {
+    beginPlacement: beginSnippetPlacement,
+    movePlacement: moveSnippetPlacement,
+    finishPlacement: finishSnippetPlacement,
+    rename: renameSnippet,
+    remove: deleteSnippet,
+    exportSnippet,
+  },
+);
 function prepareForRuntimeChange(): void {
   finalizeActivePointerGesture();
   if (surface.selection.active) {
@@ -1046,6 +1249,43 @@ selectionRotateButton.addEventListener("click", () => {
   surface.selection.rotateClockwise();
   syncTileSelectionOverlay();
 });
+selectionSaveSnippetButton.addEventListener("click", saveSelectionAsSnippet);
+saveSnippetButton.addEventListener("click", saveSelectionAsSnippet);
+componentsTab.addEventListener("click", () => {
+  setPaletteTab("components");
+});
+snippetsTab.addEventListener("click", () => {
+  setPaletteTab("snippets");
+});
+exportSnippetsButton.addEventListener("click", () => {
+  if (snippets.count === 0) {
+    return;
+  }
+  downloadBlob(
+    new Blob([snippets.exportAll()], { type: "application/json" }),
+    "factory2d-snippets.json",
+  );
+});
+importSnippetsButton.addEventListener("click", () => {
+  importSnippetsFile.click();
+});
+importSnippetsFile.addEventListener("change", async () => {
+  const file = importSnippetsFile.files?.[0];
+  importSnippetsFile.value = "";
+  if (file === undefined) {
+    return;
+  }
+  importSnippetsButton.disabled = true;
+  try {
+    const added = snippets.importFile(await file.text());
+    refreshSnippetPanel(added.at(-1)?.id ?? null);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    window.alert(`Could not import snippets: ${message}`);
+  } finally {
+    importSnippetsButton.disabled = false;
+  }
+});
 
 
 sidebarControls.addEventListener("pointerover", (event) => {
@@ -1249,6 +1489,7 @@ importFile.addEventListener("change", async () => {
 });
 
 function finalizeActivePointerGesture(): boolean {
+  snippetPanel.cancelPlacement();
   return canvasInteraction.cancel();
 }
 

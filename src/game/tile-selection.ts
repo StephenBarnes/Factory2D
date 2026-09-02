@@ -6,7 +6,7 @@ import {
   flipDirectionVertically,
   TileKind,
 } from "../simulation/tile";
-import type { World } from "../simulation/world";
+import { World } from "../simulation/world";
 
 export interface SelectionPreviewCell {
   readonly x: number;
@@ -243,9 +243,7 @@ export class TileSelectionState {
     if (active === null || active.quarterTurns === direction) {
       return false;
     }
-    active.quarterTurns = direction;
-    this.setOrigin(active, active.originX, active.originY);
-    return true;
+    return this.setQuarterTurns(active, direction);
   }
 
   rotateClockwise(): boolean {
@@ -253,9 +251,7 @@ export class TileSelectionState {
     if (active === null) {
       return false;
     }
-    active.quarterTurns = (active.quarterTurns + 1) & 3;
-    this.setOrigin(active, active.originX, active.originY);
-    return true;
+    return this.setQuarterTurns(active, ((active.quarterTurns + 1) & 3) as Direction);
   }
 
   flipHorizontally(): boolean {
@@ -312,6 +308,89 @@ export class TileSelectionState {
     this.activeSelection = active;
     this.setOrigin(active, anchorX, anchorY);
     return true;
+  }
+
+  /**
+   * Floats a copy of every occupied cell of `source` as a new pasted selection
+   * whose top-left corner is anchored at the given cell, clamped to the board.
+   * Rejects sources larger than the board in either dimension.
+   */
+  pasteWorld(source: World, anchorX: number, anchorY: number): boolean {
+    if (source.width > this.boardWidth || source.height > this.boardHeight) {
+      return false;
+    }
+    const content = captureSelectionContent(
+      source,
+      new GridRegion([{ x: 0, y: 0, width: source.width, height: source.height }]),
+    );
+    if (content === null || content.occupiedCells.length === 0) {
+      return false;
+    }
+    const active: ActiveSelection = {
+      content,
+      removesSourceOnCommit: false,
+      quarterTurns: 0,
+      flippedHorizontally: false,
+      flippedVertically: false,
+      originX: anchorX,
+      originY: anchorY,
+      dragAnchorX: 0,
+      dragAnchorY: 0,
+      dragOriginX: anchorX,
+      dragOriginY: anchorY,
+      moving: false,
+    };
+    this.activeSelection = active;
+    this.cancelDraft();
+    this.setOrigin(active, anchorX, anchorY);
+    return true;
+  }
+
+  /**
+   * Copies the transformed active selection into a standalone world cropped to
+   * its occupied bounds, preserving orientations, configuration, and internal
+   * welds. Returns null without an active selection or occupied cells.
+   */
+  captureWorld(): World | null {
+    const active = this.activeSelection;
+    if (active === null) {
+      return null;
+    }
+    const mappedCells = mapOccupiedCells(active);
+    if (mappedCells.length === 0) {
+      return null;
+    }
+    let left = Number.POSITIVE_INFINITY;
+    let top = Number.POSITIVE_INFINITY;
+    let right = Number.NEGATIVE_INFINITY;
+    let bottom = Number.NEGATIVE_INFINITY;
+    for (const cell of mappedCells) {
+      left = Math.min(left, cell.destinationX);
+      top = Math.min(top, cell.destinationY);
+      right = Math.max(right, cell.destinationX);
+      bottom = Math.max(bottom, cell.destinationY);
+    }
+    const world = new World(right - left + 1, bottom - top + 1);
+    for (const cell of mappedCells) {
+      world.place(cell.destinationX - left, cell.destinationY - top, cell.kind, cell.orientation);
+      if (cell.componentState !== null) {
+        world.restoreComponentState(
+          cell.destinationX - left,
+          cell.destinationY - top,
+          cell.componentState,
+        );
+      }
+    }
+    visitInternalWelds(active, mappedCells, (cell, neighbor) => {
+      world.setWeld(
+        cell.destinationX - left,
+        cell.destinationY - top,
+        neighbor.destinationX - left,
+        neighbor.destinationY - top,
+        true,
+      );
+    });
+    return world;
   }
 
   deleteFrom(world: World): boolean {
@@ -388,6 +467,19 @@ export class TileSelectionState {
         canPlaceCell(cell.destinationX, cell.destinationY) && canPlaceKind(cell.kind)
       ),
     };
+  }
+
+  /** Applies a rotation only when the rotated bounds still fit inside the board. */
+  private setQuarterTurns(active: ActiveSelection, quarterTurns: Direction): boolean {
+    const { width, height } = active.content.bounds;
+    const rotatedWidth = (quarterTurns & 1) === 0 ? width : height;
+    const rotatedHeight = (quarterTurns & 1) === 0 ? height : width;
+    if (rotatedWidth > this.boardWidth || rotatedHeight > this.boardHeight) {
+      return false;
+    }
+    active.quarterTurns = quarterTurns;
+    this.setOrigin(active, active.originX, active.originY);
+    return true;
   }
 
   private setOrigin(active: ActiveSelection, x: number, y: number): boolean {

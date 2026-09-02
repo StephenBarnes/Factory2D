@@ -957,6 +957,10 @@ canvas {
   gap: 10px;
 }
 
+.palette[hidden] {
+  display: none;
+}
+
 .palette + .panel-heading {
   margin-top: 18px;
 }
@@ -1134,6 +1138,230 @@ kbd {
 .inspector-component-reference kbd {
   position: static;
   pointer-events: none;
+}
+
+.panel-tabs {
+  align-items: center;
+  gap: 12px;
+}
+
+.panel-tab {
+  position: relative;
+  padding: 0 0 4px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--text-faint);
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+
+.panel-tab:hover {
+  color: var(--text-body);
+}
+
+.panel-tab[aria-selected="true"] {
+  color: var(--text-body);
+  border-bottom-color: var(--gold);
+}
+
+.panel-tabs .panel-number {
+  margin-left: auto;
+}
+
+.panel-tab-count {
+  margin-left: 5px;
+  padding: 0 4px;
+  border-radius: 2px;
+  color: var(--gold-bright);
+  background: rgb(240 199 94 / 14%);
+  font-size: 0.56rem;
+}
+
+.panel-tab-count[hidden] {
+  display: none;
+}
+
+.snippet-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.snippet-panel[hidden] {
+  display: none;
+}
+
+.snippet-panel-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+.snippet-panel-actions button {
+  min-height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--panel-border);
+  color: var(--text-body);
+  background: var(--raised);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.snippet-panel-actions #save-snippet-button {
+  grid-column: 1 / -1;
+  border-color: #5e4925;
+  color: var(--gold-bright);
+}
+
+.snippet-panel-actions button:hover:not(:disabled) {
+  border-color: var(--gold);
+  background: var(--raised-hover);
+}
+
+.snippet-panel-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.snippet-empty {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+.snippet-empty[hidden] {
+  display: none;
+}
+
+.snippet-list {
+  display: grid;
+  gap: 8px;
+}
+
+.snippet-card {
+  display: grid;
+  gap: 5px;
+  padding: 5px;
+  border: 1px solid var(--panel-border);
+  background: var(--raised);
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.snippet-card:hover {
+  border-color: var(--border-strong);
+}
+
+.snippet-card.dragging {
+  border-color: var(--gem);
+}
+
+.snippet-card.unplaceable {
+  opacity: 0.6;
+}
+
+.snippet-card-new {
+  animation: snippet-card-saved 900ms ease-out;
+}
+
+@keyframes snippet-card-saved {
+  0% {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgb(240 199 94 / 45%);
+  }
+
+  100% {
+    border-color: var(--panel-border);
+    box-shadow: none;
+  }
+}
+
+.snippet-card-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  color: var(--text-body);
+  background: none;
+  text-align: left;
+  cursor: grab;
+  touch-action: none;
+}
+
+.snippet-card-body:disabled {
+  cursor: not-allowed;
+}
+
+.snippet-card.dragging .snippet-card-body {
+  cursor: grabbing;
+}
+
+.snippet-thumbnail {
+  width: 100%;
+  height: 72px;
+  border: 1px solid var(--border-faint);
+  background: var(--inset);
+}
+
+.snippet-card-caption {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+}
+
+.snippet-card-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.snippet-card-size {
+  flex-shrink: 0;
+  color: var(--text-faint);
+}
+
+.snippet-warning {
+  margin: 0;
+  color: var(--ember);
+  font-size: 0.6rem;
+  line-height: 1.4;
+}
+
+.snippet-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 3px;
+}
+
+.snippet-card-actions button {
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  color: var(--text-mid);
+  background: var(--inset);
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.snippet-card-actions button:hover {
+  border-color: var(--border-strong);
+  color: var(--text-body);
+}
+
+.snippet-card-actions [data-snippet-action="delete"]:hover {
+  border-color: var(--ember);
+  color: var(--ember);
 }
 
 .instructions {

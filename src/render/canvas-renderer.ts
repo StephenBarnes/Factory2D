@@ -4,21 +4,18 @@ import {
   Direction,
   directionX,
   directionY,
-  orientedSides,
-  oppositeDirection,
-  TILE_DEFINITIONS,
   TileKind,
   WeldSide,
 } from "../simulation/tile";
 import type { World } from "../simulation/world";
 import { expectDefined } from "../util/assert";
 import type { GridCell, GridEdge, GridPoint } from "./grid-drag";
+import { createBodyCell, populateBodyCell } from "./body-cells";
 import {
   type BodyCell,
   createBodyPath,
   drawBody,
   drawTile,
-  setCircuitPortCharge,
 } from "./tile-renderer";
 
 
@@ -812,55 +809,12 @@ export class CanvasRenderer {
       const index = expectDefined(bodyStack[stackSize], "welded body stack entry");
       let cell = this.bodyCells[count];
       if (cell === undefined) {
-        cell = {
-          x: 0,
-          y: 0,
-          kind: TileKind.Empty,
-          orientation: Direction.Up,
-          outputCharge: 0,
-          circuitConnections: WeldSide.None,
-          circuitPortCharges: 0,
-          componentState: null,
-          seamRight: false,
-          seamDown: false,
-        };
+        cell = createBodyCell();
         this.bodyCells.push(cell);
       }
       count += 1;
-      const x = index % width;
-      cell.x = x;
-      cell.y = (index - x) / width;
-      cell.kind = world.kindAtIndex(index);
-      cell.orientation = world.orientationAtIndex(index);
-      const networkCharge = world.chargeAtPortIndex(index, Direction.Up);
-      cell.outputCharge = cell.kind === TileKind.Sensor
-        ? world.sensorOutputAtIndex(index)
-        : networkCharge;
-      cell.circuitConnections = WeldSide.None;
-      cell.circuitPortCharges = 0;
-      cell.componentState = world.componentStateSnapshotAtIndex(index);
-      const inputPorts = orientedSides(
-        TILE_DEFINITIONS[cell.kind].circuitInputPorts,
-        cell.orientation,
-      );
-      for (let value = Direction.Up; value <= Direction.Left; value += 1) {
-        const direction = value as Direction;
-        if (!world.hasCircuitConnectionAtIndex(index, direction)) {
-          continue;
-        }
-        cell.circuitConnections |= 1 << direction;
-        const portCharge = (inputPorts & (1 << direction)) !== 0
-          ? world.chargeAtPortIndex(
-            index + directionX(direction) + directionY(direction) * width,
-            oppositeDirection(direction),
-          )
-          : world.chargeAtPortIndex(index, direction);
-        cell.circuitPortCharges = setCircuitPortCharge(
-          cell.circuitPortCharges,
-          direction,
-          portCharge,
-        );
-      }
+      populateBodyCell(world, index, cell);
+      const x = cell.x;
 
       if (world.hasRightWeldAtIndex(index) && bodyStamps[index + 1] !== stamp) {
         bodyStamps[index + 1] = stamp;
