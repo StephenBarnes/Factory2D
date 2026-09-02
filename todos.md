@@ -95,9 +95,10 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 
 * A sensor that detects when the sensor's own tile moves, and outputs +1 on that side, -1 on the other side.
 * Add comparer component that compares front neighbor to back neighbor, outputs +1 on sides if they're equal, else output 0. Make it compare entire bodies, exactly like the delivery box but without consuming.
-* Maybe add min() and max() gates.
 * Add a ternary LUT component. Two input lines, two identical outputs, similar to the ROM. Make it configurable (via E-key config modal) using a 3x3 grid, similar to the grids we have for ROMs but with fixed size. Each tick, it should read its two inputs and map them to a unique configured cell in the 3x3 grid, then output the value stored there. We probably won't allow this for most puzzles, or make it expensive, since it subsumes various other components (rectifier, combiner, inverter), but it could still be useful. This is overall similar to the ROM, except that (1) it doesn't have a cursor moved in (0, 1) or (1, 0) increments but instead uses direct addresses given by the two inputs; and (2) it has a fixed 3x3 grid size for the possible 2-trit input combinations. We also don't need to support the ROM grapher component for this LUT.
 * Add a "rune engine" component that's like a programmable logic array / gate array, but more native to signed ternary than binary. Details: probably take 2 inputs and produce 2 outputs. The rune engine has a grid of ternary bits which determine the I/O relation. Details to be determined. Could include an internal latch for feedback, like the PGA in Shenzhen IO.
+* Add a component that checks whether all of up to 3 connected inputs are equal, and if so, outputs 1, else 0. For any side that's not connected to anything, don't consider it in the equality check - but if it's connected to e.g. a conduit tile, even if that's not connected to anything else, then do consider it (as a zero-value input). Building this from existing basic components (inverter, combiner, multiplier, and even including subtractor and selector) requires more than 3 components (confirmed via the circuit synthesis script) even if we guarantee exactly 2 connected inputs; the 3-input case might need twice that many.
+* Add min() and max() gates - return min/max of up to 3 connected components. Use a  Building this from other components needs 2 moderately-complex components for the 2-input case (a subtractor and selector), and probably needs 4 for the 3-input case. Use the same rule as for the equality rune above - unconnected input sides aren't considered as terms in the min/max operation.
 
 ## Circuit component modifications
 
@@ -106,15 +107,9 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * For the signal monitor and ROM grapher: in their configuration modals, add a text input for "category", defaulting to blank. Then on the signal panel, group each category together, instead of board row-major order. Show category names above the traces. Useful for grouping inputs vs outputs.
 * Sequence checker follow-ups: the expected sequence must begin with a nonzero value because the checker starts on the player's first nonzero output, so the "bursts" rectifier-puzzle case cannot verify silence during its leading negative burst. Consider an optional arm/start input port, or an explicit "expect silence for N ticks before the first value" configuration, if a puzzle needs it. Also consider a configurable maximum latency that fails a solution outright instead of relying on the cycle limit. DEFER until a puzzle actually needs this.
 
-## Circuit design problems to try, to decide whether we should add components or change behavior
-
-* Figure out how hard it is to check if two ternary inputs are different or equal, or check whether a set of 3 inputs contains both +1 and -1.
-* Check whether we can compute a min or max of 2 or 3 inputs, compactly.
-* Write a script (TypeScript or Python) that enumerates possible combinations of a given set of components and checks whether all functions of up to N ternary inputs to M outputs can be realized using up to T components, and lowest delay with which it can be realized. Assume no connectivity or planarity constraints (so don't worry about needing wire-crossings), treating components as functions where anything can be wired to anything. Later maybe extend to mark planarity requirements, or extend to sequential logic patterns that care about timing.
-
 ## Circuit components to not add because they're already buildable
 
-* AND/OR, NAND/NOR - don't make sense with ternary. Maybe add min/max, though.
+* AND/OR gates - they're binary gates not ternary, and we'll add min/max which are n-ary generalizations of them.
 * Edge detectors: can be done by using an inverter to get `-x[t-1]` and using a combiner to add `x[t] - x[t-1]`.
 * Latches: can be done by connecting a combiner's output to its input.
 * Block that writes alternating red/blue charges every tick. Because we can create this with a spark plus inverter feeding itself.

@@ -9,7 +9,8 @@
     "test": "vitest run",
     "test:browser": "playwright test",
     "test:watch": "vitest",
-    "typecheck": "tsc -b --pretty false"
+    "typecheck": "tsc -b --pretty false",
+    "search:ternary": "python3 tools/ternary_logic_search.py"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
