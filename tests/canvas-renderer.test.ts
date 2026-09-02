@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, type Mock, vi } from "vitest";
 
 import { CanvasRenderer } from "../src/render/canvas-renderer";
+import { CIRCUIT_CHARGE_COLORS } from "../src/simulation/circuit";
 import { World } from "../src/simulation/world";
 import { TileKind } from "../src/simulation/tile";
 
@@ -32,8 +33,14 @@ interface PathRectangle {
   readonly height: number;
 }
 
+let pathConstructionCount = 0;
+
 class RecordingPath2D {
   readonly rectangles: PathRectangle[] = [];
+  constructor() {
+    pathConstructionCount += 1;
+  }
+
 
   moveTo(_x: number, _y: number): void {}
   arcTo(_x1: number, _y1: number, _x2: number, _y2: number, _radius: number): void {}
@@ -46,10 +53,12 @@ class RecordingPath2D {
 interface RecordingCanvas extends FakeCanvas {
   readonly filledPaths: RecordingPath2D[];
   readonly clip: Mock;
+  readonly fillStyles: string[];
 }
 
 function createRecordingCanvas(width: number, height: number): RecordingCanvas {
   const filledPaths: RecordingPath2D[] = [];
+  const fillStyles: string[] = [];
   const clip = vi.fn();
   const context = {
     fillStyle: "",
@@ -79,6 +88,7 @@ function createRecordingCanvas(width: number, height: number): RecordingCanvas {
     setLineDash: vi.fn(),
     clip,
     fill: (path?: RecordingPath2D) => {
+      fillStyles.push(context.fillStyle as string);
       if (path !== undefined) {
         filledPaths.push(path);
       }
@@ -92,11 +102,12 @@ function createRecordingCanvas(width: number, height: number): RecordingCanvas {
     getContext: (kind: string) => kind === "2d" ? context : null,
     getBoundingClientRect: () => ({ left: 0, top: 0 }),
   } as unknown as HTMLCanvasElement;
-  return { canvas, context, filledPaths, clip };
+  return { canvas, context, filledPaths, fillStyles, clip };
 }
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  pathConstructionCount = 0;
 });
 
 describe("CanvasRenderer viewport fitting", () => {
@@ -171,5 +182,28 @@ describe("CanvasRenderer scalable tile rendering", () => {
     renderer.render();
 
     expect(clip).toHaveBeenCalledTimes(1);
+  });
+
+  it("refreshes visual state without rebuilding unchanged body geometry", () => {
+    vi.stubGlobal("window", { devicePixelRatio: 1 });
+    vi.stubGlobal("Path2D", RecordingPath2D);
+    const world = new World(1, 1);
+    world.place(0, 0, TileKind.Conduit);
+    const { canvas, fillStyles } = createRecordingCanvas(100, 100);
+    const renderer = new CanvasRenderer(canvas, world);
+
+    renderer.render();
+    const initialPathCount = pathConstructionCount;
+    fillStyles.length = 0;
+
+    world.setCharge(0, 0, 1);
+    renderer.render();
+
+    expect(pathConstructionCount).toBe(initialPathCount);
+    expect(fillStyles).toContain(CIRCUIT_CHARGE_COLORS[1]);
+
+    world.place(0, 0, TileKind.Platform);
+    renderer.render();
+    expect(pathConstructionCount).toBeGreaterThan(initialPathCount);
   });
 });

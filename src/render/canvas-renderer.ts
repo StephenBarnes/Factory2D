@@ -90,6 +90,7 @@ export class CanvasRenderer {
   private bodyStack = new Int32Array(0);
   private readonly bodyCells: BodyCell[] = [];
   private cachedWorldRevision = -1;
+  private cachedWorldGeometryRevision = -1;
   private cachedCellSize = 0;
   private readonly cachedBodies: CachedBody[] = [];
   private readonly cachedSelectionBodies: CachedBodyGeometry[] = [];
@@ -936,13 +937,18 @@ export class CanvasRenderer {
 
   private rebuildBodyCache(): void {
     if (
-      this.cachedWorldRevision === this.world.revision &&
+      this.cachedWorldGeometryRevision === this.world.geometryRevision &&
       this.cachedCellSize === this.cellSize
     ) {
+      if (this.cachedWorldRevision !== this.world.revision) {
+        this.refreshCachedBodyState();
+        this.cachedWorldRevision = this.world.revision;
+      }
       return;
     }
 
     this.cachedWorldRevision = this.world.revision;
+    this.cachedWorldGeometryRevision = this.world.geometryRevision;
     this.cachedCellSize = this.cellSize;
     this.cachedBodies.length = 0;
 
@@ -981,6 +987,18 @@ export class CanvasRenderer {
         maxX,
         maxY,
       });
+    }
+  }
+
+  private refreshCachedBodyState(): void {
+    for (const body of this.cachedBodies) {
+      for (const cell of body.cells) {
+        const index = cell.y * this.world.width + cell.x;
+        if (this.world.kindAtIndex(index) === TileKind.Empty) {
+          throw new Error("World body geometry changed without incrementing its geometry revision");
+        }
+        populateBodyCell(this.world, index, cell);
+      }
     }
   }
 

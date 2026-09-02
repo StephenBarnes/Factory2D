@@ -2,16 +2,30 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 
 # Game flow
 
-* Add tick speeds above 60 ticks per second; for those, step the simulation multiple times between renders. This is useful for testing solutions fast while still showing what's going on.
+## Main menu
+
 * Add collapsible sections (default collapsed) on the main menu: a credits section, and a technical info section to explain the video game architecture and link to GitHub repo.
-* DEFER After the last set of puzzles is unlocked, also unlock a "full toolbelt" equivalent of every puzzle - a variant where all components are available, with the same list of prices for each. This adds some content, lets players compete on more histograms.
-* Add a mechanism to detect if previous state is exactly equal to current state. Some false negatives are acceptable. The goal is to detect loops, and interrupt execution when testing puzzle solutions. (For example: the puzzle is to drop one stone block on a delivery block. The player drops it in some other location, where it sits indefinitely. We don't want to make them sit through N ticks or have to press fast-forward button.) We could combine this with the "active/asleep regions" optimization pointed out elsewhere in this file.
-* DEFER Add support for a new puzzle type, where the player starts with a machine that doesn't work. They have to modify as few tiles as possible to make it work. Same scoring rules but we only count modified tiles. Add some way to view what tiles have been modified - maybe color grid cells yellow if their contained cell is modified. Could auto-generate some of these puzzles from reference solutions.
-* If the player creates a test solution, but instead of pressing the "test" button they press "step" repeatedly until victory or loss, we currently never react to victory or loss. We should instead show the toast on failure, and show the success / score report modal on success (unless there was a failure on a previous step).
-* When the player presses test button or reset button, we currently change zoom and pan to fit the whole board. Rather don't do that - keep current zoom and pan.
-* Add a way to save specific sandbox configurations in the game, without needing to download files or use import/export. Maybe modify the sandbox to store multiple saved sandboxes, similar to the solutions stored for puzzles, and add a sandbox briefing screen that lists them.
+
+## Unlocking puzzles
+
 * Add a field to the puzzle group definitions that decides how many puzzles in the group we unlock, when the group is unlocked. I think it's currently 3, though not certain because both our groups only have 2 puzzles currently. For some groups like tutorials we'd prefer to unlock 1 at a time, while other groups should prefer 2, and collections of unrelated challenges should use 999 to unlock all of them immediately. In all cases, completing a puzzle in the group should the first still-locked puzzle in the group, if any.
+
+## Puzzle briefing screen
+
 * Modify the puzzle briefing screen: Instead of needing to click on one of the saved solutions, and then click separate duplicate/edit/delete buttons, rather have 3 buttons on each saved solution. Make the saved solutions non-selectable. Although, the gradient we currently draw on the selected solution looks nice, so keep that - but apply it to the lowest-combined-score solution, if any solutions are confirmed successful. (Later, color it according to the mineral rank of the solution - stone, iron, gold, mithril ranks determined by score percentiles.)
+
+## Sim test/play flow
+
+* When the player presses test button or reset button, we currently change zoom and pan to fit the whole board. Rather don't do that - keep current zoom and pan.
+* Bug: If the player creates a test solution, but instead of pressing the "test" button they press "step" repeatedly until victory or loss, we currently never react to victory or loss. We should instead show the toast on failure, and show the success / score report modal on success (unless there was a failure on a previous step).
+* Add tick speeds above 60 ticks per second; for those, step the simulation multiple times between renders. This is useful for testing solutions fast while still showing what's going on.
+* Add step-forward and step-back to the control panel at the bottom. Requires keeping previous state in memory, or several so we can step back multiple ticks.
+* Add a mechanism to detect if previous state is exactly equal to current state. Some false negatives are acceptable. The goal is to detect loops, and interrupt execution when testing puzzle solutions. (For example: the puzzle is to drop one stone block on a delivery block. The player drops it in some other location, where it sits indefinitely. We don't want to make them sit through N ticks or have to press fast-forward button.) We could combine this with the "active/asleep regions" optimization pointed out elsewhere in this file.
+
+## New puzzle types
+
+* DEFER Add support for a new puzzle type, where the player starts with a machine that doesn't work. They have to modify as few tiles as possible to make it work. Same scoring rules but we only count modified tiles. Add some way to view what tiles have been modified - maybe color grid lines yellow if their contained cell is modified. Could auto-generate some of these puzzles from reference solutions.
+* DEFER After the last set of puzzles is unlocked, also unlock a "full toolbelt" equivalent of every puzzle - a variant where all components are available, with the same list of prices for each. This adds some content, lets players compete on more histograms.
 
 # Storage format, import/export
 
@@ -20,16 +34,16 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * Similarly, remove the "standard" test case with no overrides, from the stored format - treat that as a given and only list additional test cases in the file.
 * Further compact orientations and charges in the export/import format, possibly storing charges per network instead of per tile. More complex per-tile state (e.g. furnace stored ticks or target/delivery-block configuration) can remain verbose. Only include full ASCII grids for fields that aren't the default value.
 
-# Player-created puzzles, histograms, authoring
+# Authoring tools, player-created puzzles, histograms
 
+* For the sandbox's puzzle properties window, we currently have a way to edit the description, but not the goal field. Add another text input for the goal. Also add most of the other fields needed to specify the puzzle: a dropdown for the puzzle group, number input for the order field, text input for the id, number input for the cycle limit. Don't worry about the `features` field since we're planning to remove that field.
+* Add tools to sandbox to define a puzzle's test cases. Figure out what UI flow would work best for this.
+* Add a way to save specific sandbox configurations in the game, without needing to download files or use import/export. Maybe modify the sandbox to store multiple saved sandboxes, similar to the solutions stored for puzzles, and add a sandbox briefing screen that lists them.
 * Implement a text-box tool that places and edits text boxes on the game screen. Useful for tutorial puzzles, and also for players that want to label/annotate their designs. Model them separate from the component grid - they're not grid-aligned, don't occupy tiles, and have no prices. Include them the puzzle JSON format and scene JSON format. Need to decide how we handle pressing enter (finishes editing, or creates a line break?), whether to allow editing after placing them, whether to place as a rectangle or a point, etc. Probably LMB or LMB-drag places or edits, RMB removes.
-* Make puzzle share/save options open a modal to enter the name, description, and goal. We'll use this both for authoring puzzles, and for later allowing users to share puzzles to a public list of community puzzles.
 * DEFER Add back-end server and database. Probably Cloudflare Workers + D1 + R2. Then make the game request histogram data and shared puzzles, and allow submitting scores and shared puzzles.
 * DEFER Use `crypto.randomUUID()` to assign each install an ID. Allow voting community-created puzzles up and down. We can assume users aren't malicious, this is a zero-stakes indie game; expect under 10 players per day. We want to avoid setting up a whole auth system or requiring email addresses, etc. Using a simple unique ID allows exploits (e.g. clear browser data and double-vote) but we'll assume nobody does that. Version the database and roll back manually if needed. If the game becomes popular enough to need more than that, upgrade to a more robust system.
 * DEFER For community puzzles, organize them automatically by their set of allowed components. Unlock each after the earliest built-in progression point where all of those components have appeared in that group or an earlier group.
 * DEFER Add histograms on the puzzle solution result modal. Rate solutions by percentile as coal, iron, gold, mithril. On the puzzle briefing screen, show the player's best score and percentile-mineral rank on each of the 4 metrics - for each metric, take the min/best over all their solutions. Also, if they have 2 or more solutions, the result modal should show their best score and the current solution's score for each metric, on each histogram.
-* For the sandbox's puzzle properties window, we currently have a way to edit the description, but not the goal field. Add another text input for the goal. Also add most of the other fields needed to specify the puzzle: a dropdown for the puzzle group, number input for the order field, text input for the id, number input for the cycle limit. Don't worry about the `features` field since we're planning to remove that field.
-* Add tools to sandbox to define a puzzle's test cases. Figure out what UI flow would work best for this.
 
 ## Puzzle infrastructure components
 
@@ -45,7 +59,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 
 * Assembler follow-ups: the recipe table is a placeholder (sensor pair, piston, lodestone, conduits) and needs real game recipes once copper and other materials exist. Consider mirrored inputs (maybe just adding a mirrored recipe), a side circuit pulse on consumption or emission like the delivery box, a side disable input, and per-recipe output welds.
 * Flipper: attaches to one block, then flips the entire connected/welded group of blocks around that line horizontally or vertically, if it would not collide/overlap other blocks. Similar to Kaizen game's rotation.
-* Laser splitter: splits everything in a line.
+* Laser splitter: splits everything in a single line, e.g. the left side of every block in its forward direction.
 * Add a press/stamper/crusher. Behaves similarly to the piston, but (1) if piston extension is blocked by another tile, and that tile can't be moved, it instead unwelds and destroys that tile; and (2) we have a list of recipes for transforming the tile that the extended arm touches, on extension.
 * Grinder blocks that process a block in front into a product block - exactly like the furnace, but with a distinct table of recipes and different appearance (and later animation and sound).
 * A drill/destroyer block that destroys the block in front of it.
@@ -56,6 +70,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * Add blocks that play a chime or other sound when charged.
 * Add a component that has no gravity, and moves forward one tile every time step; when blocked, attempt to push the tile in front. Could be useful as a model for many later components: arrows fired by elves, thrusters, etc.
 * Add a "box" component that has an internal grid of miniature components. Similar to the implemented rune array (reuse its nested `World` state, `WorldRuntime` tree, entering/leaving view, and nested board format), but instead of circuit signal ports, add holes where blocks can fall in/out or be pushed in/out. A miniature block that falls out through a hole becomes a full block on that side of the box; a full block that falls in becomes a miniature block. Similar to Factorio's warehouse mods, or Patrick's Parabox.
+* Add a slider component that cannot be moved in one axis, only the other axis. Allow rotation, which changes which axis is fixed. A welded body with sliders has all of their constraints - so with both horizontal and vertical sliders, it can't move at all.
 
 # New component behaviors
 
@@ -65,6 +80,8 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * Furnaces could have special behavior if said neighbor is surrounded by certain other neighbors. Add this to furnace recipes.
 * Furnaces could trigger a block to weld to neighbors after cooking it. Add to furnace recipes.
 * Furnaces could have stages, e.g. cookie dough -> cookie -> burnt cookie, creating timing challenges.
+* Modify the assembler to add reaction force: When it has a pending output, but no space to output, shift the assembler in its forwards direction, emitting the product out the back (at assembler's pre-movement position). Allow this motion to push other blocks that are in front of the assembler.
+* Modify the duplicator in the same way as assembler above - make it also attempt to push itself away from the output side, if it's trying to duplicate a single-tile body but there's something blocking the output. When duplicating multi-tile bodies, don't do this - require already empty space for the whole body.
 
 # Performance
 
@@ -83,6 +100,8 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * Add comparer component that compares front neighbor to back neighbor, outputs +1 on sides if they're equal, else output 0. Make it compare entire bodies, exactly like the delivery box but without consuming.
 * Maybe add min() and max() gates.
 * Show signal monitors placed inside rune arrays on the signal panel. `SignalTraceRecorder` and the panel only walk the root board today; nested monitors would need composite keys (array ID path plus inner tile ID) and a label showing which array they sit in.
+* Add a ternary LUT component. Two input lines, two identical outputs, similar to the ROM. Make it configurable (via E-key config modal) using a 3x3 grid, similar to the grids we have for ROMs but with fixed size. Each tick, it should read its two inputs and map them to a unique configured cell in the 3x3 grid, then output the value stored there. We probably won't allow this for most puzzles, or make it expensive, since it subsumes various other components (rectifier, combiner, inverter), but it could still be useful. This is overall similar to the ROM, except that (1) it doesn't have a cursor moved in (0, 1) or (1, 0) increments but instead uses direct addresses given by the two inputs; and (2) it has a fixed 3x3 grid size for the possible 2-trit input combinations. We also don't need to support the ROM grapher component for this LUT.
+* Add a "rune engine" component that's like a programmable logic array / gate array, but more native to signed ternary than binary. Details: probably take 2 inputs and produce 2 outputs. The rune engine has a grid of ternary bits which determine the I/O relation. Details to be determined. Could include an internal latch for feedback, like the PGA in Shenzhen IO.
 
 ## Circuit design problems to try, to decide whether we should add components or change behavior
 
@@ -115,11 +134,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * When saving an image using the image button, crop out parts of the screen that are over the background, outside the grid, if this can be implemented easily.
 * Implement undo and redo when editing.
 * Check for any potential bugs caused by listening only to mouse-up and mouse-down events, and assuming the mouse button is held down until a mouse-up is received. Can cause accidental deletion or placing of tiles if the mouse-up event is hidden by other window events.
-* Add step-forward and step-back to the control panel at the bottom. Requires keeping previous state in memory, or several so we can step back multiple ticks.
-* Add hotkeys for game controls: step-forward, step-back, reset, clear, and speed controls.
 * Animate text like "+2⚙" rising off the current puzzle price as components are placed.
-* Add shift + mousewheel to scroll through palette entries.
-* Middle-click on palette should act like left-click on palette.
 * The charge sensor rune should not allow circuit connections on the side it's facing, because that connection doesn't do anything. It should allow welds, but not connect to circuits on that side.
 * Add support for mobile and touch screens. Check if it's playable.
 * Modify sizing to make things more visible on 4k monitors. For example the prices of components are currently displayed very small in the inspector. Might also be an issue on 1080p though, so this may be a general sizing issue rather than UI scaling.
@@ -140,11 +155,23 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * Allow opening the configuration modal on blocks outside the player's modifiable region, but ban actually changing any of the config values - just to see the values.
 * Add an option to the export menu to open the current puzzle in the sandbox.
 * DEFER Maybe support selections that are a union of rectangles, created by shift-LMB-drag.
+* When a region is selected using the selection tool, in the sandbox, add a new tool that will crop the board to that selection. (Currently it requires using the puzzle properties modal to set the grid size to specific numbers; this selection path would be easier and more intuitive.)
+* If the player clicks and drags from a palette tile, treat it as a left-click - select that palette tile. Ideally also place the tile on mouse up on the grid, as though they clicked. So they can click and drag components from palette to grid, in addition to the current flow (click on palette, then click on grid).
+* Middle-click on palette should act like left-click on palette.
+
+## Shortcuts
+
+* Add shift + mousewheel to scroll through palette entries.
+* Modify block placement. Currently shift + LMB (or LMB drag) places welded. Add ctrl + shift + LMB drag to place and weld only the edges that you dragged over. So dragging a boustrophedon pattern with ctrl+shift will weld in the same snake pattern, not weld all blocks to all neighbors.
+* Add hotkeys for game controls: step-forward, step-back, reset, clear, and speed controls.
+* Allow pressing enter to commit selection to its position and unselect.
+* Add a shortcut for the selection tool. Maybe alt key, similar to how we have ctrl for the weld tool.
 
 # Visuals
 
+* Bug: ROMs in the selected region don't show their configured values - they show black for all cells. Seems to be a general issue - delay runes also don't show values.
 * Add backgrounds for puzzles, maybe with parallax as the player pans.
-* Rename runes; prefer metaphorical, arcane, or Anglish-style names. ROM rune -> rune of wisdom, sensor rune -> watchful rune, inverter -> gainsayer rune, delay rune -> recall rune, rectifier -> rightener, etc. Maybe rename +1, -1, and 0 to right, left, and center, or some other natural ternary system, if we can find a way to explain sum, multiply, and subtraction concisely in that system.
+* Rename runes; prefer metaphorical, arcane, or Anglish-style names. ROM rune -> rune of wisdom, sensor rune -> watchful rune, inverter -> gainsayer rune, delay rune -> recall rune, rectifier -> rightener, etc. Maybe rename +1, -1, and 0 to right, left, and center, or some other natural ternary system, if we can find a way to explain sum, multiply, and subtraction concisely in that system. Also rename the assembler - anvil or forge or something else?
 * Move gemstone count in the main menu to be around top-right instead, and show it larger and more concisely as "3◈" instead of text. Add title text saying that gemstones are earned by completing puzzles and used automatically to unlock new puzzle groups.
 * Main menu: show lock icon / unicode character next to locked puzzles and puzzle groups. On groups, add text saying "Solve 2 more puzzles to unlock" replacing "2 gemstones required", and make that text more visible.
 * Swap the symbols used for the selection tool and the player-modifiable region tool, but keep them with the same colors. (Selection should be dotted line, cyan, while modifiable-region tool should be two 90-degree lines, yellow.)
@@ -185,7 +212,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * DEFER Add a system of mechanical devices, a bit like our current ternary circuit system (conduits, inverter, etc.) but with different visuals and different mechanics. Since the game is 2D, we're restricted to motion that's legible in 2D - so use chain drives rather than driveshafts. Add chain drives that can rotate clockwise (+1), counterclockwise (-1), or stay still. Add gears (closer to one edge of the cell) that rotate in the inverse direction from that cell. Tint rotating components blue/red to make charges more visually distinct. Add equivalents for our runes: sensor rune becomes pressure plate, inverter is just a gear, wire-crossing is crossed chains. Others I'm not sure about: combiner, rectifier, multiplier, subtractor, sensor, selector. Also motors and generators to convert between runes/conduits and these clockwork components; maybe unify with the rotator block. We may add this as a later alternative to runes and conduits, for additional challenge.
 * DEFER Add recursive puzzles in the style of Patrick's Parabox - the entire puzzle is a block which contains itself. Use the miniature-block box component mentioned in another item - the entire level is a box that contains itself as one internal tile.
 * DEFER Blocks that set specific rules, e.g. what can be smelted to what. Allows puzzles in the vein of Baba Is You, or just more freedom in puzzle design. Advanced puzzles could involve changing the rules physically on the game board. Maybe have a "rule" block that looks like an arrow. Can be configured to set furnace recipes, grinder recipes, assembler recipes.
-* DEFER Look at other puzzle games (The Witness, various Zachtronics games) for inspiration, though not lazy copying of puzzles. Add any components necessary to allow implementing similar puzzles in our game. For example, we could make Witness-style mazes by letting the player place only conduits, and they have to link a fixed charge to the victory block; but how could we implement other constraints from Witness's puzzles?
+* DEFER Look at other puzzle games (The Witness, various Zachtronics games, Roody:2d) for inspiration, though not lazy copying of puzzles. Add any components necessary to allow implementing similar puzzles in our game. For example, we could make Witness-style mazes by letting the player place only conduits, and they have to link a fixed charge to the victory block; but how could we implement other constraints from Witness's puzzles?
 * DEFER Add elf archers with some simple behavior. Add arrows that they can shoot, which arc up for 2 tiles diagonally, then travel to the side and destroy the first block they hit.
 
 # Puzzle ideas

@@ -72,6 +72,7 @@ export class World {
   private readonly movedRightWelds: Uint8Array;
   private readonly movedDownWelds: Uint8Array;
   private revisionValue = 0;
+  private geometryRevisionValue = 0;
   private puzzleResultValue = PuzzleResult.InProgress;
 
   constructor(width: number, height: number) {
@@ -109,12 +110,26 @@ export class World {
     return this.revisionValue;
   }
 
+  /** Monotonically increases whenever this world's rendered body geometry may have changed. */
+  get geometryRevision(): number {
+    return this.geometryRevisionValue;
+  }
+
   /**
-   * Records an external change to state this world owns indirectly, such as an edit inside
-   * a rune array's inner board, so revision-keyed caches of this world rebuild.
+   * Records an external visual-state change owned indirectly by this world, such as an
+   * edit inside a rune array's inner board.
    */
   touchRevision(): void {
+    this.touchVisualRevision();
+  }
+
+  private touchVisualRevision(): void {
     this.revisionValue += 1;
+  }
+
+  private touchGeometryRevision(): void {
+    this.geometryRevisionValue += 1;
+    this.touchVisualRevision();
   }
 
   get puzzleResult(): PuzzleResult {
@@ -187,7 +202,7 @@ export class World {
     ) {
       this.charges[index] = charge;
       this.crossingVerticalCharges[index] = 0;
-      this.revisionValue += 1;
+      this.touchVisualRevision();
     }
   }
 
@@ -205,7 +220,7 @@ export class World {
     ) {
       this.charges[index] = horizontal;
       this.crossingVerticalCharges[index] = vertical;
-      this.revisionValue += 1;
+      this.touchVisualRevision();
     }
   }
   setIsolatedOutputCharge(x: number, y: number, charge: Charge): void {
@@ -219,7 +234,7 @@ export class World {
     }
     if (this.isolatedOutputCharges[index] !== charge) {
       this.isolatedOutputCharges[index] = charge;
-      this.revisionValue += 1;
+      this.touchVisualRevision();
     }
   }
 
@@ -307,7 +322,7 @@ export class World {
       }
     }
     if (changed) {
-      this.revisionValue += 1;
+      this.touchVisualRevision();
     }
   }
   componentStateSnapshotAt(
@@ -361,7 +376,7 @@ export class World {
       throw new Error(`Tile at (${x}, ${y}) does not have numeric configuration`);
     }
     this.charges[index] = 0;
-    this.revisionValue += 1;
+    this.touchVisualRevision();
     return true;
   }
 
@@ -418,7 +433,7 @@ export class World {
       state.failed = false;
     }
     this.charges[index] = 0;
-    this.revisionValue += 1;
+    this.touchVisualRevision();
     return true;
   }
 
@@ -462,7 +477,7 @@ export class World {
       changed = true;
     }
     if (changed) {
-      this.revisionValue += 1;
+      this.touchVisualRevision();
     }
     return changed;
   }
@@ -478,7 +493,7 @@ export class World {
       return false;
     }
     state.label = label;
-    this.revisionValue += 1;
+    this.touchVisualRevision();
     return true;
   }
 
@@ -498,7 +513,7 @@ export class World {
       throw new Error(`Configurable component at (${x}, ${y}) has no tile identity`);
     }
     this.componentStates.set(id, stateFromSnapshot(snapshot));
-    this.revisionValue += 1;
+    this.touchVisualRevision();
   }
 
   advanceDelayAtIndex(index: number, input: Charge): Charge {
@@ -511,7 +526,7 @@ export class World {
     state.data[state.cursor] = input;
     state.cursor = (state.cursor + 1) % state.length;
     if (changed) {
-      this.revisionValue += 1;
+      this.touchVisualRevision();
     }
     return output;
   }
@@ -535,7 +550,7 @@ export class World {
     } else {
       state.count = nextCount;
     }
-    this.revisionValue += 1;
+    this.touchVisualRevision();
     return output;
   }
 
@@ -558,7 +573,7 @@ export class World {
     }
     if (nextCursor !== state.cursor) {
       state.cursor = nextCursor;
-      this.revisionValue += 1;
+      this.touchVisualRevision();
     }
     return state.values[state.cursor] as Charge;
   }
@@ -584,11 +599,11 @@ export class World {
     }
     if (state.values[state.cursor] !== input) {
       state.failed = true;
-      this.revisionValue += 1;
+      this.touchVisualRevision();
       return -1;
     }
     state.cursor += 1;
-    this.revisionValue += 1;
+    this.touchVisualRevision();
     return state.cursor === valueCount ? 1 : 0;
   }
 
@@ -630,7 +645,7 @@ export class World {
     }
     this.furnaceProgress[index] = progress;
     this.furnaceTargetIds[index] = targetId;
-    this.revisionValue += 1;
+    this.touchVisualRevision();
   }
 
   applyFurnaceResults(
@@ -649,6 +664,7 @@ export class World {
     }
 
     let changed = false;
+    let geometryChanged = false;
     for (let index = 0; index < this.cellCount; index += 1) {
       if (this.kinds[index] !== TileKind.Furnace) {
         continue;
@@ -709,10 +725,13 @@ export class World {
       this.furnaceTargetIds[targetIndex] = 0;
       this.clearDisallowedWeldsAtIndex(targetIndex);
       changed = true;
+      geometryChanged = true;
     }
 
-    if (changed) {
-      this.revisionValue += 1;
+    if (geometryChanged) {
+      this.touchGeometryRevision();
+    } else if (changed) {
+      this.touchVisualRevision();
     }
   }
 
@@ -827,7 +846,7 @@ export class World {
     }
 
     if (changed) {
-      this.revisionValue += 1;
+      this.touchGeometryRevision();
     }
   }
 
@@ -882,7 +901,7 @@ export class World {
         this.clearIndex(index);
       }
     }
-    this.revisionValue += 1;
+    this.touchGeometryRevision();
   }
 
   applyDuplications(
@@ -1109,7 +1128,7 @@ export class World {
         }
       }
     }
-    this.revisionValue += 1;
+    this.touchGeometryRevision();
   }
 
   isWelded(x1: number, y1: number, x2: number, y2: number): boolean {
@@ -1140,7 +1159,7 @@ export class World {
       return false;
     }
     storage.welds[storage.index] = value;
-    this.revisionValue += 1;
+    this.touchGeometryRevision();
     return true;
   }
   weldEligibleNeighbors(x: number, y: number): boolean {
@@ -1181,7 +1200,7 @@ export class World {
     }
 
     if (changed) {
-      this.revisionValue += 1;
+      this.touchGeometryRevision();
     }
     return changed;
   }
@@ -1257,7 +1276,7 @@ export class World {
         return 0;
       }
       this.clearIndex(index);
-      this.revisionValue += 1;
+      this.touchGeometryRevision();
       return 0;
     }
 
@@ -1270,7 +1289,7 @@ export class World {
         this.furnaceProgress[index] = 0;
         this.furnaceTargetIds[index] = 0;
         this.clearDisallowedWeldsAtIndex(index);
-        this.revisionValue += 1;
+        this.touchGeometryRevision();
       }
       return this.ids[index] ?? 0;
     }
@@ -1297,7 +1316,7 @@ export class World {
     if (componentState !== null) {
       this.componentStates.set(id, componentState);
     }
-    this.revisionValue += 1;
+    this.touchGeometryRevision();
     return id;
   }
 
@@ -1314,7 +1333,7 @@ export class World {
     this.rightWelds.fill(0);
     this.downWelds.fill(0);
     this.puzzleResultValue = PuzzleResult.InProgress;
-    this.revisionValue += 1;
+    this.touchGeometryRevision();
   }
 
   clone(): World {
@@ -1359,7 +1378,7 @@ export class World {
     }
     this.puzzleResultValue = source.puzzleResultValue;
     this.nextTileId = source.nextTileId;
-    this.revisionValue += 1;
+    this.touchGeometryRevision();
   }
 
   kindAtIndex(index: number): TileKind {
@@ -1524,7 +1543,7 @@ export class World {
       transitionCount += 1;
     }
     if (transitionCount > 0) {
-      this.revisionValue += 1;
+      this.touchGeometryRevision();
     }
     return transitionCount;
   }
@@ -1662,7 +1681,7 @@ export class World {
     this.furnaceTargetIds.set(this.movedFurnaceTargetIds);
     this.rightWelds.set(this.movedRightWelds);
     this.downWelds.set(this.movedDownWelds);
-    this.revisionValue += 1;
+    this.touchGeometryRevision();
     return movementCount;
   }
 

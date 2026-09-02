@@ -272,3 +272,29 @@ Implemented the first two rendering priorities.
   - Canvas pixel inspection confirmed the low-detail tile fill rendered correctly.
 
 The fitted p95 remains above the suggested 12 ms target, so topology/visual revision separation remains the next high-value rendering change.
+
+# Update 2
+
+Implemented topology/visual revision separation, the third rendering priority.
+
+## Changes
+
+- `src/simulation/world.ts`
+  - Added a geometry revision that changes only when occupancy, tile kinds, positions, or weld topology may affect rendered body paths.
+  - Kept the existing visual revision for charges, furnace progress, configurable component state, and nested rune-array contents.
+  - Furnace progress updates remain visual-only; furnace transformations invalidate geometry.
+- `src/render/canvas-renderer.ts`
+  - Rebuilds welded-body membership, AABBs, cell arrays, and `Path2D` objects only when the geometry revision or cell size changes.
+  - Refreshes cached cells from current visual state while reusing body paths after charge and component-state changes.
+  - Fails loudly if occupancy changes without a geometry-revision increment.
+- `tests/canvas-renderer.test.ts`
+  - Verifies a conduit charge redraw updates its rendered charge color without constructing another body path.
+  - Verifies replacing the tile still rebuilds geometry.
+
+## Verification
+
+- `npm test -- --run tests/canvas-renderer.test.ts`: 6 tests passed.
+- `npm run build`: TypeScript and the production Vite bundle passed.
+- Browser smoke test placed a welded fixed-charge rune and conduit, stepped the live sandbox, and confirmed tick 1 serialized both charges as +1 and rendered the charged conduit center as `[58, 167, 255, 255]`.
+
+No comparative benchmark was rerun in this change. The next rendering work is chunk-level invalidation if topology-dirty frames remain expensive, then invalidation-driven redraws to reduce idle CPU.
