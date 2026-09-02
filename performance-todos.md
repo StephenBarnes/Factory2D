@@ -1,3 +1,5 @@
+Original request: Could you help profile this game to determine whether we need to optimize it, and if so, which parts to focus on? Currently it runs fine, but all of the puzzles/sandbox we have are quite small - under 20x20. And we want to eventually have much larger grids like 400x300 for many puzzles.
+
 # Conclusion
 
 **Optimization is not urgent for current sub-20×20 puzzles, but it is required before 400×300 boards ship.**
@@ -241,3 +243,32 @@ Initial targets:
 - Treat 60-tick/s max-size simulation as a separate product requirement; it is not currently viable.
 
 No repository changes were made. This was an execution and CPU/memory profiling pass against the actual `Simulation` and `CanvasRenderer` implementations.
+
+# Update
+
+Implemented the first two rendering priorities.
+
+## Changes
+
+- `src/render/canvas-renderer.ts`
+  - Added a low-detail path for cells below 6 screen pixels.
+  - Batches cells by tile kind and animation offset into `Path2D` fills.
+  - Preserves one-cell movement interpolation.
+  - Skips body shadows, clipping, decorations, bevels, and rounded outlines.
+  - Stores grid-space AABBs on detailed cached bodies.
+  - Culls detailed bodies outside the viewport, expanded by one cell for shadows and interpolation.
+
+- `tests/canvas-renderer.test.ts`
+  - Verifies same-kind low-detail cells use one batched fill.
+  - Verifies low-detail rendering avoids procedural clipping.
+  - Verifies zoomed rendering does not submit offscreen bodies.
+
+## Verification
+
+- Focused tests pass.
+- Browser smoke benchmark, 400×300 board with 6,000 tiles:
+  - Fitted low-detail frame: median **10.6 ms**, p95 **14.0 ms**
+  - Zoomed detailed cached frame with culling: median **0.6 ms**, p95 **0.9 ms**
+  - Canvas pixel inspection confirmed the low-detail tile fill rendered correctly.
+
+The fitted p95 remains above the suggested 12 ms target, so topology/visual revision separation remains the next high-value rendering change.

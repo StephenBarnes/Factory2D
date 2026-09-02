@@ -7,6 +7,8 @@ import {
   directionX,
   directionY,
   oppositeDirection,
+  TILE_DEFINITIONS,
+  TILE_KINDS,
   TileKind,
   WeldSide,
 } from "../simulation/tile";
@@ -30,6 +32,9 @@ const EDITABLE_REGION_DASH_PATTERN = [4, 4];
 const PORT_CELL_DASH_PATTERN = [3, 3];
 const NESTED_FRAME_COLOR = "#7a88c4";
 const PORT_CELL_COLOR = "rgb(199 211 244 / 55%)";
+/** Below this screen-space size, procedural details cost more than they communicate. */
+const LOW_DETAIL_CELL_SIZE = 6;
+const LOW_DETAIL_MOTION_BUCKETS = 9;
 
 /** Supplies the containing rune array's side charges while its inner board is displayed. */
 export interface NestedBoardView {
@@ -37,9 +42,18 @@ export interface NestedBoardView {
 }
 
 
-interface CachedBody {
+interface CachedBodyGeometry {
   readonly cells: readonly BodyCell[];
   readonly path: Path2D;
+}
+
+interface CachedBody extends CachedBodyGeometry {
+  readonly minX: number;
+  readonly minY: number;
+  /** Exclusive grid bound. */
+  readonly maxX: number;
+  /** Exclusive grid bound. */
+  readonly maxY: number;
 }
 export interface GridRegionScreenBounds {
   readonly left: number;
@@ -78,13 +92,17 @@ export class CanvasRenderer {
   private cachedWorldRevision = -1;
   private cachedCellSize = 0;
   private readonly cachedBodies: CachedBody[] = [];
-  private readonly cachedSelectionBodies: CachedBody[] = [];
+  private readonly cachedSelectionBodies: CachedBodyGeometry[] = [];
   private cachedSelectionOverlay: TileSelectionOverlay | null = null;
   private cachedSelectionCellSize = 0;
   private selectionBodyStamps = new Int32Array(0);
   private selectionBodyStack = new Int32Array(0);
   private selectionCellIndices = new Int32Array(0);
   private readonly selectionBodyCells: BodyCell[] = [];
+  /** Paths are grouped by tile kind and one of the nine adjacent-step animation offsets. */
+  private readonly lowDetailPaths: Array<Path2D | undefined> = new Array(
+    TILE_KINDS.length * LOW_DETAIL_MOTION_BUCKETS,
+  );
   private hoverX = -1;
   private hoverY = -1;
   private hoverEdge: GridEdge | null = null;
@@ -729,9 +747,26 @@ export class CanvasRenderer {
 
 
   private drawTiles(previousWorld: World | null, progress: number, animationTime: number): void {
+    if (this.cellSize < LOW_DETAIL_CELL_SIZE) {
+      this.drawLowDetailTiles(previousWorld, progress);
+      return;
+    }
+
     this.rebuildBodyCache();
 
+    const visibleLeft = -this.originX / this.cellSize - 1;
+    const visibleTop = -this.originY / this.cellSize - 1;
+    const visibleRight = (this.viewportWidth - this.originX) / this.cellSize + 1;
+    const visibleBottom = (this.viewportHeight - this.originY) / this.cellSize + 1;
     for (const body of this.cachedBodies) {
+      if (
+        body.maxX <= visibleLeft ||
+        body.minX >= visibleRight ||
+        body.maxY <= visibleTop ||
+        body.minY >= visibleBottom
+      ) {
+        continue;
+      }
       let offsetX = 0;
       let offsetY = 0;
       const remainingProgress = 1 - progress;
@@ -821,6 +856,84 @@ export class CanvasRenderer {
     }
   }
 
+  private drawLowDetailTiles(previousWorld: World | null, progress: number): void {
+    const { cellSize, originX, originY, world } = this;
+    const remainingProgress = 1 - progress;
+    const startX = Math.max(0, Math.floor(-originX / cellSize) - 1);
+    const startY = Math.max(0, Math.floor(-originY / cellSize) - 1);
+    const endX = Math.min(
+      world.width,
+      Math.ceil((this.viewportWidth - originX) / cellSize) + 1,
+    );
+    const endY = Math.min(
+      world.height,
+      Math.ceil((this.viewportHeight - originY) / cellSize) + 1,
+    );
+    this.lowDetailPaths.fill(undefined);
+
+    for (let y = startY; y < endY; y += 1) {
+      let index = y * world.width + startX;
+      for (let x = startX; x < endX; x += 1, index += 1) {
+        const kind = world.kindAtIndex(index);
+        if (kind === TileKind.Empty) {
+          continue;
+        }
+
+        let motionBucket = 4;
+        if (previousWorld !== null && remainingProgress > 0) {
+          const tileId = world.idAt(x, y);
+          if (previousWorld.idAt(x, y) !== tileId) {
+            searchPreviousPosition:
+            for (let verticalMove = -1; verticalMove <= 1; verticalMove += 1) {
+              for (let horizontalMove = -1; horizontalMove <= 1; horizontalMove += 1) {
+                if (horizontalMove === 0 && verticalMove === 0) {
+                  continue;
+                }
+                const previousX = x - horizontalMove;
+                const previousY = y - verticalMove;
+                if (
+                  previousX >= 0 &&
+                  previousX < world.width &&
+                  previousY >= 0 &&
+                  previousY < world.height &&
+                  previousWorld.idAt(previousX, previousY) === tileId
+                ) {
+                  motionBucket = (verticalMove + 1) * 3 + horizontalMove + 1;
+                  break searchPreviousPosition;
+                }
+              }
+            }
+          }
+        }
+
+        const pathIndex = kind * LOW_DETAIL_MOTION_BUCKETS + motionBucket;
+        let path = this.lowDetailPaths[pathIndex];
+        if (path === undefined) {
+          path = new Path2D();
+          this.lowDetailPaths[pathIndex] = path;
+        }
+        const horizontalMove = motionBucket % 3 - 1;
+        const verticalMove = Math.floor(motionBucket / 3) - 1;
+        path.rect(
+          originX + (x - horizontalMove * remainingProgress) * cellSize,
+          originY + (y - verticalMove * remainingProgress) * cellSize,
+          cellSize,
+          cellSize,
+        );
+      }
+    }
+
+    for (let index = 0; index < this.lowDetailPaths.length; index += 1) {
+      const path = this.lowDetailPaths[index];
+      if (path === undefined) {
+        continue;
+      }
+      const kind = Math.floor(index / LOW_DETAIL_MOTION_BUCKETS) as TileKind;
+      this.context.fillStyle = TILE_DEFINITIONS[kind].fill;
+      this.context.fill(path);
+    }
+  }
+
   private rebuildBodyCache(): void {
     if (
       this.cachedWorldRevision === this.world.revision &&
@@ -848,13 +961,25 @@ export class CanvasRenderer {
 
       const count = this.collectBody(index);
       const cells = new Array<BodyCell>(count);
+      let minX = this.world.width;
+      let minY = this.world.height;
+      let maxX = 0;
+      let maxY = 0;
       for (let cellIndex = 0; cellIndex < count; cellIndex += 1) {
         const cell = expectDefined(this.bodyCells[cellIndex], "cached body cell");
         cells[cellIndex] = { ...cell };
+        minX = Math.min(minX, cell.x);
+        minY = Math.min(minY, cell.y);
+        maxX = Math.max(maxX, cell.x + 1);
+        maxY = Math.max(maxY, cell.y + 1);
       }
       this.cachedBodies.push({
         cells,
         path: createBodyPath(0, 0, this.cellSize, cells, count),
+        minX,
+        minY,
+        maxX,
+        maxY,
       });
     }
   }
