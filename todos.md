@@ -29,7 +29,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * DEFER For community puzzles, organize them automatically by their set of allowed components. Unlock each after the earliest built-in progression point where all of those components have appeared in that group or an earlier group.
 * DEFER Add histograms on the puzzle solution result modal. Rate solutions by percentile as coal, iron, gold, mithril. On the puzzle briefing screen, show the player's best score and percentile-mineral rank on each of the 4 metrics - for each metric, take the min/best over all their solutions. Also, if they have 2 or more solutions, the result modal should show their best score and the current solution's score for each metric, on each histogram.
 * For the sandbox's puzzle properties window, we currently have a way to edit the description, but not the goal field. Add another text input for the goal. Also add most of the other fields needed to specify the puzzle: a dropdown for the puzzle group, number input for the order field, text input for the id, number input for the cycle limit. Don't worry about the `features` field since we're planning to remove that field.
-* Later: add tools to sandbox to define a puzzle's test cases. Figure out what UI flow would work best for this.
+* Add tools to sandbox to define a puzzle's test cases. Figure out what UI flow would work best for this.
 
 ## Puzzle infrastructure components
 

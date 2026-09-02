@@ -1,0 +1,181 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 4,
+  "width": 15,
+  "height": 3,
+  "id": "rectifier-compact",
+  "group": "runelore",
+  "order": 4,
+  "name": "Rectifier-compact",
+  "description": "More compact version of rectifier puzzle",
+  "goal": "Rectify the input signal",
+  "features": [
+    "Signal panel",
+    "Sequence checker",
+    "Multiplier rune",
+    "Combiner rune"
+  ],
+  "cycleLimit": 200,
+  "components": [
+    {
+      "code": "C",
+      "price": 1
+    },
+    {
+      "code": "I",
+      "price": 3
+    },
+    {
+      "code": "+",
+      "price": 3
+    },
+    {
+      "code": "*",
+      "price": 3
+    }
+  ],
+  "editableRegions": [
+    {
+      "x": 4,
+      "y": 0,
+      "width": 7,
+      "height": 3
+    }
+  ],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 14,
+    "width": 15,
+    "height": 3,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "====.......====",
+      "1UmC.......CmEV",
+      "====.......==g="
+    ],
+    "orientations": [
+      {
+        "x": 1,
+        "y": 1,
+        "direction": "right"
+      },
+      {
+        "x": 13,
+        "y": 1,
+        "direction": "right"
+      }
+    ],
+    "charges": [],
+    "crossingCharges": [],
+    "isolatedOutputCharges": [],
+    "furnaces": [],
+    "components": [
+      {
+        "x": 1,
+        "y": 1,
+        "type": "rom",
+        "width": 9,
+        "height": 3,
+        "cursor": 0,
+        "values": [
+          1,
+          -1,
+          0,
+          1,
+          1,
+          -1,
+          -1,
+          0,
+          0,
+          1,
+          -1,
+          1,
+          0,
+          -1,
+          1,
+          0,
+          0,
+          -1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "type": "monitor",
+        "label": "INPUT"
+      },
+      {
+        "x": 12,
+        "y": 1,
+        "type": "monitor",
+        "label": "OUTPUT"
+      },
+      {
+        "x": 13,
+        "y": 1,
+        "type": "checker",
+        "width": 9,
+        "height": 3,
+        "cursor": 0,
+        "failed": false,
+        "values": [
+          1,
+          0,
+          0,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          1,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "x": 13,
+        "y": 2,
+        "type": "grapher",
+        "label": "EXPECTED"
+      }
+    ],
+    "welds": [
+      "+++|.......+++|",
+      "+++|.......+++|",
+      "---........---."
+    ]
+  },
+  "testCases": [
+    {
+      "id": "mixed",
+      "name": "Mixed signal",
+      "overrides": {}
+    }
+  ]
+}
