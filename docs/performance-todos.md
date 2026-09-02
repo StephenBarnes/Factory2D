@@ -328,3 +328,40 @@ Implemented localized body-cache invalidation and unchanged-frame suppression, c
 - Browser screenshot inspection confirmed the edited detailed tile remained visible on the benchmark canvas.
 
 The renderer still receives a `requestAnimationFrame` callback while a workshop is open, but static callbacks now perform only revision/input comparisons and no drawing. Fully event-driven frame scheduling would save the remaining callback overhead; simulation feature-presence tracking is the next higher-impact scalability task.
+
+# Update 4
+
+Implemented simulation feature-presence tracking and sparse row-major pass iteration, covering the second optimization priority.
+
+## Changes
+
+- `src/simulation/world-features.ts` and `src/simulation/world.ts`
+  - Added centrally maintained bitset indices for occupied, gravity-affected, circuit, piston, magnet, conveyor, rune-array, and rare machine cells.
+  - Preserved deterministic row-major and reverse-row-major iteration.
+  - Updates the indices through placement, clearing, copying, furnace conversion, duplication, piston transitions, and body movement.
+- `src/simulation/simulation.ts` and `src/simulation/world-runtime.ts`
+  - Skip forest-wide circuit resolution when no board contains circuit behavior.
+  - Skip welded-body collection and each rare resolver when its corresponding component set is empty.
+  - Skip ordinary movement when no gravity-affected cell exists and piston resolution when no piston action tile exists.
+  - Enumerate nested rune arrays from their sparse index instead of scanning every outer-board cell.
+- Simulation resolvers
+  - Circuit, motion, welded-body, delivery, duplicator, assembler, furnace, piston, conveyor, and magnet passes now locate relevant cells through sparse indices rather than complete-board scans.
+  - Furnace scratch reset touches only furnace indices.
+  - Welder/splitter edge resolution retains a touched-edge bitset, avoiding complete edge-buffer scans while preserving row-major commit order.
+- `tests/world-features.test.ts`
+  - Covers subsystem classification, forward and reverse row-major order, placement/replacement/clear, clone/copy, body movement, and piston transitions.
+
+## Verification
+
+- Focused simulation verification: 11 files and 428 tests passed.
+- `npm test`: 42 files and 706 tests passed.
+- `npm run build`: TypeScript and the production Vite bundle passed.
+- Warmed headless-Chromium benchmark on 400×300 boards:
+  - Empty: median **0 ms**, p95 **0.1 ms** (previous profile: median **15.2 ms**).
+  - Fully occupied static platform: median **0 ms**, p95 **0.1 ms** (previous profile: median **29.8 ms**).
+  - 1%-occupied static stone: median **0.5 ms**, p95 **0.9 ms**.
+  - Single welder: median **0.6 ms**, p95 **0.7 ms**.
+  - 30,000 falling stones: median **9.6 ms**, p95 **16.5 ms** (previous profile: approximately **19.1 ms**).
+  - Fully welded conduit network: median **54.3 ms**, p95 **83.5 ms** (previous profile: median **61.6 ms**).
+
+Circuit storage still reserves four nodes per cell and rebuilds union topology every circuit tick. Compact, cached circuit topology remains the next simulation optimization priority.

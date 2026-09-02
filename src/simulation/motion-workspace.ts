@@ -8,6 +8,7 @@ import {
   TileKind,
 } from "./tile";
 import { World } from "./world";
+import { WorldFeature } from "./world-features";
 
 /**
  * Potential refactors for this file:
@@ -151,12 +152,20 @@ export class MotionWorkspace {
    */
   private collectPistonBodies(): void {
     this.bodyRoots.fill(-1);
-    for (let index = 0; index < this.world.cellCount; index += 1) {
+    for (
+      let index = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      index >= 0;
+      index = this.world.nextFeatureIndex(WorldFeature.Occupied, index)
+    ) {
       if (this.world.kindAtIndex(index) !== TileKind.Empty) {
         this.bodyRoots[index] = index;
       }
     }
-    for (let index = 0; index < this.world.cellCount; index += 1) {
+    for (
+      let index = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      index >= 0;
+      index = this.world.nextFeatureIndex(WorldFeature.Occupied, index)
+    ) {
       if (expectDefined(this.bodyRoots[index], "piston body root marker") < 0) {
         continue;
       }
@@ -173,7 +182,11 @@ export class MotionWorkspace {
         this.unionBodies(index, index + this.world.width);
       }
     }
-    for (let index = 0; index < this.world.cellCount; index += 1) {
+    for (
+      let index = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      index >= 0;
+      index = this.world.nextFeatureIndex(WorldFeature.Occupied, index)
+    ) {
       if (expectDefined(this.bodyRoots[index], "piston body root marker") >= 0) {
         this.bodyRoots[index] = this.findBodyRoot(index);
       }
@@ -235,7 +248,11 @@ export class MotionWorkspace {
     this.bodyForceY.fill(0);
     this.destinationOwners.fill(-1);
 
-    for (let base = 0; base < this.world.cellCount; base += 1) {
+    for (
+      let base = this.world.firstFeatureIndex(WorldFeature.Piston);
+      base >= 0;
+      base = this.world.nextFeatureIndex(WorldFeature.Piston, base)
+    ) {
       const action = this.pistonActionAt(base);
       if (action === 0) {
         continue;
@@ -305,7 +322,11 @@ export class MotionWorkspace {
       }
     }
 
-    for (let base = 0; base < this.world.cellCount; base += 1) {
+    for (
+      let base = this.world.firstFeatureIndex(WorldFeature.Piston);
+      base >= 0;
+      base = this.world.nextFeatureIndex(WorldFeature.Piston, base)
+    ) {
       const action = expectDefined(this.pistonActions[base], "piston action");
       if (action === 0) {
         continue;
@@ -319,7 +340,11 @@ export class MotionWorkspace {
       }
     }
 
-    for (let base = 0; base < this.world.cellCount; base += 1) {
+    for (
+      let base = this.world.firstFeatureIndex(WorldFeature.Piston);
+      base >= 0;
+      base = this.world.nextFeatureIndex(WorldFeature.Piston, base)
+    ) {
       const action = expectDefined(this.pistonActions[base], "piston action");
       if (action === 0) {
         continue;
@@ -354,7 +379,11 @@ export class MotionWorkspace {
 
   private choosePistonRecoilExtensions(): boolean {
     let foundRecoil = false;
-    for (let base = 0; base < this.world.cellCount; base += 1) {
+    for (
+      let base = this.world.firstFeatureIndex(WorldFeature.Piston);
+      base >= 0;
+      base = this.world.nextFeatureIndex(WorldFeature.Piston, base)
+    ) {
       if (expectDefined(this.pistonActions[base], "piston action") !== 1) {
         continue;
       }
@@ -384,7 +413,11 @@ export class MotionWorkspace {
     this.pistonAnchoredBodies.fill(0);
     this.pistonVacatedOwners.fill(-1);
 
-    for (let base = 0; base < this.world.cellCount; base += 1) {
+    for (
+      let base = this.world.firstFeatureIndex(WorldFeature.Piston);
+      base >= 0;
+      base = this.world.nextFeatureIndex(WorldFeature.Piston, base)
+    ) {
       const action = expectDefined(this.pistonActions[base], "piston action");
       if (action === 0) {
         continue;
@@ -420,7 +453,11 @@ export class MotionWorkspace {
   }
 
   private validatePistonMovements(): void {
-    for (let base = 0; base < this.world.cellCount; base += 1) {
+    for (
+      let base = this.world.firstFeatureIndex(WorldFeature.Piston);
+      base >= 0;
+      base = this.world.nextFeatureIndex(WorldFeature.Piston, base)
+    ) {
       const action = expectDefined(this.pistonActions[base], "piston action");
       if (action === 0) {
         continue;
@@ -450,7 +487,11 @@ export class MotionWorkspace {
   private preparePistonTransitions(): void {
     this.pistonTransitionActions.fill(0);
     this.pistonTransitionHeadWelds.fill(0);
-    for (let base = 0; base < this.world.cellCount; base += 1) {
+    for (
+      let base = this.world.firstFeatureIndex(WorldFeature.Piston);
+      base >= 0;
+      base = this.world.nextFeatureIndex(WorldFeature.Piston, base)
+    ) {
       const action = expectDefined(this.pistonActions[base], "piston action");
       if (action === 0) {
         continue;
@@ -483,12 +524,20 @@ export class MotionWorkspace {
     this.blockedMovementGroups.fill(0);
     let queueLength = 0;
 
-    for (let root = 0; root < this.world.cellCount; root += 1) {
+    for (
+      let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      root >= 0;
+      root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+    ) {
       if (expectDefined(this.bodyHeads[root], "piston body head") >= 0) {
         this.movementGroupRoots[root] = root;
       }
     }
-    for (let root = 0; root < this.world.cellCount; root += 1) {
+    for (
+      let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      root >= 0;
+      root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+    ) {
       if (expectDefined(this.bodyHeads[root], "piston body head") < 0) {
         continue;
       }
@@ -571,7 +620,11 @@ export class MotionWorkspace {
     }
 
     this.destinationOwners.fill(-1);
-    for (let root = 0; root < this.world.cellCount; root += 1) {
+    for (
+      let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      root >= 0;
+      root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+    ) {
       if (this.drivenBodies[root] === 0 || this.isMovementGroupBlocked(root)) {
         continue;
       }
@@ -595,7 +648,11 @@ export class MotionWorkspace {
         }
       }
     }
-    for (let root = 0; root < this.world.cellCount; root += 1) {
+    for (
+      let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      root >= 0;
+      root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+    ) {
       if (this.drivenBodies[root] === 1 && this.isMovementGroupBlocked(root)) {
         this.horizontalMoves[root] = 0;
         this.verticalMoves[root] = 0;
@@ -607,13 +664,21 @@ export class MotionWorkspace {
   private collectWeldedBodies(): void {
     this.bodyRoots.fill(-1);
     this.weldedBodyRoots.fill(-1);
-    for (let index = 0; index < this.world.cellCount; index += 1) {
+    for (
+      let index = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      index >= 0;
+      index = this.world.nextFeatureIndex(WorldFeature.Occupied, index)
+    ) {
       if (this.world.kindAtIndex(index) !== TileKind.Empty) {
         this.bodyRoots[index] = index;
       }
     }
 
-    for (let index = 0; index < this.world.cellCount; index += 1) {
+    for (
+      let index = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      index >= 0;
+      index = this.world.nextFeatureIndex(WorldFeature.Occupied, index)
+    ) {
       if (expectDefined(this.bodyRoots[index], "welded body root marker") < 0) {
         continue;
       }
@@ -625,7 +690,11 @@ export class MotionWorkspace {
       }
     }
 
-    for (let index = 0; index < this.world.cellCount; index += 1) {
+    for (
+      let index = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      index >= 0;
+      index = this.world.nextFeatureIndex(WorldFeature.Occupied, index)
+    ) {
       if (expectDefined(this.bodyRoots[index], "welded body root") < 0) {
         continue;
       }
@@ -643,7 +712,11 @@ export class MotionWorkspace {
   private connectMagneticallyAttractedBodies(): void {
     this.magneticConstraintHeads.fill(-1);
     this.magneticConstraintCount = 0;
-    for (let magnet = 0; magnet < this.world.cellCount; magnet += 1) {
+    for (
+      let magnet = this.world.firstFeatureIndex(WorldFeature.Magnet);
+      magnet >= 0;
+      magnet = this.world.nextFeatureIndex(WorldFeature.Magnet, magnet)
+    ) {
       const magnetDefinition = TILE_DEFINITIONS[this.world.kindAtIndex(magnet)];
       if (magnetDefinition.attractionRange === 0) {
         continue;
@@ -719,7 +792,11 @@ export class MotionWorkspace {
     this.bodyHeads.fill(-1);
     this.bodyFalls.fill(1);
     this.bodySlidesDiagonally.fill(1);
-    for (let index = this.world.cellCount - 1; index >= 0; index -= 1) {
+    for (
+      let index = this.world.lastFeatureIndex(WorldFeature.Occupied);
+      index >= 0;
+      index = this.world.previousFeatureIndex(WorldFeature.Occupied, index)
+    ) {
       if (expectDefined(this.bodyRoots[index], "body root marker") < 0) {
         continue;
       }
@@ -741,7 +818,11 @@ export class MotionWorkspace {
   private restoreWeldedBodiesAfterGravity(): void {
     this.gravityHorizontalMoves.fill(0);
     this.gravityVerticalMoves.fill(0);
-    for (let index = 0; index < this.world.cellCount; index += 1) {
+    for (
+      let index = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      index >= 0;
+      index = this.world.nextFeatureIndex(WorldFeature.Occupied, index)
+    ) {
       const weldedRoot = expectDefined(this.weldedBodyRoots[index], "welded body root");
       if (weldedRoot < 0) {
         continue;
@@ -782,7 +863,11 @@ export class MotionWorkspace {
   private collectConveyorForces(): void {
     this.bodyForceX.fill(0);
     this.bodyForceY.fill(0);
-    for (let index = 0; index < this.world.cellCount; index += 1) {
+    for (
+      let index = this.world.firstFeatureIndex(WorldFeature.Conveyor);
+      index >= 0;
+      index = this.world.nextFeatureIndex(WorldFeature.Conveyor, index)
+    ) {
       if (this.world.kindAtIndex(index) !== TileKind.Conveyor) {
         continue;
       }
@@ -823,14 +908,22 @@ export class MotionWorkspace {
     this.blockedMovementGroups.fill(0);
     let queueLength = 0;
 
-    for (let root = 0; root < this.world.cellCount; root += 1) {
+    for (
+      let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      root >= 0;
+      root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+    ) {
       if (expectDefined(this.bodyHeads[root], "body head") < 0) {
         continue;
       }
       this.movementGroupRoots[root] = root;
     }
 
-    for (let root = 0; root < this.world.cellCount; root += 1) {
+    for (
+      let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      root >= 0;
+      root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+    ) {
       if (
         expectDefined(this.bodyHeads[root], "body head") < 0 ||
         this.verticalMoves[root] === 1
@@ -973,7 +1066,11 @@ export class MotionWorkspace {
     }
 
     this.gravityDestinationOwners.fill(-1);
-    for (let root = 0; root < this.world.cellCount; root += 1) {
+    for (
+      let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      root >= 0;
+      root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+    ) {
       if (this.drivenBodies[root] === 1 || this.verticalMoves[root] !== 1) {
         continue;
       }
@@ -989,7 +1086,11 @@ export class MotionWorkspace {
     }
 
     this.destinationOwners.fill(-1);
-    for (let root = 0; root < this.world.cellCount; root += 1) {
+    for (
+      let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      root >= 0;
+      root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+    ) {
       if (
         this.drivenBodies[root] === 0 ||
         this.isMovementGroupBlocked(root)
@@ -1026,7 +1127,11 @@ export class MotionWorkspace {
       }
     }
 
-    for (let root = 0; root < this.world.cellCount; root += 1) {
+    for (
+      let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      root >= 0;
+      root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+    ) {
       if (this.drivenBodies[root] === 1 && this.isMovementGroupBlocked(root)) {
         this.horizontalMoves[root] = 0;
         this.verticalMoves[root] = 0;
@@ -1040,7 +1145,11 @@ export class MotionWorkspace {
     this.dependencyHeads.fill(-1);
     let dependencyCount = 0;
 
-    for (let root = 0; root < this.world.cellCount; root += 1) {
+    for (
+      let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      root >= 0;
+      root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+    ) {
       if (
         this.drivenBodies[root] === 0 ||
         this.horizontalMoves[root] === 0 && this.verticalMoves[root] === 0
@@ -1058,7 +1167,11 @@ export class MotionWorkspace {
       }
     }
 
-    for (let root = 0; root < this.world.cellCount; root += 1) {
+    for (
+      let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      root >= 0;
+      root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+    ) {
       if (
         expectDefined(this.bodyHeads[root], "body head") < 0 ||
         this.drivenBodies[root] === 1
@@ -1106,7 +1219,11 @@ export class MotionWorkspace {
 
     let queueHead = 0;
     let queueLength = 0;
-    for (let root = 0; root < this.world.cellCount; root += 1) {
+    for (
+      let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      root >= 0;
+      root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+    ) {
       if (this.jammedBodies[root] === 1) {
         this.blockedBodyQueue[queueLength] = root;
         queueLength += 1;
@@ -1136,14 +1253,22 @@ export class MotionWorkspace {
       }
     }
 
-    for (let root = 0; root < this.world.cellCount; root += 1) {
+    for (
+      let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      root >= 0;
+      root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+    ) {
       if (this.jammedBodies[root] === 1 && this.drivenBodies[root] === 0) {
         this.horizontalMoves[root] = 0;
         this.verticalMoves[root] = 0;
       }
     }
 
-    for (let root = 0; root < this.world.cellCount; root += 1) {
+    for (
+      let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      root >= 0;
+      root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+    ) {
       if (
         expectDefined(this.bodyHeads[root], "body head") < 0 ||
         this.drivenBodies[root] === 1 ||
@@ -1170,7 +1295,11 @@ export class MotionWorkspace {
   }
 
   private resolveDestinationConflicts(): void {
-    for (let root = 0; root < this.world.cellCount; root += 1) {
+    for (
+      let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      root >= 0;
+      root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+    ) {
       if (
         this.drivenBodies[root] === 1 ||
         this.horizontalMoves[root] !== 0 ||
@@ -1193,7 +1322,11 @@ export class MotionWorkspace {
       }
     }
 
-    for (let root = 0; root < this.world.cellCount; root += 1) {
+    for (
+      let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      root >= 0;
+      root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+    ) {
       const horizontalMove = expectDefined(
         this.horizontalMoves[root],
         "horizontal gravity movement",
@@ -1218,7 +1351,11 @@ export class MotionWorkspace {
       }
     }
 
-    for (let root = 0; root < this.world.cellCount; root += 1) {
+    for (
+      let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      root >= 0;
+      root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+    ) {
       const horizontalMove = expectDefined(
         this.horizontalMoves[root],
         "horizontal gravity movement",
@@ -1247,7 +1384,11 @@ export class MotionWorkspace {
       }
     }
 
-    for (let root = 0; root < this.world.cellCount; root += 1) {
+    for (
+      let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      root >= 0;
+      root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+    ) {
       if (this.drivenBodies[root] === 0 && this.jammedBodies[root] === 1) {
         this.horizontalMoves[root] = 0;
         this.verticalMoves[root] = 0;

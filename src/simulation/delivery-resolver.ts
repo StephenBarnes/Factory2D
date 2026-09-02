@@ -2,6 +2,7 @@ import { expectDefined } from "../util/assert";
 import { Direction, oppositeDirection, TileKind } from "./tile";
 import type { World } from "./world";
 import { WeldedBodyIndex } from "./welded-body-index";
+import { WorldFeature } from "./world-features";
 
 /** Collects complete-body delivery intents, jams shared targets, then commits absorption. */
 export class DeliveryResolver {
@@ -10,6 +11,7 @@ export class DeliveryResolver {
   private readonly world: World;
   private readonly bodies: WeldedBodyIndex;
   private readonly absorbedBodyOwners: Int32Array;
+  private absorptionCount = 0;
 
   constructor(world: World, bodies: WeldedBodyIndex) {
     this.world = world;
@@ -21,11 +23,13 @@ export class DeliveryResolver {
   collect(): void {
     this.absorbedBodyOwners.fill(-1);
     this.absorptionTargetIndices.fill(-1);
+    this.absorptionCount = 0;
 
-    for (let delivery = 0; delivery < this.world.cellCount; delivery += 1) {
-      if (this.world.kindAtIndex(delivery) !== TileKind.Delivery) {
-        continue;
-      }
+    for (
+      let delivery = this.world.firstFeatureIndex(WorldFeature.Delivery);
+      delivery >= 0;
+      delivery = this.world.nextFeatureIndex(WorldFeature.Delivery, delivery)
+    ) {
       const orientation = this.world.orientationAtIndex(delivery);
       const target = this.neighborIndex(delivery, orientation);
       const reference = this.neighborIndex(delivery, oppositeDirection(orientation));
@@ -63,7 +67,11 @@ export class DeliveryResolver {
       }
     }
 
-    for (let delivery = 0; delivery < this.world.cellCount; delivery += 1) {
+    for (
+      let delivery = this.world.firstFeatureIndex(WorldFeature.Delivery);
+      delivery >= 0;
+      delivery = this.world.nextFeatureIndex(WorldFeature.Delivery, delivery)
+    ) {
       const target = expectDefined(
         this.absorptionTargetIndices[delivery],
         "delivery target index",
@@ -80,10 +88,16 @@ export class DeliveryResolver {
         }
         member = this.bodies.nextMember(member);
       }
+      if (expectDefined(this.absorptionTargetIndices[delivery], "accepted delivery target") >= 0) {
+        this.absorptionCount += 1;
+      }
     }
   }
 
   commit(): void {
+    if (this.absorptionCount === 0) {
+      return;
+    }
     this.world.applyDeliveryAbsorptions(
       this.absorptionTargetIndices,
       this.absorbedBodyOwners,

@@ -38,6 +38,7 @@ import {
   TileKind,
 } from "./tile";
 import { expectDefined } from "../util/assert";
+import { WorldFeature, WorldFeatureIndex } from "./world-features";
 
 export interface Tile {
   readonly kind: TileKind;
@@ -74,6 +75,7 @@ export class World {
   private revisionValue = 0;
   private geometryRevisionValue = 0;
   private puzzleResultValue = PuzzleResult.InProgress;
+  private readonly featureIndex: WorldFeatureIndex;
 
   constructor(width: number, height: number) {
     if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
@@ -103,6 +105,7 @@ export class World {
     this.movedFurnaceTargetIds = new Uint32Array(this.cellCount);
     this.movedRightWelds = new Uint8Array(this.cellCount);
     this.movedDownWelds = new Uint8Array(this.cellCount);
+    this.featureIndex = new WorldFeatureIndex(this.cellCount);
   }
 
   /** Monotonically increases whenever this world's renderable state may have changed. */
@@ -113,6 +116,26 @@ export class World {
   /** Monotonically increases whenever this world's rendered body geometry may have changed. */
   get geometryRevision(): number {
     return this.geometryRevisionValue;
+  }
+
+  hasFeature(feature: WorldFeature): boolean {
+    return this.featureIndex.has(feature);
+  }
+
+  firstFeatureIndex(feature: WorldFeature): number {
+    return this.featureIndex.first(feature);
+  }
+
+  nextFeatureIndex(feature: WorldFeature, after: number): number {
+    return this.featureIndex.next(feature, after);
+  }
+
+  lastFeatureIndex(feature: WorldFeature): number {
+    return this.featureIndex.last(feature);
+  }
+
+  previousFeatureIndex(feature: WorldFeature, before: number): number {
+    return this.featureIndex.previous(feature, before);
   }
 
   /**
@@ -260,7 +283,11 @@ export class World {
     }
 
     let changed = false;
-    for (let index = 0; index < this.cellCount; index += 1) {
+    for (
+      let index = this.firstFeatureIndex(WorldFeature.Circuit);
+      index >= 0;
+      index = this.nextFeatureIndex(WorldFeature.Circuit, index)
+    ) {
       const kind = this.kinds[index] as TileKind;
       if (kind === TileKind.RuneArray) {
         const state = this.requireRuneArrayStateAtIndex(index);
@@ -665,10 +692,11 @@ export class World {
 
     let changed = false;
     let geometryChanged = false;
-    for (let index = 0; index < this.cellCount; index += 1) {
-      if (this.kinds[index] !== TileKind.Furnace) {
-        continue;
-      }
+    for (
+      let index = this.firstFeatureIndex(WorldFeature.Furnace);
+      index >= 0;
+      index = this.nextFeatureIndex(WorldFeature.Furnace, index)
+    ) {
       const progress = expectDefined(progresses[index], "next furnace progress");
       const targetId = expectDefined(targetIds[index], "next furnace target ID");
       const willTransform = expectDefined(
@@ -692,7 +720,11 @@ export class World {
       }
     }
 
-    for (let index = 0; index < this.cellCount; index += 1) {
+    for (
+      let index = this.firstFeatureIndex(WorldFeature.Furnace);
+      index >= 0;
+      index = this.nextFeatureIndex(WorldFeature.Furnace, index)
+    ) {
       const targetIndex = expectDefined(
         transformTargetIndices[index],
         "furnace transform target",
@@ -716,7 +748,7 @@ export class World {
       if (transformedId !== 0) {
         this.componentStates.delete(transformedId);
       }
-      this.kinds[targetIndex] = outputKind;
+      this.replaceKindAtIndex(targetIndex, outputKind);
       this.orientations[targetIndex] = Direction.Up;
       this.charges[targetIndex] = 0;
       this.crossingVerticalCharges[targetIndex] = 0;
@@ -769,7 +801,11 @@ export class World {
     }
 
     let changed = false;
-    for (let assembler = 0; assembler < this.cellCount; assembler += 1) {
+    for (
+      let assembler = this.firstFeatureIndex(WorldFeature.Assembler);
+      assembler >= 0;
+      assembler = this.nextFeatureIndex(WorldFeature.Assembler, assembler)
+    ) {
       const target = expectDefined(consumeTargetIndices[assembler], "assembler consume target");
       if (target < 0) {
         continue;
@@ -820,7 +856,11 @@ export class World {
       changed = true;
     }
 
-    for (let assembler = 0; assembler < this.cellCount; assembler += 1) {
+    for (
+      let assembler = this.firstFeatureIndex(WorldFeature.Assembler);
+      assembler >= 0;
+      assembler = this.nextFeatureIndex(WorldFeature.Assembler, assembler)
+    ) {
       const target = expectDefined(emitTargetIndices[assembler], "assembler emit target");
       if (target < 0) {
         continue;
@@ -861,7 +901,11 @@ export class World {
       throw new RangeError("Delivery buffers must match the world cell count");
     }
 
-    for (let delivery = 0; delivery < this.cellCount; delivery += 1) {
+    for (
+      let delivery = this.firstFeatureIndex(WorldFeature.Delivery);
+      delivery >= 0;
+      delivery = this.nextFeatureIndex(WorldFeature.Delivery, delivery)
+    ) {
       const target = expectDefined(targetIndices[delivery], "delivery target index");
       if (target < 0) {
         continue;
@@ -983,7 +1027,7 @@ export class World {
       const ownerOrientation = this.orientations[owner] as Direction;
       const id = this.nextTileId;
       this.nextTileId += 1;
-      this.kinds[destination] = kind;
+      this.replaceKindAtIndex(destination, kind);
       this.ids[destination] = id;
       this.orientations[destination] = orientationForKind(
         kind,
@@ -1301,7 +1345,7 @@ export class World {
 
     const id = this.nextTileId;
     this.nextTileId += 1;
-    this.kinds[index] = kind;
+    this.replaceKindAtIndex(index, kind);
     this.ids[index] = id;
     this.charges[index] = 0;
     this.crossingVerticalCharges[index] = 0;
@@ -1322,6 +1366,7 @@ export class World {
 
   clear(): void {
     this.kinds.fill(TileKind.Empty);
+    this.featureIndex.clear();
     this.ids.fill(0);
     this.orientations.fill(Direction.Up);
     this.charges.fill(0);
@@ -1348,6 +1393,7 @@ export class World {
     }
 
     this.kinds.set(source.kinds);
+    this.featureIndex.copyFrom(source.featureIndex);
     this.ids.set(source.ids);
     this.orientations.set(source.orientations);
     this.charges.set(source.charges);
@@ -1484,7 +1530,11 @@ export class World {
     }
 
     let transitionCount = 0;
-    for (let base = 0; base < this.cellCount; base += 1) {
+    for (
+      let base = this.firstFeatureIndex(WorldFeature.Piston);
+      base >= 0;
+      base = this.nextFeatureIndex(WorldFeature.Piston, base)
+    ) {
       const action = expectDefined(actions[base], "piston action");
       if (action === 0) {
         continue;
@@ -1502,10 +1552,10 @@ export class World {
           throw new Error(`Invalid piston extension at index ${base}`);
         }
         const movingArmId = expectDefined(this.ids[base], "retracted piston ID");
-        this.kinds[base] = TileKind.PistonBase;
+        this.replaceKindAtIndex(base, TileKind.PistonBase);
         this.ids[base] = this.nextTileId;
         this.nextTileId += 1;
-        this.kinds[arm] = TileKind.PistonArm;
+        this.replaceKindAtIndex(arm, TileKind.PistonArm);
         this.ids[arm] = movingArmId;
         this.orientations[arm] = orientation;
         this.charges[arm] = 0;
@@ -1526,7 +1576,7 @@ export class World {
         if (movingArmId === 0) {
           throw new Error(`Piston retraction at index ${base} has no arm ID`);
         }
-        this.kinds[base] = TileKind.Piston;
+        this.replaceKindAtIndex(base, TileKind.Piston);
         this.ids[base] = movingArmId;
         if (headWelded) {
           if (this.kinds[arm] === TileKind.Empty) {
@@ -1563,10 +1613,11 @@ export class World {
     }
 
     let movementCount = 0;
-    for (let source = 0; source < this.cellCount; source += 1) {
-      if (this.kinds[source] === TileKind.Empty) {
-        continue;
-      }
+    for (
+      let source = this.firstFeatureIndex(WorldFeature.Occupied);
+      source >= 0;
+      source = this.nextFeatureIndex(WorldFeature.Occupied, source)
+    ) {
       const root = expectDefined(bodyRoots[source], "moving body root");
       const moveX = expectDefined(horizontalMoves[root], "horizontal body movement");
       const moveY = expectDefined(verticalMoves[root], "vertical body movement");
@@ -1605,10 +1656,11 @@ export class World {
     this.movedRightWelds.set(this.rightWelds);
     this.movedDownWelds.set(this.downWelds);
 
-    for (let source = 0; source < this.cellCount; source += 1) {
-      if (this.kinds[source] === TileKind.Empty) {
-        continue;
-      }
+    for (
+      let source = this.firstFeatureIndex(WorldFeature.Occupied);
+      source >= 0;
+      source = this.nextFeatureIndex(WorldFeature.Occupied, source)
+    ) {
       const root = expectDefined(bodyRoots[source], "moving body root");
       const moveX = expectDefined(horizontalMoves[root], "horizontal body movement");
       const moveY = expectDefined(verticalMoves[root], "vertical body movement");
@@ -1627,10 +1679,11 @@ export class World {
       this.movedDownWelds[source] = 0;
     }
 
-    for (let source = 0; source < this.cellCount; source += 1) {
-      if (this.kinds[source] === TileKind.Empty) {
-        continue;
-      }
+    for (
+      let source = this.firstFeatureIndex(WorldFeature.Occupied);
+      source >= 0;
+      source = this.nextFeatureIndex(WorldFeature.Occupied, source)
+    ) {
       const root = expectDefined(bodyRoots[source], "moving body root");
       const moveX = expectDefined(horizontalMoves[root], "horizontal body movement");
       const moveY = expectDefined(verticalMoves[root], "vertical body movement");
@@ -1672,6 +1725,7 @@ export class World {
     }
 
     this.kinds.set(this.movedKinds);
+    this.featureIndex.rebuild(this.movedKinds);
     this.ids.set(this.movedIds);
     this.orientations.set(this.movedOrientations);
     this.charges.set(this.movedCharges);
@@ -2067,7 +2121,7 @@ export class World {
     if (id !== 0) {
       this.componentStates.delete(id);
     }
-    this.kinds[index] = TileKind.Empty;
+    this.replaceKindAtIndex(index, TileKind.Empty);
     this.orientations[index] = Direction.Up;
     this.charges[index] = 0;
     this.crossingVerticalCharges[index] = 0;
@@ -2076,6 +2130,15 @@ export class World {
     this.furnaceTargetIds[index] = 0;
     this.ids[index] = 0;
     this.clearWeldsAtIndex(index);
+  }
+
+  private replaceKindAtIndex(index: number, kind: TileKind): void {
+    const previousKind = this.kinds[index] as TileKind;
+    if (previousKind === kind) {
+      return;
+    }
+    this.featureIndex.replace(index, previousKind, kind);
+    this.kinds[index] = kind;
   }
 }
 

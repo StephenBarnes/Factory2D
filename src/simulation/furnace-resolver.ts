@@ -1,6 +1,7 @@
 import { furnaceRecipeFor } from "./furnace";
 import { Direction, TileKind } from "./tile";
 import type { World } from "./world";
+import { WorldFeature } from "./world-features";
 
 /** Resolves and commits furnace progress using persistent, allocation-free scratch buffers. */
 export class FurnaceResolver {
@@ -19,15 +20,16 @@ export class FurnaceResolver {
   }
 
   resolve(disabledFurnaces: Uint8Array): void {
-    this.nextProgress.fill(0);
-    this.nextTargetIds.fill(0);
-    this.transformTargetIndices.fill(-1);
-    this.transformKinds.fill(TileKind.Empty);
 
-    for (let index = 0; index < this.world.cellCount; index += 1) {
-      if (this.world.kindAtIndex(index) !== TileKind.Furnace) {
-        continue;
-      }
+    for (
+      let index = this.world.firstFeatureIndex(WorldFeature.Furnace);
+      index >= 0;
+      index = this.world.nextFeatureIndex(WorldFeature.Furnace, index)
+    ) {
+      this.nextProgress[index] = 0;
+      this.nextTargetIds[index] = 0;
+      this.transformTargetIndices[index] = -1;
+      this.transformKinds[index] = TileKind.Empty;
 
       const targetIndex = this.neighborIndex(index, this.world.orientationAtIndex(index));
       if (targetIndex < 0) {

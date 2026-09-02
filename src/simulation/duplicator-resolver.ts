@@ -6,6 +6,7 @@ import {
 } from "./tile";
 import type { World } from "./world";
 import { WeldedBodyIndex } from "./welded-body-index";
+import { WorldFeature } from "./world-features";
 
 /**
  * Collects duplicator requests from one stable topology, jams overlapping
@@ -34,7 +35,11 @@ export class DuplicatorResolver {
     this.sourceForDestination.fill(-1);
     this.acceptedDestinationCount = 0;
 
-    for (let duplicator = 0; duplicator < this.world.cellCount; duplicator += 1) {
+    for (
+      let duplicator = this.world.firstFeatureIndex(WorldFeature.Duplicator);
+      duplicator >= 0;
+      duplicator = this.world.nextFeatureIndex(WorldFeature.Duplicator, duplicator)
+    ) {
       if (!this.isPoweredDuplicator(duplicator)) {
         continue;
       }
@@ -49,7 +54,11 @@ export class DuplicatorResolver {
       }
     }
 
-    for (let duplicator = 0; duplicator < this.world.cellCount; duplicator += 1) {
+    for (
+      let duplicator = this.world.firstFeatureIndex(WorldFeature.Duplicator);
+      duplicator >= 0;
+      duplicator = this.world.nextFeatureIndex(WorldFeature.Duplicator, duplicator)
+    ) {
       if (this.candidateDuplicators[duplicator] !== 1) {
         continue;
       }
@@ -67,7 +76,11 @@ export class DuplicatorResolver {
       }
     }
 
-    for (let duplicator = 0; duplicator < this.world.cellCount; duplicator += 1) {
+    for (
+      let duplicator = this.world.firstFeatureIndex(WorldFeature.Duplicator);
+      duplicator >= 0;
+      duplicator = this.world.nextFeatureIndex(WorldFeature.Duplicator, duplicator)
+    ) {
       if (this.candidateDuplicators[duplicator] !== 1) {
         continue;
       }

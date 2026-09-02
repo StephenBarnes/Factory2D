@@ -6,6 +6,7 @@ import {
   TileKind,
 } from "./tile";
 import type { World } from "./world";
+import { WorldFeature } from "./world-features";
 
 const enum EdgeIntent {
   None = 0,
@@ -26,26 +27,36 @@ export class WeldOperationResolver {
   private readonly edgeIntents: Int8Array;
   private readonly changedEdges: Uint8Array;
   private readonly operatorRequests: Int32Array;
+  private readonly touchedEdgeWords: Uint32Array;
 
   constructor(world: World) {
     this.world = world;
     this.edgeIntents = new Int8Array(world.cellCount * 2);
     this.changedEdges = new Uint8Array(world.cellCount * 2);
     this.operatorRequests = new Int32Array(world.cellCount * 2);
+    this.touchedEdgeWords = new Uint32Array(Math.ceil(this.edgeIntents.length / 32));
     this.successfulOperationIndices = new Uint8Array(world.cellCount);
   }
 
   collect(): void {
-    this.edgeIntents.fill(EdgeIntent.None);
-    this.changedEdges.fill(0);
-    this.operatorRequests.fill(-1);
-    this.successfulOperationIndices.fill(0);
-
-    for (let index = 0; index < this.world.cellCount; index += 1) {
+    for (
+      let edge = this.firstTouchedEdge();
+      edge >= 0;
+      edge = this.nextTouchedEdge(edge)
+    ) {
+      this.edgeIntents[edge] = EdgeIntent.None;
+      this.changedEdges[edge] = 0;
+    }
+    this.touchedEdgeWords.fill(0);
+    for (
+      let index = this.world.firstFeatureIndex(WorldFeature.WeldOperator);
+      index >= 0;
+      index = this.world.nextFeatureIndex(WorldFeature.WeldOperator, index)
+    ) {
+      this.operatorRequests[index * 2] = -1;
+      this.operatorRequests[index * 2 + 1] = -1;
+      this.successfulOperationIndices[index] = 0;
       const kind = this.world.kindAtIndex(index);
-      if (kind !== TileKind.Welder && kind !== TileKind.Splitter) {
-        continue;
-      }
 
       const orientation = this.world.orientationAtIndex(index);
       const leftSide = ((orientation + Direction.Left) & 3) as Direction;
@@ -65,7 +76,11 @@ export class WeldOperationResolver {
       this.requestEdge(index, 1, target, secondSide, intent);
     }
 
-    for (let edge = 0; edge < this.edgeIntents.length; edge += 1) {
+    for (
+      let edge = this.firstTouchedEdge();
+      edge >= 0;
+      edge = this.nextTouchedEdge(edge)
+    ) {
       const intent = expectDefined(this.edgeIntents[edge], "weld operation edge intent");
       if (intent !== EdgeIntent.Weld && intent !== EdgeIntent.Split) {
         continue;
@@ -82,7 +97,11 @@ export class WeldOperationResolver {
       }
     }
 
-    for (let index = 0; index < this.world.cellCount; index += 1) {
+    for (
+      let index = this.world.firstFeatureIndex(WorldFeature.WeldOperator);
+      index >= 0;
+      index = this.world.nextFeatureIndex(WorldFeature.WeldOperator, index)
+    ) {
       const firstRequest = expectDefined(
         this.operatorRequests[index * 2],
         "first weld operation request",
@@ -101,7 +120,11 @@ export class WeldOperationResolver {
   }
 
   commit(): void {
-    for (let edge = 0; edge < this.edgeIntents.length; edge += 1) {
+    for (
+      let edge = this.firstTouchedEdge();
+      edge >= 0;
+      edge = this.nextTouchedEdge(edge)
+    ) {
       if (this.changedEdges[edge] !== 1) {
         continue;
       }
@@ -137,9 +160,38 @@ export class WeldOperationResolver {
     this.operatorRequests[operatorIndex * 2 + requestOffset] = edge;
     const existing = expectDefined(this.edgeIntents[edge], "existing weld operation intent");
     if (existing === EdgeIntent.None) {
+      const word = edge >>> 5;
+      this.touchedEdgeWords[word] =
+        expectDefined(this.touchedEdgeWords[word], "touched weld edge word") |
+        (1 << (edge & 31));
       this.edgeIntents[edge] = intent;
     } else if (existing !== intent) {
       this.edgeIntents[edge] = EdgeIntent.Conflict;
+    }
+  }
+
+  private firstTouchedEdge(): number {
+    return this.nextTouchedEdge(-1);
+  }
+
+  private nextTouchedEdge(after: number): number {
+    let edge = after + 1;
+    if (edge >= this.edgeIntents.length) {
+      return -1;
+    }
+    let word = edge >>> 5;
+    let candidates =
+      expectDefined(this.touchedEdgeWords[word], "touched weld edge word") &
+      (-1 << (edge & 31));
+    while (true) {
+      if (candidates !== 0) {
+        return (word << 5) + 31 - Math.clz32(candidates & -candidates);
+      }
+      word += 1;
+      if (word >= this.touchedEdgeWords.length) {
+        return -1;
+      }
+      candidates = expectDefined(this.touchedEdgeWords[word], "touched weld edge word");
     }
   }
 

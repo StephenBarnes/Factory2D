@@ -1,6 +1,7 @@
 import { expectDefined } from "../util/assert";
-import { TILE_DEFINITIONS, TileKind } from "./tile";
+import { TILE_DEFINITIONS } from "./tile";
 import type { World } from "./world";
+import { WorldFeature } from "./world-features";
 
 /**
  * Retained welded-body topology and translation-only structural comparison.
@@ -31,15 +32,18 @@ export class WeldedBodyIndex {
     this.nextBodyMembers.fill(-1);
     this.bodyMemberCounts.fill(0);
 
-    for (let index = 0; index < this.world.cellCount; index += 1) {
-      if (this.world.kindAtIndex(index) !== TileKind.Empty) {
-        this.bodyRoots[index] = index;
-      }
+    for (
+      let index = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      index >= 0;
+      index = this.world.nextFeatureIndex(WorldFeature.Occupied, index)
+    ) {
+      this.bodyRoots[index] = index;
     }
-    for (let index = 0; index < this.world.cellCount; index += 1) {
-      if (this.bodyRoots[index] === -1) {
-        continue;
-      }
+    for (
+      let index = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      index >= 0;
+      index = this.world.nextFeatureIndex(WorldFeature.Occupied, index)
+    ) {
       if (this.world.hasRightWeldAtIndex(index)) {
         this.unionBodies(index, index + 1);
       }
@@ -47,10 +51,11 @@ export class WeldedBodyIndex {
         this.unionBodies(index, index + this.world.width);
       }
     }
-    for (let index = this.world.cellCount - 1; index >= 0; index -= 1) {
-      if (this.bodyRoots[index] === -1) {
-        continue;
-      }
+    for (
+      let index = this.world.lastFeatureIndex(WorldFeature.Occupied);
+      index >= 0;
+      index = this.world.previousFeatureIndex(WorldFeature.Occupied, index)
+    ) {
       const root = this.findBodyRoot(index);
       this.bodyRoots[index] = root;
       this.nextBodyMembers[index] = expectDefined(

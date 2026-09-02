@@ -137,6 +137,9 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * Add an option to the export menu, in puzzles, to open the current puzzle in the sandbox.
 * DEFER Maybe support selections that are a union of rectangles, created by shift-LMB-drag.
 * When a region is selected using the selection tool, in the sandbox, add a new tool that will crop the board to that selection. (Currently it requires using the puzzle properties modal to set the grid size to specific numbers; this selection path would be easier and more intuitive.)
+
+## Palette panel
+
 * If the player clicks and drags from a palette tile, treat it as a left-click - select that palette tile. Ideally also place the tile on mouse up on the grid, as though they clicked. So they can click and drag components from palette to grid, in addition to the current flow (click on palette, then click on grid).
 * Middle-click on palette should act like left-click on palette.
 
@@ -151,12 +154,12 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * Show a small icon to the right of the cursor, for the currently-selected tile or tool - the weld icon, the "place player-modifiable regions" tool icon, and the icon for a tile. When ctrl is held down (to weld), it should switch to the weld icon.
 * Make the palette panel resizable. Modify the icon sizes, shrinking them as the palette becomes narrower.
 * Modify the overall layout when solving a puzzle, and in the sandbox. Add a section at the top of the palette panel, always visible even when the palette is scrolled. Move the "back" button (back to puzzle or main menu), the puzzle title, and the info button to that top-left region - currently they're all in the bottom-left `workshop-identity` region. Keep the total price and the footprint readout in that workshop-identity region. Increase display size of the puzzle title (unless the name is long), and increase display size of the live puzzle metrics (cost and footprint readouts). Add the decorated border (`src/styles.css:178`) to the top-left region.
-* If the player tries to place a block, or weld, and we don't allow it, indicate the reason. (1) If it's because they're testing a puzzle, flash the reset button. (2) If it's a weld or tile edit outside the allowed region, flash the region red. (3) If they're trying to weld a block that can't be 
+* If the player tries to place a block, or weld, and we don't allow it, indicate the reason. (1) If it's because they're testing a puzzle, flash the reset button. (2) If it's a weld or tile edit outside the allowed region, flash the region border red. (3) If they're trying to weld an edge that can't be welded because one of the neighboring blocks can't be welded on that side, e.g. sand blocks or empty blocks or the front/back of a duplicator , draw a brief low-opacity red square overlay on those tiles.
+* Modify block placement: when using LMB-drag to place multiple blocks, automatically weld them together (if allowed) along the edge that was dragged. So e.g. dragging a boustrophedon pattern will weld in the same snake pattern. This is different from shift+LMB which welds along all edges.
 
 ## Shortcuts
 
 * Add shift + mousewheel to scroll through palette entries, when mouse is not over a number configurable component (because in that case shift+mousewheel configures the number).
-* Modify block placement: when using LMB-drag to place multiple blocks, automatically weld them together (if allowed) along the edge that was dragged. So e.g. dragging a boustrophedon pattern will weld in the same snake pattern. This is different from shift+LMB which welds along all edges.
 * Add hotkeys for game controls: step-forward, step-back, reset, clear, and speed controls.
 * Allow pressing enter to commit selection to its position and unselect.
 * Add a shortcut for the selection tool. Maybe alt key, similar to how we have ctrl for the weld tool.

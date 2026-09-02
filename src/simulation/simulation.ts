@@ -1,6 +1,6 @@
 import { CircuitResolver } from "./circuit-resolver";
 import { MAX_RUNE_ARRAY_DEPTH } from "./rune-array";
-import { TileKind } from "./tile";
+import { WorldFeature } from "./world-features";
 import type { World } from "./world";
 import { WorldRuntime } from "./world-runtime";
 
@@ -29,10 +29,14 @@ export class Simulation {
 
   step(interpolationSource?: World): number {
     this.collectRuntimes();
+    let hasCircuit = false;
     for (const runtime of this.runtimes) {
       runtime.collectIntents();
+      hasCircuit ||= runtime.world.hasFeature(WorldFeature.Circuit);
     }
-    this.circuitResolver.resolve(this.tick, this.runtimes);
+    if (hasCircuit) {
+      this.circuitResolver.resolve(this.tick, this.runtimes);
+    }
     let movementCount = 0;
     for (let position = this.runtimes.length - 1; position >= 0; position -= 1) {
       const runtime = this.runtimes[position];
@@ -66,10 +70,11 @@ export class Simulation {
         throw new Error(`Missing world runtime at position ${position}`);
       }
       const world = runtime.world;
-      for (let index = 0; index < world.cellCount; index += 1) {
-        if (world.kindAtIndex(index) !== TileKind.RuneArray) {
-          continue;
-        }
+      for (
+        let index = world.firstFeatureIndex(WorldFeature.RuneArray);
+        index >= 0;
+        index = world.nextFeatureIndex(WorldFeature.RuneArray, index)
+      ) {
         if (runtime.depth >= MAX_RUNE_ARRAY_DEPTH) {
           throw new Error(`Rune arrays nest deeper than ${MAX_RUNE_ARRAY_DEPTH} levels`);
         }

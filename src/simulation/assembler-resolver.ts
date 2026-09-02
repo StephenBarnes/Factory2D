@@ -9,6 +9,7 @@ import {
 } from "./tile";
 import type { World } from "./world";
 import { WeldedBodyIndex } from "./welded-body-index";
+import { WorldFeature } from "./world-features";
 
 /**
  * Collects assembler intents from the stable start-of-tick topology and commits them after
@@ -55,10 +56,11 @@ export class AssemblerResolver {
     this.emitOwners.fill(-1);
     this.intentCount = 0;
 
-    for (let assembler = 0; assembler < this.world.cellCount; assembler += 1) {
-      if (this.world.kindAtIndex(assembler) !== TileKind.Assembler) {
-        continue;
-      }
+    for (
+      let assembler = this.world.firstFeatureIndex(WorldFeature.Assembler);
+      assembler >= 0;
+      assembler = this.world.nextFeatureIndex(WorldFeature.Assembler, assembler)
+    ) {
       const orientation = this.world.orientationAtIndex(assembler);
       if (this.world.assemblerPendingCountAtIndex(assembler) > 0) {
         const output = this.neighborIndex(assembler, oppositeDirection(orientation));
@@ -106,7 +108,11 @@ export class AssemblerResolver {
     if (this.intentCount === 0) {
       return;
     }
-    for (let assembler = 0; assembler < this.world.cellCount; assembler += 1) {
+    for (
+      let assembler = this.world.firstFeatureIndex(WorldFeature.Assembler);
+      assembler >= 0;
+      assembler = this.world.nextFeatureIndex(WorldFeature.Assembler, assembler)
+    ) {
       const output = expectDefined(this.emitTargetIndices[assembler], "assembler emit target");
       if (output >= 0 && this.emitOwners[output] !== assembler) {
         this.emitTargetIndices[assembler] = -1;
@@ -129,7 +135,11 @@ export class AssemblerResolver {
       return;
     }
     let remaining = 0;
-    for (let assembler = 0; assembler < this.world.cellCount; assembler += 1) {
+    for (
+      let assembler = this.world.firstFeatureIndex(WorldFeature.Assembler);
+      assembler >= 0;
+      assembler = this.world.nextFeatureIndex(WorldFeature.Assembler, assembler)
+    ) {
       const output = expectDefined(this.emitTargetIndices[assembler], "assembler emit target");
       if (output >= 0) {
         if (this.world.kindAtIndex(output) !== TileKind.Empty) {
@@ -148,10 +158,13 @@ export class AssemblerResolver {
       }
       this.consumeTargetIndices[assembler] = -1;
       this.queuedCounts[assembler] = 0;
-      for (let index = 0; index < this.world.cellCount; index += 1) {
-        if (this.bodyOwners[index] === assembler) {
-          this.bodyOwners[index] = -1;
+      const root = this.bodies.rootAt(input);
+      let member = this.bodies.headAtRoot(root);
+      while (member >= 0) {
+        if (this.bodyOwners[member] === assembler) {
+          this.bodyOwners[member] = -1;
         }
+        member = this.bodies.nextMember(member);
       }
     }
     if (remaining === 0) {
@@ -176,16 +189,20 @@ export class AssemblerResolver {
   }
 
   private bodyUnchanged(assembler: number): boolean {
-    for (let index = 0; index < this.world.cellCount; index += 1) {
-      if (this.bodyOwners[index] !== assembler) {
-        continue;
-      }
+    const input = expectDefined(
+      this.consumeTargetIndices[assembler],
+      "assembler unchanged-body input",
+    );
+    const root = this.bodies.rootAt(input);
+    let member = this.bodies.headAtRoot(root);
+    while (member >= 0) {
       if (
-        this.world.idAtIndex(index) !== this.observedIds[index] ||
-        this.world.kindAtIndex(index) !== this.observedKinds[index]
+        this.world.idAtIndex(member) !== this.observedIds[member] ||
+        this.world.kindAtIndex(member) !== this.observedKinds[member]
       ) {
         return false;
       }
+      member = this.bodies.nextMember(member);
     }
     return true;
   }

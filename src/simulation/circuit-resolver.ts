@@ -15,6 +15,7 @@ import {
 } from "./tile";
 import type { World } from "./world";
 import type { WorldRuntime } from "./world-runtime";
+import { WorldFeature } from "./world-features";
 
 /** Circuit nodes per cell: one per side so rune arrays can expose four separate networks. */
 const NODES_PER_CELL = 4;
@@ -55,11 +56,21 @@ export class CircuitResolver {
     this.hasLossIntent = false;
 
     for (const runtime of runtimes) {
-      runtime.nextCharges.fill(0);
-      runtime.nextCrossingVerticalCharges.fill(0);
-      runtime.nextIsolatedOutputCharges.fill(0);
-      runtime.nextPortCharges.fill(0);
-      runtime.furnaceDisabled.fill(0);
+      const world = runtime.world;
+      for (
+        let index = world.firstFeatureIndex(WorldFeature.Circuit);
+        index >= 0;
+        index = world.nextFeatureIndex(WorldFeature.Circuit, index)
+      ) {
+        runtime.nextCharges[index] = 0;
+        runtime.nextCrossingVerticalCharges[index] = 0;
+        runtime.nextIsolatedOutputCharges[index] = 0;
+        runtime.furnaceDisabled[index] = 0;
+        const portBase = index * NODES_PER_CELL;
+        for (let side = 0; side < NODES_PER_CELL; side += 1) {
+          runtime.nextPortCharges[portBase + side] = 0;
+        }
+      }
       this.registerNodes(runtime);
     }
     for (const runtime of runtimes) {
@@ -84,7 +95,11 @@ export class CircuitResolver {
 
   private registerNodes(runtime: WorldRuntime): void {
     const world = runtime.world;
-    for (let index = 0; index < world.cellCount; index += 1) {
+    for (
+      let index = world.firstFeatureIndex(WorldFeature.Circuit);
+      index >= 0;
+      index = world.nextFeatureIndex(WorldFeature.Circuit, index)
+    ) {
       const kind = world.kindAtIndex(index);
       const node = runtime.nodeBase + index * NODES_PER_CELL;
       if (kind === TileKind.RuneArray) {
@@ -108,7 +123,11 @@ export class CircuitResolver {
 
   private unionConnections(runtime: WorldRuntime): void {
     const world = runtime.world;
-    for (let index = 0; index < world.cellCount; index += 1) {
+    for (
+      let index = world.firstFeatureIndex(WorldFeature.Circuit);
+      index >= 0;
+      index = world.nextFeatureIndex(WorldFeature.Circuit, index)
+    ) {
       for (let value = Direction.Right; value <= Direction.Down; value += 1) {
         const direction = value as Direction;
         if (!world.hasCircuitConnectionAtIndex(index, direction)) {
@@ -152,7 +171,11 @@ export class CircuitResolver {
     const world = runtime.world;
     const successfulWeldOperations = runtime.weldOperationResolver.successfulOperationIndices;
     const deliveryAbsorptionTargets = runtime.deliveryResolver.absorptionTargetIndices;
-    for (let index = 0; index < world.cellCount; index += 1) {
+    for (
+      let index = world.firstFeatureIndex(WorldFeature.CircuitSource);
+      index >= 0;
+      index = world.nextFeatureIndex(WorldFeature.CircuitSource, index)
+    ) {
       const kind = world.kindAtIndex(index);
       if (kind === TileKind.Welder || kind === TileKind.Splitter) {
         const outputCharge = successfulWeldOperations[index] === 1 ? 1 : 0;
@@ -193,7 +216,11 @@ export class CircuitResolver {
 
   private driveGates(runtime: WorldRuntime): void {
     const world = runtime.world;
-    for (let index = 0; index < world.cellCount; index += 1) {
+    for (
+      let index = world.firstFeatureIndex(WorldFeature.CircuitGate);
+      index >= 0;
+      index = world.nextFeatureIndex(WorldFeature.CircuitGate, index)
+    ) {
       const kind = world.kindAtIndex(index);
       const definition = TILE_DEFINITIONS[kind];
       if (definition.circuitInputPorts === 0) {
@@ -343,7 +370,11 @@ export class CircuitResolver {
 
   private commitCharges(runtime: WorldRuntime): void {
     const world = runtime.world;
-    for (let index = 0; index < world.cellCount; index += 1) {
+    for (
+      let index = world.firstFeatureIndex(WorldFeature.Circuit);
+      index >= 0;
+      index = world.nextFeatureIndex(WorldFeature.Circuit, index)
+    ) {
       const node = runtime.nodeBase + index * NODES_PER_CELL;
       if (world.kindAtIndex(index) === TileKind.RuneArray) {
         for (let side = 0; side < NODES_PER_CELL; side += 1) {

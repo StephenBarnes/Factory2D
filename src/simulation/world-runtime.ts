@@ -6,6 +6,7 @@ import { MotionWorkspace } from "./motion-workspace";
 import { WeldOperationResolver } from "./weld-operation-resolver";
 import { WeldedBodyIndex } from "./welded-body-index";
 import type { World } from "./world";
+import { WorldFeature } from "./world-features";
 
 /**
  * Every per-world resolver and scratch buffer needed to tick one board. The root board
@@ -36,6 +37,10 @@ export class WorldRuntime {
   /** First global circuit node of this world's cells for the current tick. */
   nodeBase = 0;
 
+  private collectedDuplicators = false;
+  private collectedWeldOperators = false;
+  private collectedDeliveries = false;
+  private collectedAssemblers = false;
   constructor(world: World) {
     this.world = world;
     this.weldedBodies = new WeldedBodyIndex(world);
@@ -54,21 +59,51 @@ export class WorldRuntime {
 
   /** Observes start-of-tick state and collects every intent that precedes circuit resolution. */
   collectIntents(): void {
-    this.weldedBodies.collect();
-    this.deliveryResolver.collect();
-    this.duplicatorResolver.collect();
-    this.assemblerResolver.collect();
-    this.weldOperationResolver.collect();
+    const world = this.world;
+    this.collectedDuplicators = world.hasFeature(WorldFeature.Duplicator);
+    this.collectedWeldOperators = world.hasFeature(WorldFeature.WeldOperator);
+    this.collectedDeliveries = world.hasFeature(WorldFeature.Delivery);
+    this.collectedAssemblers = world.hasFeature(WorldFeature.Assembler);
+    if (world.hasFeature(WorldFeature.WeldedBodyObserver)) {
+      this.weldedBodies.collect();
+    }
+    if (this.collectedDeliveries) {
+      this.deliveryResolver.collect();
+    }
+    if (this.collectedDuplicators) {
+      this.duplicatorResolver.collect();
+    }
+    if (this.collectedAssemblers) {
+      this.assemblerResolver.collect();
+    }
+    if (this.collectedWeldOperators) {
+      this.weldOperationResolver.collect();
+    }
   }
 
   /** Commits the post-circuit phases in order and returns the number of moved bodies. */
   commitPhases(tick: number, interpolationSource: World | undefined): number {
-    this.duplicatorResolver.commit(interpolationSource);
-    this.weldOperationResolver.commit();
-    this.furnaceResolver.resolve(this.furnaceDisabled);
-    this.deliveryResolver.commit();
-    this.assemblerResolver.commit(interpolationSource);
-    const movementCount = this.motionWorkspace.resolveOrdinaryMovements(tick);
-    return movementCount + this.motionWorkspace.resolvePistons();
+    if (this.collectedDuplicators) {
+      this.duplicatorResolver.commit(interpolationSource);
+    }
+    if (this.collectedWeldOperators) {
+      this.weldOperationResolver.commit();
+    }
+    if (this.world.hasFeature(WorldFeature.Furnace)) {
+      this.furnaceResolver.resolve(this.furnaceDisabled);
+    }
+    if (this.collectedDeliveries) {
+      this.deliveryResolver.commit();
+    }
+    if (this.collectedAssemblers) {
+      this.assemblerResolver.commit(interpolationSource);
+    }
+    let movementCount = this.world.hasFeature(WorldFeature.Gravity)
+      ? this.motionWorkspace.resolveOrdinaryMovements(tick)
+      : 0;
+    if (this.world.hasFeature(WorldFeature.Piston)) {
+      movementCount += this.motionWorkspace.resolvePistons();
+    }
+    return movementCount;
   }
 }
