@@ -8,6 +8,7 @@ import {
   snapshotComponentState,
   stateFromSnapshot,
   validateComponentSnapshot,
+  validateSignalLabel,
   type ConfigurableComponentSnapshot,
   type ConfigurableComponentState,
 } from "./configurable-components";
@@ -366,6 +367,21 @@ export class World {
     state.cursor = 0;
     state.values = Int8Array.from(values);
     this.charges[index] = 0;
+    this.revisionValue += 1;
+    return true;
+  }
+
+  configureSignalLabel(x: number, y: number, label: string): boolean {
+    const index = this.indexOf(x, y);
+    const state = this.requireComponentStateAtIndex(index);
+    if (state.type !== "monitor" && state.type !== "grapher") {
+      throw new Error(`Tile at (${x}, ${y}) does not have a signal name`);
+    }
+    validateSignalLabel(label);
+    if (state.label === label) {
+      return false;
+    }
+    state.label = label;
     this.revisionValue += 1;
     return true;
   }

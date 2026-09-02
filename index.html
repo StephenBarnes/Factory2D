@@ -180,6 +180,24 @@
           </div>
         </dl>
       </aside>
+      <aside class="signal-panel edge-panel" id="signal-panel" aria-label="Signal panel" hidden>
+        <div class="signal-panel-heading">
+          <span class="signal-panel-title">SIGNALS</span>
+          <button
+            class="signal-panel-toggle"
+            id="signal-panel-toggle"
+            type="button"
+            aria-controls="signal-panel-canvas"
+            aria-expanded="true"
+            title="Collapse signal panel"
+          >▶</button>
+        </div>
+        <canvas
+          id="signal-panel-canvas"
+          class="signal-panel-canvas"
+          aria-label="Recorded monitor signals and ROM contents; scroll with the mouse wheel"
+        ></canvas>
+      </aside>
       <div
         class="test-status-toast"
         id="test-status-toast"
@@ -310,6 +328,10 @@
           <label class="component-numeric-panel" data-component-numeric-panel>
             <span data-component-numeric-label></span>
             <input data-component-numeric-input type="number" step="1" required />
+          </label>
+          <label class="component-numeric-panel component-text-panel" data-component-text-panel hidden>
+            <span data-component-text-label></span>
+            <input data-component-text-input type="text" autocomplete="off" spellcheck="false" />
           </label>
           <div class="component-rom-panel" data-component-rom-panel hidden>
             <div class="component-rom-dimensions">

@@ -119,12 +119,13 @@ export class PuzzleTestRun {
     this.statusValue = "running";
   }
 
-  runRemaining(): PuzzleTestReport {
+  runRemaining(afterStep?: (world: World, tick: number) => void): PuzzleTestReport {
     while (this.statusValue === "running" || this.statusValue === "between-cases") {
       if (this.statusValue === "between-cases") {
         this.continueToNextCase();
       } else {
         this.step();
+        afterStep?.(this.world, this.currentSimulationValue.tick);
       }
     }
     return expectDefined(this.reportValue ?? undefined, "Completed puzzle test report");

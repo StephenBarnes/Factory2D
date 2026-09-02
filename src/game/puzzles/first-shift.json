@@ -16,7 +16,7 @@
   "editableRegions": [ { "x": 8, "y": 3, "width": 4, "height": 4 } ],
   "initialBoard": {
     "format": "factory2d-board",
-    "version": 10,
+    "version": 11,
     "width": 20,
     "height": 14,
     "tick": 0,

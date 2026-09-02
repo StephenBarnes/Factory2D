@@ -7,6 +7,7 @@ import {
   MIN_DELAY_LENGTH,
   MIN_ROM_DIMENSION,
   type ConfigurableComponentSnapshot,
+  validateSignalLabel,
 } from "./configurable-components";
 import { furnaceRecipeFor } from "./furnace";
 import { isCharge, type Charge } from "./circuit";
@@ -24,7 +25,7 @@ import { World } from "./world";
 import { expectDefined } from "../util/assert";
 
 const FORMAT_NAME = "factory2d-board";
-const FORMAT_VERSION = 10;
+const FORMAT_VERSION = 11;
 export const MIN_BOARD_WIDTH = 1;
 export const MAX_BOARD_WIDTH = 400;
 export const MIN_BOARD_HEIGHT = 1;
@@ -124,7 +125,18 @@ interface ExportedRom {
   readonly values: readonly Charge[];
 }
 
-type ExportedComponent = ExportedDelay | ExportedCounter | ExportedRom;
+interface ExportedSignalLabel {
+  readonly x: number;
+  readonly y: number;
+  readonly type: "monitor" | "grapher";
+  readonly label: string;
+}
+
+type ExportedComponent =
+  | ExportedDelay
+  | ExportedCounter
+  | ExportedRom
+  | ExportedSignalLabel;
 
 
 interface ExportedBoard {
@@ -512,6 +524,7 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
       "width",
       "height",
       "values",
+      "label",
     ]);
     const type = requireString(entry.type, `${label} type`);
     const fields = type === "delay"
@@ -520,7 +533,9 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
         ? ["x", "y", "type", "threshold", "count"]
         : type === "rom"
           ? ["x", "y", "type", "width", "height", "cursor", "values"]
-          : null;
+          : type === "monitor" || type === "grapher"
+            ? ["x", "y", "type", "label"]
+            : null;
     if (fields === null) {
       throw new Error(`${label} has unknown type "${type}"`);
     }
@@ -558,6 +573,14 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
         threshold,
         count: requireInteger(state.count, `${label} count`, 0, threshold - 1),
       };
+    } else if (type === "monitor" || type === "grapher") {
+      const signalLabel = requireString(state.label, `${label} label`);
+      try {
+        validateSignalLabel(signalLabel);
+      } catch (error) {
+        throw new Error(`${label} label is invalid: ${error instanceof Error ? error.message : String(error)}`);
+      }
+      snapshot = { type, label: signalLabel };
     } else {
       const componentWidth = requireInteger(
         state.width,
@@ -585,7 +608,9 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
       expectedConfiguration === null ||
       (snapshot.type === "delay" && kind !== TileKind.Delay) ||
       (snapshot.type === "counter" && kind !== TileKind.Counter) ||
-      (snapshot.type === "rom" && kind !== TileKind.Rom)
+      (snapshot.type === "rom" && kind !== TileKind.Rom) ||
+      (snapshot.type === "monitor" && kind !== TileKind.Monitor) ||
+      (snapshot.type === "grapher" && kind !== TileKind.Grapher)
     ) {
       throw new Error(`${label} does not match the tile at (${x}, ${y})`);
     }

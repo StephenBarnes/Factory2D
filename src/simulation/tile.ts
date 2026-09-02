@@ -32,6 +32,8 @@ export const enum TileKind {
   Welder = 30,
   Splitter = 31,
   Duplicator = 32,
+  Monitor = 33,
+  Grapher = 34,
 }
 
 export const enum Direction {
@@ -81,6 +83,8 @@ export const enum TileDecorationStyle {
   Welder = 27,
   Splitter = 28,
   Duplicator = 29,
+  Monitor = 30,
+  Grapher = 31,
 }
 
 export const enum PaletteCategory {
@@ -836,6 +840,52 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     shadow: "#303a3f",
     decorationStyle: TileDecorationStyle.Duplicator,
     decorationColor: "#c9e4dc",
+  },
+  [TileKind.Monitor]: {
+    name: "Signal Monitor",
+    boardCode: "m",
+    palette: {
+      order: 33,
+      category: PaletteCategory.Circuits,
+      description: "Joins its welded circuit like a conduit and records that charge every tick on the signal panel. Press E to name its line",
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.All,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#4f5a6e",
+    shadow: "#2b3140",
+    decorationStyle: TileDecorationStyle.Monitor,
+    decorationColor: "#d8e4f4",
+  },
+  [TileKind.Grapher]: {
+    name: "ROM Grapher",
+    boardCode: "g",
+    palette: {
+      order: 34,
+      category: PaletteCategory.Circuits,
+      description: "Shows every value of the ROM it points at on the signal panel, marking the cursor. Press E to name its line",
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.None,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#55646a",
+    shadow: "#2e383c",
+    decorationStyle: TileDecorationStyle.Grapher,
+    decorationColor: "#d6ecea",
   },
   [TileKind.Piston]: {
     name: "Piston",

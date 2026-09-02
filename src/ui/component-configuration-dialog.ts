@@ -10,6 +10,7 @@ import { expectDefined } from "../util/assert";
 
 export type ComponentConfigurationSubmission =
   | { readonly type: "number"; readonly value: number }
+  | { readonly type: "text"; readonly value: string }
   | {
       readonly type: "rom";
       readonly width: number;
@@ -28,6 +29,9 @@ export class ComponentConfigurationDialog {
   private readonly romWidth: HTMLInputElement;
   private readonly romHeight: HTMLInputElement;
   private readonly romGrid: HTMLElement;
+  private readonly textPanel: HTMLElement;
+  private readonly textLabel: HTMLElement;
+  private readonly textInput: HTMLInputElement;
   private submit: ((submission: ComponentConfigurationSubmission) => void) | null = null;
   private romValues: Charge[] = [];
   private currentKind = TileKind.Empty;
@@ -43,6 +47,9 @@ export class ComponentConfigurationDialog {
     this.romWidth = requiredDescendant(dialog, "[data-component-rom-width]");
     this.romHeight = requiredDescendant(dialog, "[data-component-rom-height]");
     this.romGrid = requiredDescendant(dialog, "[data-component-rom-grid]");
+    this.textPanel = requiredDescendant(dialog, "[data-component-text-panel]");
+    this.textLabel = requiredDescendant(dialog, "[data-component-text-label]");
+    this.textInput = requiredDescendant(dialog, "[data-component-text-input]");
 
     requiredDescendant<HTMLButtonElement>(dialog, "[data-component-configuration-cancel]")
       .addEventListener("click", () => this.close());
@@ -72,9 +79,11 @@ export class ComponentConfigurationDialog {
     this.title.textContent = `CONFIGURE ${TILE_DEFINITIONS[kind].name.toUpperCase()}`;
     this.numericPanel.hidden = configuration.type !== "number";
     this.romPanel.hidden = configuration.type !== "rom";
+    this.textPanel.hidden = configuration.type !== "text";
     this.numericInput.disabled = configuration.type !== "number";
     this.romWidth.disabled = configuration.type !== "rom";
     this.romHeight.disabled = configuration.type !== "rom";
+    this.textInput.disabled = configuration.type !== "text";
 
     if (configuration.type === "number") {
       if (state.type !== "delay" && state.type !== "counter") {
@@ -88,6 +97,16 @@ export class ComponentConfigurationDialog {
       );
       this.description.textContent =
         `Choose an integer from ${configuration.minimum} through ${configuration.maximum}.`;
+    } else if (configuration.type === "text") {
+      if (state.type !== "monitor" && state.type !== "grapher") {
+        throw new Error(`${TILE_DEFINITIONS[kind].name} is missing signal name state`);
+      }
+      this.textLabel.textContent = configuration.label.toUpperCase();
+      this.textInput.maxLength = configuration.maximumLength;
+      this.textInput.value = state.label;
+      this.description.textContent =
+        `Name the signal panel line, using at most ${configuration.maximumLength} characters. ` +
+        "Leave it empty to show the line number.";
     } else {
       if (state.type !== "rom") {
         throw new Error("ROM is missing configuration state");
@@ -104,6 +123,9 @@ export class ComponentConfigurationDialog {
     if (configuration.type === "number") {
       this.numericInput.focus();
       this.numericInput.select();
+    } else if (configuration.type === "text") {
+      this.textInput.focus();
+      this.textInput.select();
     } else {
       this.romWidth.focus();
     }
@@ -127,6 +149,8 @@ export class ComponentConfigurationDialog {
     const submit = this.submit;
     if (configuration.type === "number") {
       submit({ type: "number", value: this.numericInput.valueAsNumber });
+    } else if (configuration.type === "text") {
+      submit({ type: "text", value: this.textInput.value.trim() });
     } else {
       const width = this.romWidth.valueAsNumber;
       const height = this.romHeight.valueAsNumber;

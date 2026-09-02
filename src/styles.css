@@ -81,10 +81,11 @@ canvas:focus-visible {
 .game-screen {
   --sidebar-width: 272px;
   --inspector-gap: 18px;
+  --signal-panel-width: 214px;
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr) auto;
   grid-template-rows: minmax(0, 1fr) auto;
   background: var(--bg-deep);
 }
@@ -757,6 +758,79 @@ canvas {
   top: var(--inspector-gap);
   left: calc(var(--sidebar-width) + var(--inspector-gap));
   padding: 11px;
+}
+
+.signal-panel {
+  grid-column: 3;
+  grid-row: 1;
+  width: var(--signal-panel-width);
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-width: 0 0 0 1px;
+}
+
+.signal-panel[hidden] {
+  display: none;
+}
+
+.signal-panel.collapsed {
+  width: 34px;
+}
+
+.signal-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 10px 8px 6px 12px;
+  color: var(--text-mid);
+  font-family: var(--font-mono);
+  font-size: 0.69rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.signal-panel.collapsed .signal-panel-heading {
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.signal-panel.collapsed .signal-panel-title {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  order: 1;
+}
+
+.signal-panel-toggle {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 2px;
+  color: var(--text-mid);
+  background: var(--raised);
+  font-size: 0.6rem;
+  line-height: 1;
+}
+
+.signal-panel-toggle:hover {
+  border-color: var(--gold);
+  background: var(--raised-hover);
+}
+
+.signal-panel-canvas {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  background: var(--inset);
+  border-top: 1px solid var(--border-faint);
+}
+
+.signal-panel-canvas[hidden] {
+  display: none;
 }
 
 .tile-inspector-hidden {
@@ -1769,6 +1843,7 @@ kbd {
   .game-screen {
     --sidebar-width: 224px;
     --inspector-gap: 12px;
+    --signal-panel-width: 170px;
   }
 
   .sidebar {
@@ -1805,6 +1880,7 @@ kbd {
 @media (max-width: 720px) {
   .game-screen {
     --sidebar-width: 188px;
+    --signal-panel-width: 136px;
   }
 
   .sidebar {

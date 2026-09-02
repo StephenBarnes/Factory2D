@@ -37,6 +37,8 @@ import {
   type BuildTool,
 } from "./ui/canvas-interaction-controller";
 import type { InspectorComponentReference } from "./ui/tile-inspector";
+import { SignalPanel } from "./ui/signal-panel";
+import { SignalTraceRecorder } from "./game/signal-traces";
 import { populateComponentPalette } from "./ui/component-palette";
 
 const MAX_AUTOMATIC_ANIMATION_MS = 250;
@@ -118,6 +120,15 @@ const selectionVerticalFlipButton = requiredElement<HTMLButtonElement>(
   "selection-flip-vertical-button",
 );
 const selectionRotateButton = requiredElement<HTMLButtonElement>("selection-rotate-button");
+const signalTraces = new SignalTraceRecorder();
+const signalPanel = new SignalPanel(
+  {
+    root: requiredElement<HTMLElement>("signal-panel"),
+    canvas: requiredElement<HTMLCanvasElement>("signal-panel-canvas"),
+    toggleButton: requiredElement<HTMLButtonElement>("signal-panel-toggle"),
+  },
+  window.localStorage,
+);
 
 type InspectorTool = Exclude<BuildTool, "tile">;
 
@@ -286,6 +297,7 @@ function advanceSimulation(duration: number, startedAt = performance.now()): voi
   }
   surface.previousWorld.copyFrom(surface.world);
   surface.simulation.step(duration > 0 ? surface.previousWorld : undefined);
+  signalTraces.sync(surface.world, surface.simulation.tick);
 
   animationStartedAt = startedAt;
   animationDuration = duration;
@@ -715,6 +727,8 @@ function openComponentConfiguration(cell: GridCell): void {
       }
       const changed = submission.type === "number"
         ? surface.world.configureNumericComponent(cell.x, cell.y, submission.value)
+        : submission.type === "text"
+        ? surface.world.configureSignalLabel(cell.x, cell.y, submission.value)
         : surface.world.configureRom(
             cell.x,
             cell.y,
@@ -860,6 +874,7 @@ const puzzleTests = new PuzzleTestController(
       surface.previousWorld.copyFrom(surface.world);
       return surface.previousWorld;
     },
+    afterStep: (world, tick) => signalTraces.sync(world, tick),
     setStepAnimation: (startedAt, duration) => {
       animationStartedAt = startedAt;
       animationDuration = duration;
@@ -1489,6 +1504,8 @@ function frame(currentTime: number): void {
     renderedTick = surface.simulation.tick;
   }
   refreshTileInspector();
+  signalTraces.sync(surface.world, surface.simulation.tick);
+  signalPanel.update(signalTraces, surface.world, surface.simulation.tick);
   const animationProgress = easedAnimationProgress(currentTime);
   surface.renderer.render(
     animationDuration === 0 ? null : surface.previousWorld,

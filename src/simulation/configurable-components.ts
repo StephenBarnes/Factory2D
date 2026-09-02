@@ -11,6 +11,7 @@ export const MIN_ROM_DIMENSION = 1;
 export const MAX_ROM_DIMENSION = 9;
 export const DEFAULT_ROM_WIDTH = 3;
 export const DEFAULT_ROM_HEIGHT = 3;
+export const MAX_SIGNAL_LABEL_LENGTH = 12;
 
 export interface NumericComponentConfiguration {
   readonly type: "number";
@@ -25,9 +26,17 @@ export interface RomComponentConfiguration {
   readonly configureOnPlacement: boolean;
 }
 
+export interface TextComponentConfiguration {
+  readonly type: "text";
+  readonly label: string;
+  readonly maximumLength: number;
+  readonly configureOnPlacement: boolean;
+}
+
 export type ComponentConfiguration =
   | NumericComponentConfiguration
-  | RomComponentConfiguration;
+  | RomComponentConfiguration
+  | TextComponentConfiguration;
 
 const DELAY_CONFIGURATION: NumericComponentConfiguration = Object.freeze({
   type: "number",
@@ -47,6 +56,12 @@ const ROM_CONFIGURATION: RomComponentConfiguration = Object.freeze({
   type: "rom",
   configureOnPlacement: false,
 });
+const SIGNAL_LABEL_CONFIGURATION: TextComponentConfiguration = Object.freeze({
+  type: "text",
+  label: "Signal name",
+  maximumLength: MAX_SIGNAL_LABEL_LENGTH,
+  configureOnPlacement: false,
+});
 
 export function componentConfigurationForKind(
   kind: TileKind,
@@ -58,6 +73,9 @@ export function componentConfigurationForKind(
       return COUNTER_CONFIGURATION;
     case TileKind.Rom:
       return ROM_CONFIGURATION;
+    case TileKind.Monitor:
+    case TileKind.Grapher:
+      return SIGNAL_LABEL_CONFIGURATION;
     default:
       return null;
   }
@@ -84,10 +102,22 @@ export interface RomComponentState {
   values: Int8Array;
 }
 
+export interface MonitorComponentState {
+  readonly type: "monitor";
+  label: string;
+}
+
+export interface GrapherComponentState {
+  readonly type: "grapher";
+  label: string;
+}
+
 export type ConfigurableComponentState =
   | DelayComponentState
   | CounterComponentState
-  | RomComponentState;
+  | RomComponentState
+  | MonitorComponentState
+  | GrapherComponentState;
 
 export interface DelayComponentSnapshot {
   readonly type: "delay";
@@ -110,10 +140,22 @@ export interface RomComponentSnapshot {
   readonly values: readonly Charge[];
 }
 
+export interface MonitorComponentSnapshot {
+  readonly type: "monitor";
+  readonly label: string;
+}
+
+export interface GrapherComponentSnapshot {
+  readonly type: "grapher";
+  readonly label: string;
+}
+
 export type ConfigurableComponentSnapshot =
   | DelayComponentSnapshot
   | CounterComponentSnapshot
-  | RomComponentSnapshot;
+  | RomComponentSnapshot
+  | MonitorComponentSnapshot
+  | GrapherComponentSnapshot;
 
 export function createDefaultComponentState(
   kind: TileKind,
@@ -140,6 +182,10 @@ export function createDefaultComponentState(
         cursor: 0,
         values: new Int8Array(DEFAULT_ROM_WIDTH * DEFAULT_ROM_HEIGHT),
       };
+    case TileKind.Monitor:
+      return { type: "monitor", label: "" };
+    case TileKind.Grapher:
+      return { type: "grapher", label: "" };
     default:
       return null;
   }
@@ -170,6 +216,9 @@ export function cloneComponentState(
         cursor: state.cursor,
         values: state.values.slice(),
       };
+    case "monitor":
+    case "grapher":
+      return { type: state.type, label: state.label };
   }
 }
 
@@ -198,6 +247,9 @@ export function snapshotComponentState(
         cursor: state.cursor,
         values: Array.from(state.values) as Charge[],
       };
+    case "monitor":
+    case "grapher":
+      return { type: state.type, label: state.label };
   }
 }
 
@@ -225,6 +277,22 @@ export function validateComponentSnapshot(
       requireInteger(snapshot.cursor, "ROM cursor", 0, snapshot.width * snapshot.height - 1);
       requireCharges(snapshot.values, snapshot.width * snapshot.height, "ROM values");
       break;
+    case "monitor":
+    case "grapher":
+      validateSignalLabel(snapshot.label);
+      break;
+  }
+}
+
+export function validateSignalLabel(label: string): void {
+  if (typeof label !== "string" || label.length > MAX_SIGNAL_LABEL_LENGTH) {
+    throw new RangeError(`Signal name must be a string of at most ${MAX_SIGNAL_LABEL_LENGTH} characters`);
+  }
+  for (const character of label) {
+    const codePoint = character.codePointAt(0) ?? 0;
+    if (codePoint < 0x20 || codePoint === 0x7f) {
+      throw new RangeError("Signal name must not contain control characters");
+    }
   }
 }
 
@@ -254,6 +322,9 @@ export function stateFromSnapshot(
         cursor: snapshot.cursor,
         values: Int8Array.from(snapshot.values),
       };
+    case "monitor":
+    case "grapher":
+      return { type: snapshot.type, label: snapshot.label };
   }
 }
 
@@ -264,7 +335,9 @@ export function componentStateMatchesKind(
   return (
     (state.type === "delay" && kind === TileKind.Delay) ||
     (state.type === "counter" && kind === TileKind.Counter) ||
-    (state.type === "rom" && kind === TileKind.Rom)
+    (state.type === "rom" && kind === TileKind.Rom) ||
+    (state.type === "monitor" && kind === TileKind.Monitor) ||
+    (state.type === "grapher" && kind === TileKind.Grapher)
   );
 }
 

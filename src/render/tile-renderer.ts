@@ -1075,6 +1075,65 @@ function drawDecoration(
       );
       break;
     }
+    case TileDecorationStyle.Monitor: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.lineWidth = Math.max(1.5, size * 0.05);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.fillStyle = "#141821";
+      context.fillRect(-size * 0.24, -size * 0.19, size * 0.48, size * 0.38);
+      context.strokeStyle = definition.decorationColor;
+      context.strokeRect(-size * 0.24, -size * 0.19, size * 0.48, size * 0.38);
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
+      context.beginPath();
+      context.moveTo(-size * 0.18, size * 0.08);
+      context.lineTo(-size * 0.09, size * 0.08);
+      context.lineTo(-size * 0.09, -size * 0.08);
+      context.lineTo(size * 0.03, -size * 0.08);
+      context.lineTo(size * 0.03, size * 0.08);
+      context.lineTo(size * 0.18, size * 0.08);
+      context.stroke();
+      context.restore();
+      break;
+    }
+    case TileDecorationStyle.Grapher: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.lineWidth = Math.max(1.5, size * 0.05);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.strokeStyle = definition.decorationColor;
+      context.beginPath();
+      context.moveTo(-size * 0.1, -size * 0.32);
+      context.lineTo(0, -size * 0.42);
+      context.lineTo(size * 0.1, -size * 0.32);
+      context.stroke();
+      const barHeights = [0.14, 0.26, 0.08, 0.2];
+      const barWidth = size * 0.08;
+      const gap = size * 0.04;
+      const totalWidth = barHeights.length * barWidth + (barHeights.length - 1) * gap;
+      const baseline = size * 0.2;
+      context.fillStyle = definition.decorationColor;
+      for (let bar = 0; bar < barHeights.length; bar += 1) {
+        const barHeight = size * expectDefined(barHeights[bar], "grapher bar height");
+        context.fillRect(
+          -totalWidth / 2 + bar * (barWidth + gap),
+          baseline - barHeight,
+          barWidth,
+          barHeight,
+        );
+      }
+      context.strokeStyle = "#1c2528";
+      context.lineWidth = Math.max(1, size * 0.03);
+      context.beginPath();
+      context.moveTo(-size * 0.28, baseline);
+      context.lineTo(size * 0.28, baseline);
+      context.stroke();
+      context.restore();
+      break;
+    }
     case TileDecorationStyle.Piston:
     case TileDecorationStyle.PistonBase:
     case TileDecorationStyle.PistonArm: {

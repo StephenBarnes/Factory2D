@@ -64,6 +64,8 @@ export interface PuzzleTestControllerDependencies {
   readonly beginSimulation: () => void;
   readonly mountRuntime: (world: World, simulation?: Simulation) => void;
   readonly beforeStep: () => World;
+  /** Observes the live case world after every committed test step, including fast-forwarding. */
+  readonly afterStep: (world: World, tick: number) => void;
   readonly setStepAnimation: (startedAt: number, duration: number) => void;
   readonly finishAnimation: () => void;
   readonly animationsEnabled: (ticksPerSecond: number) => boolean;
@@ -224,6 +226,7 @@ export class PuzzleTestController {
         ? Math.min(tickDuration, MAX_AUTOMATIC_ANIMATION_MS)
         : 0;
       const status = state.run.step(animationDuration > 0 ? interpolationSource : undefined);
+      this.dependencies.afterStep(state.run.world, state.run.simulation.tick);
       this.dependencies.setStepAnimation(
         currentTime - accumulatedMs,
         animationDuration,
@@ -253,7 +256,7 @@ export class PuzzleTestController {
       return;
     }
     this.dependencies.finishAnimation();
-    const report = state.run.runRemaining();
+    const report = state.run.runRemaining(this.dependencies.afterStep);
     this.dependencies.mountRuntime(state.run.world, state.run.simulation);
     this.view.selectCase(state.run.currentCase.id);
     this.finish(report);

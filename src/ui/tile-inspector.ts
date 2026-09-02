@@ -218,9 +218,13 @@ export class TileInspector {
       } else if (componentState.type === "counter") {
         this.configuration.textContent =
           `COUNT ${componentState.count} · THRESHOLD ${componentState.threshold}`;
-      } else {
+      } else if (componentState.type === "rom") {
         this.configuration.textContent =
           `${componentState.width} × ${componentState.height} · CELL ${componentState.cursor + 1}`;
+      } else {
+        this.configuration.textContent = componentState.label === ""
+          ? "UNNAMED SIGNAL"
+          : `SIGNAL "${componentState.label}"`;
       }
       this.configurationControls.textContent = componentConfiguration.type === "number"
         ? "E EDIT · SHIFT + WHEEL ADJUST"
