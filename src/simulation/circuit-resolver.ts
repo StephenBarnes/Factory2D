@@ -17,21 +17,26 @@ import type { World } from "./world";
 import type { WorldRuntime } from "./world-runtime";
 import { WorldFeature } from "./world-features";
 
-/** Circuit nodes per cell: one per side so rune arrays can expose four separate networks. */
-const NODES_PER_CELL = 4;
-
 /**
- * Resolves and commits circuit state for a whole tree of worlds at once using persistent,
- * allocation-free scratch buffers. Every cell owns four node slots: ordinary circuit tiles
- * use slot 0, wire crossings use slots 0 (horizontal) and 1 (vertical), and rune arrays use
- * one slot per side. A nested world's edge-center cells connect to the containing array's
- * side nodes as if a conduit sat just beyond the edge, so signals cross array boundaries
- * within the same tick. Victory blocks in any world are observed here too, since they read
- * the same start-of-tick port charges as gates, and they latch the root world's result.
+ * Resolves and commits circuit state for a whole tree of worlds at once. Shared circuit
+ * nodes are allocated only for circuit-capable cells: one for ordinary shared networks,
+ * two for wire crossings, and four for rune arrays. The union topology is retained until
+ * world geometry or the nested-world tree changes; only driver sums and sequential state
+ * are recomputed each tick.
+ *
+ * A nested world's edge-center cells connect to the containing array's side nodes as if a
+ * conduit sat just beyond the edge, so signals cross array boundaries within the same tick.
+ * Victory blocks in any world are observed here too, since they read the same start-of-tick
+ * port charges as gates, and they latch the root world's result.
  */
 export class CircuitResolver {
   private roots = new Int32Array(0);
   private driveSums = new Int32Array(0);
+  private nodeCount = 0;
+  private readonly topologyRuntimes: WorldRuntime[] = [];
+  private readonly topologyGeometryRevisions: number[] = [];
+  private readonly topologyParents: (WorldRuntime | null)[] = [];
+  private readonly topologyParentIndices: number[] = [];
   private hasWinIntent = false;
   private hasLossIntent = false;
 
@@ -41,17 +46,8 @@ export class CircuitResolver {
     if (root.parent !== null) {
       throw new Error("The first circuit runtime must be the root world");
     }
-    let nodeCount = 0;
-    for (const runtime of runtimes) {
-      runtime.nodeBase = nodeCount;
-      nodeCount += runtime.world.cellCount * NODES_PER_CELL;
-    }
-    if (this.roots.length < nodeCount) {
-      this.roots = new Int32Array(nodeCount);
-      this.driveSums = new Int32Array(nodeCount);
-    }
-    this.roots.fill(-1, 0, nodeCount);
-    this.driveSums.fill(0, 0, nodeCount);
+    this.ensureTopology(runtimes);
+    this.driveSums.fill(0, 0, this.nodeCount);
     this.hasWinIntent = false;
     this.hasLossIntent = false;
 
@@ -66,15 +62,11 @@ export class CircuitResolver {
         runtime.nextCrossingVerticalCharges[index] = 0;
         runtime.nextIsolatedOutputCharges[index] = 0;
         runtime.furnaceDisabled[index] = 0;
-        const portBase = index * NODES_PER_CELL;
-        for (let side = 0; side < NODES_PER_CELL; side += 1) {
+        const portBase = index * 4;
+        for (let side = 0; side < 4; side += 1) {
           runtime.nextPortCharges[portBase + side] = 0;
         }
       }
-      this.registerNodes(runtime);
-    }
-    for (const runtime of runtimes) {
-      this.unionConnections(runtime);
     }
     for (const runtime of runtimes) {
       this.driveSources(runtime, tick);
@@ -93,31 +85,86 @@ export class CircuitResolver {
     }
   }
 
-  private registerNodes(runtime: WorldRuntime): void {
-    const world = runtime.world;
-    for (
-      let index = world.firstFeatureIndex(WorldFeature.Circuit);
-      index >= 0;
-      index = world.nextFeatureIndex(WorldFeature.Circuit, index)
-    ) {
-      const kind = world.kindAtIndex(index);
-      const node = runtime.nodeBase + index * NODES_PER_CELL;
-      if (kind === TileKind.RuneArray) {
-        for (let side = 0; side < NODES_PER_CELL; side += 1) {
-          this.roots[node + side] = node + side;
+  private ensureTopology(runtimes: readonly WorldRuntime[]): void {
+    if (!this.topologyIsCurrent(runtimes)) {
+      this.rebuildTopology(runtimes);
+    }
+  }
+
+  private topologyIsCurrent(runtimes: readonly WorldRuntime[]): boolean {
+    if (runtimes.length !== this.topologyRuntimes.length) {
+      return false;
+    }
+    for (let position = 0; position < runtimes.length; position += 1) {
+      const runtime = expectDefined(runtimes[position], "circuit runtime");
+      if (
+        this.topologyRuntimes[position] !== runtime ||
+        this.topologyGeometryRevisions[position] !== runtime.world.geometryRevision ||
+        this.topologyParents[position] !== runtime.parent ||
+        this.topologyParentIndices[position] !== runtime.parentIndex
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private rebuildTopology(runtimes: readonly WorldRuntime[]): void {
+    let nodeCount = 0;
+    for (const runtime of runtimes) {
+      let nodes = runtime.circuitNodes;
+      if (nodes === null) {
+        nodes = new Int32Array(runtime.world.cellCount);
+        runtime.circuitNodes = nodes;
+      }
+      nodes.fill(-1);
+      const world = runtime.world;
+      for (
+        let index = world.firstFeatureIndex(WorldFeature.Circuit);
+        index >= 0;
+        index = world.nextFeatureIndex(WorldFeature.Circuit, index)
+      ) {
+        const kind = world.kindAtIndex(index);
+        if (kind === TileKind.RuneArray) {
+          nodes[index] = nodeCount;
+          nodeCount += 4;
+          continue;
         }
-        continue;
+        const definition = TILE_DEFINITIONS[kind];
+        const sharedPorts = definition.circuitPorts &
+          ~(definition.circuitInputPorts | definition.circuitOutputPorts);
+        if (sharedPorts !== 0) {
+          nodes[index] = nodeCount;
+          nodeCount += kind === TileKind.WireCrossing ? 2 : 1;
+        }
       }
-      const definition = TILE_DEFINITIONS[kind];
-      const sharedPorts = definition.circuitPorts &
-        ~(definition.circuitInputPorts | definition.circuitOutputPorts);
-      if (sharedPorts === 0) {
-        continue;
-      }
+    }
+
+    if (this.roots.length < nodeCount) {
+      this.roots = new Int32Array(nodeCount);
+      this.driveSums = new Int32Array(nodeCount);
+    }
+    for (let node = 0; node < nodeCount; node += 1) {
       this.roots[node] = node;
-      if (kind === TileKind.WireCrossing) {
-        this.roots[node + 1] = node + 1;
-      }
+    }
+    for (const runtime of runtimes) {
+      this.unionConnections(runtime);
+    }
+    for (let node = 0; node < nodeCount; node += 1) {
+      this.roots[node] = this.findRoot(node);
+    }
+    this.nodeCount = nodeCount;
+
+    this.topologyRuntimes.length = runtimes.length;
+    this.topologyGeometryRevisions.length = runtimes.length;
+    this.topologyParents.length = runtimes.length;
+    this.topologyParentIndices.length = runtimes.length;
+    for (let position = 0; position < runtimes.length; position += 1) {
+      const runtime = expectDefined(runtimes[position], "circuit runtime");
+      this.topologyRuntimes[position] = runtime;
+      this.topologyGeometryRevisions[position] = runtime.world.geometryRevision;
+      this.topologyParents[position] = runtime.parent;
+      this.topologyParentIndices[position] = runtime.parentIndex;
     }
   }
 
@@ -144,8 +191,8 @@ export class CircuitResolver {
           continue;
         }
         this.unionNodes(
-          this.circuitNode(runtime, index, direction),
-          this.circuitNode(runtime, neighbor, oppositeDirection(direction)),
+          this.requireCircuitNode(runtime, index, direction),
+          this.requireCircuitNode(runtime, neighbor, oppositeDirection(direction)),
         );
       }
     }
@@ -161,8 +208,8 @@ export class CircuitResolver {
         continue;
       }
       this.unionNodes(
-        this.circuitNode(runtime, index, side),
-        parent.nodeBase + runtime.parentIndex * NODES_PER_CELL + side,
+        this.requireCircuitNode(runtime, index, side),
+        this.requireCircuitNode(parent, runtime.parentIndex, side),
       );
     }
   }
@@ -207,7 +254,9 @@ export class CircuitResolver {
       }
 
       if (outputCharge !== 0) {
-        const root = this.findRoot(this.circuitNode(runtime, index, Direction.Up));
+        const root = this.findRoot(
+          this.requireCircuitNode(runtime, index, Direction.Up),
+        );
         this.driveSums[root] =
           expectDefined(this.driveSums[root], "circuit drive sum") + outputCharge;
       }
@@ -375,18 +424,24 @@ export class CircuitResolver {
       index >= 0;
       index = world.nextFeatureIndex(WorldFeature.Circuit, index)
     ) {
-      const node = runtime.nodeBase + index * NODES_PER_CELL;
-      if (world.kindAtIndex(index) === TileKind.RuneArray) {
-        for (let side = 0; side < NODES_PER_CELL; side += 1) {
-          runtime.nextPortCharges[index * NODES_PER_CELL + side] = this.resolvedCharge(node + side);
+      const kind = world.kindAtIndex(index);
+      const node = this.circuitNode(
+        runtime,
+        index,
+        kind === TileKind.WireCrossing ? Direction.Right : Direction.Up,
+      );
+      if (kind === TileKind.RuneArray) {
+        const arrayNode = this.requireCircuitNode(runtime, index, Direction.Up);
+        for (let side = 0; side < 4; side += 1) {
+          runtime.nextPortCharges[index * 4 + side] = this.resolvedCharge(arrayNode + side);
         }
         continue;
       }
-      if (expectDefined(this.roots[node], "circuit root marker") >= 0) {
+      if (node >= 0) {
         runtime.nextCharges[index] = this.resolvedCharge(node);
-      }
-      if (expectDefined(this.roots[node + 1], "circuit root marker") >= 0) {
-        runtime.nextCrossingVerticalCharges[index] = this.resolvedCharge(node + 1);
+        if (kind === TileKind.WireCrossing) {
+          runtime.nextCrossingVerticalCharges[index] = this.resolvedCharge(node + 1);
+        }
       }
     }
     world.applyCircuitCharges(
@@ -418,7 +473,7 @@ export class CircuitResolver {
         continue;
       }
       const outputNode = this.connectedNeighborNode(runtime, index, outputDirection);
-      if (outputNode < 0 || expectDefined(this.roots[outputNode], "output circuit root marker") < 0) {
+      if (outputNode < 0) {
         continue;
       }
       const outputRoot = this.findRoot(outputNode);
@@ -448,7 +503,7 @@ export class CircuitResolver {
     if (parent === null || !isVirtualPort(world, index, direction)) {
       return -1;
     }
-    return parent.nodeBase + runtime.parentIndex * NODES_PER_CELL + direction;
+    return this.requireCircuitNode(parent, runtime.parentIndex, direction);
   }
 
   /** Whether a welded circuit link or a virtual array port faces `index` across `direction`. */
@@ -514,14 +569,33 @@ export class CircuitResolver {
   }
 
   private circuitNode(runtime: WorldRuntime, index: number, direction: Direction): number {
+    const nodes = runtime.circuitNodes;
+    if (nodes === null) {
+      throw new Error("Circuit node lookup is unavailable before topology construction");
+    }
+    const node = expectDefined(nodes[index], "circuit node");
+    if (node < 0) {
+      return -1;
+    }
     const kind = runtime.world.kindAtIndex(index);
-    const node = runtime.nodeBase + index * NODES_PER_CELL;
     if (kind === TileKind.RuneArray) {
       return node + direction;
     }
     const verticalAxis = kind === TileKind.WireCrossing &&
       (direction === Direction.Up || direction === Direction.Down);
     return node + (verticalAxis ? 1 : 0);
+  }
+
+  private requireCircuitNode(
+    runtime: WorldRuntime,
+    index: number,
+    direction: Direction,
+  ): number {
+    const node = this.circuitNode(runtime, index, direction);
+    if (node < 0) {
+      throw new Error(`Circuit cell at index ${index} has no shared node`);
+    }
+    return node;
   }
 
   private findRoot(index: number): number {

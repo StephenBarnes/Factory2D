@@ -364,4 +364,32 @@ Implemented simulation feature-presence tracking and sparse row-major pass itera
   - 30,000 falling stones: median **9.6 ms**, p95 **16.5 ms** (previous profile: approximately **19.1 ms**).
   - Fully welded conduit network: median **54.3 ms**, p95 **83.5 ms** (previous profile: median **61.6 ms**).
 
-Circuit storage still reserves four nodes per cell and rebuilds union topology every circuit tick. Compact, cached circuit topology remains the next simulation optimization priority.
+Compact, cached circuit topology is implemented in Update 5 below.
+
+# Update 5
+
+Implemented compact circuit nodes and cached forest-wide union topology, covering the third optimization priority.
+
+## Changes
+
+- `src/simulation/circuit-resolver.ts` and `src/simulation/world-runtime.ts`
+  - Allocate one node for an ordinary shared circuit tile, two for a wire crossing, and four for a rune array instead of reserving four nodes for every board cell.
+  - Lazily allocate one cell-index-to-node lookup only for worlds that participate in circuit resolution.
+  - Cache the flattened union topology across ticks while every participating world's geometry revision and nested runtime parent/index structure remain unchanged.
+  - Rebuild after placement, removal, orientation, weld, movement, reset, nested-array replacement, or tree-position changes.
+  - Recompute driver sums, sequential gate state, circuit charges, and victory intents every tick.
+- `tests/circuit.test.ts` and `tests/rune-array.test.ts`
+  - Verify compact node counts, reuse across visual-only circuit ticks, geometry-triggered rebuilding, and invalidation when a resized rune array replaces its inner world.
+
+## Verification
+
+- Focused circuit verification: 3 files and 317 tests passed.
+- `npm test`: 42 files and 708 tests passed.
+- `npm run build`: TypeScript and the production Vite bundle passed.
+- Warmed headless-Chromium benchmark on a fully welded 400×300 conduit network:
+  - First topology-building tick: **126.6 ms**.
+  - Cached ticks: median **42.7 ms**, p95 **56.6 ms**.
+  - Previous feature-index benchmark: median **54.3 ms**, p95 **83.5 ms**.
+  - Circuit topology storage for 120,000 conduits is **1.37 MiB**: 0.46 MiB each for roots, driver sums, and the cell-to-node lookup. The previous roots and driver sums alone reserved **3.66 MiB**.
+
+The cached dense-circuit median is below the 50 ms workstation target, while p95 remains 6.6 ms above it. Motion/runtime scratch allocation is the next listed optimization priority.

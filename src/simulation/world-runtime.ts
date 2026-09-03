@@ -34,8 +34,12 @@ export class WorldRuntime {
   /** Cell index of the containing rune array inside `parent`, or -1 for the root. */
   parentIndex = -1;
   depth = 0;
-  /** First global circuit node of this world's cells for the current tick. */
-  nodeBase = 0;
+  /**
+   * Global node base by cell for the circuit topology currently cached by CircuitResolver.
+   * Allocated lazily only for worlds that participate in circuit resolution; -1 means the
+   * cell has no shared circuit node.
+   */
+  circuitNodes: Int32Array | null = null;
 
   private collectedDuplicators = false;
   private collectedWeldOperators = false;

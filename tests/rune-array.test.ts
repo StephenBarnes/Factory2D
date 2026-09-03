@@ -114,6 +114,21 @@ describe("rune arrays", () => {
     expect(tall.world.chargeAtPort(1, 0, Direction.Down)).toBe(0);
   });
 
+  it("rebuilds cached circuit topology after replacing an inner world", () => {
+    const { world, inner, simulation } = createPassthroughWorld();
+    fillConduitRow(inner, 0);
+    simulation.step();
+    expect(world.chargeAt(2, 0)).toBe(1);
+
+    world.configureRuneArray(1, 0, 5, 1, "");
+    const resizedInner = world.runeArrayWorldAt(1, 0);
+    fillConduitRow(resizedInner, 0);
+    simulation.step();
+
+    expect(world.chargeAt(2, 0)).toBe(1);
+    expect(resizedInner.chargeAt(2, 0)).toBe(1);
+  });
+
   it("keeps the outer sides separate while nothing inside connects them", () => {
     const { world, inner, simulation } = createPassthroughWorld();
     inner.place(0, 0, TileKind.Conduit);

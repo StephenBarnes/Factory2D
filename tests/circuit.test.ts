@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { expectDefined } from "../src/util/assert";
 
+import { CircuitResolver } from "../src/simulation/circuit-resolver";
 import { Simulation } from "../src/simulation/simulation";
 import { Direction, TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
+import { WorldRuntime } from "../src/simulation/world-runtime";
 
 type GateInput = {
   readonly direction: Direction.Right | Direction.Down | Direction.Left;
@@ -50,6 +52,34 @@ describe("circuit networks", () => {
     expect(world.chargeAt(1, 1)).toBe(1);
     expect(world.chargeAt(2, 1)).toBe(1);
     expect(world.chargeAt(3, 1)).toBe(0);
+  });
+
+  it("allocates compact nodes and caches topology until geometry changes", () => {
+    const world = new World(4, 1);
+    world.place(0, 0, TileKind.FixedCharge);
+    world.place(1, 0, TileKind.Conduit);
+    world.place(2, 0, TileKind.WireCrossing);
+    world.place(3, 0, TileKind.Inverter);
+    world.setWeld(0, 0, 1, 0, true);
+    const runtime = new WorldRuntime(world);
+    const resolver = new CircuitResolver();
+    const internals = resolver as unknown as {
+      readonly nodeCount: number;
+      rebuildTopology(runtimes: readonly WorldRuntime[]): void;
+    };
+    const rebuildTopology = vi.spyOn(internals, "rebuildTopology");
+
+    resolver.resolve(0, [runtime]);
+
+    expect(internals.nodeCount).toBe(4);
+    expect(rebuildTopology).toHaveBeenCalledTimes(1);
+
+    resolver.resolve(1, [runtime]);
+    expect(rebuildTopology).toHaveBeenCalledTimes(1);
+
+    world.setWeld(0, 0, 1, 0, false);
+    resolver.resolve(2, [runtime]);
+    expect(rebuildTopology).toHaveBeenCalledTimes(2);
   });
 
   it("drives a welded circuit with +1 constantly", () => {
