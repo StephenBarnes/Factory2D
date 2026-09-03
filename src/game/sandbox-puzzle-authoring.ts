@@ -1,7 +1,9 @@
 import { GridRegion } from "./grid-region";
 import {
+  MAX_PUZZLE_CYCLE_LIMIT,
   parsePuzzleFile,
   PUZZLE_FORMAT,
+  PUZZLE_ID_PATTERN,
   type ParsedPuzzleFile,
 } from "./puzzle-format";
 import {
@@ -9,6 +11,7 @@ import {
   serializePuzzleTemplate,
   type PuzzleExportMetadata,
 } from "./puzzle-export";
+import { puzzleGroupById } from "./puzzle-groups";
 import { PuzzleComponents, type PricedComponent } from "./puzzle-components";
 import {
   deserializeBoard,
@@ -38,8 +41,13 @@ export interface SandboxPuzzleComponentProperty {
 export interface SandboxPuzzleProperties {
   readonly width: number;
   readonly height: number;
+  readonly id: string;
+  readonly groupId: string;
+  readonly order: number;
   readonly name: string;
   readonly description: string;
+  readonly goal: string;
+  readonly cycleLimit: number | null;
   readonly components: readonly SandboxPuzzleComponentProperty[];
 }
 
@@ -51,11 +59,11 @@ export interface SandboxPuzzleImport {
 }
 
 interface PuzzleMetadata {
-  readonly id: string;
-  readonly groupId: string;
-  readonly order: number;
-  readonly goal: string;
-  readonly cycleLimit: number | null;
+  id: string;
+  groupId: string;
+  order: number;
+  goal: string;
+  cycleLimit: number | null;
   readonly testCases: readonly unknown[];
   readonly testCaseWorlds: readonly World[];
   readonly sourceWidth: number;
@@ -174,8 +182,13 @@ export class SandboxPuzzleAuthoringState {
     return {
       width,
       height,
+      id: this.metadata.id,
+      groupId: this.metadata.groupId,
+      order: this.metadata.order,
       name: this.nameValue,
       description: this.descriptionValue,
+      goal: this.metadata.goal,
+      cycleLimit: this.metadata.cycleLimit,
       components: PALETTE_KINDS.map((kind) => ({
         kind,
         enabled: this.availableComponentsValue.has(kind),
@@ -186,8 +199,31 @@ export class SandboxPuzzleAuthoringState {
 
   update(properties: SandboxPuzzleProperties): void {
     requireBoardDimensions(properties.width, properties.height);
+    const id = requireNonEmptyText(properties.id, "Puzzle id");
+    if (!PUZZLE_ID_PATTERN.test(id)) {
+      throw new Error("Puzzle id must contain lowercase letters, digits, and single hyphens only");
+    }
+    if (puzzleGroupById(properties.groupId) === undefined) {
+      throw new Error(`Puzzle group "${properties.groupId}" is not defined`);
+    }
+    if (!Number.isFinite(properties.order)) {
+      throw new Error("Puzzle order must be a finite number");
+    }
     const name = requireNonEmptyText(properties.name, "Puzzle name");
     const description = requireNonEmptyText(properties.description, "Puzzle description");
+    const goal = requireNonEmptyText(properties.goal, "Puzzle goal");
+    if (
+      properties.cycleLimit !== null &&
+      (
+        !Number.isSafeInteger(properties.cycleLimit) ||
+        properties.cycleLimit < 1 ||
+        properties.cycleLimit > MAX_PUZZLE_CYCLE_LIMIT
+      )
+    ) {
+      throw new Error(
+        `Puzzle cycle limit must be an integer from 1 through ${MAX_PUZZLE_CYCLE_LIMIT}`,
+      );
+    }
     if (properties.components.length !== PALETTE_KINDS.length) {
       throw new Error("Puzzle properties must include every palette component");
     }
@@ -219,6 +255,11 @@ export class SandboxPuzzleAuthoringState {
     }
 
     const availableComponents = new PuzzleComponents(enabled);
+    this.metadata.id = id;
+    this.metadata.groupId = properties.groupId;
+    this.metadata.order = properties.order;
+    this.metadata.goal = goal;
+    this.metadata.cycleLimit = properties.cycleLimit;
     this.nameValue = name;
     this.descriptionValue = description;
     this.availableComponentsValue = availableComponents;

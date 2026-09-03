@@ -14,7 +14,7 @@ import type { World } from "../simulation/world";
 
 export const PUZZLE_FORMAT = "factory2d-puzzle";
 export const PUZZLE_VERSION = 5;
-const PUZZLE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+export const PUZZLE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const DEFAULT_PUZZLE_CYCLE_LIMIT = 1_000;
 export const MAX_PUZZLE_CYCLE_LIMIT = 10_000;
 const PUZZLE_FIELDS = [

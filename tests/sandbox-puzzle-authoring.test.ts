@@ -58,8 +58,15 @@ describe("sandbox puzzle authoring", () => {
     expect(imported.world.isWelded(1, 1, 2, 1)).toBe(true);
 
     const properties = imported.authoring.properties(4, 3);
-    expect(properties.name).toBe("Imported Puzzle");
-    expect(properties.description).toBe("Imported description");
+    expect(properties).toMatchObject({
+      id: "imported-puzzle",
+      groupId: "runelore",
+      order: 7,
+      name: "Imported Puzzle",
+      description: "Imported description",
+      goal: "Keep this goal",
+      cycleLimit: 250,
+    });
     expect(properties.components.find(({ kind }) => kind === TileKind.Stone)).toEqual({
       kind: TileKind.Stone,
       enabled: true,
@@ -71,8 +78,13 @@ describe("sandbox puzzle authoring", () => {
       ...properties,
       width: 5,
       height: 4,
+      id: "updated-puzzle",
+      groupId: "advanced-runelore",
+      order: 3.5,
       name: "Updated Puzzle",
       description: "Updated description",
+      goal: "Updated goal",
+      cycleLimit: 400,
       components: properties.components.map((component) =>
         component.kind === TileKind.Sand
           ? { ...component, enabled: true, price: 4 }
@@ -80,6 +92,7 @@ describe("sandbox puzzle authoring", () => {
       ),
     };
     imported.authoring.update(updatedProperties);
+    expect(imported.authoring.fileName).toBe("updated-puzzle.json");
     const resized = resizeWorldFromTopLeft(imported.world, 5, 4);
     resized.place(0, 3, TileKind.Iron);
     const exportedSource = imported.authoring.serialize(resized, imported.editableRegion);
@@ -100,12 +113,13 @@ describe("sandbox puzzle authoring", () => {
     };
 
     expect(exported).toMatchObject({
-      id: "imported-puzzle",
-      group: "runelore",
+      id: "updated-puzzle",
+      group: "advanced-runelore",
+      order: 3.5,
       name: "Updated Puzzle",
       description: "Updated description",
-      goal: "Keep this goal",
-      cycleLimit: 250,
+      goal: "Updated goal",
+      cycleLimit: 400,
     });
     expect(exported.components).toHaveLength(2);
     expect(exported.components).toContainEqual({

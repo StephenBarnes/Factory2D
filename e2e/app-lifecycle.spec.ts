@@ -225,7 +225,7 @@ test("workshop identity exposes information and live puzzle metrics", async ({ p
     "Tutorial puzzle teaching block placement",
   );
   await expect(dialog.locator("[data-workshop-info-goal]")).toHaveText(
-    "Drop one iron block into the delivery box",
+    "Drop one stone block into the delivery box",
   );
   await dialog.getByRole("button", { name: "CLOSE" }).click();
 
@@ -244,12 +244,19 @@ test("workshop identity exposes information and live puzzle metrics", async ({ p
   await expect(page.locator("#puzzle-metrics")).toBeHidden();
   await expect(page.locator("#screen-title")).toHaveText("SANDBOX");
   await page.getByRole("button", { name: "Puzzle properties" }).click();
+  await expect(dialog.getByRole("textbox", { name: "ID" })).toHaveValue("untitled-puzzle");
+  await expect(dialog.getByRole("combobox", { name: "GROUP" })).toHaveValue("basics");
+  await expect(dialog.getByRole("spinbutton", { name: "ORDER" })).toHaveValue("0");
   await expect(dialog.getByRole("textbox", { name: "PUZZLE NAME" })).toHaveValue(
     "Untitled Puzzle",
   );
   await expect(dialog.getByRole("textbox", { name: "DESCRIPTION" })).toHaveValue(
     "TODO: Describe the puzzle setup.",
   );
+  await expect(dialog.getByRole("textbox", { name: "GOAL" })).toHaveValue(
+    "TODO: Describe the victory condition.",
+  );
+  await expect(dialog.getByRole("spinbutton", { name: "CYCLE LIMIT" })).toHaveValue("");
   await expect(dialog.locator("[data-workshop-info-goal-panel]")).toBeHidden();
 });
 
@@ -636,10 +643,17 @@ test("export dropup exposes scene actions and sandbox puzzle authoring", async (
   await page.goto("/sandbox");
   await page.getByRole("button", { name: "Puzzle properties" }).click();
   const propertiesDialog = page.locator("#workshop-info-dialog");
+  await propertiesDialog.getByRole("textbox", { name: "ID" }).fill("authored-puzzle");
+  await propertiesDialog.getByRole("combobox", { name: "GROUP" }).selectOption("runelore");
+  await propertiesDialog.getByRole("spinbutton", { name: "ORDER" }).fill("12.5");
   await propertiesDialog.getByRole("textbox", { name: "PUZZLE NAME" }).fill("Authored Puzzle");
   await propertiesDialog.getByRole("textbox", { name: "DESCRIPTION" }).fill(
     "Authored in the sandbox.",
   );
+  await propertiesDialog.getByRole("textbox", { name: "GOAL" }).fill(
+    "Deliver the authored mechanism.",
+  );
+  await propertiesDialog.getByRole("spinbutton", { name: "CYCLE LIMIT" }).fill("321");
   await propertiesDialog.getByRole("spinbutton", { name: "WIDTH" }).fill("22");
   await propertiesDialog.getByRole("spinbutton", { name: "HEIGHT" }).fill("15");
   await propertiesDialog.getByRole("checkbox", { name: "Sand" }).uncheck();
@@ -687,7 +701,7 @@ test("export dropup exposes scene actions and sandbox puzzle authoring", async (
   const puzzleDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "DOWNLOAD PUZZLE FILE" }).click();
   const puzzleDownload = await puzzleDownloadPromise;
-  expect(puzzleDownload.suggestedFilename()).toBe("untitled-puzzle.json");
+  expect(puzzleDownload.suggestedFilename()).toBe("authored-puzzle.json");
   const puzzleDownloadPath = await puzzleDownload.path();
   if (puzzleDownloadPath === null) {
     throw new Error("Puzzle download did not produce a local file");
@@ -695,14 +709,24 @@ test("export dropup exposes scene actions and sandbox puzzle authoring", async (
   const puzzleFile = JSON.parse(await readFile(puzzleDownloadPath, "utf8")) as {
     readonly name: string;
     readonly description: string;
+    readonly id: string;
+    readonly group: string;
+    readonly order: number;
+    readonly goal: string;
+    readonly cycleLimit: number;
     readonly width: number;
     readonly height: number;
     readonly components: readonly { readonly code: string; readonly price: number }[];
     readonly editableRegions: readonly unknown[];
   };
   expect(puzzleFile).toMatchObject({
+    id: "authored-puzzle",
+    group: "runelore",
+    order: 12.5,
     name: "Authored Puzzle",
     description: "Authored in the sandbox.",
+    goal: "Deliver the authored mechanism.",
+    cycleLimit: 321,
     width: 22,
     height: 15,
   });
@@ -720,6 +744,17 @@ test("export dropup exposes scene actions and sandbox puzzle authoring", async (
   await page.getByRole("button", { name: "Puzzle properties" }).click();
   await expect(propertiesDialog.getByRole("textbox", { name: "PUZZLE NAME" })).toHaveValue(
     "Authored Puzzle",
+  );
+  await expect(propertiesDialog.getByRole("textbox", { name: "ID" })).toHaveValue(
+    "authored-puzzle",
+  );
+  await expect(propertiesDialog.getByRole("combobox", { name: "GROUP" })).toHaveValue("runelore");
+  await expect(propertiesDialog.getByRole("spinbutton", { name: "ORDER" })).toHaveValue("12.5");
+  await expect(propertiesDialog.getByRole("textbox", { name: "GOAL" })).toHaveValue(
+    "Deliver the authored mechanism.",
+  );
+  await expect(propertiesDialog.getByRole("spinbutton", { name: "CYCLE LIMIT" })).toHaveValue(
+    "321",
   );
   await expect(propertiesDialog.getByRole("spinbutton", { name: "WIDTH" })).toHaveValue("22");
   await expect(propertiesDialog.getByRole("spinbutton", { name: "HEIGHT" })).toHaveValue("15");

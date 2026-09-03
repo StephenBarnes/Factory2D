@@ -1848,6 +1848,7 @@ kbd {
 
 .workshop-properties input[type="text"],
 .workshop-properties input[type="number"],
+.workshop-properties select,
 .workshop-properties textarea {
   min-width: 0;
   padding: 9px 10px;
@@ -1864,6 +1865,7 @@ kbd {
 }
 
 .workshop-properties input:focus-visible,
+.workshop-properties select:focus-visible,
 .workshop-properties textarea:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
@@ -1881,12 +1883,14 @@ kbd {
   color: var(--gold);
 }
 
+.workshop-properties-metadata,
 .workshop-properties-dimensions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
+.workshop-properties-metadata label,
 .workshop-properties-dimensions label {
   display: grid;
   gap: 7px;

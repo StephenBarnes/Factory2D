@@ -384,7 +384,36 @@
                 <span>DESCRIPTION</span>
                 <textarea rows="4" required data-workshop-properties-description></textarea>
               </label>
+              <label>
+                <span>GOAL</span>
+                <input type="text" required data-workshop-properties-goal>
+              </label>
             </div>
+            <fieldset class="workshop-properties-metadata">
+              <legend>PUZZLE CATALOG</legend>
+              <label>
+                <span>ID</span>
+                <input
+                  type="text"
+                  required
+                  pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+                  title="Lowercase letters, digits, and single hyphens only"
+                  data-workshop-properties-id
+                >
+              </label>
+              <label>
+                <span>GROUP</span>
+                <select required data-workshop-properties-group></select>
+              </label>
+              <label>
+                <span>ORDER</span>
+                <input type="number" step="any" required data-workshop-properties-order>
+              </label>
+              <label>
+                <span>CYCLE LIMIT</span>
+                <input type="number" step="1" min="1" placeholder="Default: 1000" data-workshop-properties-cycle-limit>
+              </label>
+            </fieldset>
             <fieldset class="workshop-properties-dimensions">
               <legend>GRID SIZE</legend>
               <label>

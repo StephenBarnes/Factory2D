@@ -2,6 +2,11 @@ import type {
   SandboxPuzzleComponentProperty,
   SandboxPuzzleProperties,
 } from "../game/sandbox-puzzle-authoring";
+import { PUZZLE_GROUPS } from "../game/puzzle-groups";
+import {
+  DEFAULT_PUZZLE_CYCLE_LIMIT,
+  MAX_PUZZLE_CYCLE_LIMIT,
+} from "../game/puzzle-format";
 import {
   MAX_BOARD_HEIGHT,
   MAX_BOARD_WIDTH,
@@ -30,8 +35,13 @@ export class WorkshopInfoDialog {
   private readonly description: HTMLElement;
   private readonly goalPanel: HTMLElement;
   private readonly goal: HTMLElement;
+  private readonly idInput: HTMLInputElement;
+  private readonly groupSelect: HTMLSelectElement;
+  private readonly orderInput: HTMLInputElement;
   private readonly nameInput: HTMLInputElement;
   private readonly descriptionInput: HTMLTextAreaElement;
+  private readonly goalInput: HTMLInputElement;
+  private readonly cycleLimitInput: HTMLInputElement;
   private readonly widthInput: HTMLInputElement;
   private readonly heightInput: HTMLInputElement;
   private readonly componentControls = new Map<TileKind, ComponentControls>();
@@ -48,8 +58,16 @@ export class WorkshopInfoDialog {
     this.description = requiredDescendant(dialog, "[data-workshop-info-description]");
     this.goalPanel = requiredDescendant(dialog, "[data-workshop-info-goal-panel]");
     this.goal = requiredDescendant(dialog, "[data-workshop-info-goal]");
+    this.idInput = requiredDescendant(dialog, "[data-workshop-properties-id]");
+    this.groupSelect = requiredDescendant(dialog, "[data-workshop-properties-group]");
+    this.orderInput = requiredDescendant(dialog, "[data-workshop-properties-order]");
     this.nameInput = requiredDescendant(dialog, "[data-workshop-properties-name]");
     this.descriptionInput = requiredDescendant(dialog, "[data-workshop-properties-description]");
+    this.goalInput = requiredDescendant(dialog, "[data-workshop-properties-goal]");
+    this.cycleLimitInput = requiredDescendant(
+      dialog,
+      "[data-workshop-properties-cycle-limit]",
+    );
     this.widthInput = requiredDescendant(dialog, "[data-workshop-properties-width]");
     this.heightInput = requiredDescendant(dialog, "[data-workshop-properties-height]");
     this.saveButton = requiredDescendant(dialog, "[data-workshop-properties-save]");
@@ -59,6 +77,14 @@ export class WorkshopInfoDialog {
     this.widthInput.max = String(MAX_BOARD_WIDTH);
     this.heightInput.min = String(MIN_BOARD_HEIGHT);
     this.heightInput.max = String(MAX_BOARD_HEIGHT);
+    this.cycleLimitInput.max = String(MAX_PUZZLE_CYCLE_LIMIT);
+    this.cycleLimitInput.placeholder = `Default: ${DEFAULT_PUZZLE_CYCLE_LIMIT}`;
+    for (const group of PUZZLE_GROUPS) {
+      const option = document.createElement("option");
+      option.value = group.id;
+      option.textContent = group.name;
+      this.groupSelect.append(option);
+    }
     this.buildComponentControls(
       requiredDescendant(dialog, "[data-workshop-properties-components]"),
     );
@@ -93,8 +119,15 @@ export class WorkshopInfoDialog {
     this.propertiesContent.hidden = false;
     this.saveButton.hidden = false;
     this.closeButton.textContent = "CANCEL";
+    this.idInput.value = properties.id;
+    this.groupSelect.value = properties.groupId;
+    this.orderInput.valueAsNumber = properties.order;
     this.nameInput.value = properties.name;
     this.descriptionInput.value = properties.description;
+    this.goalInput.value = properties.goal;
+    this.cycleLimitInput.value = properties.cycleLimit === null
+      ? ""
+      : String(properties.cycleLimit);
     this.widthInput.valueAsNumber = properties.width;
     this.heightInput.valueAsNumber = properties.height;
     for (const component of properties.components) {
@@ -187,8 +220,15 @@ export class WorkshopInfoDialog {
     this.saveProperties({
       width: this.widthInput.valueAsNumber,
       height: this.heightInput.valueAsNumber,
+      id: this.idInput.value,
+      groupId: this.groupSelect.value,
+      order: this.orderInput.valueAsNumber,
       name: this.nameInput.value,
       description: this.descriptionInput.value,
+      goal: this.goalInput.value,
+      cycleLimit: this.cycleLimitInput.value === ""
+        ? null
+        : this.cycleLimitInput.valueAsNumber,
       components,
     });
     this.dialog.close();
