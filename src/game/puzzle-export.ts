@@ -19,7 +19,6 @@ export interface PuzzleExportMetadata {
   readonly name: string;
   readonly description: string;
   readonly goal: string;
-  readonly features: readonly string[];
   readonly cycleLimit: number | null;
   readonly components: readonly { readonly kind: TileKind; readonly price: number }[];
   readonly testCases: readonly unknown[];
@@ -70,16 +69,9 @@ function placeholderMetadata(): PuzzleExportMetadata {
     name: "Untitled Puzzle",
     description: "TODO: Describe the puzzle setup.",
     goal: "TODO: Describe the victory condition.",
-    features: [],
     cycleLimit: null,
     components: placeholderPuzzleComponents(),
-    testCases: [
-      {
-        id: "standard",
-        name: "Standard case",
-        overrides: {},
-      },
-    ],
+    testCases: [],
   };
 }
 
@@ -105,7 +97,6 @@ export function serializePuzzleTemplate(
     name: metadata.name,
     description: metadata.description,
     goal: metadata.goal,
-    features: metadata.features,
     ...(metadata.cycleLimit === null ? {} : { cycleLimit: metadata.cycleLimit }),
     components: componentEntries(metadata.components),
     editableRegions: editableRegion.rectangles,

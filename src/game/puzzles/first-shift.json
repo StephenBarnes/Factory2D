@@ -1,6 +1,6 @@
 {
   "format": "factory2d-puzzle",
-  "version": 4,
+  "version": 5,
   "width": 20,
   "height": 14,
   "id": "first-shift",
@@ -9,7 +9,6 @@
   "name": "First Shift",
   "description": "Tutorial puzzle teaching block placement",
   "goal": "Drop one iron block into the delivery box",
-  "features": [],
   "components": [
     { "code": "#", "price": 1 }
   ],
@@ -37,12 +36,7 @@
       "=.......=#==.......=",
       "===================="
     ],
-    "orientations": [],
-    "charges": [],
-    "crossingCharges": [],
     "isolatedOutputCharges": [],
-    "furnaces": [],
-    "components": [],
     "welds": [
       "+------------------|",
       "|..................|",
@@ -60,11 +54,5 @@
       "-------------------."
     ]
   },
-  "testCases": [
-    {
-      "id": "standard",
-      "name": "Standard case",
-      "overrides": {}
-    }
-  ]
+  "testCases": []
 }

@@ -172,12 +172,12 @@ interface ExportedBoardContents {
   readonly width: number;
   readonly height: number;
   readonly grid: readonly string[];
-  readonly orientations: readonly ExportedOrientation[];
-  readonly charges: readonly ExportedCharge[];
-  readonly crossingCharges: readonly ExportedCrossingCharge[];
+  readonly orientations?: readonly ExportedOrientation[];
+  readonly charges?: readonly ExportedCharge[];
+  readonly crossingCharges?: readonly ExportedCrossingCharge[];
   readonly isolatedOutputCharges: readonly ExportedCharge[];
-  readonly furnaces: readonly ExportedFurnace[];
-  readonly components: readonly ExportedComponent[];
+  readonly furnaces?: readonly ExportedFurnace[];
+  readonly components?: readonly ExportedComponent[];
   readonly welds: readonly string[];
 }
 
@@ -223,12 +223,14 @@ export function serializeBoard(world: World, tick: number): string {
     tick,
     result: PUZZLE_RESULT_NAMES[world.puzzleResult],
     grid: contents.grid,
-    orientations: contents.orientations,
-    charges: contents.charges,
-    crossingCharges: contents.crossingCharges,
+    ...(contents.orientations === undefined ? {} : { orientations: contents.orientations }),
+    ...(contents.charges === undefined ? {} : { charges: contents.charges }),
+    ...(contents.crossingCharges === undefined
+      ? {}
+      : { crossingCharges: contents.crossingCharges }),
     isolatedOutputCharges: contents.isolatedOutputCharges,
-    furnaces: contents.furnaces,
-    components: contents.components,
+    ...(contents.furnaces === undefined ? {} : { furnaces: contents.furnaces }),
+    ...(contents.components === undefined ? {} : { components: contents.components }),
     welds: contents.welds,
   };
   return `${JSON.stringify(board, null, 2)}\n`;
@@ -335,12 +337,12 @@ function exportBoardContents(world: World): ExportedBoardContents {
     width: world.width,
     height: world.height,
     grid,
-    orientations,
-    charges,
-    crossingCharges,
+    ...(orientations.length === 0 ? {} : { orientations }),
+    ...(charges.length === 0 ? {} : { charges }),
+    ...(crossingCharges.length === 0 ? {} : { crossingCharges }),
     isolatedOutputCharges,
-    furnaces,
-    components,
+    ...(furnaces.length === 0 ? {} : { furnaces }),
+    ...(components.length === 0 ? {} : { components }),
     welds,
   };
 }
@@ -445,7 +447,9 @@ function importBoardContents(
     }
   }
 
-  const orientations = requireArray(board.orientations, `${label} orientations`);
+  const orientations = board.orientations === undefined
+    ? []
+    : requireArray(board.orientations, `${label} orientations`);
   const orientationByCell = new Uint8Array(width * height);
   const hasOrientation = new Uint8Array(width * height);
   for (let index = 0; index < orientations.length; index += 1) {
@@ -474,7 +478,9 @@ function importBoardContents(
     hasOrientation[cellIndex] = 1;
   }
 
-  const furnaces = requireArray(board.furnaces, `${label} furnaces`);
+  const furnaces = board.furnaces === undefined
+    ? []
+    : requireArray(board.furnaces, `${label} furnaces`);
   const furnaceProgressByCell = new Uint16Array(width * height);
   const hasFurnaceState = new Uint8Array(width * height);
   for (let index = 0; index < furnaces.length; index += 1) {
@@ -519,7 +525,9 @@ function importBoardContents(
     hasFurnaceState[cellIndex] = 1;
   }
 
-  const charges = requireArray(board.charges, `${label} charges`);
+  const charges = board.charges === undefined
+    ? []
+    : requireArray(board.charges, `${label} charges`);
   const chargeByCell = new Int8Array(width * height);
   const hasCharge = new Uint8Array(width * height);
   for (let index = 0; index < charges.length; index += 1) {
@@ -542,7 +550,9 @@ function importBoardContents(
     chargeByCell[cellIndex] = charge;
     hasCharge[cellIndex] = 1;
   }
-  const crossingCharges = requireArray(board.crossingCharges, `${label} crossing charges`);
+  const crossingCharges = board.crossingCharges === undefined
+    ? []
+    : requireArray(board.crossingCharges, `${label} crossing charges`);
   const horizontalChargeByCell = new Int8Array(width * height);
   const verticalChargeByCell = new Int8Array(width * height);
   const hasCrossingCharge = new Uint8Array(width * height);

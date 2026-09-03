@@ -6,8 +6,8 @@ import { SignalTraceRecorder } from "../src/game/signal-traces";
 import { Direction, TileKind } from "../src/simulation/tile";
 import type { World } from "../src/simulation/world";
 
-/** Cycles the checker needs after the player's first output for the mixed and burst cases. */
-const MIXED_CYCLES_AT_ZERO_LATENCY = 29;
+/** Cycles the checker needs after the player's first output for the standard and burst cases. */
+const STANDARD_CYCLES_AT_ZERO_LATENCY = 29;
 const BURSTS_CYCLES_AT_ZERO_LATENCY = 32;
 
 function weld(world: World, a: readonly [number, number], b: readonly [number, number]): void {
@@ -119,7 +119,7 @@ describe("shipped rectifier puzzle", () => {
 
     expect(report.succeeded).toBe(true);
     expect(report.results.map((result) => [result.id, result.outcome, result.cycles])).toEqual([
-      ["mixed", "won", MIXED_CYCLES_AT_ZERO_LATENCY + 2],
+      ["standard", "won", STANDARD_CYCLES_AT_ZERO_LATENCY + 2],
       ["bursts", "won", BURSTS_CYCLES_AT_ZERO_LATENCY + 2],
     ]);
   });
@@ -136,7 +136,7 @@ describe("shipped rectifier puzzle", () => {
 
     expect(report.succeeded).toBe(true);
     expect(report.results.map((result) => [result.id, result.outcome, result.cycles])).toEqual([
-      ["mixed", "won", MIXED_CYCLES_AT_ZERO_LATENCY + latency],
+      ["standard", "won", STANDARD_CYCLES_AT_ZERO_LATENCY + latency],
       ["bursts", "won", BURSTS_CYCLES_AT_ZERO_LATENCY + latency],
     ]);
     },
@@ -151,7 +151,7 @@ describe("shipped rectifier puzzle", () => {
 
     expect(report.succeeded).toBe(false);
     expect(report.results).toHaveLength(1);
-    expect(report.results[0]).toMatchObject({ id: "mixed", outcome: "lost" });
+    expect(report.results[0]).toMatchObject({ id: "standard", outcome: "lost" });
   });
 
   it("rejects an absolute-value machine that emits +1 for negative inputs", () => {
@@ -163,7 +163,7 @@ describe("shipped rectifier puzzle", () => {
 
     expect(report.succeeded).toBe(false);
     expect(report.results).toHaveLength(1);
-    expect(report.results[0]).toMatchObject({ id: "mixed", outcome: "lost" });
+    expect(report.results[0]).toMatchObject({ id: "standard", outcome: "lost" });
   });
 
   it("fails on the cycle limit when the workshop never emits a signal", () => {
@@ -173,7 +173,7 @@ describe("shipped rectifier puzzle", () => {
     const report = runPuzzleTests(puzzle, solution);
 
     expect(report.succeeded).toBe(false);
-    expect(report.results[0]).toMatchObject({ id: "mixed", outcome: "cycle-limit" });
+    expect(report.results[0]).toMatchObject({ id: "standard", outcome: "cycle-limit" });
   });
 
   it("orders its signal panel lines as input, output, then the checker's expected sequence", () => {

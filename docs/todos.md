@@ -18,10 +18,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 # Storage format, import/export
 
 * Allow importing scenes in puzzles, not only in the sandbox? But only allow them to modify the player-modifiable regions, including welds on the perimeter. This could be useful for sharing solutions, maybe? Or if we don't allow importing except in the sandbox, then remove the button on puzzle screens - currently it's disabled but still taking up screen space.
-* Edit format for scenes and puzzles: make the fields `orientations`, `charges`, `crossingCharges`, `furnaces`, `components` all optional, with default value of `[]`. When exporting, don't specify those fields if they're the empty list, which is often the case. This will reduce incompatibility when we add new block types and de-bloats the format.
-* Similarly, remove the "standard" test case with no overrides, from the stored format - treat that as a given and only list additional test cases in the file.
 * Further compact orientations and charges in the export/import format, possibly storing charges per network instead of per tile. More complex per-tile state (e.g. furnace stored ticks or target/delivery-block configuration) can remain verbose. Only include full ASCII grids for fields that aren't the default value.
-* Remove the `features` field on puzzles, and the features display on the puzzle briefing screen.
 
 # Authoring tools, player-created puzzles, histograms
 

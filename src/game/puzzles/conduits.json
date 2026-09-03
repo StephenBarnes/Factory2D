@@ -1,6 +1,6 @@
 {
   "format": "factory2d-puzzle",
-  "version": 4,
+  "version": 5,
   "width": 20,
   "height": 14,
   "id": "conduits",
@@ -9,7 +9,6 @@
   "name": "Conduits",
   "description": "Tutorial puzzle teaching conduit mechanics",
   "goal": "Connect the blue positive wire to the victory block",
-  "features": [],
   "components": [ { "code": "C", "price": 1 } ],
   "editableRegions": [ { "x": 7, "y": 1, "width": 6, "height": 12 } ],
   "initialBoard": {
@@ -42,11 +41,7 @@
         "direction": "right"
       }
     ],
-    "charges": [],
-    "crossingCharges": [],
     "isolatedOutputCharges": [],
-    "furnaces": [],
-    "components": [],
     "welds": [
       "+------------------|",
       "|..................|",
@@ -64,11 +59,5 @@
       "-------------------."
     ]
   },
-  "testCases": [
-    {
-      "id": "standard",
-      "name": "Standard case",
-      "overrides": {}
-    }
-  ]
+  "testCases": []
 }

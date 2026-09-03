@@ -27,13 +27,11 @@ function authoredPuzzleSource(): string {
   puzzle.name = "Imported Puzzle";
   puzzle.description = "Imported description";
   puzzle.goal = "Keep this goal";
-  puzzle.features = ["Keep this feature"];
   puzzle.cycleLimit = 250;
   puzzle.components = [
     { code: TILE_DEFINITIONS[TileKind.Stone].boardCode, price: 7 },
   ];
   puzzle.testCases = [
-    { id: "standard", name: "Standard", overrides: {} },
     {
       id: "alternate",
       name: "Alternate",
@@ -91,7 +89,6 @@ describe("sandbox puzzle authoring", () => {
       readonly name: string;
       readonly description: string;
       readonly goal: string;
-      readonly features: readonly string[];
       readonly cycleLimit: number;
       readonly components: readonly { readonly code: string; readonly price: number }[];
       readonly testCases: readonly {
@@ -108,7 +105,6 @@ describe("sandbox puzzle authoring", () => {
       name: "Updated Puzzle",
       description: "Updated description",
       goal: "Keep this goal",
-      features: ["Keep this feature"],
       cycleLimit: 250,
     });
     expect(exported.components).toHaveLength(2);
@@ -120,8 +116,8 @@ describe("sandbox puzzle authoring", () => {
       code: TILE_DEFINITIONS[TileKind.Sand].boardCode,
       price: 4,
     });
-    expect(exported.testCases.map(({ id }) => id)).toEqual(["standard", "alternate"]);
-    expect(exported.testCases[1]?.overrides.initialBoard?.grid).toEqual([
+    expect(exported.testCases.map(({ id }) => id)).toEqual(["alternate"]);
+    expect(exported.testCases[0]?.overrides.initialBoard?.grid).toEqual([
       "...V.",
       ".##..",
       ".....",

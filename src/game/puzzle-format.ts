@@ -13,7 +13,7 @@ import { TILE_DEFINITIONS, TILE_KINDS, TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
 
 export const PUZZLE_FORMAT = "factory2d-puzzle";
-export const PUZZLE_VERSION = 4;
+export const PUZZLE_VERSION = 5;
 const PUZZLE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const DEFAULT_PUZZLE_CYCLE_LIMIT = 1_000;
 export const MAX_PUZZLE_CYCLE_LIMIT = 10_000;
@@ -28,7 +28,6 @@ const PUZZLE_FIELDS = [
   "name",
   "description",
   "goal",
-  "features",
   "components",
   "editableRegions",
   "initialBoard",
@@ -43,13 +42,15 @@ const BOARD_FIELDS = [
   "tick",
   "result",
   "grid",
+  "welds",
+] as const;
+const OPTIONAL_BOARD_FIELDS = [
   "orientations",
   "charges",
   "crossingCharges",
   "isolatedOutputCharges",
   "furnaces",
   "components",
-  "welds",
 ] as const;
 const TEST_CASE_FIELDS = ["id", "name", "overrides"] as const;
 const OPTIONAL_TEST_CASE_FIELDS = ["cycleLimit"] as const;
@@ -90,7 +91,6 @@ export interface ParsedPuzzleFile {
   readonly cycleLimit: number;
   readonly description: string;
   readonly goal: string;
-  readonly features: readonly string[];
   readonly editableRegion: GridRegion;
   readonly availableComponents: PuzzleComponents;
   readonly initialWorld: World;
@@ -146,12 +146,15 @@ function parsePuzzleFileValue(value: unknown): ParsedPuzzleFile {
   const description = requireNonEmptyString(puzzle.description, "Puzzle description");
   const goal = requireNonEmptyString(puzzle.goal, "Puzzle goal");
   const cycleLimit = parseCycleLimit(puzzle.cycleLimit, "Puzzle cycleLimit");
-  const features = parseUniqueStrings(puzzle.features, "Puzzle features");
-
 
   const availableComponents = parseComponents(puzzle.components);
   const editableRegion = parseEditableRegion(puzzle.editableRegions);
-  const board = requireExactObject(puzzle.initialBoard, "Puzzle initialBoard", BOARD_FIELDS);
+  const board = requireExactObject(
+    puzzle.initialBoard,
+    "Puzzle initialBoard",
+    BOARD_FIELDS,
+    OPTIONAL_BOARD_FIELDS,
+  );
   const initialWorld = parseInitialWorld(board, "Puzzle initialBoard");
   if (initialWorld.width !== width || initialWorld.height !== height) {
     throw new Error("Puzzle initialBoard dimensions must match Puzzle width and height");
@@ -168,7 +171,6 @@ function parsePuzzleFileValue(value: unknown): ParsedPuzzleFile {
     cycleLimit,
     description,
     goal,
-    features,
     editableRegion,
     availableComponents,
     initialWorld,
@@ -210,12 +212,15 @@ function parseTestCases(
   puzzleCycleLimit: number,
 ): readonly ParsedPuzzleTestCase[] {
   const entries = requireArray(value, "Puzzle testCases");
-  if (entries.length === 0) {
-    throw new Error("Puzzle testCases must contain at least one test case");
-  }
-
-  const testCases: ParsedPuzzleTestCase[] = [];
-  const seenIds = new Set<string>();
+  const testCases: ParsedPuzzleTestCase[] = [
+    Object.freeze({
+      id: "standard",
+      name: "Standard case",
+      cycleLimit: puzzleCycleLimit,
+      initialWorld: baseWorld,
+    }),
+  ];
+  const seenIds = new Set<string>(["standard"]);
   for (let index = 0; index < entries.length; index += 1) {
     const label = `Puzzle testCases[${index}]`;
     const entry = requireExactObject(
@@ -310,20 +315,6 @@ function parseEditableRegion(value: unknown): GridRegion {
   return new GridRegion(rectangles);
 }
 
-function parseUniqueStrings(value: unknown, label: string): readonly string[] {
-  const entries = requireArray(value, label);
-  const strings: string[] = [];
-  const seen = new Set<string>();
-  for (let index = 0; index < entries.length; index += 1) {
-    const entry = requireNonEmptyString(entries[index], `${label}[${index}]`);
-    if (seen.has(entry)) {
-      throw new Error(`${label} contains duplicate value "${entry}"`);
-    }
-    seen.add(entry);
-    strings.push(entry);
-  }
-  return Object.freeze(strings);
-}
 
 function parseCycleLimit(value: unknown, label: string): number {
   if (value === undefined) {

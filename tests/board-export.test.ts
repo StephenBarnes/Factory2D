@@ -34,10 +34,7 @@ describe("board export", () => {
       charges: [
         { x: 2, y: 1, charge: -1 },
       ],
-      crossingCharges: [],
       isolatedOutputCharges: [],
-      furnaces: [],
-      components: [],
       welds: [
         "..|",
         "-..",
@@ -45,12 +42,13 @@ describe("board export", () => {
     }, null, 2)}\n`);
   });
 
-  it("exports an empty board without runtime tile identities", () => {
+  it("omits empty optional sparse fields and runtime tile identities", () => {
     const world = new World(2, 1);
     world.place(0, 0, TileKind.Sand);
     world.place(0, 0, TileKind.Empty);
 
-    expect(JSON.parse(serializeBoard(world, 0))).toEqual({
+    const serialized = serializeBoard(world, 0);
+    expect(JSON.parse(serialized)).toEqual({
       format: "factory2d-board",
       version: 14,
       width: 2,
@@ -58,14 +56,12 @@ describe("board export", () => {
       tick: 0,
       result: "in-progress",
       grid: [".."],
-      orientations: [],
-      charges: [],
-      crossingCharges: [],
       isolatedOutputCharges: [],
-      furnaces: [],
-      components: [],
       welds: [".."],
     });
+    const imported = deserializeBoard(serialized);
+    expect(imported.world.width).toBe(2);
+    expect(imported.world.kindAt(0, 0)).toBe(TileKind.Empty);
   });
 
   it("rejects a tick that cannot identify a deterministic simulation state", () => {
@@ -247,9 +243,7 @@ describe("board export", () => {
       width: 1,
       height: 1,
       grid: ["W"],
-      charges: [],
       crossingCharges: [{ x: 0, y: 0, horizontal: 1, vertical: -1 }],
-      furnaces: [],
     });
     expect(imported.tick).toBe(7);
     expect(imported.world.kindAt(0, 0)).toBe(TileKind.WireCrossing);

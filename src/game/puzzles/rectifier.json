@@ -1,6 +1,6 @@
 {
   "format": "factory2d-puzzle",
-  "version": 4,
+  "version": 5,
   "width": 24,
   "height": 14,
   "id": "rectifier",
@@ -9,12 +9,6 @@
   "name": "Rectifier",
   "description": "The input rune feeds a signal into your workshop. Emit +1 whenever the input is +1 and 0 otherwise. Take as many ticks as you need: the sequence checker starts comparing at your first nonzero output, and the signal panel shows the input, your output, and the expected output side by side.",
   "goal": "Rectify the input signal",
-  "features": [
-    "Signal panel",
-    "Sequence checker",
-    "Multiplier rune",
-    "Combiner rune"
-  ],
   "cycleLimit": 200,
   "components": [
     {
@@ -86,10 +80,7 @@
         "direction": "up"
       }
     ],
-    "charges": [],
-    "crossingCharges": [],
     "isolatedOutputCharges": [],
-    "furnaces": [],
     "components": [
       {
         "x": 3,
@@ -203,11 +194,6 @@
     ]
   },
   "testCases": [
-    {
-      "id": "mixed",
-      "name": "Mixed signal",
-      "overrides": {}
-    },
     {
       "id": "bursts",
       "name": "Bursts",

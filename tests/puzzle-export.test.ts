@@ -60,9 +60,8 @@ describe("puzzle export", () => {
       { x: 0, y: 0, width: 2, height: 2 },
       { x: 3, y: 2, width: 1, height: 1 },
     ]);
-    expect(exported.testCases).toEqual([
-      { id: "standard", name: "Standard case", overrides: {} },
-    ]);
+    expect(exported.testCases).toEqual([]);
+    expect(exported).not.toHaveProperty("features");
     expect(exported.components).toContainEqual({
       code: TILE_DEFINITIONS[TileKind.Stone].boardCode,
       price: 1,

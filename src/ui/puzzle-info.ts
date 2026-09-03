@@ -23,7 +23,6 @@ export class PuzzleInfoView {
   private readonly title: HTMLElement;
   private readonly description: HTMLElement;
   private readonly goal: HTMLElement;
-  private readonly features: HTMLUListElement;
   private readonly solutionList: HTMLElement;
   private readonly emptySolutions: HTMLElement;
   private readonly backButton: HTMLButtonElement;
@@ -33,7 +32,6 @@ export class PuzzleInfoView {
     this.title = requiredDescendant(root, "#puzzle-info-title");
     this.description = requiredDescendant(root, "#puzzle-info-description");
     this.goal = requiredDescendant(root, "#puzzle-info-goal");
-    this.features = requiredDescendant(root, "#puzzle-info-features");
     this.solutionList = requiredDescendant(root, "#solution-list");
     this.emptySolutions = requiredDescendant(root, "#empty-solutions");
     this.backButton = requiredDescendant(root, "#puzzle-info-back-button");
@@ -44,13 +42,6 @@ export class PuzzleInfoView {
     this.title.textContent = options.puzzle.name;
     this.description.textContent = options.puzzle.description;
     this.goal.textContent = options.puzzle.goal;
-    this.features.replaceChildren(
-      ...options.puzzle.features.map((feature) => {
-        const item = document.createElement("li");
-        item.textContent = feature;
-        return item;
-      }),
-    );
 
     let bestSolution: SavedPuzzleSolution | null = null;
     let bestCombinedScore = Number.POSITIVE_INFINITY;

@@ -502,31 +502,6 @@ canvas:focus-visible {
   line-height: 1.5;
 }
 
-.puzzle-features {
-  margin-top: 30px;
-  padding-top: 22px;
-  border-top: 1px solid var(--border-faint);
-}
-
-.puzzle-features ul {
-  margin: 14px 0 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  list-style: none;
-}
-
-.puzzle-features li {
-  padding: 6px 8px;
-  border: 1px solid var(--border-strong);
-  color: var(--text-mid);
-  background: var(--inset);
-  font-family: var(--font-mono);
-  font-size: 0.58rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
 
 .solutions-panel {
   min-width: 0;

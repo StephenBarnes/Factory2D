@@ -55,7 +55,6 @@ interface PuzzleMetadata {
   readonly groupId: string;
   readonly order: number;
   readonly goal: string;
-  readonly features: readonly string[];
   readonly cycleLimit: number | null;
   readonly testCases: readonly unknown[];
   readonly testCaseWorlds: readonly World[];
@@ -74,12 +73,12 @@ interface MutableSerializedBoard {
   tick: number;
   result: string;
   grid: string[];
-  orientations: CoordinateEntry[];
-  charges: CoordinateEntry[];
-  crossingCharges: CoordinateEntry[];
+  orientations?: CoordinateEntry[];
+  charges?: CoordinateEntry[];
+  crossingCharges?: CoordinateEntry[];
   isolatedOutputCharges: CoordinateEntry[];
-  furnaces: CoordinateEntry[];
-  components: CoordinateEntry[];
+  furnaces?: CoordinateEntry[];
+  components?: CoordinateEntry[];
   welds: string[];
 }
 
@@ -127,15 +126,8 @@ export class SandboxPuzzleAuthoringState {
         groupId: "basics",
         order: 0,
         goal: "TODO: Describe the victory condition.",
-        features: [],
         cycleLimit: null,
-        testCases: [
-          {
-            id: "standard",
-            name: "Standard case",
-            overrides: {},
-          },
-        ],
+        testCases: [],
         testCaseWorlds: [],
         sourceWidth: width,
         sourceHeight: height,
@@ -157,10 +149,9 @@ export class SandboxPuzzleAuthoringState {
         groupId: parsed.groupId,
         order: parsed.order,
         goal: parsed.goal,
-        features: parsed.features,
         cycleLimit: source.cycleLimit === undefined ? null : parsed.cycleLimit,
         testCases,
-        testCaseWorlds: parsed.testCases.map(({ initialWorld }) => initialWorld),
+        testCaseWorlds: parsed.testCases.slice(1).map(({ initialWorld }) => initialWorld),
         sourceWidth: parsed.initialWorld.width,
         sourceHeight: parsed.initialWorld.height,
       },
@@ -244,7 +235,6 @@ export class SandboxPuzzleAuthoringState {
       name: this.nameValue,
       description: this.descriptionValue,
       goal: this.metadata.goal,
-      features: this.metadata.features,
       cycleLimit: this.metadata.cycleLimit,
       components: this.availableComponentsValue.entries,
       testCases: resizeTestCases(
@@ -304,12 +294,12 @@ export function resizeWorldFromTopLeft(source: World, width: number, height: num
   board.result = "in-progress";
   board.grid = resizeRows(board.grid, width, height, ".");
   board.welds = resizedWorldWeldRows(source, width, height);
-  board.orientations = filterCoordinates(board.orientations, width, height);
-  board.charges = filterCoordinates(board.charges, width, height);
-  board.crossingCharges = filterCoordinates(board.crossingCharges, width, height);
+  board.orientations = filterCoordinates(board.orientations ?? [], width, height);
+  board.charges = filterCoordinates(board.charges ?? [], width, height);
+  board.crossingCharges = filterCoordinates(board.crossingCharges ?? [], width, height);
   board.isolatedOutputCharges = filterCoordinates(board.isolatedOutputCharges, width, height);
-  board.components = filterCoordinates(board.components, width, height);
-  board.furnaces = board.furnaces.filter((entry) => {
+  board.components = filterCoordinates(board.components ?? [], width, height);
+  board.furnaces = (board.furnaces ?? []).filter((entry) => {
     if (!coordinateFits(entry, width, height)) {
       return false;
     }

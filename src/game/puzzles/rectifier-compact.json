@@ -1,6 +1,6 @@
 {
   "format": "factory2d-puzzle",
-  "version": 4,
+  "version": 5,
   "width": 15,
   "height": 3,
   "id": "rectifier-compact",
@@ -9,12 +9,6 @@
   "name": "Rectifier-compact",
   "description": "More compact version of rectifier puzzle",
   "goal": "Rectify the input signal",
-  "features": [
-    "Signal panel",
-    "Sequence checker",
-    "Multiplier rune",
-    "Combiner rune"
-  ],
   "cycleLimit": 200,
   "components": [
     {
@@ -66,10 +60,7 @@
         "direction": "right"
       }
     ],
-    "charges": [],
-    "crossingCharges": [],
     "isolatedOutputCharges": [],
-    "furnaces": [],
     "components": [
       {
         "x": 1,
@@ -171,11 +162,5 @@
       "---........---."
     ]
   },
-  "testCases": [
-    {
-      "id": "mixed",
-      "name": "Mixed signal",
-      "overrides": {}
-    }
-  ]
+  "testCases": []
 }

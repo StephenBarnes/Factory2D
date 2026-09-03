@@ -16,7 +16,7 @@ const TEST_PUZZLE_ID = "parser-fixture";
 function puzzleFile(): JsonObject {
   return {
     format: "factory2d-puzzle",
-    version: 4,
+    version: 5,
     width: 4,
     height: 4,
     id: TEST_PUZZLE_ID,
@@ -25,7 +25,6 @@ function puzzleFile(): JsonObject {
     name: "Parser Fixture",
     description: "Controlled parser test data.",
     goal: "Exercise the puzzle format.",
-    features: ["Parsing"],
     components: [
       { code: "#", price: 1 },
       { code: "=", price: 3 },
@@ -44,12 +43,7 @@ function puzzleFile(): JsonObject {
         "....",
         "=...",
       ],
-      orientations: [],
-      charges: [],
-      crossingCharges: [],
       isolatedOutputCharges: [],
-      furnaces: [],
-      components: [],
       welds: [
         "....",
         "....",
@@ -58,11 +52,6 @@ function puzzleFile(): JsonObject {
       ],
     },
     testCases: [
-      {
-        id: "standard",
-        name: "Standard load",
-        overrides: {},
-      },
       {
         id: "offset-load",
         name: "Offset load",
@@ -136,14 +125,14 @@ describe("puzzle JSON format", () => {
 
     const configuredFile = puzzleFile();
     configuredFile.cycleLimit = 250;
-    const firstTestCase = expectDefined(
+    const offsetTestCase = expectDefined(
       arrayField(configuredFile, "testCases")[0],
-      "Missing standard test case",
+      "Missing offset test case",
     ) as JsonObject;
-    firstTestCase.cycleLimit = 12;
+    offsetTestCase.cycleLimit = 12;
     const configured = parsePuzzleFile(configuredFile, "configured.json");
     expect(configured.cycleLimit).toBe(250);
-    expect(configured.testCases.map((testCase) => testCase.cycleLimit)).toEqual([12, 250]);
+    expect(configured.testCases.map((testCase) => testCase.cycleLimit)).toEqual([250, 12]);
 
     configuredFile.cycleLimit = MAX_PUZZLE_CYCLE_LIMIT + 1;
     expect(() => parsePuzzleFile(configuredFile, "invalid.json")).toThrow(
@@ -151,7 +140,7 @@ describe("puzzle JSON format", () => {
     );
 
     configuredFile.cycleLimit = 250;
-    firstTestCase.cycleLimit = 0;
+    offsetTestCase.cycleLimit = 0;
     expect(() => parsePuzzleFile(configuredFile, "invalid-case.json")).toThrow(
       "invalid-case.json: Puzzle testCases[0] cycleLimit must be an integer from 1",
     );
@@ -160,7 +149,7 @@ describe("puzzle JSON format", () => {
   it("applies sparse test-case board overrides and returns independent worlds", () => {
     const parsed = parsePuzzleFile(puzzleFile(), "parser-fixture.json");
     expect(parsed.testCases.map((testCase) => [testCase.id, testCase.name])).toEqual([
-      ["standard", "Standard load"],
+      ["standard", "Standard case"],
       ["offset-load", "Offset load"],
     ]);
 
@@ -190,28 +179,28 @@ describe("puzzle JSON format", () => {
     expect(second.kindAt(2, 1)).toBe(TileKind.Sand);
   });
 
-  it("strictly validates test-case identities and sparse override fields", () => {
-    const emptyFile = puzzleFile();
-    emptyFile.testCases = [];
-    expect(() => parsePuzzleFile(emptyFile, "puzzles/empty.json")).toThrow(
-      "puzzles/empty.json: Puzzle testCases must contain at least one test case",
-    );
+  it("adds the standard case and reserves its identity", () => {
+    const standardOnlyFile = puzzleFile();
+    standardOnlyFile.testCases = [];
+    const standardOnly = parsePuzzleFile(standardOnlyFile, "puzzles/standard-only.json");
+    expect(standardOnly.testCases.map(({ id, name }) => [id, name])).toEqual([
+      ["standard", "Standard case"],
+    ]);
 
     const duplicateFile = puzzleFile();
     const testCases = arrayField(duplicateFile, "testCases");
-    const duplicate = structuredClone(
-      expectDefined(testCases[0], "Missing standard test case"),
-    ) as JsonObject;
-    testCases.push(duplicate);
+    testCases.push({ id: "standard", name: "Stored standard", overrides: {} });
     expect(() => parsePuzzleFile(duplicateFile, "puzzles/duplicate.json")).toThrow(
       'puzzles/duplicate.json: Puzzle testCases contains duplicate id "standard"',
     );
+  });
 
+  it("strictly validates sparse test-case override fields", () => {
     const unknownOverrideFile = puzzleFile();
     const firstTestCase = objectField(
       expectDefined(
         arrayField(unknownOverrideFile, "testCases")[0],
-        "Missing standard test case",
+        "Missing offset test case",
       ) as JsonObject,
       "overrides",
     );
@@ -224,7 +213,7 @@ describe("puzzle JSON format", () => {
   it("rejects malformed test-case board dimensions", () => {
     const file = puzzleFile();
     const offsetTestCase = expectDefined(
-      arrayField(file, "testCases")[1],
+      arrayField(file, "testCases")[0],
       "Missing offset test case",
     ) as JsonObject;
     const overrides = objectField(offsetTestCase, "overrides");
@@ -232,7 +221,7 @@ describe("puzzle JSON format", () => {
     arrayField(boardOverrides, "grid").pop();
 
     expect(() => parsePuzzleFile(file, "puzzles/mismatched.json")).toThrow(
-      "puzzles/mismatched.json: Puzzle testCases[1] initialBoard is invalid: Board grid must contain exactly 4 rows",
+      "puzzles/mismatched.json: Puzzle testCases[0] initialBoard is invalid: Board grid must contain exactly 4 rows",
     );
   });
 
@@ -266,14 +255,14 @@ describe("puzzle JSON format", () => {
 
     const testCaseWithoutVictory = puzzleFile();
     const offsetTestCase = expectDefined(
-      arrayField(testCaseWithoutVictory, "testCases")[1],
+      arrayField(testCaseWithoutVictory, "testCases")[0],
       "Missing offset test case",
     ) as JsonObject;
     const overrides = objectField(offsetTestCase, "overrides");
     const overrideBoard = objectField(overrides, "initialBoard");
     arrayField(overrideBoard, "grid")[0] = "....";
     expect(() => parsePuzzleFile(testCaseWithoutVictory, "puzzles/no-test-victory.json")).toThrow(
-      "puzzles/no-test-victory.json: Puzzle testCases[1] initialBoard must contain at least one victory block",
+      "puzzles/no-test-victory.json: Puzzle testCases[0] initialBoard must contain at least one victory block",
     );
   });
 

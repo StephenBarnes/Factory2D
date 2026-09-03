@@ -25,7 +25,6 @@ export interface PuzzleDefinition {
   readonly name: string;
   readonly cycleLimit: number;
   readonly description: string;
-  readonly features: readonly string[];
   readonly goal: string;
   readonly editableRegion: GridRegion;
   readonly availableComponents: PuzzleComponents;
@@ -147,7 +146,6 @@ export function loadPuzzleDefinitions(
     name: parsed.name,
     cycleLimit: parsed.cycleLimit,
     description: parsed.description,
-    features: parsed.features,
     goal: parsed.goal,
     editableRegion: parsed.editableRegion,
     availableComponents: parsed.availableComponents,

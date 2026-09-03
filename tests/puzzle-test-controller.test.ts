@@ -24,7 +24,6 @@ function puzzleWith(testCases: readonly PuzzleTestCaseDefinition[]): PuzzleDefin
     name: "Controller Test",
     cycleLimit: 20,
     description: "Controller test puzzle",
-    features: [],
     goal: "Trigger victory",
     editableRegion: new GridRegion([{ x: 0, y: 0, width: 1, height: 1 }]),
     availableComponents: new PuzzleComponents([{ kind: TileKind.FixedCharge, price: 1 }]),

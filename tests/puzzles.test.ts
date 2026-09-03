@@ -25,7 +25,6 @@ function progressionPuzzle(id: string, order: number): PuzzleDefinition {
     name: id,
     cycleLimit: 10,
     description: id,
-    features: [],
     goal: id,
     editableRegion: new GridRegion([{ x: 0, y: 0, width: 1, height: 1 }]),
     availableComponents: new PuzzleComponents([{ kind: TileKind.Stone, price: 1 }]),
