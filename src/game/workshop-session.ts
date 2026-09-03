@@ -5,7 +5,6 @@ import type { GridRegion } from "./grid-region";
 import { EditableRegionAuthoringState } from "./editable-region-authoring";
 import type { PuzzleComponents } from "./puzzle-components";
 import {
-  resizeWorldFromTopLeft,
   SandboxPuzzleAuthoringState,
   type SandboxPuzzleImport,
   type SandboxPuzzleProperties,
@@ -42,7 +41,7 @@ function createWorkshopSession(
       : null,
     availableComponents: puzzle?.availableComponents ?? null,
     puzzleAuthoring: puzzle === null
-      ? SandboxPuzzleAuthoringState.createDefault(world.width, world.height)
+      ? SandboxPuzzleAuthoringState.createDefault(world)
       : null,
     editingState: new WorkshopEditingState(puzzle !== null),
   };
@@ -90,10 +89,7 @@ export class WorkshopSessionController {
   replaceActiveWorld(world: World, tick: number): void {
     this.replaceRuntime(world, tick);
     if (this.currentSession.puzzleAuthoring !== null) {
-      this.currentSession.puzzleAuthoring = SandboxPuzzleAuthoringState.createDefault(
-        world.width,
-        world.height,
-      );
+      this.currentSession.puzzleAuthoring = SandboxPuzzleAuthoringState.createDefault(world);
     }
     this.currentSession.editableRegionAuthoring?.resetForBoard(world.width, world.height);
   }
@@ -123,16 +119,31 @@ export class WorkshopSessionController {
 
     const dimensionsChanged = properties.width !== this.currentSession.world.width ||
       properties.height !== this.currentSession.world.height;
-    const resizedWorld = dimensionsChanged
-      ? resizeWorldFromTopLeft(this.currentSession.world, properties.width, properties.height)
-      : null;
+    authoring.saveSelectedWorld(this.currentSession.baseline);
     authoring.update(properties);
-    if (resizedWorld !== null) {
+    if (dimensionsChanged) {
       regionAuthoring.resizeForBoard(properties.width, properties.height);
-      this.replaceRuntime(resizedWorld, 0);
+      this.replaceRuntime(authoring.selectedWorld(), 0);
     }
     return dimensionsChanged;
   }
+  selectActiveSandboxTestCase(testCaseId: string): void {
+    const authoring = this.activeSandboxAuthoring();
+    authoring.saveSelectedWorld(this.currentSession.baseline);
+    this.replaceRuntime(authoring.selectTestCase(testCaseId), 0);
+  }
+
+  duplicateActiveSandboxTestCase(): void {
+    const authoring = this.activeSandboxAuthoring();
+    authoring.saveSelectedWorld(this.currentSession.baseline);
+    this.replaceRuntime(authoring.duplicateSelectedTestCase(), 0);
+  }
+
+  deleteActiveSandboxTestCase(): void {
+    const authoring = this.activeSandboxAuthoring();
+    this.replaceRuntime(authoring.deleteSelectedTestCase(), 0);
+  }
+
 
   showActiveRuntime(world: World, simulation = new Simulation(world)): void {
     if (
@@ -173,6 +184,7 @@ export class WorkshopSessionController {
       this.currentSession.baseline.resetPuzzleResult();
     }
     this.currentSession.simulation.tick = 0;
+    this.currentSession.puzzleAuthoring?.saveSelectedWorld(this.currentSession.baseline);
   }
 
   private replaceRuntime(world: World, tick: number): void {
@@ -189,6 +201,15 @@ export class WorkshopSessionController {
       throw new Error("Sandbox authoring can only change the active sandbox session");
     }
   }
+  private activeSandboxAuthoring(): SandboxPuzzleAuthoringState {
+    this.requireActiveSandbox();
+    const authoring = this.currentSession.puzzleAuthoring;
+    if (authoring === null) {
+      throw new Error("Sandbox puzzle authoring state is missing");
+    }
+    return authoring;
+  }
+
 
   private activate(session: WorkshopSession): boolean {
     if (session === this.currentSession) {

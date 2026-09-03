@@ -1171,6 +1171,84 @@ function stopWorkshopActivity(): void {
   closeExportOptions();
   setRunning(false);
 }
+function setSandboxTestCaseOptionsOpen(open: boolean): void {
+  testCaseOptions.hidden = !open;
+  testCaseButton.setAttribute("aria-expanded", String(open));
+}
+
+function configureSandboxTestCaseMenu(): void {
+  if (navigation.screen.kind !== "sandbox") {
+    return;
+  }
+  const authoring = surface.session.puzzleAuthoring;
+  if (authoring === null) {
+    throw new Error("Sandbox puzzle authoring state is missing");
+  }
+
+  testCaseOptions.replaceChildren();
+  for (const testCase of authoring.testCases) {
+    const option = document.createElement("button");
+    option.type = "button";
+    option.textContent = testCase.name;
+    option.dataset.testCaseId = testCase.id;
+    const selected = testCase.id === authoring.selectedTestCaseId;
+    option.setAttribute("aria-pressed", String(selected));
+    option.addEventListener("click", () => {
+      setSandboxTestCaseOptionsOpen(false);
+      if (testCase.id === authoring.selectedTestCaseId) {
+        return;
+      }
+      changeSandboxTestCase(() => sessions.selectActiveSandboxTestCase(testCase.id));
+    });
+    testCaseOptions.append(option);
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "test-case-authoring-actions";
+  const duplicate = document.createElement("button");
+  duplicate.type = "button";
+  duplicate.textContent = "DUPLICATE CURRENT";
+  duplicate.addEventListener("click", () => {
+    setSandboxTestCaseOptionsOpen(false);
+    changeSandboxTestCase(() => sessions.duplicateActiveSandboxTestCase());
+  });
+  const selected = authoring.testCases.find(
+    ({ id }) => id === authoring.selectedTestCaseId,
+  );
+  if (selected === undefined) {
+    throw new Error(`Selected sandbox test case "${authoring.selectedTestCaseId}" is missing`);
+  }
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.textContent = "DELETE CURRENT";
+  remove.disabled = selected.standard;
+  remove.title = selected.standard ? "The standard test case cannot be deleted" : "";
+  remove.addEventListener("click", () => {
+    setSandboxTestCaseOptionsOpen(false);
+    changeSandboxTestCase(() => sessions.deleteActiveSandboxTestCase());
+  });
+  actions.append(duplicate, remove);
+  testCaseOptions.append(actions);
+
+  testCaseDropup.hidden = false;
+  testCaseButton.textContent = `CASE: ${selected.name}`;
+  testCaseButton.title = "Choose, duplicate, or delete a sandbox puzzle test case";
+  testCaseButton.disabled = false;
+  setSandboxTestCaseOptionsOpen(false);
+}
+
+function changeSandboxTestCase(updateSession: () => void): void {
+  stopWorkshopActivity();
+  surface.mountActiveSession({
+    fitBoard: false,
+    cancelInteraction: true,
+    updateSession,
+  });
+  configureSandboxTestCaseMenu();
+  updateTransportState();
+  refreshPointerHover();
+}
+
 
 const savedSolutions = new SavedSolutionController(window.localStorage);
 const navigation = new NavigationController(
@@ -1194,6 +1272,9 @@ const navigation = new NavigationController(
       refreshPuzzleMetrics();
       const screen = navigation.screen;
       puzzleTests.configure(screen.kind === "puzzle" ? puzzleById(screen.puzzleId) : null);
+      if (screen.kind === "sandbox") {
+        configureSandboxTestCaseMenu();
+      }
       updateTransportState();
       importButton.disabled = surface.session.editableRegion !== null;
       updateExportOptionsForSession();
@@ -1423,7 +1504,11 @@ fastForwardButton.addEventListener("click", () => {
 });
 
 testCaseButton.addEventListener("click", () => {
-  puzzleTests.toggleCaseOptions();
+  if (navigation.screen.kind === "sandbox") {
+    setSandboxTestCaseOptionsOpen(testCaseOptions.hidden !== false);
+  } else {
+    puzzleTests.toggleCaseOptions();
+  }
 });
 
 stepButton.addEventListener("click", () => {
@@ -1552,7 +1637,7 @@ downloadPuzzleButton.addEventListener("click", () => {
   if (regionAuthoring === null || puzzleAuthoring === null) {
     throw new Error("Sandbox puzzle authoring state is missing");
   }
-  const source = puzzleAuthoring.serialize(surface.session.world, regionAuthoring.region);
+  const source = puzzleAuthoring.serialize(regionAuthoring.region);
   downloadBlob(
     new Blob([source], { type: "application/json" }),
     puzzleAuthoring.fileName,

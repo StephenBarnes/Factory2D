@@ -69,6 +69,28 @@ describe("workshop session controller", () => {
     expect(sessions.active.baseline.kindAt(2, 2)).toBe(TileKind.Stone);
     expect(authoring.region.rectangles).toEqual([]);
   });
+
+  it("keeps each authored sandbox test case independent", () => {
+    const sessions = new WorkshopSessionController(createSandboxWorld());
+    sessions.active.world.place(0, 0, TileKind.Stone);
+    sessions.saveEditedBaseline();
+
+    sessions.duplicateActiveSandboxTestCase();
+    expect(sessions.active.puzzleAuthoring?.selectedTestCaseId).toBe("case-1");
+    expect(sessions.active.world.kindAt(0, 0)).toBe(TileKind.Stone);
+    sessions.active.world.place(1, 0, TileKind.Iron);
+    sessions.saveEditedBaseline();
+
+    sessions.selectActiveSandboxTestCase("standard");
+    expect(sessions.active.world.kindAt(0, 0)).toBe(TileKind.Stone);
+    expect(sessions.active.world.kindAt(1, 0)).toBe(TileKind.Empty);
+    sessions.selectActiveSandboxTestCase("case-1");
+    expect(sessions.active.world.kindAt(1, 0)).toBe(TileKind.Iron);
+
+    sessions.deleteActiveSandboxTestCase();
+    expect(sessions.active.puzzleAuthoring?.selectedTestCaseId).toBe("standard");
+    expect(sessions.active.puzzleAuthoring?.testCases).toHaveLength(1);
+  });
 });
 
 describe("saved solution controller", () => {

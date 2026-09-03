@@ -64,10 +64,19 @@ interface PuzzleMetadata {
   order: number;
   goal: string;
   cycleLimit: number | null;
-  readonly testCases: readonly unknown[];
-  readonly testCaseWorlds: readonly World[];
-  readonly sourceWidth: number;
-  readonly sourceHeight: number;
+}
+
+interface AuthoredPuzzleTestCase {
+  readonly id: string;
+  readonly name: string;
+  readonly cycleLimit: number | null;
+  world: World;
+}
+
+export interface SandboxPuzzleTestCaseSummary {
+  readonly id: string;
+  readonly name: string;
+  readonly standard: boolean;
 }
 
 interface CoordinateEntry {
@@ -106,13 +115,18 @@ export class SandboxPuzzleAuthoringState {
   private descriptionValue: string;
   private availableComponentsValue: PuzzleComponents;
   private readonly pricesByKind: (number | undefined)[];
+  private selectedTestCaseIdValue = "standard";
 
   private constructor(
     private readonly metadata: PuzzleMetadata,
     name: string,
     description: string,
     components: readonly PricedComponent[],
+    private readonly authoredTestCases: AuthoredPuzzleTestCase[],
   ) {
+    if (authoredTestCases.length === 0 || authoredTestCases[0]?.id !== "standard") {
+      throw new Error("Sandbox puzzle authoring requires a standard test case");
+    }
     this.nameValue = name;
     this.descriptionValue = description;
     this.availableComponentsValue = new PuzzleComponents(components);
@@ -125,8 +139,8 @@ export class SandboxPuzzleAuthoringState {
     }
   }
 
-  static createDefault(width: number, height: number): SandboxPuzzleAuthoringState {
-    requireBoardDimensions(width, height);
+  static createDefault(world: World): SandboxPuzzleAuthoringState {
+    requireBoardDimensions(world.width, world.height);
     const components = placeholderPuzzleComponents();
     return new SandboxPuzzleAuthoringState(
       {
@@ -135,14 +149,16 @@ export class SandboxPuzzleAuthoringState {
         order: 0,
         goal: "TODO: Describe the victory condition.",
         cycleLimit: null,
-        testCases: [],
-        testCaseWorlds: [],
-        sourceWidth: width,
-        sourceHeight: height,
       },
       "Untitled Puzzle",
       "TODO: Describe the puzzle setup.",
       components,
+      [{
+        id: "standard",
+        name: "Standard case",
+        cycleLimit: null,
+        world: world.clone(),
+      }],
     );
   }
 
@@ -150,7 +166,24 @@ export class SandboxPuzzleAuthoringState {
     parsed: ParsedPuzzleFile,
     source: Readonly<Record<string, unknown>>,
   ): SandboxPuzzleAuthoringState {
-    const testCases = cloneJson(source.testCases) as readonly unknown[];
+    const sourceTestCases = source.testCases;
+    if (!Array.isArray(sourceTestCases)) {
+      throw new Error("Parsed puzzle test cases are missing");
+    }
+    const authoredTestCases = parsed.testCases.map((testCase, index) => {
+      const sourceCase = index === 0 ? null : sourceTestCases[index - 1];
+      if (index > 0 && !isRecord(sourceCase)) {
+        throw new Error(`Parsed puzzle test case ${index} is missing`);
+      }
+      return {
+        id: testCase.id,
+        name: testCase.name,
+        cycleLimit: sourceCase !== null && Object.hasOwn(sourceCase, "cycleLimit")
+          ? testCase.cycleLimit
+          : null,
+        world: testCase.initialWorld.clone(),
+      };
+    });
     return new SandboxPuzzleAuthoringState(
       {
         id: parsed.id,
@@ -158,14 +191,11 @@ export class SandboxPuzzleAuthoringState {
         order: parsed.order,
         goal: parsed.goal,
         cycleLimit: source.cycleLimit === undefined ? null : parsed.cycleLimit,
-        testCases,
-        testCaseWorlds: parsed.testCases.slice(1).map(({ initialWorld }) => initialWorld),
-        sourceWidth: parsed.initialWorld.width,
-        sourceHeight: parsed.initialWorld.height,
       },
       parsed.name,
       parsed.description,
       parsed.availableComponents.entries,
+      authoredTestCases,
     );
   }
 
@@ -175,6 +205,74 @@ export class SandboxPuzzleAuthoringState {
 
   get availableComponents(): PuzzleComponents {
     return this.availableComponentsValue;
+  }
+
+  get testCases(): readonly SandboxPuzzleTestCaseSummary[] {
+    return this.authoredTestCases.map((testCase, index) => ({
+      id: testCase.id,
+      name: testCase.name,
+      standard: index === 0,
+    }));
+  }
+
+  get selectedTestCaseId(): string {
+    return this.selectedTestCaseIdValue;
+  }
+
+  selectedWorld(): World {
+    return this.testCase(this.selectedTestCaseIdValue).world.clone();
+  }
+
+  saveSelectedWorld(world: World): void {
+    const selected = this.testCase(this.selectedTestCaseIdValue);
+    const standard = this.authoredTestCases[0];
+    if (standard === undefined) {
+      throw new Error("Sandbox puzzle standard test case is missing");
+    }
+    if (world.width !== standard.world.width || world.height !== standard.world.height) {
+      throw new RangeError("Sandbox test case dimensions must match");
+    }
+    selected.world = world.clone();
+    selected.world.resetPuzzleResult();
+  }
+
+  selectTestCase(testCaseId: string): World {
+    const selected = this.testCase(testCaseId);
+    this.selectedTestCaseIdValue = selected.id;
+    return selected.world.clone();
+  }
+
+  duplicateSelectedTestCase(): World {
+    const source = this.testCase(this.selectedTestCaseIdValue);
+    let suffix = 1;
+    while (this.authoredTestCases.some(({ id }) => id === `case-${suffix}`)) {
+      suffix += 1;
+    }
+    const duplicate: AuthoredPuzzleTestCase = {
+      id: `case-${suffix}`,
+      name: `Case ${suffix}`,
+      cycleLimit: source.cycleLimit,
+      world: source.world.clone(),
+    };
+    this.authoredTestCases.push(duplicate);
+    this.selectedTestCaseIdValue = duplicate.id;
+    return duplicate.world.clone();
+  }
+
+  deleteSelectedTestCase(): World {
+    const index = this.authoredTestCases.findIndex(
+      ({ id }) => id === this.selectedTestCaseIdValue,
+    );
+    if (index <= 0) {
+      throw new Error("The standard test case cannot be deleted");
+    }
+    this.authoredTestCases.splice(index, 1);
+    const selected = this.authoredTestCases[Math.max(0, index - 1)];
+    if (selected === undefined) {
+      throw new Error("Sandbox puzzle test-case selection is missing");
+    }
+    this.selectedTestCaseIdValue = selected.id;
+    return selected.world.clone();
   }
 
   properties(width: number, height: number): SandboxPuzzleProperties {
@@ -254,6 +352,20 @@ export class SandboxPuzzleAuthoringState {
       }
     }
 
+    const standard = this.authoredTestCases[0];
+    if (standard === undefined) {
+      throw new Error("Sandbox puzzle standard test case is missing");
+    }
+    if (standard.world.width !== properties.width || standard.world.height !== properties.height) {
+      for (const testCase of this.authoredTestCases) {
+        testCase.world = resizeWorldFromTopLeft(
+          testCase.world,
+          properties.width,
+          properties.height,
+        );
+      }
+    }
+
     const availableComponents = new PuzzleComponents(enabled);
     this.metadata.id = id;
     this.metadata.groupId = properties.groupId;
@@ -268,7 +380,11 @@ export class SandboxPuzzleAuthoringState {
     }
   }
 
-  serialize(world: World, editableRegion: GridRegion): string {
+  serialize(editableRegion: GridRegion): string {
+    const standard = this.authoredTestCases[0];
+    if (standard === undefined) {
+      throw new Error("Sandbox puzzle standard test case is missing");
+    }
     const metadata: PuzzleExportMetadata = {
       id: this.metadata.id,
       groupId: this.metadata.groupId,
@@ -278,18 +394,44 @@ export class SandboxPuzzleAuthoringState {
       goal: this.metadata.goal,
       cycleLimit: this.metadata.cycleLimit,
       components: this.availableComponentsValue.entries,
-      testCases: resizeTestCases(
-        this.metadata.testCases,
-        this.metadata.testCaseWorlds,
-        this.metadata.sourceWidth,
-        this.metadata.sourceHeight,
-        world.width,
-        world.height,
+      testCases: this.authoredTestCases.slice(1).map((testCase) =>
+        serializeAuthoredTestCase(testCase)
       ),
     };
-    return serializePuzzleTemplate(world, editableRegion, metadata);
+    return serializePuzzleTemplate(standard.world, editableRegion, metadata);
+  }
+
+  private testCase(testCaseId: string): AuthoredPuzzleTestCase {
+    const testCase = this.authoredTestCases.find(({ id }) => id === testCaseId);
+    if (testCase === undefined) {
+      throw new Error(`Sandbox puzzle test case "${testCaseId}" does not exist`);
+    }
+    return testCase;
   }
 }
+function serializeAuthoredTestCase(testCase: AuthoredPuzzleTestCase): unknown {
+  const world = testCase.world.clone();
+  world.resetPuzzleResult();
+  const board = JSON.parse(serializeBoard(world, 0)) as MutableSerializedBoard;
+  return {
+    id: testCase.id,
+    name: testCase.name,
+    ...(testCase.cycleLimit === null ? {} : { cycleLimit: testCase.cycleLimit }),
+    overrides: {
+      initialBoard: {
+        grid: board.grid,
+        welds: board.welds,
+        orientations: board.orientations ?? [],
+        charges: board.charges ?? [],
+        crossingCharges: board.crossingCharges ?? [],
+        isolatedOutputCharges: board.isolatedOutputCharges ?? [],
+        furnaces: board.furnaces ?? [],
+        components: board.components ?? [],
+      },
+    },
+  };
+}
+
 
 export function parseSandboxImport(source: string, fileName: string): SandboxPuzzleImport {
   let value: unknown;
@@ -315,10 +457,7 @@ export function parseSandboxImport(source: string, fileName: string): SandboxPuz
     world: imported.world,
     tick: imported.tick,
     editableRegion: new GridRegion([]),
-    authoring: SandboxPuzzleAuthoringState.createDefault(
-      imported.world.width,
-      imported.world.height,
-    ),
+    authoring: SandboxPuzzleAuthoringState.createDefault(imported.world),
   };
 }
 
@@ -352,66 +491,6 @@ export function resizeWorldFromTopLeft(source: World, width: number, height: num
   return deserializeBoard(JSON.stringify(board)).world;
 }
 
-function resizeTestCases(
-  source: readonly unknown[],
-  sourceWorlds: readonly World[],
-  sourceWidth: number,
-  sourceHeight: number,
-  width: number,
-  height: number,
-): readonly unknown[] {
-  const testCases = cloneJson(source) as unknown[];
-  if (sourceWidth === width && sourceHeight === height) {
-    return testCases;
-  }
-  for (let testCaseIndex = 0; testCaseIndex < testCases.length; testCaseIndex += 1) {
-    const testCase = testCases[testCaseIndex];
-    if (!isRecord(testCase) || !isRecord(testCase.overrides)) {
-      continue;
-    }
-    const board = testCase.overrides.initialBoard;
-    if (!isRecord(board)) {
-      continue;
-    }
-    if (Array.isArray(board.grid)) {
-      board.grid = resizeRows(board.grid as string[], width, height, ".");
-    }
-    if (Array.isArray(board.welds)) {
-      board.welds = resizeOverrideWeldRows(board.welds as string[], width, height);
-    }
-    for (const field of [
-      "orientations",
-      "charges",
-      "crossingCharges",
-      "isolatedOutputCharges",
-      "components",
-    ] as const) {
-      const entries = board[field];
-      if (Array.isArray(entries)) {
-        board[field] = entries.filter((entry) =>
-          isCoordinateEntry(entry) && coordinateFits(entry, width, height)
-        );
-      }
-    }
-    const furnaceEntries = board.furnaces;
-    const sourceWorld = sourceWorlds[testCaseIndex];
-    if (Array.isArray(furnaceEntries)) {
-      board.furnaces = furnaceEntries.filter((entry) => {
-        if (!isCoordinateEntry(entry) || !coordinateFits(entry, width, height)) {
-          return false;
-        }
-        if (sourceWorld === undefined) {
-          return true;
-        }
-        const orientation = sourceWorld.orientationAt(entry.x, entry.y);
-        const targetX = entry.x + directionX(orientation);
-        const targetY = entry.y + directionY(orientation);
-        return targetX >= 0 && targetX < width && targetY >= 0 && targetY < height;
-      });
-    }
-  }
-  return testCases;
-}
 
 function resizeRows(
   rows: readonly string[],
@@ -444,20 +523,6 @@ function resizedWorldWeldRows(source: World, width: number, height: number): str
   return rows;
 }
 
-function resizeOverrideWeldRows(rows: readonly string[], width: number, height: number): string[] {
-  const resized = resizeRows(rows, width, height, ".");
-  for (let y = 0; y < height; y += 1) {
-    const cells = [...(resized[y] ?? "")];
-    for (let x = 0; x < width; x += 1) {
-      const value = cells[x] ?? ".";
-      const right = x < width - 1 && (value === "-" || value === "+");
-      const down = y < height - 1 && (value === "|" || value === "+");
-      cells[x] = right ? (down ? "+" : "-") : (down ? "|" : ".");
-    }
-    resized[y] = cells.join("");
-  }
-  return resized;
-}
 
 function filterCoordinates<T extends CoordinateEntry>(
   entries: readonly T[],
@@ -471,9 +536,6 @@ function coordinateFits(entry: CoordinateEntry, width: number, height: number): 
   return entry.x >= 0 && entry.x < width && entry.y >= 0 && entry.y < height;
 }
 
-function isCoordinateEntry(value: unknown): value is CoordinateEntry {
-  return isRecord(value) && Number.isInteger(value.x) && Number.isInteger(value.y);
-}
 
 function requireBoardDimensions(width: number, height: number): void {
   if (!Number.isInteger(width) || width < MIN_BOARD_WIDTH || width > MAX_BOARD_WIDTH) {
@@ -500,6 +562,3 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function cloneJson<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T;
-}

@@ -91,11 +91,13 @@ describe("sandbox puzzle authoring", () => {
           : component
       ),
     };
+    imported.authoring.saveSelectedWorld(imported.world);
     imported.authoring.update(updatedProperties);
     expect(imported.authoring.fileName).toBe("updated-puzzle.json");
-    const resized = resizeWorldFromTopLeft(imported.world, 5, 4);
+    const resized = imported.authoring.selectedWorld();
     resized.place(0, 3, TileKind.Iron);
-    const exportedSource = imported.authoring.serialize(resized, imported.editableRegion);
+    imported.authoring.saveSelectedWorld(resized);
+    const exportedSource = imported.authoring.serialize(imported.editableRegion);
     const exported = JSON.parse(exportedSource) as {
       readonly id: string;
       readonly group: string;
@@ -142,6 +144,35 @@ describe("sandbox puzzle authoring", () => {
     expect([reparsed.initialWorld.width, reparsed.initialWorld.height]).toEqual([5, 4]);
     expect(reparsed.initialWorld.kindAt(0, 3)).toBe(TileKind.Iron);
     expect(reparsed.testCases).toHaveLength(2);
+  });
+
+  it("duplicates, switches, edits, and deletes authored test cases", () => {
+    const imported = parseSandboxImport(authoredPuzzleSource(), "imported-puzzle.json");
+    expect(imported.authoring.testCases).toEqual([
+      { id: "standard", name: "Standard case", standard: true },
+      { id: "alternate", name: "Alternate", standard: false },
+    ]);
+
+    const alternate = imported.authoring.selectTestCase("alternate");
+    expect(alternate.kindAt(1, 1)).toBe(TileKind.Stone);
+    alternate.place(0, 2, TileKind.Iron);
+    imported.authoring.saveSelectedWorld(alternate);
+
+    const duplicate = imported.authoring.duplicateSelectedTestCase();
+    expect(imported.authoring.selectedTestCaseId).toBe("case-1");
+    expect(duplicate.kindAt(0, 2)).toBe(TileKind.Iron);
+    duplicate.place(0, 2, TileKind.Glass);
+    imported.authoring.saveSelectedWorld(duplicate);
+
+    expect(imported.authoring.selectTestCase("alternate").kindAt(0, 2)).toBe(TileKind.Iron);
+    imported.authoring.selectTestCase("case-1");
+    const selectedAfterDelete = imported.authoring.deleteSelectedTestCase();
+    expect(imported.authoring.selectedTestCaseId).toBe("alternate");
+    expect(selectedAfterDelete.kindAt(0, 2)).toBe(TileKind.Iron);
+    expect(imported.authoring.testCases.map(({ id }) => id)).toEqual([
+      "standard",
+      "alternate",
+    ]);
   });
 
   it("resizes a scene from the top-left while preserving retained state and welds", () => {

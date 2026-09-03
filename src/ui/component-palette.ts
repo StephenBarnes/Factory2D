@@ -19,7 +19,7 @@ const PALETTE_SHORTCUTS = [
   { code: "Digit0", label: "0" },
 ] as const;
 
-const PALETTE_CATEGORIES = [
+export const PALETTE_CATEGORIES = [
   { category: PaletteCategory.RawMaterials, label: "Raw Materials" },
   { category: PaletteCategory.Mechanisms, label: "Mechanisms" },
   { category: PaletteCategory.Circuits, label: "Circuit Components" },

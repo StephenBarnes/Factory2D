@@ -14,6 +14,7 @@ import {
   MIN_BOARD_WIDTH,
 } from "../simulation/board-export";
 import { TILE_DEFINITIONS, TILE_KINDS, type TileKind } from "../simulation/tile";
+import { PALETTE_CATEGORIES } from "./component-palette";
 
 export interface WorkshopInformation {
   readonly name: string;
@@ -159,39 +160,91 @@ export class WorkshopInfoDialog {
         if (leftPalette === null || rightPalette === null) {
           throw new Error("Puzzle component palette metadata is missing");
         }
-        return leftPalette.order - rightPalette.order;
+        return leftPalette.category - rightPalette.category ||
+          leftPalette.order - rightPalette.order;
       });
+
+    for (const categoryDefinition of PALETTE_CATEGORIES) {
+      const categoryKinds = kinds.filter(
+        (kind) => TILE_DEFINITIONS[kind].palette?.category === categoryDefinition.category,
+      );
+      if (categoryKinds.length === 0) {
+        continue;
+      }
+
+      const section = document.createElement("section");
+      section.className = "workshop-properties-component-group";
+      const header = document.createElement("div");
+      header.className = "workshop-properties-component-group-header";
+      const heading = document.createElement("h3");
+      heading.textContent = categoryDefinition.label;
+      const actions = document.createElement("div");
+      const selectAll = document.createElement("button");
+      selectAll.type = "button";
+      selectAll.textContent = "ALL";
+      selectAll.setAttribute("aria-label", `Enable all ${categoryDefinition.label}`);
+      selectAll.addEventListener("click", () => {
+        this.setComponentsEnabled(categoryKinds, true);
+      });
+      const selectNone = document.createElement("button");
+      selectNone.type = "button";
+      selectNone.textContent = "NONE";
+      selectNone.setAttribute("aria-label", `Disable all ${categoryDefinition.label}`);
+      selectNone.addEventListener("click", () => {
+        this.setComponentsEnabled(categoryKinds, false);
+      });
+      actions.append(selectAll, selectNone);
+      header.append(heading, actions);
+
+      const rows = document.createElement("div");
+      rows.className = "workshop-properties-component-rows";
+      for (const kind of categoryKinds) {
+        const row = document.createElement("div");
+        row.className = "workshop-properties-component";
+
+        const enabledLabel = document.createElement("label");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        const name = document.createElement("span");
+        name.textContent = TILE_DEFINITIONS[kind].name;
+        enabledLabel.append(checkbox, name);
+
+        const priceLabel = document.createElement("label");
+        priceLabel.className = "workshop-properties-price";
+        const priceText = document.createElement("span");
+        priceText.textContent = "PRICE";
+        const price = document.createElement("input");
+        price.type = "number";
+        price.setAttribute("aria-label", `${TILE_DEFINITIONS[kind].name} price`);
+        price.min = "0";
+        price.max = String(Number.MAX_SAFE_INTEGER);
+        price.step = "1";
+        price.required = true;
+        priceLabel.append(priceText, price);
+        checkbox.addEventListener("change", () => {
+          price.disabled = !checkbox.checked;
+          checkbox.setCustomValidity("");
+        });
+
+        row.append(enabledLabel, priceLabel);
+        rows.append(row);
+        this.componentControls.set(kind, { checkbox, price });
+      }
+
+      section.append(header, rows);
+      container.append(section);
+    }
+  }
+
+  private setComponentsEnabled(kinds: readonly TileKind[], enabled: boolean): void {
     for (const kind of kinds) {
-      const row = document.createElement("div");
-      row.className = "workshop-properties-component";
-
-      const enabledLabel = document.createElement("label");
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      const name = document.createElement("span");
-      name.textContent = TILE_DEFINITIONS[kind].name;
-      enabledLabel.append(checkbox, name);
-
-      const priceLabel = document.createElement("label");
-      priceLabel.className = "workshop-properties-price";
-      const priceText = document.createElement("span");
-      priceText.textContent = "PRICE";
-      const price = document.createElement("input");
-      price.type = "number";
-      price.setAttribute("aria-label", `${TILE_DEFINITIONS[kind].name} price`);
-      price.min = "0";
-      price.max = String(Number.MAX_SAFE_INTEGER);
-      price.step = "1";
-      price.required = true;
-      priceLabel.append(priceText, price);
-      checkbox.addEventListener("change", () => {
-        price.disabled = !checkbox.checked;
-        checkbox.setCustomValidity("");
-      });
-
-      row.append(enabledLabel, priceLabel);
-      container.append(row);
-      this.componentControls.set(kind, { checkbox, price });
+      const controls = this.componentControls.get(kind);
+      if (controls === undefined) {
+        throw new Error(`Missing puzzle property controls for tile kind ${kind}`);
+      }
+      controls.checkbox.checked = enabled;
+      controls.checkbox.setCustomValidity("");
+      controls.price.disabled = !enabled;
     }
   }
 

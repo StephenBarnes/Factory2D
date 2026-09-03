@@ -257,7 +257,55 @@ test("workshop identity exposes information and live puzzle metrics", async ({ p
     "TODO: Describe the victory condition.",
   );
   await expect(dialog.getByRole("spinbutton", { name: "CYCLE LIMIT" })).toHaveValue("");
+  await expect(
+    dialog.locator(".workshop-properties-component-group").getByRole("heading"),
+  ).toHaveText([
+    "Raw Materials",
+    "Mechanisms",
+    "Circuit Components",
+    "Puzzle Tools",
+  ]);
+  await dialog.getByRole("button", { name: "Disable all Raw Materials" }).click();
+  await expect(dialog.getByRole("checkbox", { name: "Sand" })).not.toBeChecked();
+  await expect(dialog.getByRole("checkbox", { name: "Stone" })).not.toBeChecked();
+  await expect(dialog.getByRole("checkbox", { name: "Conveyor Belt" })).toBeChecked();
+  await dialog.getByRole("button", { name: "Enable all Raw Materials" }).click();
+  await expect(dialog.getByRole("checkbox", { name: "Sand" })).toBeChecked();
+  await expect(dialog.getByRole("checkbox", { name: "Stone" })).toBeChecked();
   await expect(dialog.locator("[data-workshop-info-goal-panel]")).toBeHidden();
+});
+
+test("sandbox test-case menu duplicates, switches, and deletes independent boards", async ({ page }) => {
+  await seedBrowserStorage(page, "empty");
+  await page.goto("/sandbox");
+
+  const caseButton = page.getByRole("button", { name: "CASE: Standard case" });
+  await expect(caseButton).toBeVisible();
+  await placeStone(page, 0, 0);
+  await caseButton.click();
+  await page.getByRole("button", { name: "DUPLICATE CURRENT" }).click();
+  await expect(page.getByRole("button", { name: "CASE: Case 1" })).toBeVisible();
+
+  await placeStone(page, 1, 0);
+  await page.getByRole("button", { name: "CASE: Case 1" }).click();
+  await page.getByRole("button", { name: "Standard case", exact: true }).click();
+  let board = JSON.parse((await diagnosticSnapshot(page)).serializedBoard) as {
+    readonly grid: readonly string[];
+  };
+  expect(board.grid[0]?.slice(0, 2)).toBe("#.");
+
+  await page.getByRole("button", { name: "CASE: Standard case" }).click();
+  await page.getByRole("button", { name: "Case 1", exact: true }).click();
+  board = JSON.parse((await diagnosticSnapshot(page)).serializedBoard) as {
+    readonly grid: readonly string[];
+  };
+  expect(board.grid[0]?.slice(0, 2)).toBe("##");
+
+  await page.getByRole("button", { name: "CASE: Case 1" }).click();
+  await page.getByRole("button", { name: "DELETE CURRENT" }).click();
+  await expect(page.getByRole("button", { name: "CASE: Standard case" })).toBeVisible();
+  await page.getByRole("button", { name: "CASE: Standard case" }).click();
+  await expect(page.getByRole("button", { name: "Case 1", exact: true })).toHaveCount(0);
 });
 
 test("tile inspector follows palette, tool, and occupied-board hover", async ({ page }) => {
