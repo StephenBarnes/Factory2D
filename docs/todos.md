@@ -4,8 +4,6 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 
 ## Sim test/play flow
 
-* When the player presses test button or reset button, we currently change zoom and pan to fit the whole board. Rather don't do that - keep current zoom and pan.
-* Bug: If the player creates a test solution, but instead of pressing the "test" button they press "step" repeatedly until victory or loss, we currently never react to victory or loss. We should instead show the toast on failure, and show the success / score report modal on success (unless there was a failure on a previous step).
 * Add tick speeds above 60 ticks per second; for those, step the simulation multiple times between renders. This is useful for testing solutions fast while still showing what's going on.
 * DEFER Add a step-back button to the control panel at the bottom, maybe? Requires keeping previous state in memory, or several so we can step back multiple ticks.
 * DEFER If we do the "asleep vs active regions" change below, or if we store previous state for step-back, then as a follow-up: when testing a solution, check for loops (no active regions, or previous state equals current state) and end the test early.

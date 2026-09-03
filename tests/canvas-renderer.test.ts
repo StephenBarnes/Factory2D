@@ -149,6 +149,23 @@ describe("CanvasRenderer viewport fitting", () => {
     expect(renderer.gridPointFromClientPoint(0, 80)).toEqual({ x: 0, y: 0 });
     expect(renderer.gridPointFromClientPoint(640, 400)).toEqual({ x: 20, y: 10 });
   });
+
+  it("preserves a player-modified camera across renderer replacement", () => {
+    vi.stubGlobal("window", { devicePixelRatio: 1 });
+    const { canvas } = createCanvas(640, 480);
+    const original = new CanvasRenderer(canvas, new World(20, 10));
+    original.fitBoardToViewport();
+    original.zoomAtClientPoint(200, 150, -300);
+    original.panByPixels(75, -40);
+    const expectedPoint = original.gridPointFromClientPoint(123, 234);
+
+    const replacement = new CanvasRenderer(canvas, new World(20, 10));
+    replacement.preserveViewFrom(original);
+
+    const actualPoint = replacement.gridPointFromClientPoint(123, 234);
+    expect(actualPoint.x).toBeCloseTo(expectedPoint.x);
+    expect(actualPoint.y).toBeCloseTo(expectedPoint.y);
+  });
 });
 
 describe("CanvasRenderer scalable tile rendering", () => {

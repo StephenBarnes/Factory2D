@@ -196,6 +196,21 @@ export class CanvasRenderer {
     this.renderInvalidated = true;
   }
 
+  /** Carries the player's current camera across a renderer remount on the same canvas. */
+  preserveViewFrom(renderer: CanvasRenderer): void {
+    if (!renderer.viewInitialized) {
+      return;
+    }
+    this.cellSize = renderer.cellSize;
+    this.viewCenterX = renderer.viewCenterX;
+    this.viewCenterY = renderer.viewCenterY;
+    this.viewInitialized = true;
+    // A preserved camera is now intentional, even if the source was the initial fitted view.
+    this.viewModified = true;
+    this.resizeBackingStore();
+    this.renderInvalidated = true;
+  }
+
   zoomAtClientPoint(clientX: number, clientY: number, wheelDeltaY: number): void {
     this.resizeBackingStore();
     const bounds = this.canvas.getBoundingClientRect();

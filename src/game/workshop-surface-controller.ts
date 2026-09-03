@@ -272,6 +272,7 @@ export class WorkshopSurfaceController {
   }
 
   private mountView(world: World, fitBoard: boolean): void {
+    const previousRenderer = this.currentRenderer;
     const nestedView = this.viewPath.length === 0 ? null : this.createNestedView();
     const renderer = this.factories.createRenderer(
       this.canvas,
@@ -289,6 +290,8 @@ export class WorkshopSurfaceController {
 
     if (fitBoard) {
       renderer.fitBoardToViewport();
+    } else {
+      renderer.preserveViewFrom(previousRenderer);
     }
     this.mountListener?.();
   }

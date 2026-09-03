@@ -27,12 +27,15 @@ interface PuzzleTestContext {
   readonly viewedCaseId: string;
 }
 
+
+type PuzzleTestRunMode = "automatic" | "manual";
 interface PuzzleTestViewingState extends PuzzleTestContext {
   readonly kind: "viewing-case";
 }
 
 interface PuzzleTestRunningState extends PuzzleTestContext {
   readonly kind: "running";
+  readonly mode: PuzzleTestRunMode;
   readonly run: PuzzleTestRun;
   readonly caseStartedAt: number;
   readonly accumulatedMs: number;
@@ -41,6 +44,7 @@ interface PuzzleTestRunningState extends PuzzleTestContext {
 interface PuzzleTestBetweenCasesState extends PuzzleTestContext {
   readonly kind: "between-cases";
   readonly run: PuzzleTestRun;
+  readonly mode: PuzzleTestRunMode;
   readonly nextCaseAt: number;
 }
 
@@ -124,6 +128,12 @@ export class PuzzleTestController {
     return this.lifecycleValue.kind === "running" || this.lifecycleValue.kind === "between-cases";
   }
 
+  get manualStepping(): boolean {
+    const state = this.lifecycleValue;
+    return (state.kind === "running" || state.kind === "between-cases") &&
+      state.mode === "manual";
+  }
+
   get viewedCaseId(): string | null {
     return this.lifecycleValue.kind === "idle" ? null : this.lifecycleValue.viewedCaseId;
   }
@@ -173,28 +183,71 @@ export class PuzzleTestController {
     if (state.kind === "idle" || state.kind === "running" || state.kind === "between-cases") {
       return;
     }
-    this.dependencies.prepareForRuntimeChange();
-    this.dependencies.resetSession();
-    this.view.hideStatus();
-    this.view.closeReport();
-    const run = new PuzzleTestRun(state.puzzle, this.dependencies.getBaseline());
-    this.dependencies.beginSimulation();
-    this.dependencies.mountRuntime(run.world, run.simulation);
-    this.lifecycleValue = {
-      kind: "running",
-      puzzle: state.puzzle,
-      viewedCaseId: run.currentCase.id,
-      run,
-      caseStartedAt: startedAt,
-      accumulatedMs: 0,
-    };
-    this.view.selectCase(run.currentCase.id);
-    this.refreshPresentation();
+    this.beginRun(state, "automatic", startedAt);
+  }
+
+  step(duration: number, startedAt = performance.now()): void {
+    const initialState = this.lifecycleValue;
+    if (
+      initialState.kind === "idle" ||
+      initialState.kind === "failed" ||
+      initialState.kind === "succeeded"
+    ) {
+      return;
+    }
+
+    let state: PuzzleTestRunningState;
+    if (initialState.kind === "viewing-case") {
+      state = this.beginRun(initialState, "manual", startedAt);
+    } else if (initialState.kind === "between-cases") {
+      if (initialState.mode !== "manual") {
+        return;
+      }
+      initialState.run.continueToNextCase();
+      this.dependencies.mountRuntime(initialState.run.world, initialState.run.simulation);
+      state = {
+        kind: "running",
+        puzzle: initialState.puzzle,
+        viewedCaseId: initialState.run.currentCase.id,
+        mode: "manual",
+        run: initialState.run,
+        caseStartedAt: startedAt,
+        accumulatedMs: 0,
+      };
+      this.lifecycleValue = state;
+      this.view.selectCase(state.viewedCaseId);
+    } else {
+      if (initialState.kind !== "running" || initialState.mode !== "manual") {
+        return;
+      }
+      state = initialState;
+    }
+
+    const interpolationSource = this.dependencies.beforeStep();
+    const status = state.run.step(duration > 0 ? interpolationSource : undefined);
+    this.dependencies.afterStep(state.run.world, state.run.simulation.tick);
+    this.dependencies.setStepAnimation(startedAt, duration);
+    if (status === "between-cases") {
+      this.lifecycleValue = {
+        kind: "between-cases",
+        puzzle: state.puzzle,
+        viewedCaseId: state.run.currentCase.id,
+        mode: "manual",
+        run: state.run,
+        nextCaseAt: startedAt,
+      };
+      this.refreshPresentation();
+    } else if (status === "failed" || status === "succeeded") {
+      this.finish(expectDefined(state.run.report ?? undefined, "Completed puzzle test report"));
+    }
   }
 
   advanceFrame(currentTime: number, elapsed: number): void {
     const state = this.lifecycleValue;
     if (state.kind === "between-cases") {
+      if (state.mode === "manual") {
+        return;
+      }
       if (currentTime < state.nextCaseAt) {
         return;
       }
@@ -204,6 +257,7 @@ export class PuzzleTestController {
         kind: "running",
         puzzle: state.puzzle,
         viewedCaseId: state.run.currentCase.id,
+        mode: state.mode,
         run: state.run,
         caseStartedAt: currentTime,
         accumulatedMs: 0,
@@ -212,7 +266,7 @@ export class PuzzleTestController {
       this.refreshPresentation();
       return;
     }
-    if (state.kind !== "running") {
+    if (state.kind !== "running" || state.mode === "manual") {
       return;
     }
 
@@ -236,6 +290,7 @@ export class PuzzleTestController {
           kind: "between-cases",
           puzzle: state.puzzle,
           viewedCaseId: state.run.currentCase.id,
+          mode: state.mode,
           run: state.run,
           nextCaseAt: currentTime + TEST_CASE_TRANSITION_MS,
         };
@@ -302,6 +357,33 @@ export class PuzzleTestController {
 
   closeCaseOptions(): void {
     this.view.setCaseOptionsOpen(false);
+  }
+
+  private beginRun(
+    state: PuzzleTestViewingState | PuzzleTestCompletedState,
+    mode: PuzzleTestRunMode,
+    startedAt: number,
+  ): PuzzleTestRunningState {
+    this.dependencies.prepareForRuntimeChange();
+    this.dependencies.resetSession();
+    this.view.hideStatus();
+    this.view.closeReport();
+    const run = new PuzzleTestRun(state.puzzle, this.dependencies.getBaseline());
+    this.dependencies.beginSimulation();
+    this.dependencies.mountRuntime(run.world, run.simulation);
+    const runningState: PuzzleTestRunningState = {
+      kind: "running",
+      puzzle: state.puzzle,
+      viewedCaseId: run.currentCase.id,
+      mode,
+      run,
+      caseStartedAt: startedAt,
+      accumulatedMs: 0,
+    };
+    this.lifecycleValue = runningState;
+    this.view.selectCase(run.currentCase.id);
+    this.refreshPresentation();
+    return runningState;
   }
 
   private finish(report: PuzzleTestReport): void {

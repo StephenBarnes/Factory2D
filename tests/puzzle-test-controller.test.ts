@@ -269,4 +269,45 @@ describe("puzzle test controller", () => {
     expect(harness.counts.reset).toBe(1);
     expect(harness.mountedCaseKinds).toHaveLength(1);
   });
+
+  it("steps every test case manually and presents success only after all pass", () => {
+    const harness = controllerHarness(winningSolution());
+    harness.controller.configure(puzzleWith([
+      caseDefinition("first", 5, emptyVictoryWorld),
+      caseDefinition("second", 5, emptyVictoryWorld),
+    ]));
+
+    harness.controller.step(0, 0);
+    harness.controller.advanceFrame(10_000, 10_000);
+    expect(harness.controller.lifecycle.kind).toBe("running");
+    expect(harness.controller.manualStepping).toBe(true);
+    harness.controller.step(0, 1);
+    expect(harness.controller.lifecycle.kind).toBe("between-cases");
+
+    harness.controller.step(0, 2);
+    harness.controller.step(0, 3);
+
+    expect(harness.controller.lifecycle.kind).toBe("succeeded");
+    expect(harness.view.report?.results.map((result) => result.id)).toEqual(["first", "second"]);
+    expect(harness.recordedReports).toHaveLength(1);
+    expect(harness.counts.begin).toBe(1);
+  });
+
+  it("keeps a manual-step failure latched until reset", () => {
+    const harness = controllerHarness(new World(3, 1));
+    harness.controller.configure(puzzleWith([
+      caseDefinition("loss", 5, () => chargedVictoryWorld(-1)),
+    ]));
+
+    harness.controller.step(0, 0);
+    harness.controller.step(0, 1);
+    expect(harness.controller.lifecycle.kind).toBe("failed");
+    expect(harness.view.failure).toContain('test case "Case loss"');
+    expect(harness.recordedReports).toEqual([null]);
+
+    harness.controller.step(0, 2);
+    expect(harness.controller.lifecycle.kind).toBe("failed");
+    expect(harness.counts.begin).toBe(1);
+    expect(harness.recordedReports).toEqual([null]);
+  });
 });

@@ -230,7 +230,7 @@ function updateTransportState(): void {
     ? testLifecycle === "between-cases" ? "CASE PASSED" : "TESTING CASE"
     : testFailed ? "TEST FAILED"
     : running ? "SIMULATING" : editingEnabled ? "BUILD MODE" : "RESET TO EDIT";
-  stepButton.disabled = running || testingPuzzleSolution;
+  stepButton.disabled = running || (testingPuzzleSolution && !puzzleTests.manualStepping);
   clearButton.disabled = !editingEnabled || testingPuzzleSolution;
   transportShortcutLabel.textContent = puzzleWorkshop ? "TEST SOLUTION" : "RUN / PAUSE";
   for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
@@ -1134,7 +1134,7 @@ const puzzleTests = new PuzzleTestController(
     },
     mountRuntime: (world, simulation) => {
       surface.mountActiveSession({
-        fitBoard: true,
+        fitBoard: false,
         cancelInteraction: true,
         updateSession: () => {
           if (simulation === undefined) {
@@ -1427,7 +1427,12 @@ testCaseButton.addEventListener("click", () => {
 });
 
 stepButton.addEventListener("click", () => {
-  advanceSimulation(animationsEnabled() ? MANUAL_STEP_ANIMATION_MS : 0);
+  const duration = animationsEnabled() ? MANUAL_STEP_ANIMATION_MS : 0;
+  if (navigation.screen.kind === "puzzle") {
+    puzzleTests.step(duration);
+  } else {
+    advanceSimulation(duration);
+  }
 });
 animationToggle.addEventListener("change", finishAnimationIfDisabled);
 
@@ -1794,8 +1799,13 @@ document.addEventListener("keydown", (event) => {
     } else {
       setRunning(!running);
     }
-  } else if (event.code === "KeyN" && !running && !puzzleTests.testing) {
-    advanceSimulation(animationsEnabled() ? MANUAL_STEP_ANIMATION_MS : 0);
+  } else if (event.code === "KeyN" && !running) {
+    const duration = animationsEnabled() ? MANUAL_STEP_ANIMATION_MS : 0;
+    if (navigation.screen.kind === "puzzle") {
+      puzzleTests.step(duration);
+    } else {
+      advanceSimulation(duration);
+    }
   } else if (event.code === "KeyR") {
     resetSimulation();
   } else {

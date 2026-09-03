@@ -13,9 +13,14 @@ import type { TileInspector } from "../src/ui/tile-inspector";
 
 class FakeRenderer {
   fitCount = 0;
+  preservedFrom: FakeRenderer | null = null;
 
   fitBoardToViewport(): void {
     this.fitCount += 1;
+  }
+
+  preserveViewFrom(renderer: CanvasRenderer): void {
+    this.preservedFrom = renderer as unknown as FakeRenderer;
   }
 }
 
@@ -112,5 +117,6 @@ describe("workshop surface controller", () => {
     expect(mounted).toBe(1);
     expect(harness.surface.world).toBe(runtime);
     expect(harness.renderers.at(-1)?.fitCount).toBe(0);
+    expect(harness.renderers.at(-1)?.preservedFrom).toBe(harness.renderers[0]);
   });
 });
