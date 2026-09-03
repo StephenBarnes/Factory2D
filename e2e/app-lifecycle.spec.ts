@@ -504,9 +504,9 @@ test("renders puzzle cases and leaves the failed case paused on the board", asyn
 
   await expect(report).not.toBeVisible();
   await expect(page.getByRole("status")).toHaveText(
-    "Failed: test case \"Standard case\" reached cycle limit 1000",
+    "Failed: test case \"Standard case\" reached cycle limit 10",
   );
-  await expect(page.locator("#tick-counter")).toHaveText("TICK 1000");
+  await expect(page.locator("#tick-counter")).toHaveText("TICK 0010");
   await expect(page.locator("#state-label")).toHaveText("TEST FAILED");
   await expect(fastForwardButton).not.toBeVisible();
 

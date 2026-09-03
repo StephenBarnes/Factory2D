@@ -9,6 +9,7 @@
   "name": "Conduits",
   "description": "Tutorial puzzle teaching conduit mechanics",
   "goal": "Connect the blue positive wire to the victory block",
+  "cycleLimit": 10,
   "components": [ { "code": "C", "price": 1 } ],
   "editableRegions": [ { "x": 7, "y": 1, "width": 6, "height": 12 } ],
   "initialBoard": {

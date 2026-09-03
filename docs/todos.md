@@ -21,8 +21,8 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 # Authoring tools, player-created puzzles, histograms
 
 * For the sandbox's puzzle properties window, we currently have a way to edit the description, but not the goal field. Add another text input for the goal. Also add most of the other fields needed to specify the puzzle: a dropdown for the puzzle group, number input for the order field, text input for the id, number input for the cycle limit. Don't worry about the `features` field since we're planning to remove that field.
-* Add tools to sandbox to define a puzzle's test cases. Figure out what UI flow would work best for this.
-* Add a way to save specific sandbox configurations in the game, without needing to download files or use import/export. Maybe modify the sandbox to store multiple saved sandboxes, similar to the solutions stored for puzzles, and add a sandbox briefing screen that lists them.
+* Add tools to sandbox to define a puzzle's test cases. Figure out what UI flow would work best for this. Maybe have a test case selector menu in the sandbox, plus a button to duplicate a test case (so it can be modified to make it slightly different) and delete a test case. We might need a modal for managing test cases in the sandbox.
+* Add a way to save specific sandbox configurations in the game, without needing to download files or use import/export. Maybe modify the sandbox to store multiple saved sandboxes, similar to the solutions stored for puzzles, and add a sandbox equivalent of the puzzle briefing screen that lists them.
 * Implement a text-box tool that places and edits text boxes on the game screen. Useful for tutorial puzzles, and also for players that want to label/annotate their designs. Model them separate from the component grid - they're not grid-aligned, don't occupy tiles, and have no prices. Include them the puzzle JSON format and scene JSON format. Need to decide how we handle pressing enter (finishes editing, or creates a line break?), whether to allow editing after placing them, whether to place as a rectangle or a point, etc. Probably LMB or LMB-drag places or edits, RMB removes.
 * DEFER Add back-end server and database. Probably Cloudflare Workers + D1 + R2. Then make the game request histogram data and shared puzzles, and allow submitting scores and shared puzzles.
 * DEFER Use `crypto.randomUUID()` to assign each install an ID. Allow voting community-created puzzles up and down. We can assume users aren't malicious, this is a zero-stakes indie game; expect under 10 players per day. We want to avoid setting up a whole auth system or requiring email addresses, etc. Using a simple unique ID allows exploits (e.g. clear browser data and double-vote) but we'll assume nobody does that. Version the database and roll back manually if needed. If the game becomes popular enough to need more than that, upgrade to a more robust system.
@@ -50,6 +50,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * Add a component that has no gravity, and moves forward one tile every time step; when blocked, attempt to push the tile in front. Could be useful as a model for many later components: arrows fired by elves, thrusters, etc.
 * Add a "box" component that has an internal grid of miniature components. Similar to the implemented rune array (reuse its nested `World` state, `WorldRuntime` tree, entering/leaving view, and nested board format), but instead of circuit signal ports, add holes where blocks can fall in/out or be pushed in/out. A miniature block that falls out through a hole becomes a full block on that side of the box; a full block that falls in becomes a miniature block. Similar to Factorio's warehouse mods, or Patrick's Parabox.
 * Add a slider component that cannot be moved in one axis, only the other axis. Allow rotation, which changes which axis is fixed. A welded body with sliders has all of their constraints - so with both horizontal and vertical sliders, it can't move at all.
+* Add a fastener block. It makes its welded body immune to gravity, but as soon as the body is pushed by any force besides gravity (currently pistons, conveyor belts), the fastener block is destroyed. If another block falls onto the fastened body, that doesn't break the fastener (because otherwise there'd be weird behaviors where unwelding one block in the fastened body makes the fastener break).
 
 # New component behaviors
 
@@ -200,7 +201,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * Animate when joints are welded or split, including by the welder/splitter components and by the player.
 * Improve piston extension/retraction animation.
 * Add animation for the delivery box - animate tiles moving into it, and shrinking, as they're absorbed.
-* Animate fragile blocks shattering.
+* Animate fragile blocks shattering - maybe split them in half across say a line at 30 degrees from vertical, then animate the halves moving apart and fading out from one tick to the next. Also use the same shatter animation for blocks broken by mining devices, fasteners that break, etc.
 * Interpolate movement inside a rune array while its contents are displayed and the array itself moved in the same tick: the nested previous world is matched by ID path, which works, but a resized array yields no interpolation source for that tick.
 
 # Larger projects, DEFER to later or never, and break up into tasks:

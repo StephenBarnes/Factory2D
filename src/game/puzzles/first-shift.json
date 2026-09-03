@@ -9,6 +9,7 @@
   "name": "First Shift",
   "description": "Tutorial puzzle teaching block placement",
   "goal": "Drop one stone block into the delivery box",
+  "cycleLimit": 10,
   "components": [
     { "code": "#", "price": 1 }
   ],
