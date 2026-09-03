@@ -2,11 +2,6 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 
 # Game flow
 
-## Main menu
-
-* Move gemstone count in the main menu to be around top-right instead, and show it larger and more concisely as "3◈" instead of text ("3 gemstones"). Add title/mouseover text saying that gemstones are earned by completing puzzles and used automatically to unlock new puzzle groups.
-* Show lock icon / unicode character next to locked puzzles and puzzle groups. On groups, add text saying "Solve 2 more puzzles to unlock" replacing "2 gemstones required", and make that text more visible.
-
 ## Sim test/play flow
 
 * When the player presses test button or reset button, we currently change zoom and pan to fit the whole board. Rather don't do that - keep current zoom and pan.
@@ -138,6 +133,17 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * DEFER Maybe support selections that are a union of rectangles, created by shift-LMB-drag.
 * When a region is selected using the selection tool, in the sandbox, add a new tool that will crop the board to that selection. (Currently it requires using the puzzle properties modal to set the grid size to specific numbers; this selection path would be easier and more intuitive.)
 
+## Main menu
+
+* On the main menu, apply the gold gradient fill to any puzzles that are unlocked and not completed yet, and also give them the decorated border.
+
+## Puzzle briefing screen
+
+* On the puzzle briefing screen, we currently have 3 buttons on each solution (duplicate/edit/delete) on a row below the scores, with solution name on the left of the top row. For screens that are wide, rather make this one row. Also replace the "Confirmed successful" green text with a checkmark after the solution name.
+* On the puzzle briefing screen, we currently apply a brighter border and a gold gradient to the topmost solution. Instead, apply it to all solutions with the minimum combined score.
+* DEFER Later instead of a gold highlight, choose color according to a grade decided by percentile on the histogram - iron, gold, diamond, mithril. Also, on the main menu, color completed puzzles' buttons by the grade of the player's best solution.
+* DEFER Also style the 4 scores of each solution according to their grade in the histogram for that specific metric.
+
 ## Palette panel
 
 * If the player clicks and drags from a palette tile, treat it as a left-click - select that palette tile. Ideally also place the tile on mouse up on the grid, as though they clicked. So they can click and drag components from palette to grid, in addition to the current flow (click on palette, then click on grid).
@@ -190,7 +196,6 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * Add some more gradients. The current gradients on e.g. the "Sandbox" button and solution list look really good. Use them for more buttons, and for the editor panels (palette panel, bottom bar, inspector).
 * Modify selection tool color - make it purple instead of teal.
 * Convert more text regions to a serif font, instead of small-caps or sans-serif.
-* The green color in the main menu (outlines for puzzles and puzzle groups that have been solved) looks bad. Replace with brown. For unsolved puzzles and groups, make their outlines bright yellow to differentiate. (But the green color on the solution verification / results report looks great - keep that.)
 * Change color of the game-canvas region outside the game board - currently it's black, change it to a very dark brown (darker than game board and panels).
 * Check button styles - some of them are grey, using the system/browser default style, which clashes. For example in the edit-configuration modal. In fact, we're setting the text color to greyish, but not setting the background or border style, so it's grey on grey which is unreadable.
 

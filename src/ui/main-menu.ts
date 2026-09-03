@@ -14,17 +14,20 @@ export interface MainMenuOptions {
 
 export function populatePuzzleMap(container: HTMLElement, options: MainMenuOptions): void {
   const fragment = document.createDocumentFragment();
+  const completedPuzzleCount = options.completedPuzzleIds.size;
 
   const gemstoneCount = document.createElement("p");
   gemstoneCount.className = "gemstone-count";
+  gemstoneCount.title =
+    "Gemstones are earned by completing puzzles and automatically unlock new puzzle groups.";
+  gemstoneCount.setAttribute(
+    "aria-label",
+    `${completedPuzzleCount} ${completedPuzzleCount === 1 ? "gemstone" : "gemstones"}. ${gemstoneCount.title}`,
+  );
   const gemstoneIcon = document.createElement("span");
   gemstoneIcon.ariaHidden = "true";
-  gemstoneIcon.textContent = "◆";
-  const gemstoneLabel = options.completedPuzzleIds.size === 1 ? "GEMSTONE" : "GEMSTONES";
-  gemstoneCount.append(
-    gemstoneIcon,
-    ` ${options.completedPuzzleIds.size} ${gemstoneLabel}`,
-  );
+  gemstoneIcon.textContent = "◈";
+  gemstoneCount.append(String(completedPuzzleCount), gemstoneIcon);
   fragment.append(gemstoneCount);
 
   for (const group of PUZZLE_GROUPS) {
@@ -51,9 +54,14 @@ export function populatePuzzleMap(container: HTMLElement, options: MainMenuOptio
     groupName.textContent = group.name;
     const groupStatus = document.createElement("span");
     groupStatus.className = "puzzle-group-status";
-    groupStatus.textContent = unlocked
-      ? `${completedCount}/${groupPuzzles.length} COMPLETE`
-      : `LOCKED · ${group.gemstoneThreshold} GEMSTONES REQUIRED`;
+    if (unlocked) {
+      groupStatus.textContent = `${completedCount}/${groupPuzzles.length} COMPLETE`;
+    } else {
+      const remainingPuzzleCount = group.gemstoneThreshold - completedPuzzleCount;
+      groupStatus.textContent =
+        `🔒 SOLVE ${remainingPuzzleCount} MORE ` +
+        `${remainingPuzzleCount === 1 ? "PUZZLE" : "PUZZLES"} TO UNLOCK`;
+    }
     heading.append(groupName, groupStatus);
     section.append(heading);
 
@@ -82,7 +90,11 @@ export function populatePuzzleMap(container: HTMLElement, options: MainMenuOptio
 
       const status = document.createElement("span");
       status.className = "puzzle-status";
-      status.textContent = completed ? "◆ COMPLETE" : puzzleUnlocked ? "AVAILABLE" : "LOCKED";
+      status.textContent = completed
+        ? "◆ COMPLETE"
+        : puzzleUnlocked
+          ? "AVAILABLE"
+          : "🔒 LOCKED";
 
       button.append(number, name, status);
       if (puzzleUnlocked) {

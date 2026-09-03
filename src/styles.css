@@ -108,6 +108,7 @@ canvas:focus-visible {
 }
 
 .main-menu-content {
+  position: relative;
   width: min(900px, calc(100% - 40px));
   min-height: 100%;
   margin: 0 auto;
@@ -206,25 +207,31 @@ canvas:focus-visible {
 }
 
 .gemstone-count {
+  position: absolute;
+  top: clamp(42px, 8vh, 92px);
+  right: 0;
   width: fit-content;
-  margin: 0 0 2px;
-  padding: 7px 11px;
-  border: 1px solid #806b9b;
-  background: rgb(43 31 55 / 78%);
-  color: #dcb9ff;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
+  margin: 0;
+  padding: 9px 13px;
+  border: 1px solid #9b75bd;
+  background: linear-gradient(135deg, rgb(61 39 78 / 92%), rgb(35 25 45 / 92%));
+  box-shadow: 0 8px 24px rgb(0 0 0 / 24%);
+  color: #ead1ff;
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 2vw, 1.45rem);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  line-height: 1;
+  letter-spacing: 0.03em;
 }
 
 .gemstone-count span {
-  color: #c982ff;
+  margin-left: 0.08em;
+  color: #cf8dff;
 }
 
 .puzzle-group {
   width: 100%;
-  border: 1px solid #3e3221;
+  border: 1px solid var(--gold-bright);
   background: rgb(21 16 10 / 88%);
 }
 
@@ -273,11 +280,12 @@ canvas:focus-visible {
 }
 
 .puzzle-group[data-state="locked"] .puzzle-group-status {
-  color: var(--text-faint);
+  color: var(--gold-bright);
+  font-size: 0.66rem;
 }
 
 .puzzle-group[data-state="completed"] {
-  border-color: #566d45;
+  border-color: var(--bronze);
 }
 
 .puzzle-group-list {
@@ -288,6 +296,7 @@ canvas:focus-visible {
 }
 
 .puzzle-node {
+  border-color: var(--gold-bright);
   width: 100%;
   min-height: 52px;
   padding: 9px 11px;
@@ -300,7 +309,7 @@ canvas:focus-visible {
 
 .puzzle-node:disabled {
   cursor: not-allowed;
-  opacity: 0.45;
+  opacity: 0.72;
 }
 
 .puzzle-number {
@@ -340,13 +349,16 @@ canvas:focus-visible {
   text-align: right;
 }
 
-.puzzle-node[data-state="locked"] .puzzle-number,
+.puzzle-node[data-state="locked"] .puzzle-number {
+  color: var(--text-muted);
+}
+
 .puzzle-node[data-state="locked"] .puzzle-status {
-  color: var(--text-faint);
+  color: var(--gold-bright);
 }
 
 .puzzle-node[data-state="completed"] {
-  border-color: #6d8f5c;
+  border-color: var(--bronze);
 }
 
 .main-menu-note {
@@ -2558,6 +2570,10 @@ kbd {
   .main-menu-content {
     width: min(100% - 24px, 680px);
     padding-top: 34px;
+  }
+
+  .gemstone-count {
+    top: 34px;
   }
 
   .sandbox-node {

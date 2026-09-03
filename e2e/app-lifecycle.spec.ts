@@ -334,16 +334,26 @@ test("puzzle groups show gemstone progression and default collapse states", asyn
   await seedBrowserStorage(page, "empty");
   await page.goto("/");
 
+  const gemstoneCount = page.locator(".gemstone-count");
   const basics = page.locator(".puzzle-group").filter({ hasText: "Basics" });
   const runelore = page.locator(".puzzle-group").filter({ hasText: "Runelore" });
-  await expect(page.locator(".gemstone-count")).toHaveText("◆ 0 GEMSTONES");
+  await expect(gemstoneCount).toHaveText("0◈");
+  await expect(gemstoneCount).toHaveAttribute(
+    "title",
+    "Gemstones are earned by completing puzzles and automatically unlock new puzzle groups.",
+  );
   await expect(basics).toHaveJSProperty("open", true);
+  await expect(basics).toHaveCSS("border-color", "rgb(246, 207, 126)");
   await expect(runelore).toHaveJSProperty("open", false);
+  await expect(runelore.locator(".puzzle-group-status")).toHaveText(
+    "🔒 SOLVE 2 MORE PUZZLES TO UNLOCK",
+  );
   await expect(page.getByRole("button", { name: /First Shift/ })).toBeEnabled();
   const runeloreButtons = runelore.locator("button");
   await expect(runeloreButtons).not.toHaveCount(0);
   for (const button of await runeloreButtons.all()) {
     await expect(button).toBeDisabled();
+    await expect(button.locator(".puzzle-status")).toHaveText("🔒 LOCKED");
   }
 });
 
@@ -353,8 +363,9 @@ test("unlocked fixture opens a gemstone-gated group and puzzle", async ({ page }
 
   const basics = page.locator(".puzzle-group").filter({ hasText: "Basics" });
   const runelore = page.locator(".puzzle-group").filter({ hasText: "Runelore" });
-  await expect(page.locator(".gemstone-count")).toHaveText("◆ 2 GEMSTONES");
+  await expect(page.locator(".gemstone-count")).toHaveText("2◈");
   await expect(basics).toHaveJSProperty("open", false);
+  await expect(basics).toHaveCSS("border-color", "rgb(138, 106, 58)");
   await expect(runelore).toHaveJSProperty("open", true);
 
   const conduits = page.getByRole("button", { name: /Conduits/ });
