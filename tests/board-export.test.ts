@@ -138,7 +138,7 @@ describe("board export", () => {
       tick: 42,
       result: "in-progress",
       grid: [
-        "LM",
+        "Li",
         "SI",
         ".:",
       ],

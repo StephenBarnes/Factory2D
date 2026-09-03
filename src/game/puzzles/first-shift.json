@@ -8,7 +8,7 @@
   "order": 0,
   "name": "First Shift",
   "description": "Tutorial puzzle teaching block placement",
-  "goal": "Drop one iron block into the delivery box",
+  "goal": "Drop one stone block into the delivery box",
   "components": [
     { "code": "#", "price": 1 }
   ],

@@ -27,7 +27,7 @@ export interface AssemblerRecipe {
 export const ASSEMBLER_RECIPES: readonly AssemblerRecipe[] = Object.freeze([
   Object.freeze({
     name: "Sensor pair",
-    input: ["GM"],
+    input: ["Gi"],
     welds: ["-."],
     outputs: [
       { kind: TileKind.Sensor, orientation: Direction.Up },
@@ -36,19 +36,19 @@ export const ASSEMBLER_RECIPES: readonly AssemblerRecipe[] = Object.freeze([
   }),
   Object.freeze({
     name: "Piston",
-    input: ["M", "#"],
+    input: ["i", "#"],
     welds: ["|", "."],
     outputs: [{ kind: TileKind.Piston, orientation: Direction.Up }],
   }),
   Object.freeze({
     name: "Lodestone",
-    input: ["M.", "MM"],
+    input: ["i.", "ii"],
     welds: ["|.", "-."],
     outputs: [{ kind: TileKind.Magnet, orientation: Direction.Right }],
   }),
   Object.freeze({
     name: "Conduits",
-    input: ["MM", "MM"],
+    input: ["ii", "ii"],
     welds: ["+|", "-."],
     outputs: [
       { kind: TileKind.Conduit, orientation: Direction.Up },

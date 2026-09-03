@@ -17,8 +17,8 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 
 # Storage format, import/export
 
-* Further compact orientations and charges in the scene and tutorial export/import formats, possibly storing charges per network instead of per tile. More complex per-tile state (e.g. furnace stored ticks or target/delivery-block configuration) can remain verbose. Only include full ASCII grids for fields that aren't empty / default value everywhere.
-* Allow importing scenes in puzzles, not only in the sandbox. But only allow them to modify the player-modifiable regions, including welds on the perimeter. This could be useful for sharing solutions. Or, if we don't allow importing scenes except in the sandbox, then remove the import button on puzzle screens - currently it's disabled but still taking up screen space.
+* DEFER Further compact orientations and charges in the scene and tutorial export/import formats, possibly storing charges per network instead of per tile. More complex per-tile state (e.g. furnace stored ticks or target/delivery-block configuration) can remain verbose. Only include full ASCII grids for fields that aren't empty / default value everywhere.
+* DEFER Allow importing scenes in puzzles, not only in the sandbox. But only allow them to modify the player-modifiable regions, including welds on the perimeter. This could be useful for sharing solutions. Or, if we don't allow importing scenes except in the sandbox, then remove the import button on puzzle screens - currently it's disabled but still taking up screen space.
 
 # Authoring tools, player-created puzzles, histograms
 

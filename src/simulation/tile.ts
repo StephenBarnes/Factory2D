@@ -280,7 +280,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   },
   [TileKind.Iron]: {
     name: "Iron",
-    boardCode: "M",
+    boardCode: "i",
     palette: {
       order: 4,
       category: PaletteCategory.RawMaterials,
