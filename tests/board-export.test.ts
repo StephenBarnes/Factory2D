@@ -34,7 +34,6 @@ describe("board export", () => {
       charges: [
         { x: 2, y: 1, charge: -1 },
       ],
-      isolatedOutputCharges: [],
       welds: [
         "..|",
         "-..",
@@ -56,7 +55,6 @@ describe("board export", () => {
       tick: 0,
       result: "in-progress",
       grid: [".."],
-      isolatedOutputCharges: [],
       welds: [".."],
     });
     const imported = deserializeBoard(serialized);

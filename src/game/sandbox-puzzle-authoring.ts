@@ -76,7 +76,7 @@ interface MutableSerializedBoard {
   orientations?: CoordinateEntry[];
   charges?: CoordinateEntry[];
   crossingCharges?: CoordinateEntry[];
-  isolatedOutputCharges: CoordinateEntry[];
+  isolatedOutputCharges?: CoordinateEntry[];
   furnaces?: CoordinateEntry[];
   components?: CoordinateEntry[];
   welds: string[];
@@ -297,7 +297,7 @@ export function resizeWorldFromTopLeft(source: World, width: number, height: num
   board.orientations = filterCoordinates(board.orientations ?? [], width, height);
   board.charges = filterCoordinates(board.charges ?? [], width, height);
   board.crossingCharges = filterCoordinates(board.crossingCharges ?? [], width, height);
-  board.isolatedOutputCharges = filterCoordinates(board.isolatedOutputCharges, width, height);
+  board.isolatedOutputCharges = filterCoordinates(board.isolatedOutputCharges ?? [], width, height);
   board.components = filterCoordinates(board.components ?? [], width, height);
   board.furnaces = (board.furnaces ?? []).filter((entry) => {
     if (!coordinateFits(entry, width, height)) {

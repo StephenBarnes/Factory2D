@@ -43,7 +43,6 @@ function puzzleFile(): JsonObject {
         "....",
         "=...",
       ],
-      isolatedOutputCharges: [],
       welds: [
         "....",
         "....",

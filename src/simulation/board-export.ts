@@ -175,7 +175,7 @@ interface ExportedBoardContents {
   readonly orientations?: readonly ExportedOrientation[];
   readonly charges?: readonly ExportedCharge[];
   readonly crossingCharges?: readonly ExportedCrossingCharge[];
-  readonly isolatedOutputCharges: readonly ExportedCharge[];
+  readonly isolatedOutputCharges?: readonly ExportedCharge[];
   readonly furnaces?: readonly ExportedFurnace[];
   readonly components?: readonly ExportedComponent[];
   readonly welds: readonly string[];
@@ -228,7 +228,7 @@ export function serializeBoard(world: World, tick: number): string {
     ...(contents.crossingCharges === undefined
       ? {}
       : { crossingCharges: contents.crossingCharges }),
-    isolatedOutputCharges: contents.isolatedOutputCharges,
+    ...(contents.isolatedOutputCharges === undefined ? {} : { isolatedOutputCharges: contents.isolatedOutputCharges }),
     ...(contents.furnaces === undefined ? {} : { furnaces: contents.furnaces }),
     ...(contents.components === undefined ? {} : { components: contents.components }),
     welds: contents.welds,
@@ -340,7 +340,7 @@ function exportBoardContents(world: World): ExportedBoardContents {
     ...(orientations.length === 0 ? {} : { orientations }),
     ...(charges.length === 0 ? {} : { charges }),
     ...(crossingCharges.length === 0 ? {} : { crossingCharges }),
-    isolatedOutputCharges,
+    ...(isolatedOutputCharges.length === 0 ? {} : { isolatedOutputCharges }),
     ...(furnaces.length === 0 ? {} : { furnaces }),
     ...(components.length === 0 ? {} : { components }),
     welds,

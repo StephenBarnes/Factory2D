@@ -17,8 +17,8 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 
 # Storage format, import/export
 
-* Allow importing scenes in puzzles, not only in the sandbox? But only allow them to modify the player-modifiable regions, including welds on the perimeter. This could be useful for sharing solutions, maybe? Or if we don't allow importing except in the sandbox, then remove the button on puzzle screens - currently it's disabled but still taking up screen space.
-* Further compact orientations and charges in the export/import format, possibly storing charges per network instead of per tile. More complex per-tile state (e.g. furnace stored ticks or target/delivery-block configuration) can remain verbose. Only include full ASCII grids for fields that aren't the default value.
+* Further compact orientations and charges in the scene and tutorial export/import formats, possibly storing charges per network instead of per tile. More complex per-tile state (e.g. furnace stored ticks or target/delivery-block configuration) can remain verbose. Only include full ASCII grids for fields that aren't empty / default value everywhere.
+* Allow importing scenes in puzzles, not only in the sandbox. But only allow them to modify the player-modifiable regions, including welds on the perimeter. This could be useful for sharing solutions. Or, if we don't allow importing scenes except in the sandbox, then remove the import button on puzzle screens - currently it's disabled but still taking up screen space.
 
 # Authoring tools, player-created puzzles, histograms
 
@@ -55,8 +55,8 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 
 # New component behaviors
 
-* Add a fragility flag to tile kinds, and set it to true for glass blocks. A fragile block with no welds that drops and then stops falling should be deleted (later animated with a shatter effect). Maybe don't break if it fell only one tile before stopping; would require storing I think two bits per fragile block, for whether it fell in the previous tick and whether it'll shatter on stopping. Could create interesting puzzles like lowering them one block at a time with pistons, or welding before dropping and then unwelding.
-* Make the glass block look more like transparent glass. (By adding some specular, and making it darker in the middle and brighter on the rim to simulate Fresnel, I think. We don't need actual transparency since the background is a fixed color.) Add a transparent flag in the tile definition. Make the sensor not detect transparent blocks.
+* Add a fragility flag to tile kinds, and set it to true for glass blocks. A fragile block with no welds that drops and then stops falling should be deleted (later animated with a shatter effect), unless it fell only one tile before stopping; would require storing additional data per fragile block. Most blocks won't be fragile so this is fine. Could create interesting puzzles like lowering blocks one tile at a time with pistons, or welding before dropping and then unwelding.
+* Add a flag in the tile definition for glass blocks, to make the sensor rune not detect them.
 * Add an indestructible flag. Blocks like crushers and drills should not be able to destroy these. Needed to prevent some exploits when solving puzzles, e.g. by drilling into the ground and activating the victory block.
 * Furnaces could have special behavior if said neighbor is surrounded by certain other neighbors. Add this to furnace recipes.
 * Furnaces could trigger a block to weld to neighbors after cooking it. Add to furnace recipes.
@@ -178,6 +178,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 
 ## Specific block appearance changes
 
+* Make the glass block look more like transparent glass. (By adding some specular, and making it darker in the middle and brighter on the rim to simulate Fresnel, I think. We don't need actual rendered transparency.)
 * For the piston base block, don't show the small rectangle that's meant to represent the head/arm of the piston. Only show it on the combined / retracted base+arm block, and on the extended arm block.
 * Mark the "wire crossing" tile in a way that makes it apparent it's a wire-crossing block regardless of how many circuit connections it has. Currently with one wire, or two opposite-side wires connected, it looks like a conduit block except for the background color. Maybe draw the central cross regardless of how many sides are wired.
 * Replace the current rune icon set with more intuitive or pretty symbols, matching the rune theme. Make stone/glass/platform have two parallel lines instead of the Z-lightning-bolt. Block sensor should have angular rune-like eye symbol (hollow diamond with center diamond for the pupil); charge sensor should be the same eye with lighting bolt replacing pupil. Fixed charge should have 3 lighting bolts, not plus symbol and circle. Inverter should be "hagalaz" N/H symbol. Subtractor should mark back with a small plus. Rectifier should be "thurisaz" `|>` instead of current `>|` diode symbol. Victory block should have "jera" rune symbol. Magnet should be reworked, but defer until we change its mechanics. Also give them sensible background colors, e.g. shades of purple for all sensors, teal/blue for all 3-input mathematical transforms.
