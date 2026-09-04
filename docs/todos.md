@@ -133,12 +133,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * DEFER Maybe support selections that are a union of rectangles, created by shift-LMB-drag.
 * EASY? When a region is selected using the selection tool, in the sandbox, add a new tool that will crop the board to that selection. (Currently it requires using the puzzle properties modal to set the grid size to specific numbers; this selection path would be easier and more intuitive.)
 
-## Main menu
-
-* EASY On the main menu, apply the gold gradient fill to any puzzles that are unlocked and not completed yet, and also give them the decorated border.
-* EASY On the main menu, move settings and credits buttons to top-left, above the main content.
-* EASY PRIORITY Rename the "credits" button to "about". Show some text: (1) credits (primarily developed by ChatGPT 5.6 Sol, and ChatGPT 6 Astra, with some help from Fable 5.1; some design and orchestration by Stephen Barnes); (2) inspirations - include links to Roody:2d and Infinifactory on Steam, and recommend those games; (3) technical details - a very general overview of our tech stack and overall architecture, plus link to GitHub.
-
 ## Puzzle briefing screen
 
 * DEFER Later instead of a gold highlight, choose color according to a grade decided by percentile on the histogram - iron, gold, diamond, mithril. Also, on the main menu, color completed puzzles' buttons by the grade of the player's best solution.

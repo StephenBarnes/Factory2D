@@ -170,7 +170,7 @@ test("routes only to accessible canonical screens", async ({ page }) => {
   await expect(page).toHaveURL(/\/$/);
 });
 
-test("opens settings and credits from the main menu", async ({ page }) => {
+test("opens settings and about from the main menu", async ({ page }) => {
   await seedBrowserStorage(page, "empty");
   await page.goto("/");
 
@@ -182,14 +182,16 @@ test("opens settings and credits from the main menu", async ({ page }) => {
   await expect(settings.getByRole("button", { name: "CLEAR ALL PLAYER DATA" })).toBeVisible();
   await settings.getByRole("button", { name: "CLOSE" }).click();
 
-  await page.getByRole("button", { name: "CREDITS" }).click();
-  const credits = page.getByRole("dialog", { name: "CREDITS" });
-  await expect(credits).toBeVisible();
-  await expect(credits).toContainText("TODO: Add credits and architecture overview.");
-  await expect(credits.getByRole("link", { name: "VIEW SOURCE ON GITHUB" })).toHaveAttribute(
+  await page.getByRole("button", { name: "ABOUT", exact: true }).click();
+  const about = page.getByRole("dialog", { name: "Factory 2D", exact: true });
+  await expect(about).toBeVisible();
+  await expect(about.getByRole("link", { name: "VIEW SOURCE ON GITHUB" })).toHaveAttribute(
     "href",
     "https://github.com/StephenBarnes/Factory2D",
   );
+  await about.getByRole("button", { name: "CLOSE" }).click();
+  await expect(about).toBeHidden();
+  await expect(page.getByRole("button", { name: "ABOUT", exact: true })).toBeFocused();
 });
 
 test("exports, clears, and imports all player data", async ({ page }) => {

@@ -94,8 +94,8 @@ const exportPlayerDataButton = requiredElement<HTMLButtonElement>("export-player
 const importPlayerDataButton = requiredElement<HTMLButtonElement>("import-player-data-button");
 const importPlayerDataFile = requiredElement<HTMLInputElement>("import-player-data-file");
 const clearPlayerDataButton = requiredElement<HTMLButtonElement>("clear-player-data-button");
-const creditsButton = requiredElement<HTMLButtonElement>("credits-button");
-const creditsDialog = requiredElement<HTMLDialogElement>("credits-dialog");
+const aboutButton = requiredElement<HTMLButtonElement>("about-button");
+const aboutDialog = requiredElement<HTMLDialogElement>("about-dialog");
 const menuButton = requiredElement<HTMLButtonElement>("menu-button");
 const screenTitle = requiredElement<HTMLElement>("screen-title");
 const workshopInfoButton = requiredElement<HTMLButtonElement>("workshop-info-button");
@@ -1478,8 +1478,8 @@ clearPlayerDataButton.addEventListener("click", () => {
     window.alert(`Could not clear player data: ${message}`);
   }
 });
-creditsButton.addEventListener("click", () => {
-  creditsDialog.showModal();
+aboutButton.addEventListener("click", () => {
+  aboutDialog.showModal();
 });
 
 sidebarControls.addEventListener("click", (event) => {

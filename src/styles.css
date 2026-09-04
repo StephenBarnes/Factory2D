@@ -180,6 +180,7 @@ canvas:focus-visible {
 
 /* Gilded corner engravings on major panels. */
 .sandbox-node::after,
+.puzzle-node[data-state="unlocked"]::after,
 .puzzle-brief::after,
 .solutions-panel::after,
 .tile-inspector::after,
@@ -297,6 +298,7 @@ canvas:focus-visible {
 }
 
 .puzzle-node {
+  position: relative;
   border-color: var(--gold-bright);
   width: 100%;
   min-height: 52px;
@@ -306,6 +308,10 @@ canvas:focus-visible {
   align-items: center;
   gap: 9px;
   transition: border-color 120ms ease, background-color 120ms ease, transform 120ms ease;
+}
+
+.puzzle-node[data-state="unlocked"] {
+  background: linear-gradient(90deg, rgb(84 58 25 / 70%), var(--panel-bg) 42%);
 }
 
 .puzzle-node:disabled {
@@ -371,8 +377,10 @@ canvas:focus-visible {
 }
 
 .main-menu-actions {
-  margin-top: 20px;
+  margin-bottom: 32px;
+  padding-right: 100px;
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -1860,6 +1868,28 @@ kbd {
 
 .main-menu-dialog-content a:hover {
   color: var(--gold-bright);
+}
+
+.about-dialog-content section + section {
+  margin-top: 24px;
+}
+
+.about-dialog-content h3 {
+  margin: 0 0 8px;
+  color: var(--gold);
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+}
+
+.about-dialog-content p + p {
+  margin-top: 12px;
+}
+
+.about-dialog-content p a {
+  display: inline;
+  margin: 0;
+  font: inherit;
+  letter-spacing: inherit;
 }
 
 .main-menu-dialog-actions {
