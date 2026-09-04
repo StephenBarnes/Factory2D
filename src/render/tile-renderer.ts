@@ -1034,64 +1034,47 @@ function drawDecoration(
       break;
     }
     case TileDecorationStyle.WireCrossing: {
-      const visibleConnections = circuitConnections === WeldSide.None
-        ? WeldSide.All
-        : circuitConnections;
       const centerX = left + size / 2;
       const centerY = top + size / 2;
       const innerOffset = size * 0.27;
       const traceWidth = Math.max(2, size * 0.12);
       context.lineCap = "round";
       context.lineWidth = traceWidth;
-      if ((visibleConnections & WeldSide.Left) !== 0) {
-        context.strokeStyle = CIRCUIT_CHARGE_COLORS[
-          circuitPortCharge(circuitPortCharges, Direction.Left)
-        ];
-        context.beginPath();
-        context.moveTo(centerX - innerOffset, centerY);
-        context.lineTo(centerX, centerY);
-        context.stroke();
-      }
-      if ((visibleConnections & WeldSide.Right) !== 0) {
-        context.strokeStyle = CIRCUIT_CHARGE_COLORS[
-          circuitPortCharge(circuitPortCharges, Direction.Right)
-        ];
-        context.beginPath();
-        context.moveTo(centerX, centerY);
-        context.lineTo(centerX + innerOffset, centerY);
-        context.stroke();
-      }
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[
+        circuitPortCharge(circuitPortCharges, Direction.Left)
+      ];
+      context.beginPath();
+      context.moveTo(centerX - innerOffset, centerY);
+      context.lineTo(centerX, centerY);
+      context.stroke();
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[
+        circuitPortCharge(circuitPortCharges, Direction.Right)
+      ];
+      context.beginPath();
+      context.moveTo(centerX, centerY);
+      context.lineTo(centerX + innerOffset, centerY);
+      context.stroke();
       context.strokeStyle = definition.fill;
       context.lineWidth = traceWidth * 1.75;
       context.beginPath();
-      if ((visibleConnections & WeldSide.Up) !== 0) {
-        context.moveTo(centerX, centerY - innerOffset);
-        context.lineTo(centerX, centerY);
-      }
-      if ((visibleConnections & WeldSide.Down) !== 0) {
-        context.moveTo(centerX, centerY);
-        context.lineTo(centerX, centerY + innerOffset);
-      }
+      context.moveTo(centerX, centerY - innerOffset);
+      context.lineTo(centerX, centerY + innerOffset);
       context.stroke();
       context.lineWidth = traceWidth;
-      if ((visibleConnections & WeldSide.Up) !== 0) {
-        context.strokeStyle = CIRCUIT_CHARGE_COLORS[
-          circuitPortCharge(circuitPortCharges, Direction.Up)
-        ];
-        context.beginPath();
-        context.moveTo(centerX, centerY - innerOffset);
-        context.lineTo(centerX, centerY);
-        context.stroke();
-      }
-      if ((visibleConnections & WeldSide.Down) !== 0) {
-        context.strokeStyle = CIRCUIT_CHARGE_COLORS[
-          circuitPortCharge(circuitPortCharges, Direction.Down)
-        ];
-        context.beginPath();
-        context.moveTo(centerX, centerY);
-        context.lineTo(centerX, centerY + innerOffset);
-        context.stroke();
-      }
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[
+        circuitPortCharge(circuitPortCharges, Direction.Up)
+      ];
+      context.beginPath();
+      context.moveTo(centerX, centerY - innerOffset);
+      context.lineTo(centerX, centerY);
+      context.stroke();
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[
+        circuitPortCharge(circuitPortCharges, Direction.Down)
+      ];
+      context.beginPath();
+      context.moveTo(centerX, centerY);
+      context.lineTo(centerX, centerY + innerOffset);
+      context.stroke();
       break;
     }
     case TileDecorationStyle.Delay: {
@@ -1376,12 +1359,14 @@ function drawDecoration(
         context.lineTo(0, -size * 0.25 + headOffset);
       }
       context.stroke();
-      context.translate(0, headOffset);
-      context.fillStyle = "#d1aa6b";
-      context.fillRect(-size * 0.25, -size * 0.32, size * 0.5, size * 0.14);
-      context.strokeStyle = "#4b3828";
-      context.lineWidth = Math.max(1, size * 0.035);
-      context.strokeRect(-size * 0.25, -size * 0.32, size * 0.5, size * 0.14);
+      if (!isBase) {
+        context.translate(0, headOffset);
+        context.fillStyle = "#d1aa6b";
+        context.fillRect(-size * 0.25, -size * 0.32, size * 0.5, size * 0.14);
+        context.strokeStyle = "#4b3828";
+        context.lineWidth = Math.max(1, size * 0.035);
+        context.strokeRect(-size * 0.25, -size * 0.32, size * 0.5, size * 0.14);
+      }
       context.restore();
       break;
     }
