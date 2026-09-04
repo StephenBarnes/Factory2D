@@ -149,6 +149,7 @@ const selectionRotateButton = requiredElement<HTMLButtonElement>("selection-rota
 const selectionSaveSnippetButton = requiredElement<HTMLButtonElement>(
   "selection-save-snippet-button",
 );
+const selectionDeleteButton = requiredElement<HTMLButtonElement>("selection-delete-button");
 const nestedViewBar = requiredElement<HTMLElement>("nested-view-bar");
 const nestedViewBackButton = requiredElement<HTMLButtonElement>("nested-view-back-button");
 const nestedViewTrail = requiredElement<HTMLElement>("nested-view-trail");
@@ -1509,6 +1510,7 @@ selectionRotateButton.addEventListener("click", () => {
   syncTileSelectionOverlay();
 });
 selectionSaveSnippetButton.addEventListener("click", saveSelectionAsSnippet);
+selectionDeleteButton.addEventListener("click", deleteTileSelection);
 saveSnippetButton.addEventListener("click", saveSelectionAsSnippet);
 componentsTab.addEventListener("click", () => {
   setPaletteTab("components");
@@ -1853,11 +1855,14 @@ document.addEventListener("keydown", (event) => {
       return;
     }
   }
+  const transportSpace =
+    event.code === "Space" &&
+    (event.target === speedSelect || event.target === animationToggle);
   if (
     event.ctrlKey ||
     event.metaKey ||
     event.altKey ||
-    textEntryTarget
+    (textEntryTarget && !transportSpace)
   ) {
     return;
   }
@@ -1967,6 +1972,9 @@ document.addEventListener("keydown", (event) => {
 
   if (event.code === "Space") {
     event.preventDefault();
+    if (event.repeat) {
+      return;
+    }
     if (navigation.screen.kind === "puzzle") {
       puzzleTests.start();
     } else {
