@@ -66,6 +66,7 @@ export class SnippetPanel {
     list.addEventListener("pointerdown", (event) => this.handlePointerDown(event));
     list.addEventListener("pointermove", (event) => this.handlePointerMove(event));
     list.addEventListener("pointerup", (event) => this.handlePointerFinish(event));
+    list.addEventListener("lostpointercapture", (event) => this.handlePointerFinish(event));
     list.addEventListener("pointercancel", (event) => this.handlePointerFinish(event));
     list.addEventListener("click", (event) => this.handleClick(event));
   }
@@ -165,6 +166,10 @@ export class SnippetPanel {
   private handlePointerMove(event: PointerEvent): void {
     const gesture = this.gesture;
     if (gesture === null || event.pointerId !== gesture.pointerId) {
+      return;
+    }
+    if ((event.buttons & 1) === 0) {
+      this.cancelPlacement();
       return;
     }
     if (!gesture.placing) {

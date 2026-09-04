@@ -56,6 +56,7 @@ export interface CanvasInteractionCallbacks {
 interface PointerEventData {
   readonly pointerId: number;
   readonly button: number;
+  readonly buttons: number;
   readonly clientX: number;
   readonly clientY: number;
   readonly altKey: boolean;
@@ -67,6 +68,7 @@ interface PointerEventData {
 interface GestureBase {
   readonly pointerId: number;
   readonly session: WorkshopSession;
+  readonly buttonMask: number;
 }
 
 interface PickOrPanGesture extends GestureBase {
@@ -107,6 +109,7 @@ export class CanvasInteractionController {
     canvas.addEventListener("pointerdown", (event) => this.handlePointerDown(event));
     canvas.addEventListener("pointermove", (event) => this.handlePointerMove(event));
     canvas.addEventListener("pointerup", (event) => this.handlePointerFinish(event));
+    canvas.addEventListener("lostpointercapture", (event) => this.handlePointerFinish(event));
     canvas.addEventListener("pointercancel", (event) => this.handlePointerFinish(event));
     canvas.addEventListener("pointerleave", () => this.handlePointerLeave());
     canvas.addEventListener("contextmenu", (event) => event.preventDefault());
@@ -123,6 +126,7 @@ export class CanvasInteractionController {
     if (gesture === null || (!this.surface.session.editingState.editable && gesture === "edit")) {
       return;
     }
+    const buttonMask = pointerButtonMask(event.button);
 
     this.cancel();
     event.preventDefault();
@@ -132,6 +136,7 @@ export class CanvasInteractionController {
       this.active = {
         kind: "pick-or-pan",
         pointerId: event.pointerId,
+        buttonMask,
         session,
         pendingPickCell: cell,
         originClientX: event.clientX,
@@ -143,6 +148,7 @@ export class CanvasInteractionController {
       this.active = {
         kind: "pan",
         pointerId: event.pointerId,
+        buttonMask,
         session,
         lastClientX: event.clientX,
         lastClientY: event.clientY,
@@ -190,6 +196,7 @@ export class CanvasInteractionController {
     this.active = {
       kind: "edit",
       pointerId: event.pointerId,
+      buttonMask,
       session,
       tool,
       erase,
@@ -213,6 +220,14 @@ export class CanvasInteractionController {
     this.surface.hoveredEdge = this.surface.renderer.edgeFromGridPoint(point);
     this.callbacks.refreshHover();
 
+    if (
+      active !== null &&
+      event.pointerId === active.pointerId &&
+      (event.buttons & active.buttonMask) === 0
+    ) {
+      this.cancel();
+      return;
+    }
     if (active === null || event.pointerId !== active.pointerId) {
       return;
     }
@@ -225,6 +240,7 @@ export class CanvasInteractionController {
       this.active = {
         kind: "pan",
         pointerId: active.pointerId,
+        buttonMask: active.buttonMask,
         session: active.session,
         lastClientX: active.originClientX,
         lastClientY: active.originClientY,
@@ -415,5 +431,19 @@ export class CanvasInteractionController {
       throw new Error("Editable-region authoring is only available in the sandbox");
     }
     return authoring;
+  }
+}
+
+/** `PointerEvent.buttons` orders secondary and auxiliary differently from `button`. */
+function pointerButtonMask(button: number): number {
+  switch (button) {
+    case 0:
+      return 1;
+    case 1:
+      return 4;
+    case 2:
+      return 2;
+    default:
+      throw new Error(`Unsupported active pointer button: ${button}`);
   }
 }

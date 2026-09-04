@@ -116,16 +116,24 @@ function event(
   options: Partial<{
     pointerId: number;
     button: number;
+    buttons: number;
     clientX: number;
     clientY: number;
     altKey: boolean;
     shiftKey: boolean;
   }> = {},
 ) {
+  const button = options.button ?? 0;
+  const pressedButtons = button === 1 ? 4 : button === 2 ? 2 : 1;
+  const buttons = options.buttons ??
+    (type === "pointerup" || type === "pointercancel" || type === "lostpointercapture"
+      ? 0
+      : pressedButtons);
   return {
     type,
     pointerId: options.pointerId ?? 1,
-    button: options.button ?? 0,
+    button,
+    buttons,
     clientX: options.clientX ?? 0.5,
     clientY: options.clientY ?? 0.5,
     altKey: options.altKey ?? false,
@@ -208,6 +216,30 @@ describe("canvas interaction controller", () => {
     expect(harness.counts.commit).toBe(1);
     expect(harness.canvas.captured.has(1)).toBe(false);
     expect(harness.controller.activePointerId).toBeNull();
+  });
+
+  it("cancels before moving when the initiating button is no longer pressed", () => {
+    const harness = interactionHarness();
+    harness.controller.handlePointerDown(event("pointerdown", {
+      button: 2,
+      shiftKey: true,
+    }));
+    expect(harness.editedLines).toHaveLength(1);
+
+    harness.controller.handlePointerMove(event("pointermove", {
+      button: 2,
+      buttons: 0,
+      clientX: 2.5,
+    }));
+    harness.controller.handlePointerMove(event("pointermove", {
+      buttons: 0,
+      clientX: 3.5,
+    }));
+
+    expect(harness.editedLines).toHaveLength(1);
+    expect(harness.counts.commit).toBe(1);
+    expect(harness.controller.activePointerId).toBeNull();
+    expect(harness.canvas.captured.has(1)).toBe(false);
   });
 
   it("keeps an edit continuous after leaving and re-entering the grid", () => {

@@ -1924,6 +1924,7 @@ document.addEventListener("keyup", (event) => {
 });
 
 window.addEventListener("blur", () => {
+  finalizeActivePointerGesture();
   if (temporaryWeldActive) {
     temporaryWeldActive = false;
     if (selectedTool === "weld") {
