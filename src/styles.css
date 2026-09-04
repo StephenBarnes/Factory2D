@@ -406,7 +406,7 @@ canvas:focus-visible {
 }
 
 .puzzle-info-content {
-  width: min(1120px, calc(100% - 40px));
+  width: min(1360px, calc(100% - 40px));
   min-height: 100%;
   margin: 0 auto;
   padding: clamp(30px, 6vh, 64px) 0 48px;
@@ -508,6 +508,8 @@ canvas:focus-visible {
 .solutions-panel {
   min-width: 0;
   padding: clamp(18px, 3vw, 28px);
+  container-type: inline-size;
+  container-name: solutions;
 }
 
 .solutions-heading {
@@ -591,6 +593,11 @@ canvas:focus-visible {
   display: block;
 }
 
+.solution-identity {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .solution-identity strong {
   color: var(--text-bright);
   font-size: 0.82rem;
@@ -603,7 +610,7 @@ canvas:focus-visible {
   font-size: 0.64rem;
 }
 
-.solution-identity small.confirmed {
+.solution-confirmed {
   color: var(--emerald);
 }
 
@@ -661,6 +668,28 @@ canvas:focus-visible {
   border-color: #c66a71;
   color: #f1a1a7;
 }
+@container solutions (min-width: 720px) {
+  .solution-row:not(.sandbox-row) {
+    grid-template-columns: minmax(130px, 1fr) auto auto;
+  }
+
+  .sandbox-row {
+    grid-template-columns: minmax(130px, 1fr) auto;
+  }
+
+  .solution-row .solution-row-actions {
+    grid-column: auto;
+    padding-top: 0;
+    border-top: 0;
+  }
+}
+
+@media (min-width: 1200px) {
+  .puzzle-info-layout {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+}
+
 
 
 .menu-button {

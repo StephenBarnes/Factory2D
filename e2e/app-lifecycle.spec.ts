@@ -710,7 +710,6 @@ test("persists successful solution scores on the puzzle briefing", async ({ page
     has: page.locator(".solution-identity strong", { hasText: "Solution 1" }),
   });
   await expect(scoredSolution).toBeVisible();
-  await expect(scoredSolution).toContainText("Confirmed successful");
   await expect(scoredSolution.locator(".solution-scores strong")).toHaveText(["1", "9", "1", "11"]);
   await expect(scoredSolution).toHaveClass(/best-score/);
   await page.reload();
@@ -718,7 +717,7 @@ test("persists successful solution scores on the puzzle briefing", async ({ page
   await expect(scoredSolution).toHaveClass(/best-score/);
 });
 
-test("highlights only the confirmed solution with the lowest combined score", async ({ page }) => {
+test("highlights every confirmed solution tied for the lowest combined score", async ({ page }) => {
   await seedBrowserStorage(page, "populated");
   await page.goto("/puzzles/first-shift");
   await page.evaluate((storageKey) => {
@@ -750,6 +749,26 @@ test("highlights only the confirmed solution with the lowest combined score", as
 
   const rows = page.locator("#solution-list").getByRole("listitem");
   await expect(rows.filter({ hasText: "Solution 1" })).not.toHaveClass(/best-score/);
+  await expect(rows.filter({ hasText: "Solution 2" })).toHaveClass(/best-score/);
+
+  await page.evaluate((storageKey) => {
+    const serialized = window.localStorage.getItem(storageKey);
+    if (serialized === null) {
+      throw new Error("Saved-solution storage is missing");
+    }
+    const stored = JSON.parse(serialized) as {
+      solutions: Array<{ id: string; scores: unknown }>;
+    };
+    const first = stored.solutions.find(({ id }) => id === "solution-1");
+    const second = stored.solutions.find(({ id }) => id === "solution-2");
+    if (first === undefined || second === undefined) {
+      throw new Error("Scored-solution fixture is incomplete");
+    }
+    first.scores = second.scores;
+    window.localStorage.setItem(storageKey, JSON.stringify(stored));
+  }, PUZZLE_SOLUTIONS_STORAGE_KEY);
+  await page.reload();
+  await expect(rows.filter({ hasText: "Solution 1" })).toHaveClass(/best-score/);
   await expect(rows.filter({ hasText: "Solution 2" })).toHaveClass(/best-score/);
 });
 

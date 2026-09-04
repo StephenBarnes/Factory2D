@@ -141,8 +141,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 ## Puzzle briefing screen
 
-* EASY On the puzzle briefing screen, we currently have 3 buttons on each solution (duplicate/edit/delete) on a row below the scores, with solution name on the left of the top row. For screens that are wide, rather make this one row. Also replace the "Confirmed successful" green text with a checkmark after the solution name.
-* EASY On the puzzle briefing screen, we currently apply a brighter border and a gold gradient to the topmost solution. Instead, apply it to all solutions with the minimum combined score.
 * DEFER Later instead of a gold highlight, choose color according to a grade decided by percentile on the histogram - iron, gold, diamond, mithril. Also, on the main menu, color completed puzzles' buttons by the grade of the player's best solution.
 * DEFER Also style the 4 scores of each solution according to their grade in the histogram for that specific metric.
 
@@ -230,5 +228,6 @@ For the text box tool:
 * A suite of basic circuit problems, where you only have: conduit, combiner, inverter, and fixed source. Add puzzles to build most of the more advanced circuit components out of these. The combiner is effectively a sum or vote/majority rune. Combiner also gives a 1-tick delay, so you can chain them to make a machine that acts like a delay rune with arbitrary memory size. Combiner with duplicate inputs, one delayed and inverted, gives edge detection. Spark is fixed value plus edge detection. For the rectifier/diode, we have a puzzle and reference solution, which needs two combiners and a multiplier. Rectifier could also be built using two combiners, fixed source, and inverter: use fixed source and inverter to get -1, then compute `Combiner(x, x, -1)` which takes (-1, 0, 1) to (-1, -1, 1), and then combine that with +1.
 * Physically reverse a list: The player's machine receives ruby blocks and sapphire blocks in some order; they must be output in reverse order. Requires building a physical contraption that behaves like a push/pop stack, or maybe putting them in a box and physically rotating it. The player presses a button to drop the next block, and we drop a stone block to signal the end of the sequence. (How do we build the infra to test? Maybe a delivery box, swapping which block is below it. Or maybe use block-comparer to produce +1 and -1 charge for each one received, and then compare sequences omitting zeros. Or maybe put the entire sequence we expect on a conveyor belt below the delivery box.)
 * Physical subtraction: Receive some number of stone blocks and some number of iron blocks; output a number of blocks equal to the absolute value of the difference, then press a button to validate answer.
+* Puzzle: Given a supply of sand blocks, and a conduit that pulses N times, move N sand blocks to the output, and the rest to a different output.
 * PRIORITY Create a few puzzles that are actually difficult - maybe some of those above.
-* PRIORITY Create a few better tutorial puzzles. Maybe with the text box component in another todo item above.
+* PRIORITY Create a few better tutorial puzzles. Use the text box component we've added.

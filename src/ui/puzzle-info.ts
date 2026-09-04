@@ -43,17 +43,15 @@ export class PuzzleInfoView {
     this.description.textContent = options.puzzle.description;
     this.goal.textContent = options.puzzle.goal;
 
-    let bestSolution: SavedPuzzleSolution | null = null;
     let bestCombinedScore = Number.POSITIVE_INFINITY;
     for (const solution of options.solutions) {
       if (solution.scores !== null && solution.scores.combined < bestCombinedScore) {
-        bestSolution = solution;
         bestCombinedScore = solution.scores.combined;
       }
     }
 
     const solutionRows = options.solutions.map((solution) =>
-      this.createSolutionRow(solution, solution === bestSolution, options),
+      this.createSolutionRow(solution, solution.scores?.combined === bestCombinedScore, options),
     );
     this.solutionList.replaceChildren(...solutionRows);
     this.emptySolutions.hidden = solutionRows.length !== 0;
@@ -79,12 +77,21 @@ export class PuzzleInfoView {
     identity.className = "solution-identity";
     const name = document.createElement("strong");
     name.textContent = solution.name;
-    const status = document.createElement("small");
-    status.className = solution.scores === null ? "unconfirmed" : "confirmed";
-    status.textContent = solution.scores === null
-      ? "Not yet confirmed"
-      : "Confirmed successful";
-    identity.append(name, status);
+    identity.append(name);
+    if (solution.scores === null) {
+      const status = document.createElement("small");
+      status.className = "unconfirmed";
+      status.textContent = "Not yet confirmed";
+      identity.append(status);
+    } else {
+      const status = document.createElement("span");
+      status.className = "solution-confirmed";
+      status.setAttribute("role", "img");
+      status.ariaLabel = "Confirmed successful";
+      status.title = "Confirmed successful";
+      status.textContent = "✓";
+      name.append(" ", status);
+    }
 
     const scores = document.createElement("div");
     scores.className = "solution-scores";
