@@ -1136,6 +1136,7 @@ const canvasInteraction = new CanvasInteractionController(surface, {
   commitEditTransaction: commitEditedWorld,
 });
 surface.setInteractionCanceler(() => {
+  cancelPalettePlacement();
   canvasInteraction.cancel();
   textBoxTool.cancel();
   snippetPanel.cancelPlacement();
@@ -1157,6 +1158,7 @@ const snippetPanel = new SnippetPanel(
   },
 );
 function prepareForRuntimeChange(): void {
+  cancelPalettePlacement();
   finalizeActivePointerGesture();
   if (surface.selection.active) {
     commitTileSelection();
@@ -1481,6 +1483,81 @@ clearPlayerDataButton.addEventListener("click", () => {
 aboutButton.addEventListener("click", () => {
   aboutDialog.showModal();
 });
+
+let palettePointerId: number | null = null;
+
+function cancelPalettePlacement(): void {
+  const pointerId = palettePointerId;
+  palettePointerId = null;
+  if (pointerId !== null && sidebarControls.hasPointerCapture(pointerId)) {
+    sidebarControls.releasePointerCapture(pointerId);
+  }
+  if (pointerId !== null) {
+    surface.clearPointerHover();
+    refreshPointerHover();
+  }
+}
+
+sidebarControls.addEventListener("pointerdown", (event) => {
+  if (event.button !== 0 && event.button !== 1) return;
+  const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".palette-item");
+  if (button === null || button.disabled) return;
+  if (event.button === 1) {
+    event.preventDefault();
+    cancelPalettePlacement();
+    button.click();
+    return;
+  }
+  const kind = Number(button.dataset.tile);
+  if (!isTileKind(kind) || TILE_DEFINITIONS[kind].palette === null) return;
+  event.preventDefault();
+  cancelPalettePlacement();
+  canvasInteraction.cancel();
+  selectTile(kind);
+  if (selectedTool === "tile") {
+    palettePointerId = event.pointerId;
+    sidebarControls.setPointerCapture(event.pointerId);
+  }
+});
+
+sidebarControls.addEventListener("pointermove", (event) => {
+  if (event.pointerId !== palettePointerId) return;
+  if ((event.buttons & 1) === 0) {
+    cancelPalettePlacement();
+    return;
+  }
+  surface.hoveredPaletteButton = null;
+  const overCanvas = document.elementFromPoint(event.clientX, event.clientY) === canvas;
+  surface.hoveredCell = overCanvas
+    ? surface.renderer.cellFromGridPoint(
+      surface.renderer.gridPointFromClientPoint(event.clientX, event.clientY),
+    )
+    : null;
+  surface.hoveredEdge = null;
+  refreshPointerHover();
+});
+
+sidebarControls.addEventListener("pointerup", (event) => {
+  if (event.pointerId !== palettePointerId || event.button !== 0) return;
+  cancelPalettePlacement();
+  if (selectedTool !== "tile" || document.elementFromPoint(event.clientX, event.clientY) !== canvas) return;
+  const cell = surface.renderer.cellFromGridPoint(
+    surface.renderer.gridPointFromClientPoint(event.clientX, event.clientY),
+  );
+  if (cell === null) return;
+  const configure = surface.world.kindAt(cell.x, cell.y) !== selectedKind &&
+    componentConfigurationForKind(selectedKind)?.configureOnPlacement === true;
+  if (editCellLine(cell, cell, false, event.shiftKey)) {
+    commitEditedWorld();
+    if (configure) openComponentConfiguration(cell);
+  }
+});
+sidebarControls.addEventListener("pointercancel", cancelPalettePlacement);
+sidebarControls.addEventListener("lostpointercapture", cancelPalettePlacement);
+sidebarControls.addEventListener("auxclick", (event) => {
+  if (event.button === 1) event.preventDefault();
+});
+window.addEventListener("blur", cancelPalettePlacement);
 
 sidebarControls.addEventListener("click", (event) => {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".palette-item");

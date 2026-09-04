@@ -137,11 +137,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * DEFER Later instead of a gold highlight, choose color according to a grade decided by percentile on the histogram - iron, gold, diamond, mithril. Also, on the main menu, color completed puzzles' buttons by the grade of the player's best solution.
 * DEFER Also style the 4 scores of each solution according to their grade in the histogram for that specific metric.
 
-## Palette panel
-
-* If the player clicks and drags from a palette tile, treat it as a left-click - select that palette tile. Ideally also place the tile on mouse up on the grid, as though they clicked. So they can click and drag components from palette to grid, in addition to the current flow (click on palette, then click on grid).
-* EASY Middle-click on palette should act like left-click on palette.
-
 ## Settings menu
 
 * Add color-blindness options for people who can't distinguish red and blue circuit wires. Maybe just let them specify colors (from a short menu) for charges +1 and -1. Also apply these to the cost change popups.
