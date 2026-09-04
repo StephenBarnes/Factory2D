@@ -199,7 +199,7 @@ const TOOL_INSPECTOR_DETAILS: Readonly<Record<InspectorTool, ToolInspectorDetail
   "text-box": {
     name: "Text box tool",
     description: "Adds free-positioned notes without tiles or cost. Puzzle instructions and labels inside fixed arrays are read-only.",
-    controls: "LEFT CLICK ADD / EDIT · LEFT DRAG DRAW / MOVE · RIGHT CLICK DELETE · ENTER NEWLINE · ESC SAVE · BOX FITS TEXT",
+    controls: "LEFT CLICK ADD / EDIT · LEFT DRAG MOVE · RIGHT CLICK DELETE · ENTER NEWLINE · ESC SAVE / DELETE EMPTY · BOX FITS TEXT",
   },
 };
 

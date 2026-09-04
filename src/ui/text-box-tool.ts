@@ -11,7 +11,7 @@ interface TextBoxGesture {
   readonly origin: GridPoint;
   readonly clientX: number;
   readonly clientY: number;
-  readonly existing: TextBox | null;
+  readonly existing: TextBox;
   readonly erase: boolean;
   preview: TextBox;
   dragged: boolean;
@@ -20,7 +20,7 @@ interface TextBoxGesture {
 /** Free-positioned annotations; tile permissions deliberately do not constrain player notes. */
 export class TextBoxTool {
   private gesture: TextBoxGesture | null = null;
-  private saveEditor: (() => void) | null = null;
+  private saveEditor: ((deleteEmpty?: boolean) => void) | null = null;
   private composing = false;
   private readonly textarea: HTMLTextAreaElement;
 
@@ -45,7 +45,7 @@ export class TextBoxTool {
     cancel.addEventListener("click", () => this.closeEditor());
     dialog.addEventListener("cancel", (event) => {
       event.preventDefault();
-      if (!this.composing) this.saveEditor?.();
+      if (!this.composing) this.saveEditor?.(true);
     });
     textarea.addEventListener("compositionstart", () => { this.composing = true; });
     textarea.addEventListener("compositionend", () => { this.composing = false; });
@@ -54,7 +54,7 @@ export class TextBoxTool {
       if (this.composing || event.isComposing || event.keyCode === 229) return;
       if (event.key === "Escape") {
         event.preventDefault();
-        this.saveEditor?.();
+        this.saveEditor?.(true);
       }
     });
     dialog.addEventListener("keyup", (event) => event.stopPropagation());
@@ -106,6 +106,10 @@ export class TextBoxTool {
       text: "",
       owner: this.surface.session.puzzleAuthoring === null ? "player" : "author",
     };
+    if (existing === null) {
+      this.showEditor(world, preview, null);
+      return;
+    }
     this.gesture = {
       world, renderer: this.surface.renderer, origin: point, clientX, clientY,
       existing, erase, preview, dragged: false,
@@ -124,24 +128,11 @@ export class TextBoxTool {
     gesture.dragged ||= exceedsPanDragThreshold(clientX - gesture.clientX, clientY - gesture.clientY);
     if (!gesture.dragged) return;
     const { world, existing, origin } = gesture;
-    if (existing !== null) {
-      gesture.preview = {
-        ...existing,
-        x: Math.max(0, Math.min(world.width - existing.width, existing.x + point.x - origin.x)),
-        y: Math.max(0, Math.min(world.height - existing.height, existing.y + point.y - origin.y)),
-      };
-    } else {
-      const x = Math.max(0, Math.min(world.width, point.x));
-      const y = Math.max(0, Math.min(world.height, point.y));
-      const width = Math.max(Math.min(0.5, world.width), Math.abs(x - origin.x));
-      const height = Math.max(Math.min(0.5, world.height), Math.abs(y - origin.y));
-      gesture.preview = {
-        ...gesture.preview,
-        x: Math.min(Math.min(x, origin.x), world.width - width),
-        y: Math.min(Math.min(y, origin.y), world.height - height),
-        width, height,
-      };
-    }
+    gesture.preview = {
+      ...existing,
+      x: Math.max(0, Math.min(world.width - existing.width, existing.x + point.x - origin.x)),
+      y: Math.max(0, Math.min(world.height - existing.height, existing.y + point.y - origin.y)),
+    };
     gesture.renderer.setTextBoxPreview(gesture.preview);
   }
 
@@ -151,9 +142,9 @@ export class TextBoxTool {
     if (gesture === null || gesture.world !== this.surface.world || !this.canEdit(gesture.existing)) return;
     const { world, existing, preview } = gesture;
     if (gesture.erase) {
-      world.setTextBoxes(world.textBoxes.filter((box) => box.id !== existing?.id));
+      world.setTextBoxes(world.textBoxes.filter((box) => box.id !== existing.id));
       this.commitEdit();
-    } else if (existing !== null && gesture.dragged) {
+    } else if (gesture.dragged) {
       if (existing.x !== preview.x || existing.y !== preview.y) {
         world.setTextBoxes(world.textBoxes.map((box) => box.id === existing.id ? preview : box));
         this.commitEdit();
@@ -182,13 +173,21 @@ export class TextBoxTool {
   private showEditor(world: World, box: TextBox, existing: TextBox | null): void {
     this.textarea.value = box.text;
     this.textarea.setCustomValidity("");
-    this.saveEditor = () => {
+    this.saveEditor = (deleteEmpty = false) => {
       if (this.surface.world !== world || !this.canEdit(existing) ||
           (existing !== null && !world.textBoxes.some((entry) => entry.id === existing.id))) {
         this.closeEditor();
         return;
       }
       const text = this.textarea.value;
+      if (deleteEmpty && text.trim() === "") {
+        if (existing !== null) {
+          world.setTextBoxes(world.textBoxes.filter((entry) => entry.id !== existing.id));
+          this.commitEdit();
+        }
+        this.closeEditor();
+        return;
+      }
       this.textarea.setCustomValidity(text.trim() === "" ? "Enter text for this box." : "");
       if (!this.textarea.reportValidity()) return;
       const updated = this.surface.renderer.fitTextBox({ ...box, text });

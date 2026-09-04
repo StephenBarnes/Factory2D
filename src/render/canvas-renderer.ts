@@ -40,8 +40,9 @@ const LOW_DETAIL_MOTION_BUCKETS = 9;
 const TEXT_BOX_FONT_SCALE = 100;
 const TEXT_BOX_FONT = '20px Georgia, "Times New Roman", serif';
 const TEXT_BOX_LINE_HEIGHT = 0.26;
-const TEXT_BOX_HORIZONTAL_PADDING = 0.12;
-const TEXT_BOX_VERTICAL_PADDING = 0.06;
+const TEXT_BOX_HORIZONTAL_PADDING = 0.18;
+const TEXT_BOX_TOP_PADDING = 0.16;
+const TEXT_BOX_BOTTOM_PADDING = 0.06;
 
 interface TextBoxLayout {
   readonly lines: readonly string[];
@@ -323,7 +324,7 @@ export class CanvasRenderer {
     const contentWidth = (width - TEXT_BOX_HORIZONTAL_PADDING * 2) * TEXT_BOX_FONT_SCALE;
     const fitsWidth = layout.lines.every((line) => this.context.measureText(line).width <= contentWidth);
     this.context.restore();
-    const height = layout.lines.length * layout.lineHeight + TEXT_BOX_VERTICAL_PADDING * 2;
+    const height = layout.lines.length * layout.lineHeight + TEXT_BOX_TOP_PADDING + TEXT_BOX_BOTTOM_PADDING;
     if (!fitsWidth || height > this.world.height) return null;
     return {
       ...sizedBox,
@@ -352,7 +353,8 @@ export class CanvasRenderer {
   private drawTextBox(box: TextBox, preview: boolean): void {
     const { context } = this;
     const paddingX = Math.min(TEXT_BOX_HORIZONTAL_PADDING, box.width / 4);
-    const paddingY = Math.min(TEXT_BOX_VERTICAL_PADDING, box.height / 4);
+    const paddingTop = Math.min(TEXT_BOX_TOP_PADDING, box.height / 2);
+    const paddingBottom = Math.min(TEXT_BOX_BOTTOM_PADDING, box.height / 4);
     context.save();
     context.fillStyle = preview ? "rgb(38 57 53 / 92%)" : "rgb(29 22 15 / 92%)";
     context.strokeStyle = preview ? "#78dcca" : "#c1a576";
@@ -361,7 +363,7 @@ export class CanvasRenderer {
     context.fillRect(box.x, box.y, box.width, box.height);
     context.strokeRect(box.x, box.y, box.width, box.height);
     context.beginPath();
-    context.rect(box.x + paddingX, box.y + paddingY, box.width - paddingX * 2, box.height - paddingY * 2);
+    context.rect(box.x + paddingX, box.y + paddingTop, box.width - paddingX * 2, box.height - paddingTop - paddingBottom);
     context.clip();
     context.fillStyle = "#f4e4c5";
     let layout = this.textBoxLayouts.get(box);
@@ -371,8 +373,8 @@ export class CanvasRenderer {
     }
     context.scale(1 / TEXT_BOX_FONT_SCALE, 1 / TEXT_BOX_FONT_SCALE);
     for (let index = 0; index < layout.lines.length; index += 1) {
-      const top = box.y + paddingY + index * layout.lineHeight;
-      if (top >= box.y + box.height - paddingY) break;
+      const top = box.y + paddingTop + index * layout.lineHeight;
+      if (top >= box.y + box.height - paddingBottom) break;
       context.fillText(
         expectDefined(layout.lines[index], "Text box line is missing"),
         (box.x + paddingX) * TEXT_BOX_FONT_SCALE,
