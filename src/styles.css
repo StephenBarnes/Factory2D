@@ -1747,6 +1747,68 @@ kbd {
   line-height: 1.55;
 }
 
+.settings-dialog-content {
+  display: grid;
+  gap: 20px;
+}
+
+.settings-dialog-content > h2 {
+  margin-bottom: 0;
+}
+
+.settings-section {
+  padding: 16px;
+  border: 1px solid var(--border-faint);
+  background: var(--inset);
+}
+
+.settings-section h3 {
+  margin: 0 0 8px;
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+}
+
+.settings-action-row {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-action-row button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  color: var(--text-body);
+  background: var(--raised);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.settings-action-row button:hover {
+  border-color: var(--gold);
+  background: var(--raised-hover);
+}
+
+.settings-danger-section {
+  border-color: #6d3328;
+}
+
+.settings-action-row .danger-button {
+  border-color: #93493a;
+  color: #ffb3a1;
+}
+
+.settings-action-row .danger-button:hover {
+  border-color: #d2674f;
+  color: #ffd0c5;
+  background: #3a1d17;
+}
+
 .main-menu-dialog-content a {
   width: fit-content;
   margin-top: 22px;

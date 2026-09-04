@@ -367,9 +367,34 @@
       <dialog class="main-menu-dialog" id="settings-dialog" aria-labelledby="settings-title">
         <form method="dialog">
           <div class="main-menu-dialog-status">SETTINGS</div>
-          <div class="main-menu-dialog-content">
+          <div class="main-menu-dialog-content settings-dialog-content">
             <h2 id="settings-title">SETTINGS</h2>
-            <p>TODO: Add settings.</p>
+            <section class="settings-section" aria-labelledby="player-data-title">
+              <h3 id="player-data-title">PLAYER DATA</h3>
+              <p>
+                Download or restore everything saved by Factory 2D, including puzzle progress,
+                solutions, sandboxes, and snippets.
+              </p>
+              <div class="settings-action-row">
+                <button id="export-player-data-button" type="button">DOWNLOAD PLAYER DATA</button>
+                <button id="import-player-data-button" type="button">IMPORT PLAYER DATA</button>
+                <input
+                  id="import-player-data-file"
+                  type="file"
+                  accept="application/json,.json"
+                  hidden
+                />
+              </div>
+            </section>
+            <section class="settings-section settings-danger-section" aria-labelledby="clear-data-title">
+              <h3 id="clear-data-title">CLEAR PLAYER DATA</h3>
+              <p>Erase all puzzle progress, solutions, sandboxes, snippets, and other saved settings.</p>
+              <div class="settings-action-row">
+                <button id="clear-player-data-button" class="danger-button" type="button">
+                  CLEAR ALL PLAYER DATA
+                </button>
+              </div>
+            </section>
           </div>
           <div class="main-menu-dialog-actions">
             <button type="submit">CLOSE</button>

@@ -4,6 +4,11 @@ import type {
   DiagnosticDirection,
 } from "./dev/diagnostic-snapshot";
 import { NavigationController } from "./game/navigation-controller";
+import {
+  clearPlayerData,
+  replacePlayerData,
+  serializePlayerData,
+} from "./game/player-data";
 import { SavedSandboxController } from "./game/saved-sandbox-controller";
 import { SavedSolutionController } from "./game/saved-solution-controller";
 import { PuzzleTestController } from "./game/puzzle-test-controller";
@@ -84,6 +89,10 @@ const puzzleMap = requiredElement<HTMLElement>("puzzle-map");
 const sandboxButton = requiredElement<HTMLButtonElement>("sandbox-button");
 const settingsButton = requiredElement<HTMLButtonElement>("settings-button");
 const settingsDialog = requiredElement<HTMLDialogElement>("settings-dialog");
+const exportPlayerDataButton = requiredElement<HTMLButtonElement>("export-player-data-button");
+const importPlayerDataButton = requiredElement<HTMLButtonElement>("import-player-data-button");
+const importPlayerDataFile = requiredElement<HTMLInputElement>("import-player-data-file");
+const clearPlayerDataButton = requiredElement<HTMLButtonElement>("clear-player-data-button");
 const creditsButton = requiredElement<HTMLButtonElement>("credits-button");
 const creditsDialog = requiredElement<HTMLDialogElement>("credits-dialog");
 const menuButton = requiredElement<HTMLButtonElement>("menu-button");
@@ -1378,6 +1387,59 @@ sandboxButton.addEventListener("click", () => {
 });
 settingsButton.addEventListener("click", () => {
   settingsDialog.showModal();
+});
+exportPlayerDataButton.addEventListener("click", () => {
+  try {
+    downloadBlob(
+      new Blob([serializePlayerData(window.localStorage)], { type: "application/json" }),
+      "factory2d-player-data.json",
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    window.alert(`Could not export player data: ${message}`);
+  }
+});
+importPlayerDataButton.addEventListener("click", () => {
+  importPlayerDataFile.click();
+});
+importPlayerDataFile.addEventListener("change", async () => {
+  const file = importPlayerDataFile.files?.[0];
+  importPlayerDataFile.value = "";
+  if (file === undefined) {
+    return;
+  }
+  if (!window.confirm("Importing will replace all player data on this device. Continue?")) {
+    return;
+  }
+
+  importPlayerDataButton.disabled = true;
+  try {
+    replacePlayerData(window.localStorage, await file.text());
+    settingsDialog.close();
+    window.location.reload();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    window.alert(`Could not import player data: ${message}`);
+  } finally {
+    importPlayerDataButton.disabled = false;
+  }
+});
+clearPlayerDataButton.addEventListener("click", () => {
+  if (
+    !window.confirm(
+      "Clear all saved puzzle progress, solutions, sandboxes, snippets, and settings? This cannot be undone.",
+    )
+  ) {
+    return;
+  }
+  try {
+    clearPlayerData(window.localStorage);
+    settingsDialog.close();
+    window.location.reload();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    window.alert(`Could not clear player data: ${message}`);
+  }
 });
 creditsButton.addEventListener("click", () => {
   creditsDialog.showModal();

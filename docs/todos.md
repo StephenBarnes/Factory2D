@@ -1,6 +1,6 @@
 Tasks that are not actionable yet due to prerequisites, or are lower priority, are marked as DEFER.
-Tasks that are key blockers to shipping the first version are marked as PRIORITY.
 Tasks that are likely to be easy to implement marked as EASY.
+Tasks that are key blockers to shipping the first version are marked as PRIORITY - once these are resolved
 
 # Game flow
 
@@ -25,9 +25,10 @@ Tasks that are likely to be easy to implement marked as EASY.
 
 # Authoring tools, player-created puzzles, histograms
 
-* Implement a text-box tool that places and edits text boxes on the game screen. Useful for tutorial puzzles, and also for players that want to label/annotate their designs. Model them separate from the component grid - they're not grid-aligned, don't occupy tiles, and have no prices. Include them the puzzle JSON format and scene JSON format. Need to decide how we handle pressing enter (either finishes editing or creates a line break), how to allow editing after placing them, whether to place as a rectangle or a point, etc. Probably LMB or LMB-drag places or edits, RMB removes.
+* PRIORITY Implement a text-box tool that places and edits text boxes on the game screen. Useful for tutorial puzzles, and also for players that want to label/annotate their designs. Model them separate from the component grid - they're not grid-aligned, don't occupy tiles, and have no prices. Include them the puzzle JSON format and scene JSON format. Need to decide how we handle pressing enter (either finishes editing or creates a line break), how to allow editing after placing them, whether to place as a rectangle or a point, etc. Probably LMB or LMB-drag places or edits, RMB removes.
 * DEFER Add back-end server and database. Probably Cloudflare Workers + D1 + R2. Then make the game request histogram data and shared puzzles, and allow submitting scores and shared puzzles.
 * DEFER Use `crypto.randomUUID()` to assign each install an ID. Allow voting community-created puzzles up and down. We can assume users aren't malicious, this is a zero-stakes indie game; expect under 10 players per day. We want to avoid setting up a whole auth system or requiring email addresses, etc. Using a simple unique ID allows exploits (e.g. clear browser data and double-vote) but we'll assume nobody does that. Version the database and roll back manually if needed. If the game becomes popular enough to need more than that, upgrade to a more robust system.
+	* Also, when using the "clear all player data" button, do not erase the UUID. Unclear what we should do when importing/exporting - maybe transfer the UUID.
 * DEFER For community puzzles, organize them automatically by their set of allowed components. Unlock each after the earliest built-in progression point where all of those components have appeared in that group or an earlier group.
 * DEFER Add histograms on the puzzle solution result modal. Rate solutions by percentile as coal, iron, gold, mithril. On the puzzle briefing screen, show the player's best score and percentile-mineral rank on each of the 4 metrics - for each metric, take the min/best over all their solutions. Also, if they have 2 or more solutions, the result modal should show their best score and the current solution's score for each metric, on each histogram.
 
@@ -139,6 +140,8 @@ Tasks that are likely to be easy to implement marked as EASY.
 ## Main menu
 
 * EASY On the main menu, apply the gold gradient fill to any puzzles that are unlocked and not completed yet, and also give them the decorated border.
+* EASY On the main menu, move settings and credits buttons to top-left, above the main content.
+* EASY PRIORITY Rename the "credits" button to "about". Show some text: (1) credits - primarily developed by ChatGPT 5.6 Sol, and ChatGPT 6 Astra, with some help from Fable 5.1; most design and orchestration by Stephen Barnes; (2) inspirations - include links to Roody:2d and Infinifactory on Steam, and recommend those games; (3) technical details - a very general overview of our tech stack and overall architecture.
 
 ## Puzzle briefing screen
 
@@ -155,8 +158,6 @@ Tasks that are likely to be easy to implement marked as EASY.
 ## Settings menu
 
 * Add color-blindness options for people who can't distinguish red and blue circuit wires. Maybe just let them specify colors (from a short menu) for charges +1 and -1. Also apply these to the cost change popups.
-* PRIORITY EASY? Add option to clear all puzzle solutions and other saved state. Keep the user's UUID, once we track that.
-* Add a button to download all player data (everything in localStorage), and a button to import that, so players could transfer data to another device.
 
 ## Workshop (puzzle/sandbox) screen
 
@@ -226,6 +227,8 @@ Tasks that are likely to be easy to implement marked as EASY.
 # Puzzle ideas
 
 * Count up to N pulses from two separate sources and decide which source gave more pulses in total. One solution idea: use a counter block, with an inverter on one of the two inputs, and then check whether final value is positive or negative? But wrap-arounds are possible, so maybe use spark blocks to initialize it to N. Also we can't read the value of the counter block directly, would need to decrement it until it reaches zero and compare number of decrements to initial value; but that seems like almost the same problem we started with?
-* A suite of basic circuit problems, where you only have: conduit, combiner, inverter, and fixed source. Add puzzles to build most of the more advanced circuit components out of these. The combiner is effectively a sum or vote/majority rune. Combiner also gives a 1-tick delay, so you can chain them to make the delay rune with arbitrary memory size. Combiner with duplicate inputs, one delayed and inverted, gives edge detection. Spark is fixed value plus edge detection. For the rectifier/diode, we have a puzzle and reference solution, which needs two combiners and a multiplier. Rectifier could also be built using two combiners, fixed source, and inverter: use fixed source and inverter to get -1, then compute `Combiner(x, x, -1)` which takes (-1, 0, 1) to (-1, -1, 1), and then combine that with +1.
-* The player's machine receives ruby blocks and sapphire blocks in some order; they must be output in reverse order. Requires building a physical contraption that behaves like a push/pop stack, or maybe putting them in a box and physically rotating it. The player presses a button to drop the next block, and we drop a stone block to signal the end of the sequence. (How do we build the infra to test? Maybe a delivery box, swapping which block is below it. Or maybe use block-comparer to produce +1 and -1 charge for each one received, and then compare sequences omitting zeros. Or maybe put the entire sequence we expect on a conveyor belt below the delivery box.)
+* A suite of basic circuit problems, where you only have: conduit, combiner, inverter, and fixed source. Add puzzles to build most of the more advanced circuit components out of these. The combiner is effectively a sum or vote/majority rune. Combiner also gives a 1-tick delay, so you can chain them to make a machine that acts like a delay rune with arbitrary memory size. Combiner with duplicate inputs, one delayed and inverted, gives edge detection. Spark is fixed value plus edge detection. For the rectifier/diode, we have a puzzle and reference solution, which needs two combiners and a multiplier. Rectifier could also be built using two combiners, fixed source, and inverter: use fixed source and inverter to get -1, then compute `Combiner(x, x, -1)` which takes (-1, 0, 1) to (-1, -1, 1), and then combine that with +1.
+* Physically reverse a list: The player's machine receives ruby blocks and sapphire blocks in some order; they must be output in reverse order. Requires building a physical contraption that behaves like a push/pop stack, or maybe putting them in a box and physically rotating it. The player presses a button to drop the next block, and we drop a stone block to signal the end of the sequence. (How do we build the infra to test? Maybe a delivery box, swapping which block is below it. Or maybe use block-comparer to produce +1 and -1 charge for each one received, and then compare sequences omitting zeros. Or maybe put the entire sequence we expect on a conveyor belt below the delivery box.)
 * Physical subtraction: Receive some number of stone blocks and some number of iron blocks; output a number of blocks equal to the absolute value of the difference, then press a button to validate answer.
+* PRIORITY Create a few puzzles that are actually difficult - maybe some of those above.
+* PRIORITY Create a few better tutorial puzzles. Maybe with the text box component in another todo item above.

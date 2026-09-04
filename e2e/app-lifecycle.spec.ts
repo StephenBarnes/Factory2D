@@ -1,6 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import type { DevelopmentDiagnosticSnapshot } from "../src/dev/diagnostic-snapshot";
+import {
+  PLAYER_DATA_FORMAT,
+  PLAYER_DATA_VERSION,
+} from "../src/game/player-data";
 import { PUZZLE_SOLUTIONS_STORAGE_KEY } from "../src/game/puzzle-solutions";
 import { seedBrowserStorage } from "./browser-fixtures";
 
@@ -173,7 +177,9 @@ test("opens settings and credits from the main menu", async ({ page }) => {
   await page.getByRole("button", { name: "SETTINGS" }).click();
   const settings = page.getByRole("dialog", { name: "SETTINGS" });
   await expect(settings).toBeVisible();
-  await expect(settings).toContainText("TODO: Add settings.");
+  await expect(settings.getByRole("button", { name: "DOWNLOAD PLAYER DATA" })).toBeVisible();
+  await expect(settings.getByRole("button", { name: "IMPORT PLAYER DATA" })).toBeVisible();
+  await expect(settings.getByRole("button", { name: "CLEAR ALL PLAYER DATA" })).toBeVisible();
   await settings.getByRole("button", { name: "CLOSE" }).click();
 
   await page.getByRole("button", { name: "CREDITS" }).click();
@@ -184,6 +190,76 @@ test("opens settings and credits from the main menu", async ({ page }) => {
     "href",
     "https://github.com/StephenBarnes/Factory2D",
   );
+});
+
+test("exports, clears, and imports all player data", async ({ page }) => {
+  const fixture = await seedBrowserStorage(page, "unlocked");
+  await page.goto("/");
+  await page.evaluate(() => {
+    window.localStorage.setItem("factory2d.test-setting", "custom value");
+  });
+
+  await page.getByRole("button", { name: "SETTINGS" }).click();
+  const settings = page.getByRole("dialog", { name: "SETTINGS" });
+  const downloadPromise = page.waitForEvent("download");
+  await settings.getByRole("button", { name: "DOWNLOAD PLAYER DATA" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("factory2d-player-data.json");
+  const downloadPath = await download.path();
+  if (downloadPath === null) {
+    throw new Error("Player data download did not produce a local file");
+  }
+  const exported = JSON.parse(await readFile(downloadPath, "utf8")) as {
+    readonly format: string;
+    readonly version: number;
+    readonly entries: readonly { readonly key: string; readonly value: string }[];
+  };
+  expect(exported).toEqual({
+    format: PLAYER_DATA_FORMAT,
+    version: PLAYER_DATA_VERSION,
+    entries: Object.entries({
+      ...fixture.values,
+      "factory2d.test-setting": "custom value",
+    }).sort(([first], [second]) => first.localeCompare(second))
+      .map(([key, value]) => ({ key, value })),
+  });
+
+  const clearReload = page.waitForEvent("load");
+  page.once("dialog", async (dialog) => {
+    expect(dialog.message()).toContain("Clear all saved puzzle progress");
+    await dialog.accept();
+  });
+  await settings.getByRole("button", { name: "CLEAR ALL PLAYER DATA" }).click();
+  await clearReload;
+  await expect(page.locator(".gemstone-count")).toHaveText("0◈");
+  expect(await page.evaluate(() => window.localStorage.length)).toBe(0);
+
+  await page.getByRole("button", { name: "SETTINGS" }).click();
+  const importReload = page.waitForEvent("load");
+  page.once("dialog", async (dialog) => {
+    expect(dialog.message()).toContain("replace all player data");
+    await dialog.accept();
+  });
+  await page.locator("#import-player-data-file").setInputFiles(downloadPath);
+  await importReload;
+
+  await expect(page.locator(".gemstone-count")).toHaveText("2◈");
+  expect(await page.evaluate(() => Object.fromEntries(
+    Array.from({ length: window.localStorage.length }, (_, index) => {
+      const key = window.localStorage.key(index);
+      if (key === null) {
+        throw new Error(`Missing localStorage key ${index}`);
+      }
+      const value = window.localStorage.getItem(key);
+      if (value === null) {
+        throw new Error(`Missing localStorage value for ${key}`);
+      }
+      return [key, value];
+    }),
+  ))).toEqual({
+    ...fixture.values,
+    "factory2d.test-setting": "custom value",
+  });
 });
 
 test("edge panels reserve a non-overlapping canvas region", async ({ page }) => {
