@@ -1888,7 +1888,15 @@ document.addEventListener("keydown", (event) => {
     return;
   }
   if (event.code === "Enter" || event.code === "NumpadEnter") {
-    if (surface.hoveredCell !== null && enterHoveredRuneArray(surface.hoveredCell)) {
+    if (surface.selection.active) {
+      event.preventDefault();
+      finalizeActivePointerGesture();
+      commitTileSelection();
+      refreshPointerHover();
+    } else if (
+      (surface.hoveredCell !== null && enterHoveredRuneArray(surface.hoveredCell)) ||
+      exitRuneArray()
+    ) {
       event.preventDefault();
     }
     return;

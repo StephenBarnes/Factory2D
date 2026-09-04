@@ -1,6 +1,6 @@
 Tasks that are not actionable yet due to prerequisites, or are lower priority, are marked as DEFER.
 Tasks that are likely to be easy to implement marked as EASY.
-Tasks that are key blockers to shipping the first version are marked as PRIORITY - once these are resolved
+Tasks that are key blockers to shipping the first version are marked as PRIORITY - once these are resolved, we'll upload our first version to Itch.io.
 
 # Game flow
 
@@ -26,11 +26,11 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 # Authoring tools, player-created puzzles, histograms
 
 * PRIORITY Implement a text-box tool that places and edits text boxes on the game screen. Useful for tutorial puzzles, and also for players that want to label/annotate their designs. Model them separate from the component grid - they're not grid-aligned, don't occupy tiles, and have no prices. Include them the puzzle JSON format and scene JSON format. Need to decide how we handle pressing enter (either finishes editing or creates a line break), how to allow editing after placing them, whether to place as a rectangle or a point, etc. Probably LMB or LMB-drag places or edits, RMB removes.
-* DEFER Add back-end server and database. Probably Cloudflare Workers + D1 + R2. Then make the game request histogram data and shared puzzles, and allow submitting scores and shared puzzles.
+* PRIORITY Add back-end server and database. Probably Cloudflare Workers + D1 + R2. Then make the game request histogram data and (later) shared puzzles, and allow submitting scores and shared puzzles.
 * DEFER Use `crypto.randomUUID()` to assign each install an ID. Allow voting community-created puzzles up and down. We can assume users aren't malicious, this is a zero-stakes indie game; expect under 10 players per day. We want to avoid setting up a whole auth system or requiring email addresses, etc. Using a simple unique ID allows exploits (e.g. clear browser data and double-vote) but we'll assume nobody does that. Version the database and roll back manually if needed. If the game becomes popular enough to need more than that, upgrade to a more robust system.
 	* Also, when using the "clear all player data" button, do not erase the UUID. Unclear what we should do when importing/exporting - maybe transfer the UUID.
 * DEFER For community puzzles, organize them automatically by their set of allowed components. Unlock each after the earliest built-in progression point where all of those components have appeared in that group or an earlier group.
-* DEFER Add histograms on the puzzle solution result modal. Rate solutions by percentile as coal, iron, gold, mithril. On the puzzle briefing screen, show the player's best score and percentile-mineral rank on each of the 4 metrics - for each metric, take the min/best over all their solutions. Also, if they have 2 or more solutions, the result modal should show their best score and the current solution's score for each metric, on each histogram.
+* PRIORITY Add histograms on the puzzle solution result modal. Rate solutions by percentile as coal, iron, gold, mithril. On the puzzle briefing screen, show the player's best score and percentile-mineral rank on each of the 4 metrics - for each metric, take the min/best over all their solutions. Also, if they have 2 or more solutions, the result modal should show their best score and the current solution's score for each metric, on each histogram.
 
 # Hardening
 
@@ -98,6 +98,7 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * For signal traces drawn in the signals panel, allow click and drag to reorder them. Probably store ordering on the signal monitor and ROM-grapher components, but hide that number - don't add a box to edit the number directly in the config modal. Only allow reordering inside each category, once categories are added.
 * For the signal monitor and ROM grapher: in their configuration modals, add a text input for "category", defaulting to blank. Then on the signal panel, group each category together, instead of board row-major order. Show category names above the traces. Useful for grouping inputs vs outputs.
 * Sequence checker follow-ups: the expected sequence must begin with a nonzero value because the checker starts on the player's first nonzero output, so the "bursts" rectifier-puzzle case cannot verify silence during its leading negative burst. Consider an optional arm/start input port, or an explicit "expect silence for N ticks before the first value" configuration, if a puzzle needs it. Also consider a configurable maximum latency that fails a solution outright instead of relying on the cycle limit. DEFER until a puzzle actually needs this.
+* Minor: allow charge sensor runes inside rune arrays, pointing at the wall of the array, to read values from outside the rune array.
 
 ## Circuit components to not add because they're already buildable
 
@@ -125,7 +126,7 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Add support for mobile and touch screens. Check if it's playable.
 * Modify sizing to make things more visible on 4k monitors. For example the prices of components are currently displayed very small in the inspector. Might also be an issue on 1080p though, so this may be a general sizing issue rather than UI scaling.
 * EASY In the sandbox, instead of showing `0 (gear symbol)` next to components, show nothing, because prices don't make sense for the sandbox.
-* EASY? On the puzzle results screen, add a button to go directly to the next puzzle's briefing screen - if the solution succeeded, and there's a defined next puzzle, and it's unlocked. Display the next puzzle's name. This is meant to help reduce menu navigation needed when we have several easy tutorial puzzles in rapid succession.
+* PRIORITY EASY? On the puzzle results screen, add a button to go directly to the next puzzle's briefing screen - if the solution succeeded, and there's a defined next puzzle, and it's unlocked. Display the next puzzle's name. This is meant to help reduce menu navigation needed when we have several easy tutorial puzzles in rapid succession.
 * EASY? For the ROM's configuration modal, allow click and drag to set multiple cells. Add three buttons to fill with red, blue, or black.
 * Allow mirroring components with some hotkey. Because we allow mirroring selections, and we'll add components like flippers. But this probably currently breaks things like ROMs which do not have mirror symmetry. Also check all components for any that have rotational asymmetry that may cause a rotated machine to behave differently, e.g. ROM cursor's wrapping behavior may break rotational symmetry. Actually, I think ROMs could be made to work with only rotation - a flip is equivalent to some rotation for them, as long as we keep the two input sides in the correct positions.
 * EASY Currently, if I change the tick speed, and then try to use space key to run/pause, it instead opens/closes the tick speed dropup menu. Same for animation checkbox. Modify it to instead do test/play and pause.
@@ -140,7 +141,7 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 * EASY On the main menu, apply the gold gradient fill to any puzzles that are unlocked and not completed yet, and also give them the decorated border.
 * EASY On the main menu, move settings and credits buttons to top-left, above the main content.
-* EASY PRIORITY Rename the "credits" button to "about". Show some text: (1) credits - primarily developed by ChatGPT 5.6 Sol, and ChatGPT 6 Astra, with some help from Fable 5.1; most design and orchestration by Stephen Barnes; (2) inspirations - include links to Roody:2d and Infinifactory on Steam, and recommend those games; (3) technical details - a very general overview of our tech stack and overall architecture.
+* EASY PRIORITY Rename the "credits" button to "about". Show some text: (1) credits (primarily developed by ChatGPT 5.6 Sol, and ChatGPT 6 Astra, with some help from Fable 5.1; some design and orchestration by Stephen Barnes); (2) inspirations - include links to Roody:2d and Infinifactory on Steam, and recommend those games; (3) technical details - a very general overview of our tech stack and overall architecture, plus link to GitHub.
 
 ## Puzzle briefing screen
 
@@ -173,9 +174,8 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 * EASY? Add shift + mousewheel to scroll through palette entries, when mouse is not over a number configurable component (because in that case shift+mousewheel configures the number).
 * EASY Add hotkeys for game controls: step-forward, step-back, reset, clear, and speed controls.
-* EASY Allow pressing enter to commit selection to its position and unselect.
 * EASY Add a shortcut for the selection tool. Maybe alt key, similar to how we have ctrl for the weld tool.
-* EASY With a rune array opened, pressing enter key should exit out of it (analogous to pressing enter to go inside it). Exception if there's a current selection to be committed (so enter-to-commit takes precedence) or if the player's mouse is over a nested rune array (in which case enter key enters that rune array).
+* When the player has entered a rune array, allow middle-click to pick the virtual conduit blocks at the edge midpoints.
 
 # Visuals
 
