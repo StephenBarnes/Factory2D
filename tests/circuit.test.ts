@@ -3,7 +3,7 @@ import { expectDefined } from "../src/util/assert";
 
 import { CircuitResolver } from "../src/simulation/circuit-resolver";
 import { Simulation } from "../src/simulation/simulation";
-import { Direction, TileKind } from "../src/simulation/tile";
+import { Direction, directionX, directionY, oppositeDirection, TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
 import { WorldRuntime } from "../src/simulation/world-runtime";
 
@@ -228,6 +228,52 @@ describe("circuit networks", () => {
       expect(world.chargeAt(1, 2)).toBe(input);
     },
   );
+
+  it.each([Direction.Up, Direction.Right, Direction.Down, Direction.Left])(
+    "senses through a %s-facing weld without making a circuit connection",
+    (orientation) => {
+      const world = new World(3, 3);
+      world.place(1, 1, TileKind.ChargeSensor, orientation);
+      for (const side of [Direction.Up, Direction.Right, Direction.Down, Direction.Left]) {
+        const x = 1 + directionX(side);
+        const y = 1 + directionY(side);
+        world.place(x, y, TileKind.Conduit);
+        world.setWeld(1, 1, x, y, true);
+        expect(world.isWelded(1, 1, x, y)).toBe(true);
+        expect(world.hasCircuitConnectionAtIndex(4, side)).toBe(side !== orientation);
+        expect(world.hasCircuitConnectionAtIndex(y * 3 + x, oppositeDirection(side)))
+          .toBe(side !== orientation);
+      }
+      world.place(0, 2, TileKind.Platform);
+      world.setWeld(0, 2, 1, 2, true);
+      world.setCharge(1 + directionX(orientation), 1 + directionY(orientation), -1);
+
+      new Simulation(world).step();
+
+      for (const side of [Direction.Up, Direction.Right, Direction.Down, Direction.Left]) {
+        expect(world.chargeAt(1 + directionX(side), 1 + directionY(side)))
+          .toBe(side === orientation ? 0 : -1);
+      }
+    },
+  );
+
+  it("senses a virtual array port without electrically joining it", () => {
+    const world = new World(2, 1);
+    world.place(0, 0, TileKind.FixedCharge);
+    world.place(1, 0, TileKind.RuneArray);
+    world.setWeld(0, 0, 1, 0, true);
+    world.configureRuneArray(1, 0, 3, 1, "");
+    const inner = world.runeArrayWorldAt(1, 0);
+    inner.place(0, 0, TileKind.ChargeSensor, Direction.Left);
+    inner.place(1, 0, TileKind.Conduit);
+    inner.setWeld(0, 0, 1, 0, true);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+    expect(inner.chargeAt(1, 0)).toBe(0);
+    simulation.step();
+    expect(inner.chargeAt(1, 0)).toBe(1);
+  });
 
   it("connects an inverter through its rotated isolated inputs and pointed output", () => {
     const world = new World(3, 3);

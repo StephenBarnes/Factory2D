@@ -534,7 +534,10 @@ export class CircuitResolver {
       return world.chargeAtPortIndex(neighbor, oppositeDirection(direction));
     }
     const parent = runtime.parent;
-    if (parent === null || !isVirtualPort(world, index, direction)) {
+    if (
+      parent === null ||
+      index !== runeArrayPortCellIndex(world.width, world.height, direction)
+    ) {
       return 0;
     }
     return parent.world.chargeAtPortIndex(runtime.parentIndex, direction);
