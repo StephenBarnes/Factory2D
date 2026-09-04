@@ -2313,6 +2313,25 @@ kbd {
   letter-spacing: 0.08em;
 }
 
+.rom-fill-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.rom-fill-actions button::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+  vertical-align: middle;
+  border: 1px solid var(--text-mid);
+  background: var(--charge-color);
+}
+
 .rom-configuration-grid {
   width: fit-content;
   max-width: 100%;
@@ -2320,6 +2339,8 @@ kbd {
   display: grid;
   grid-template-columns: repeat(var(--rom-width), minmax(22px, 32px));
   gap: 3px;
+  touch-action: none;
+  user-select: none;
 }
 
 .rom-configuration-cell {
@@ -2407,6 +2428,32 @@ kbd {
   gap: 10px;
   border-top: 1px solid var(--border-faint);
   background: var(--inset);
+}
+
+.component-configuration-actions button,
+.rom-fill-actions button {
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  color: var(--gold-bright);
+  background: var(--raised);
+  font: 700 0.7rem var(--font-mono);
+}
+
+.component-configuration-actions button:hover,
+.rom-fill-actions button:hover {
+  border-color: var(--gold);
+  background: var(--raised-hover);
+}
+
+.component-configuration-actions .primary-control {
+  border-color: var(--gold);
+  color: var(--inset);
+  background: var(--gold);
+}
+
+.component-configuration-actions .primary-control:hover {
+  background: var(--gold-bright);
 }
 
 .test-report-dialog {

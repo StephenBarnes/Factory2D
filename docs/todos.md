@@ -125,7 +125,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Modify sizing to make things more visible on 4k monitors. For example the prices of components are currently displayed very small in the inspector. Might also be an issue on 1080p though, so this may be a general sizing issue rather than UI scaling.
 * EASY In the sandbox, instead of showing `0 (gear symbol)` next to components, show nothing, because prices don't make sense for the sandbox.
 * PRIORITY EASY? On the puzzle results screen, add a button to go directly to the next puzzle's briefing screen - if the solution succeeded, and there's a defined next puzzle, and it's unlocked. Display the next puzzle's name. This is meant to help reduce menu navigation needed when we have several easy tutorial puzzles in rapid succession.
-* EASY? For the ROM's configuration modal, allow click and drag to set multiple cells. Add three buttons to fill with red, blue, or black.
 * Allow mirroring components with some hotkey. Because we allow mirroring selections, and we'll add components like flippers. But this probably currently breaks things like ROMs which do not have mirror symmetry. Also check all components for any that have rotational asymmetry that may cause a rotated machine to behave differently, e.g. ROM cursor's wrapping behavior may break rotational symmetry.
 * Modify the tick speed menu to use our own drop-up widget (like the export button).
 * EASY? Allow opening the configuration modal on blocks outside the player's modifiable region, but ban actually changing any of the config values - just to see the values.
@@ -157,6 +156,7 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * When we show the success screen / puzzle solution results screen, show the delta vs the player's previous best solution in each metric, if they have any previous solutions. So they can see easily whether their new solution improved on the previous one in each metric.
 * Add some way to copy-paste per-component configuration between configurable components. Maybe when the selection tool is used to select some components, add a "copy config from..." button which allows clicking on one component and then copies its config to all selected components of the same type.
 * EASY? On mouseover on a trace line (in the signal panel), highlight the relevant component in the grid - the signal monitor or ROM grapher that produced that graph.
+* EASY When editing the ROM rune, or configuration for any other block, pressing the escape key should act like pressing "save", not like pressing "cancel".
 
 ## Shortcuts
 
@@ -192,7 +192,7 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Add some more gradients. The current gradients on e.g. the "Sandbox" button and solution list look really good. Use them for more buttons, and for the editor panels (palette panel, bottom bar, inspector).
 * EASY Convert more text regions to a serif font, instead of small-caps or sans-serif.
 * EASY Change color of the game-canvas region outside the game board - currently it's black, change it to a very dark brown (darker than game board and panels).
-* EASY? Check button styles - some of them are grey, using the system/browser default style, which clashes. For example in the edit-configuration modal. In fact, we're setting the text color to greyish, but not setting the background or border style, so it's grey on grey which is unreadable.
+* EASY? Check remaining button styles for system/browser defaults. The component-configuration and text-box modal actions now use themed bronze buttons and gold Save buttons; audit other surfaces for similar contrast issues.
 
 ## Animations
 

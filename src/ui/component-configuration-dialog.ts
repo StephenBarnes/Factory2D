@@ -54,6 +54,13 @@ export class ComponentConfigurationDialog {
   private romValues: Charge[] = [];
   private currentKind = TileKind.Empty;
   private openArrayAfterSave = false;
+  private romStroke: {
+    readonly pointerId: number;
+    readonly button: number;
+    readonly value: Charge;
+    x: number;
+    y: number;
+  } | null = null;
 
   constructor(private readonly dialog: HTMLDialogElement) {
     this.form = requiredDescendant(dialog, "[data-component-configuration-form]");
@@ -93,6 +100,63 @@ export class ComponentConfigurationDialog {
     });
     this.romWidth.addEventListener("input", () => this.resizeRomDraft());
     this.romHeight.addEventListener("input", () => this.resizeRomDraft());
+    for (const value of [-1, 0, 1] as const) {
+      const button = requiredDescendant<HTMLButtonElement>(dialog, `[data-rom-fill="${value}"]`);
+      button.style.setProperty("--charge-color", value === 0 ? "#17131f" : CIRCUIT_CHARGE_COLORS[value]);
+      button.addEventListener("click", () => {
+        this.endRomStroke();
+        this.romValues.fill(value);
+        for (const cell of this.romGrid.querySelectorAll<HTMLButtonElement>("button")) {
+          this.updateRomCell(cell, value);
+        }
+      });
+    }
+    this.romGrid.addEventListener("pointerdown", (event) => {
+      if (this.romStroke !== null || (event.button !== 0 && event.button !== 2)) return;
+      const cell = this.romCellAt(event.clientX, event.clientY);
+      if (cell === null) return;
+      event.preventDefault();
+      cell.focus();
+      const current = expectDefined(this.romValues[Number(cell.dataset.romIndex)], "ROM draft value");
+      const value: Charge = event.button === 2 ? 0 : current === 1 ? -1 : 1;
+      this.romStroke = {
+        pointerId: event.pointerId, button: event.button, value,
+        x: event.clientX, y: event.clientY,
+      };
+      this.romGrid.setPointerCapture(event.pointerId);
+      this.paintRomCell(cell, value);
+    });
+    this.romGrid.addEventListener("pointermove", (event) => {
+      const stroke = this.romStroke;
+      if (stroke === null || stroke.pointerId !== event.pointerId) return;
+      if ((event.buttons & (stroke.button === 0 ? 1 : 2)) === 0) {
+        this.endRomStroke();
+        return;
+      }
+      const first = requiredDescendant<HTMLButtonElement>(this.romGrid, "button");
+      const bounds = first.getBoundingClientRect();
+      const steps = Math.max(1, Math.ceil(
+        Math.hypot(event.clientX - stroke.x, event.clientY - stroke.y) /
+        (Math.min(bounds.width, bounds.height) / 2),
+      ));
+      for (let step = 1; step <= steps; step += 1) {
+        const cell = this.romCellAt(
+          stroke.x + (event.clientX - stroke.x) * step / steps,
+          stroke.y + (event.clientY - stroke.y) * step / steps,
+        );
+        if (cell !== null) this.paintRomCell(cell, stroke.value);
+      }
+      stroke.x = event.clientX;
+      stroke.y = event.clientY;
+    });
+    for (const type of ["pointerup", "pointercancel", "lostpointercapture"] as const) {
+      this.romGrid.addEventListener(type, (event) => {
+        if (event.pointerId === this.romStroke?.pointerId) this.endRomStroke();
+      });
+    }
+    this.romGrid.addEventListener("contextmenu", (event) => event.preventDefault());
+    window.addEventListener("blur", () => this.endRomStroke());
+    this.dialog.addEventListener("close", () => this.endRomStroke());
   }
 
   get open(): boolean {
@@ -165,10 +229,10 @@ export class ComponentConfigurationDialog {
       this.romWidth.value = String(state.width);
       this.romHeight.value = String(state.height);
       this.romValues = [...state.values];
-      this.description.textContent = state.type === "checker"
-        ? "Expected values are read row by row. Left-click cells to alternate +1 and -1. " +
-          "Right-click clears a cell to 0."
-        : "Left-click cells to alternate +1 and -1. Right-click clears a cell to 0.";
+      this.description.textContent =
+        (state.type === "checker" ? "Expected values are read row by row. " : "") +
+        "Left-click to alternate +1 and -1; drag to paint that value. " +
+        "Right-click or right-drag clears to 0. Fill buttons replace the whole grid.";
       this.renderRomGrid(state.width, state.height);
     }
 
@@ -187,6 +251,7 @@ export class ComponentConfigurationDialog {
   }
 
   close(): void {
+    this.endRomStroke();
     this.submit = null;
     if (this.dialog.open) {
       this.dialog.close();
@@ -254,6 +319,7 @@ export class ComponentConfigurationDialog {
   }
 
   private renderRomGrid(width: number, height: number): void {
+    this.endRomStroke();
     this.romGrid.style.setProperty("--rom-width", String(width));
     const cells: HTMLButtonElement[] = [];
     for (let index = 0; index < width * height; index += 1) {
@@ -262,20 +328,34 @@ export class ComponentConfigurationDialog {
       cell.className = "rom-configuration-cell";
       cell.dataset.romIndex = String(index);
       this.updateRomCell(cell, expectDefined(this.romValues[index], "ROM draft value"));
-      cell.addEventListener("click", () => {
+      cell.addEventListener("click", (event) => {
+        // Pointer gestures paint on press; keyboard activation still alternates.
+        if (event.detail !== 0) return;
         const value = expectDefined(this.romValues[index], "ROM draft value");
-        const nextValue: Charge = value === 0 ? 1 : value === 1 ? -1 : 1;
-        this.romValues[index] = nextValue;
-        this.updateRomCell(cell, nextValue);
-      });
-      cell.addEventListener("contextmenu", (event) => {
-        event.preventDefault();
-        this.romValues[index] = 0;
-        this.updateRomCell(cell, 0);
+        this.paintRomCell(cell, value === 1 ? -1 : 1);
       });
       cells.push(cell);
     }
     this.romGrid.replaceChildren(...cells);
+  }
+
+  private romCellAt(x: number, y: number): HTMLButtonElement | null {
+    const element = document.elementFromPoint(x, y);
+    return element instanceof HTMLButtonElement && element.parentElement === this.romGrid
+      ? element : null;
+  }
+
+  private paintRomCell(cell: HTMLButtonElement, value: Charge): void {
+    this.romValues[Number(cell.dataset.romIndex)] = value;
+    this.updateRomCell(cell, value);
+  }
+
+  private endRomStroke(): void {
+    const stroke = this.romStroke;
+    this.romStroke = null;
+    if (stroke !== null && this.romGrid.hasPointerCapture(stroke.pointerId)) {
+      this.romGrid.releasePointerCapture(stroke.pointerId);
+    }
   }
 
   private updateRomCell(cell: HTMLButtonElement, value: Charge): void {
