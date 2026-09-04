@@ -166,6 +166,11 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Add some way to copy-paste per-component configuration between configurable components. Maybe when the selection tool is used to select some components, add a "copy config from..." button which allows clicking on one component and then copies its config to all selected components of the same type.
 * EASY? On mouseover on a trace line (in the signal panel), highlight the relevant component in the grid - the signal monitor or ROM grapher that produced that graph.
 
+For the text box tool:
+* Remove click-and-drag sizing. Instead, create the text box immediately on clicking. (Because we resize it automatically to contain the text, so the dragged size does nothing.)
+* Add some padding above the text. Currently a single line of text looks like it's a bit too close to the top border of the text box, and asymmetrical because there's enough space below it. Also add some more padding on the left side.
+* EASY When editing text, on pressing escape with no text in the box, instead of the current behavior (popup that says "Enter text for this box.") rather delete the text-box.
+
 ## Shortcuts
 
 * EASY? Add shift + mousewheel to scroll through palette entries, when mouse is not over a number configurable component (because in that case shift+mousewheel configures the number).

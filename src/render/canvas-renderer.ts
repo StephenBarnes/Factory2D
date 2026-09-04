@@ -36,10 +36,18 @@ const PORT_CELL_COLOR = "rgb(199 211 244 / 55%)";
 /** Below this screen-space size, procedural details cost more than they communicate. */
 const LOW_DETAIL_CELL_SIZE = 6;
 const LOW_DETAIL_MOTION_BUCKETS = 9;
-const TEXT_BOX_FONT = '0.2px Georgia, "Times New Roman", serif';
+// Measure and draw at a normal font size: subpixel fonts have inconsistent browser baselines.
+const TEXT_BOX_FONT_SCALE = 100;
+const TEXT_BOX_FONT = '20px Georgia, "Times New Roman", serif';
 const TEXT_BOX_LINE_HEIGHT = 0.26;
 const TEXT_BOX_HORIZONTAL_PADDING = 0.12;
 const TEXT_BOX_VERTICAL_PADDING = 0.06;
+
+interface TextBoxLayout {
+  readonly lines: readonly string[];
+  readonly ascent: number;
+  readonly lineHeight: number;
+}
 
 /** Supplies the containing rune array's side charges while its inner board is displayed. */
 export interface NestedBoardView {
@@ -81,7 +89,7 @@ export class CanvasRenderer {
   private tileSelectionOverlay: TileSelectionOverlay | null = null;
   private tileSelectionDraft: GridRegion | null = null;
   private textBoxPreview: TextBox | null = null;
-  private readonly textBoxLines = new WeakMap<TextBox, readonly string[]>();
+  private readonly textBoxLayouts = new WeakMap<TextBox, TextBoxLayout>();
 
   private cellSize = MAX_TILE_SIZE;
   private originX = 0;
@@ -298,18 +306,31 @@ export class CanvasRenderer {
     this.renderedNestedPortCharges = nestedPortCharges;
   }
 
-  /** Fits the saved rectangle to its wrapped text without changing the chosen width. */
+  /** Fits both dimensions to the text, wrapping only at the board's full width. */
   fitTextBox(box: TextBox): TextBox | null {
-    const padding = Math.min(TEXT_BOX_HORIZONTAL_PADDING, box.width / 4);
-    const contentWidth = box.width - padding * 2;
     this.context.save();
     this.context.font = TEXT_BOX_FONT;
-    const lines = this.wrapTextBox(box.text, contentWidth);
-    const fitsWidth = lines.every((line) => this.context.measureText(line).width <= contentWidth);
+    let longestLine = 0;
+    for (const line of box.text.split(/\r\n?|\n/)) {
+      longestLine = Math.max(longestLine, this.context.measureText(line).width);
+    }
+    const width = Math.min(
+      this.world.width,
+      (Math.ceil(longestLine) + 1) / TEXT_BOX_FONT_SCALE + TEXT_BOX_HORIZONTAL_PADDING * 2,
+    );
+    const sizedBox = { ...box, width };
+    const layout = this.layoutTextBox(sizedBox);
+    const contentWidth = (width - TEXT_BOX_HORIZONTAL_PADDING * 2) * TEXT_BOX_FONT_SCALE;
+    const fitsWidth = layout.lines.every((line) => this.context.measureText(line).width <= contentWidth);
     this.context.restore();
-    const height = lines.length * TEXT_BOX_LINE_HEIGHT + TEXT_BOX_VERTICAL_PADDING * 2;
+    const height = layout.lines.length * layout.lineHeight + TEXT_BOX_VERTICAL_PADDING * 2;
     if (!fitsWidth || height > this.world.height) return null;
-    return { ...box, y: Math.min(box.y, this.world.height - height), height };
+    return {
+      ...sizedBox,
+      x: Math.min(box.x, this.world.width - width),
+      y: Math.min(box.y, this.world.height - height),
+      height,
+    };
   }
 
   private drawTextBoxes(): void {
@@ -319,7 +340,7 @@ export class CanvasRenderer {
     context.translate(this.originX, this.originY);
     context.scale(this.cellSize, this.cellSize);
     context.font = TEXT_BOX_FONT;
-    context.textBaseline = "top";
+    context.textBaseline = "alphabetic";
     context.textAlign = "left";
     for (const box of this.world.textBoxes) {
       if (box.id !== this.textBoxPreview?.id) this.drawTextBox(box, false);
@@ -343,17 +364,40 @@ export class CanvasRenderer {
     context.rect(box.x + paddingX, box.y + paddingY, box.width - paddingX * 2, box.height - paddingY * 2);
     context.clip();
     context.fillStyle = "#f4e4c5";
-    let lines = this.textBoxLines.get(box);
-    if (lines === undefined) {
-      lines = this.wrapTextBox(box.text, box.width - paddingX * 2);
-      this.textBoxLines.set(box, lines);
+    let layout = this.textBoxLayouts.get(box);
+    if (layout === undefined) {
+      layout = this.layoutTextBox(box);
+      this.textBoxLayouts.set(box, layout);
     }
-    for (let index = 0; index < lines.length; index += 1) {
-      const y = box.y + paddingY + index * TEXT_BOX_LINE_HEIGHT;
-      if (y >= box.y + box.height - paddingY) break;
-      context.fillText(expectDefined(lines[index], "Text box line is missing"), box.x + paddingX, y);
+    context.scale(1 / TEXT_BOX_FONT_SCALE, 1 / TEXT_BOX_FONT_SCALE);
+    for (let index = 0; index < layout.lines.length; index += 1) {
+      const top = box.y + paddingY + index * layout.lineHeight;
+      if (top >= box.y + box.height - paddingY) break;
+      context.fillText(
+        expectDefined(layout.lines[index], "Text box line is missing"),
+        (box.x + paddingX) * TEXT_BOX_FONT_SCALE,
+        (top + layout.ascent) * TEXT_BOX_FONT_SCALE,
+      );
     }
     context.restore();
+  }
+
+  private layoutTextBox(box: TextBox): TextBoxLayout {
+    const padding = Math.min(TEXT_BOX_HORIZONTAL_PADDING, box.width / 4);
+    const lines = this.wrapTextBox(box.text, (box.width - padding * 2) * TEXT_BOX_FONT_SCALE);
+    const reference = this.context.measureText("Mg");
+    let ascent = reference.actualBoundingBoxAscent;
+    let descent = reference.actualBoundingBoxDescent;
+    for (const line of lines) {
+      const metrics = this.context.measureText(line);
+      ascent = Math.max(ascent, metrics.actualBoundingBoxAscent);
+      descent = Math.max(descent, metrics.actualBoundingBoxDescent);
+    }
+    return {
+      lines,
+      ascent: ascent / TEXT_BOX_FONT_SCALE,
+      lineHeight: Math.max(TEXT_BOX_LINE_HEIGHT, (ascent + descent) / TEXT_BOX_FONT_SCALE),
+    };
   }
 
   private wrapTextBox(text: string, width: number): readonly string[] {

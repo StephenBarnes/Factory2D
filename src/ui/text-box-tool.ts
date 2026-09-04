@@ -193,12 +193,13 @@ export class TextBoxTool {
       if (!this.textarea.reportValidity()) return;
       const updated = this.surface.renderer.fitTextBox({ ...box, text });
       if (updated === null) {
-        this.textarea.setCustomValidity("This text cannot fit on the board at this width. Use less text or create a wider box.");
+        this.textarea.setCustomValidity("This text cannot fit on the board. Use less text or fewer lines.");
         this.textarea.reportValidity();
         return;
       }
       if (existing === null || text !== existing.text ||
-          updated.height !== existing.height || updated.y !== existing.y) {
+          updated.width !== existing.width || updated.height !== existing.height ||
+          updated.x !== existing.x || updated.y !== existing.y) {
         world.setTextBoxes(existing === null
           ? [...world.textBoxes, updated]
           : world.textBoxes.map((entry) => entry.id === existing.id ? updated : entry));
