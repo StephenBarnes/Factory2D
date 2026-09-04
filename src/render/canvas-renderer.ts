@@ -36,6 +36,10 @@ const PORT_CELL_COLOR = "rgb(199 211 244 / 55%)";
 /** Below this screen-space size, procedural details cost more than they communicate. */
 const LOW_DETAIL_CELL_SIZE = 6;
 const LOW_DETAIL_MOTION_BUCKETS = 9;
+const TEXT_BOX_FONT = '0.2px Georgia, "Times New Roman", serif';
+const TEXT_BOX_LINE_HEIGHT = 0.26;
+const TEXT_BOX_HORIZONTAL_PADDING = 0.12;
+const TEXT_BOX_VERTICAL_PADDING = 0.06;
 
 /** Supplies the containing rune array's side charges while its inner board is displayed. */
 export interface NestedBoardView {
@@ -294,13 +298,27 @@ export class CanvasRenderer {
     this.renderedNestedPortCharges = nestedPortCharges;
   }
 
+  /** Fits the saved rectangle to its wrapped text without changing the chosen width. */
+  fitTextBox(box: TextBox): TextBox | null {
+    const padding = Math.min(TEXT_BOX_HORIZONTAL_PADDING, box.width / 4);
+    const contentWidth = box.width - padding * 2;
+    this.context.save();
+    this.context.font = TEXT_BOX_FONT;
+    const lines = this.wrapTextBox(box.text, contentWidth);
+    const fitsWidth = lines.every((line) => this.context.measureText(line).width <= contentWidth);
+    this.context.restore();
+    const height = lines.length * TEXT_BOX_LINE_HEIGHT + TEXT_BOX_VERTICAL_PADDING * 2;
+    if (!fitsWidth || height > this.world.height) return null;
+    return { ...box, y: Math.min(box.y, this.world.height - height), height };
+  }
+
   private drawTextBoxes(): void {
     if (this.world.textBoxes.length === 0 && this.textBoxPreview === null) return;
     const { context } = this;
     context.save();
     context.translate(this.originX, this.originY);
     context.scale(this.cellSize, this.cellSize);
-    context.font = "0.32px sans-serif";
+    context.font = TEXT_BOX_FONT;
     context.textBaseline = "top";
     context.textAlign = "left";
     for (const box of this.world.textBoxes) {
@@ -312,8 +330,8 @@ export class CanvasRenderer {
 
   private drawTextBox(box: TextBox, preview: boolean): void {
     const { context } = this;
-    const padding = Math.min(0.16, box.width / 4, box.height / 4);
-    const lineHeight = 0.42;
+    const paddingX = Math.min(TEXT_BOX_HORIZONTAL_PADDING, box.width / 4);
+    const paddingY = Math.min(TEXT_BOX_VERTICAL_PADDING, box.height / 4);
     context.save();
     context.fillStyle = preview ? "rgb(38 57 53 / 92%)" : "rgb(29 22 15 / 92%)";
     context.strokeStyle = preview ? "#78dcca" : "#c1a576";
@@ -322,18 +340,18 @@ export class CanvasRenderer {
     context.fillRect(box.x, box.y, box.width, box.height);
     context.strokeRect(box.x, box.y, box.width, box.height);
     context.beginPath();
-    context.rect(box.x + padding, box.y + padding, box.width - padding * 2, box.height - padding * 2);
+    context.rect(box.x + paddingX, box.y + paddingY, box.width - paddingX * 2, box.height - paddingY * 2);
     context.clip();
     context.fillStyle = "#f4e4c5";
     let lines = this.textBoxLines.get(box);
     if (lines === undefined) {
-      lines = this.wrapTextBox(box.text, box.width - padding * 2);
+      lines = this.wrapTextBox(box.text, box.width - paddingX * 2);
       this.textBoxLines.set(box, lines);
     }
     for (let index = 0; index < lines.length; index += 1) {
-      const y = box.y + padding + index * lineHeight;
-      if (y >= box.y + box.height - padding) break;
-      context.fillText(expectDefined(lines[index], "Text box line is missing"), box.x + padding, y);
+      const y = box.y + paddingY + index * TEXT_BOX_LINE_HEIGHT;
+      if (y >= box.y + box.height - paddingY) break;
+      context.fillText(expectDefined(lines[index], "Text box line is missing"), box.x + paddingX, y);
     }
     context.restore();
   }

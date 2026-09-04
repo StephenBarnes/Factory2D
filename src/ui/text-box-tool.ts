@@ -45,7 +45,7 @@ export class TextBoxTool {
     cancel.addEventListener("click", () => this.closeEditor());
     dialog.addEventListener("cancel", (event) => {
       event.preventDefault();
-      if (!this.composing) this.closeEditor();
+      if (!this.composing) this.saveEditor?.();
     });
     textarea.addEventListener("compositionstart", () => { this.composing = true; });
     textarea.addEventListener("compositionend", () => { this.composing = false; });
@@ -54,14 +54,13 @@ export class TextBoxTool {
       if (this.composing || event.isComposing || event.keyCode === 229) return;
       if (event.key === "Escape") {
         event.preventDefault();
-        this.closeEditor();
-      } else if (event.key === "Enter" && !event.shiftKey && event.target === textarea) {
-        event.preventDefault();
         this.saveEditor?.();
       }
     });
     dialog.addEventListener("keyup", (event) => event.stopPropagation());
     dialog.addEventListener("close", () => {
+      // A queued close event can arrive after the next edit has already opened.
+      if (this.dialog.open) return;
       this.saveEditor = null;
       this.composing = false;
     });
@@ -192,8 +191,14 @@ export class TextBoxTool {
       const text = this.textarea.value;
       this.textarea.setCustomValidity(text.trim() === "" ? "Enter text for this box." : "");
       if (!this.textarea.reportValidity()) return;
-      if (existing === null || text !== existing.text) {
-        const updated = { ...box, text };
+      const updated = this.surface.renderer.fitTextBox({ ...box, text });
+      if (updated === null) {
+        this.textarea.setCustomValidity("This text cannot fit on the board at this width. Use less text or create a wider box.");
+        this.textarea.reportValidity();
+        return;
+      }
+      if (existing === null || text !== existing.text ||
+          updated.height !== existing.height || updated.y !== existing.y) {
         world.setTextBoxes(existing === null
           ? [...world.textBoxes, updated]
           : world.textBoxes.map((entry) => entry.id === existing.id ? updated : entry));

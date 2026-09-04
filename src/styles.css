@@ -1070,7 +1070,7 @@ canvas {
 .text-box-swatch {
   display: grid;
   place-items: center;
-  border-color: var(--gold);
+  border-color: #5f512c;
   color: var(--gold-bright);
   background: var(--inset);
   font: 700 26px var(--font-display);
