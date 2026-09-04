@@ -11,6 +11,7 @@ import {
 import { PuzzleResult } from "../simulation/puzzle-result";
 import { TILE_DEFINITIONS, TILE_KINDS, TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
+import { WorldFeature } from "../simulation/world-features";
 
 export const PUZZLE_FORMAT = "factory2d-puzzle";
 export const PUZZLE_VERSION = 5;
@@ -51,6 +52,7 @@ const OPTIONAL_BOARD_FIELDS = [
   "isolatedOutputCharges",
   "furnaces",
   "components",
+  "textBoxes",
 ] as const;
 const TEST_CASE_FIELDS = ["id", "name", "overrides"] as const;
 const OPTIONAL_TEST_CASE_FIELDS = ["cycleLimit"] as const;
@@ -63,6 +65,7 @@ const INITIAL_BOARD_OVERRIDE_FIELDS = [
   "isolatedOutputCharges",
   "furnaces",
   "components",
+  "textBoxes",
   "welds",
 ] as const;
 
@@ -219,9 +222,25 @@ function parseInitialWorld(
   }
   if (requireVictory) {
     requireVictoryBlock(importedBoard.world, label);
+    markTextBoxesAsAuthor(importedBoard.world);
   }
   return importedBoard.world;
 }
+
+/** Every label supplied by a puzzle is fixed author content, regardless of its scene origin. */
+function markTextBoxesAsAuthor(world: World): void {
+  if (world.textBoxes.some((box) => box.owner !== "author")) {
+    world.setTextBoxes(world.textBoxes.map((box) => ({ ...box, owner: "author" })));
+  }
+  for (
+    let index = world.firstFeatureIndex(WorldFeature.RuneArray);
+    index >= 0;
+    index = world.nextFeatureIndex(WorldFeature.RuneArray, index)
+  ) {
+    markTextBoxesAsAuthor(world.runeArrayWorldAtIndex(index));
+  }
+}
+
 function requireVictoryBlock(world: World, label: string): void {
   for (let index = 0; index < world.cellCount; index += 1) {
     if (world.kindAtIndex(index) === TileKind.Victory) {

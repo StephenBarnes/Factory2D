@@ -14,8 +14,9 @@ import {
 import { componentConfigurationForKind } from "../simulation/configurable-components";
 import type { TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
+import type { TextBoxTool } from "./text-box-tool";
 
-export type BuildTool = "tile" | "weld" | "selection" | "editable-region";
+export type BuildTool = "tile" | "weld" | "selection" | "editable-region" | "text-box";
 
 export interface CanvasInteractionSurface {
   readonly canvas: HTMLCanvasElement;
@@ -30,6 +31,7 @@ export interface CanvasInteractionSurface {
 
 export interface CanvasInteractionCallbacks {
   readonly getSelectedTool: () => BuildTool;
+  readonly textBoxTool?: TextBoxTool;
   readonly getSelectedKind: () => TileKind;
   readonly editCellLine: (
     from: GridCell,
@@ -95,7 +97,11 @@ interface EditGesture extends GestureBase {
   readonly pendingConfigurationCell: GridCell | null;
 }
 
-type ActiveGesture = PickOrPanGesture | PanGesture | EditGesture;
+interface TextBoxPointerGesture extends GestureBase {
+  readonly kind: "text-box";
+}
+
+type ActiveGesture = PickOrPanGesture | PanGesture | EditGesture | TextBoxPointerGesture;
 
 /** Owns canvas pointer capture and the complete active-gesture state machine. */
 export class CanvasInteractionController {
@@ -113,6 +119,12 @@ export class CanvasInteractionController {
     canvas.addEventListener("pointercancel", (event) => this.handlePointerFinish(event));
     canvas.addEventListener("pointerleave", () => this.handlePointerLeave());
     canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+  }
+
+  private get textBoxTool(): TextBoxTool {
+    const tool = this.callbacks.textBoxTool;
+    if (tool === undefined) throw new Error("Text box gestures require a text box tool");
+    return tool;
   }
 
   get activePointerId(): number | null {
@@ -159,6 +171,11 @@ export class CanvasInteractionController {
 
     const tool = this.callbacks.getSelectedTool();
     const erase = event.button === 2;
+    if (tool === "text-box") {
+      this.active = { kind: "text-box", pointerId: event.pointerId, buttonMask, session };
+      this.textBoxTool.begin(point, event.clientX, event.clientY, erase);
+      return;
+    }
     const weldPlacedTiles = shouldWeldPlacedTile(event.button, event.shiftKey);
     const selectedKind = this.callbacks.getSelectedKind();
     const shouldConfigurePlacement =
@@ -259,6 +276,10 @@ export class CanvasInteractionController {
       this.callbacks.refreshHover();
       return;
     }
+    if (current?.kind === "text-box") {
+      this.textBoxTool.move(point, event.clientX, event.clientY);
+      return;
+    }
     if (current?.kind !== "edit") {
       throw new Error("Active edit pointer is missing its edit state");
     }
@@ -326,6 +347,17 @@ export class CanvasInteractionController {
       this.cancel();
       return;
     }
+    if (active.kind === "text-box") {
+      this.resetActiveState();
+      if (event.type === "pointerup") {
+        const point = this.surface.renderer.gridPointFromClientPoint(event.clientX, event.clientY);
+        this.textBoxTool.move(point, event.clientX, event.clientY);
+        this.textBoxTool.finish();
+      } else {
+        this.textBoxTool.cancelGesture();
+      }
+      return;
+    }
 
     if (event.type === "pointerup" && active.kind === "pick-or-pan" && active.pendingPickCell !== null) {
       this.callbacks.pickTile(active.pendingPickCell);
@@ -376,7 +408,7 @@ export class CanvasInteractionController {
    * Middle-button and Alt-secondary-button pans remain captured across ticks.
    */
   cancelEditGesture(): void {
-    if (this.active?.kind === "edit") {
+    if (this.active?.kind === "edit" || this.active?.kind === "text-box") {
       this.cancel();
     }
   }
@@ -385,6 +417,9 @@ export class CanvasInteractionController {
     const active = this.active;
     if (active === null) {
       return false;
+    }
+    if (active.kind === "text-box") {
+      this.textBoxTool.cancelGesture();
     }
     if (active.kind === "edit" && active.tool === "editable-region") {
       this.editableRegionAuthoring(active.session).cancelRectangle();

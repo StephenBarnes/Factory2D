@@ -6,6 +6,7 @@ export type DiagnosticSelectedTool =
   | { readonly kind: "weld" }
   | { readonly kind: "selection" }
   | { readonly kind: "editable-region" }
+  | { readonly kind: "text-box" }
   | {
       readonly kind: "tile";
       readonly tileKind: string;

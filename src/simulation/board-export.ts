@@ -13,6 +13,7 @@ import {
 import { furnaceRecipeFor } from "./furnace";
 import { isCharge, type Charge } from "./circuit";
 import { PuzzleResult } from "./puzzle-result";
+import type { TextBox } from "./text-box";
 import {
   MAX_RUNE_ARRAY_DEPTH,
   MAX_RUNE_ARRAY_DIMENSION,
@@ -186,6 +187,7 @@ interface ExportedBoardContents {
   readonly isolatedOutputCharges?: readonly ExportedCharge[];
   readonly furnaces?: readonly ExportedFurnace[];
   readonly components?: readonly ExportedComponent[];
+  readonly textBoxes?: readonly TextBox[];
   readonly welds: readonly string[];
 }
 
@@ -199,6 +201,7 @@ const BOARD_CONTENTS_FIELDS = [
   "isolatedOutputCharges",
   "furnaces",
   "components",
+  "textBoxes",
   "welds",
 ] as const;
 
@@ -239,6 +242,7 @@ export function serializeBoard(world: World, tick: number): string {
     ...(contents.isolatedOutputCharges === undefined ? {} : { isolatedOutputCharges: contents.isolatedOutputCharges }),
     ...(contents.furnaces === undefined ? {} : { furnaces: contents.furnaces }),
     ...(contents.components === undefined ? {} : { components: contents.components }),
+    ...(contents.textBoxes === undefined ? {} : { textBoxes: contents.textBoxes }),
     welds: contents.welds,
   };
   return `${JSON.stringify(board, null, 2)}\n`;
@@ -358,6 +362,7 @@ function exportBoardContents(world: World): ExportedBoardContents {
     ...(isolatedOutputCharges.length === 0 ? {} : { isolatedOutputCharges }),
     ...(furnaces.length === 0 ? {} : { furnaces }),
     ...(components.length === 0 ? {} : { components }),
+    ...(world.textBoxes.length === 0 ? {} : { textBoxes: world.textBoxes }),
     welds,
   };
 }
@@ -387,6 +392,7 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
     "furnaces",
     "isolatedOutputCharges",
     "components",
+    "textBoxes",
     "welds",
   ]);
   if (board.format !== FORMAT_NAME) {
@@ -893,6 +899,14 @@ function importBoardContents(
   }
 
   const world = new World(width, height);
+  if (board.textBoxes !== undefined) {
+    try {
+      // setTextBoxes performs complete runtime validation of these untrusted records.
+      world.setTextBoxes(requireArray(board.textBoxes, `${label} textBoxes`) as TextBox[]);
+    } catch (error) {
+      throw new Error(`${label} textBoxes: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const cellIndex = y * width + x;

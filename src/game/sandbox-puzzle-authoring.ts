@@ -30,6 +30,7 @@ import {
   TileKind,
 } from "../simulation/tile";
 import type { World } from "../simulation/world";
+import type { TextBox } from "../simulation/text-box";
 
 const DEFAULT_COMPONENT_PRICE = 1;
 
@@ -97,6 +98,7 @@ interface MutableSerializedBoard {
   isolatedOutputCharges?: CoordinateEntry[];
   furnaces?: CoordinateEntry[];
   components?: CoordinateEntry[];
+  textBoxes?: TextBox[];
   welds: string[];
 }
 
@@ -428,6 +430,7 @@ function serializeAuthoredTestCase(testCase: AuthoredPuzzleTestCase): unknown {
         isolatedOutputCharges: board.isolatedOutputCharges ?? [],
         furnaces: board.furnaces ?? [],
         components: board.components ?? [],
+        textBoxes: board.textBoxes ?? [],
       },
     },
   };
@@ -505,6 +508,13 @@ export function resizeWorldFromTopLeft(source: World, width: number, height: num
   board.crossingCharges = filterCoordinates(board.crossingCharges ?? [], width, height);
   board.isolatedOutputCharges = filterCoordinates(board.isolatedOutputCharges ?? [], width, height);
   board.components = filterCoordinates(board.components ?? [], width, height);
+  board.textBoxes = (board.textBoxes ?? [])
+    .filter((box) => box.x < width && box.y < height)
+    .map((box) => ({
+      ...box,
+      width: Math.min(box.width, width - box.x),
+      height: Math.min(box.height, height - box.y),
+    }));
   board.furnaces = (board.furnaces ?? []).filter((entry) => {
     if (!coordinateFits(entry, width, height)) {
       return false;

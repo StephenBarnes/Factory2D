@@ -13,6 +13,7 @@ import {
   WeldSide,
 } from "../simulation/tile";
 import type { World } from "../simulation/world";
+import type { TextBox } from "../simulation/text-box";
 import { expectDefined } from "../util/assert";
 import type { GridCell, GridEdge, GridPoint } from "./grid-drag";
 import { createBodyCell, populateBodyCell } from "./body-cells";
@@ -75,6 +76,8 @@ export class CanvasRenderer {
   private authoredEditableRegionDraft: GridRectangle | null = null;
   private tileSelectionOverlay: TileSelectionOverlay | null = null;
   private tileSelectionDraft: GridRegion | null = null;
+  private textBoxPreview: TextBox | null = null;
+  private readonly textBoxLines = new WeakMap<TextBox, readonly string[]>();
 
   private cellSize = MAX_TILE_SIZE;
   private originX = 0;
@@ -166,6 +169,13 @@ export class CanvasRenderer {
       this.renderInvalidated = true;
       this.tileSelectionOverlay = overlay;
       this.tileSelectionDraft = draft;
+    }
+  }
+
+  setTextBoxPreview(box: TextBox | null): void {
+    if (this.textBoxPreview !== box) {
+      this.textBoxPreview = box;
+      this.renderInvalidated = true;
     }
   }
 
@@ -274,6 +284,7 @@ export class CanvasRenderer {
     this.drawEditableRegionAuthoring();
     this.drawTileSelection(animationTime);
     this.drawHover(animationTime);
+    this.drawTextBoxes();
 
     this.renderInvalidated = false;
     this.renderedWorldRevision = this.world.revision;
@@ -281,6 +292,77 @@ export class CanvasRenderer {
     this.renderedPreviousWorldRevision = previousWorldRevision;
     this.renderedProgress = boundedProgress;
     this.renderedNestedPortCharges = nestedPortCharges;
+  }
+
+  private drawTextBoxes(): void {
+    if (this.world.textBoxes.length === 0 && this.textBoxPreview === null) return;
+    const { context } = this;
+    context.save();
+    context.translate(this.originX, this.originY);
+    context.scale(this.cellSize, this.cellSize);
+    context.font = "0.32px sans-serif";
+    context.textBaseline = "top";
+    context.textAlign = "left";
+    for (const box of this.world.textBoxes) {
+      if (box.id !== this.textBoxPreview?.id) this.drawTextBox(box, false);
+    }
+    if (this.textBoxPreview !== null) this.drawTextBox(this.textBoxPreview, true);
+    context.restore();
+  }
+
+  private drawTextBox(box: TextBox, preview: boolean): void {
+    const { context } = this;
+    const padding = Math.min(0.16, box.width / 4, box.height / 4);
+    const lineHeight = 0.42;
+    context.save();
+    context.fillStyle = preview ? "rgb(38 57 53 / 92%)" : "rgb(29 22 15 / 92%)";
+    context.strokeStyle = preview ? "#78dcca" : "#c1a576";
+    context.lineWidth = 0.025;
+    if (preview) context.setLineDash([0.12, 0.08]);
+    context.fillRect(box.x, box.y, box.width, box.height);
+    context.strokeRect(box.x, box.y, box.width, box.height);
+    context.beginPath();
+    context.rect(box.x + padding, box.y + padding, box.width - padding * 2, box.height - padding * 2);
+    context.clip();
+    context.fillStyle = "#f4e4c5";
+    let lines = this.textBoxLines.get(box);
+    if (lines === undefined) {
+      lines = this.wrapTextBox(box.text, box.width - padding * 2);
+      this.textBoxLines.set(box, lines);
+    }
+    for (let index = 0; index < lines.length; index += 1) {
+      const y = box.y + padding + index * lineHeight;
+      if (y >= box.y + box.height - padding) break;
+      context.fillText(expectDefined(lines[index], "Text box line is missing"), box.x + padding, y);
+    }
+    context.restore();
+  }
+
+  private wrapTextBox(text: string, width: number): readonly string[] {
+    const lines: string[] = [];
+    for (const paragraph of text.split(/\r\n?|\n/)) {
+      let line = "";
+      for (const word of paragraph.split(/(\s+)/u)) {
+        if (this.context.measureText(line + word).width <= width) {
+          line += word;
+          continue;
+        }
+        if (line !== "") {
+          lines.push(line.trimEnd());
+          line = "";
+        }
+        if (word.trim() === "") continue;
+        for (const character of word) {
+          if (line !== "" && this.context.measureText(line + character).width > width) {
+            lines.push(line);
+            line = "";
+          }
+          line += character;
+        }
+      }
+      lines.push(line.trimEnd());
+    }
+    return lines;
   }
 
   private nestedPortChargeKey(): number {

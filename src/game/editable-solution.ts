@@ -1,7 +1,7 @@
 import type { GridRegion } from "./grid-region";
 import type { World } from "../simulation/world";
 
-/** Copies only player-owned cells and welds into another puzzle-case world. */
+/** Copies player-owned cells, welds, and annotations into another puzzle-case world. */
 export function applyEditableSolution(
   target: World,
   solution: World,
@@ -10,6 +10,11 @@ export function applyEditableSolution(
   if (target.width !== solution.width || target.height !== solution.height) {
     throw new RangeError("Puzzle test world dimensions must match the solution");
   }
+
+  target.setTextBoxes([
+    ...target.textBoxes.filter((box) => box.owner === "author"),
+    ...solution.textBoxes.filter((box) => box.owner === "player"),
+  ]);
 
   for (let y = 0; y < target.height; y += 1) {
     for (let x = 0; x < target.width; x += 1) {

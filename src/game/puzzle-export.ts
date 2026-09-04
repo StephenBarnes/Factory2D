@@ -3,6 +3,7 @@ import { PUZZLE_FORMAT, PUZZLE_VERSION } from "./puzzle-format";
 import { serializeBoard } from "../simulation/board-export";
 import { TILE_DEFINITIONS, TILE_KINDS, type TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
+import type { TextBox } from "../simulation/text-box";
 
 const PLACEHOLDER_COMPONENT_PRICE = 1;
 
@@ -103,5 +104,12 @@ export function serializePuzzleTemplate(
     initialBoard,
     testCases: metadata.testCases,
   };
-  return `${JSON.stringify(puzzle, null, 2)}\n`;
+  // The same rule applies to base, nested, and additional-case boards. JSON traversal
+  // leaves the live scene and caller-owned override payloads untouched.
+  return `${JSON.stringify(puzzle, (key: string, value: unknown): unknown => {
+    if (key === "textBoxes" && Array.isArray(value)) {
+      return (value as readonly TextBox[]).map((box) => ({ ...box, owner: "author" }));
+    }
+    return value;
+  }, 2)}\n`;
 }

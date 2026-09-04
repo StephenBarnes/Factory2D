@@ -84,6 +84,7 @@ function createRecordingCanvas(width: number, height: number): RecordingCanvas {
     save: vi.fn(),
     restore: vi.fn(),
     translate: vi.fn(),
+    scale: vi.fn(),
     rotate: vi.fn(),
     setLineDash: vi.fn(),
     clip,

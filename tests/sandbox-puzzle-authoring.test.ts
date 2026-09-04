@@ -175,6 +175,36 @@ describe("sandbox puzzle authoring", () => {
     ]);
   });
 
+  it("preserves independent annotations and explicit empty annotations across exported cases", () => {
+    const imported = parseSandboxImport(authoredPuzzleSource(), "imported-puzzle.json");
+    const standard = imported.authoring.selectTestCase("standard");
+    standard.setTextBoxes([
+      { id: "hint", x: 0.25, y: 0.5, width: 2.5, height: 1, text: "Standard hint", owner: "author" },
+    ]);
+    imported.authoring.saveSelectedWorld(standard);
+    const alternate = imported.authoring.selectTestCase("alternate");
+    alternate.setTextBoxes([]);
+    imported.authoring.saveSelectedWorld(alternate);
+    const restored = parseSandboxImport(
+      imported.authoring.serialize(imported.editableRegion), "imported-puzzle.json",
+    );
+    expect(restored.authoring.selectTestCase("standard").textBoxes).toEqual(standard.textBoxes);
+    expect(restored.authoring.selectTestCase("alternate").textBoxes).toEqual([]);
+  });
+
+  it("clips fractional annotation rectangles on shrink and drops fully cropped labels", () => {
+    const world = new World(4, 3);
+    world.setTextBoxes([
+      { id: "retained", x: 1.25, y: 0.5, width: 2, height: 2, text: "Retained", owner: "author" },
+      { id: "cropped", x: 3, y: 2, width: 1, height: 1, text: "Cropped", owner: "author" },
+    ]);
+    const resized = resizeWorldFromTopLeft(world, 2, 1);
+    expect(resized.textBoxes).toEqual([
+      { id: "retained", x: 1.25, y: 0.5, width: 0.75, height: 0.5, text: "Retained", owner: "author" },
+    ]);
+    expect(resizeWorldFromTopLeft(resized, 4, 3).textBoxes).toEqual(resized.textBoxes);
+  });
+
   it("resizes a scene from the top-left while preserving retained state and welds", () => {
     const world = new World(3, 2);
     world.place(0, 0, TileKind.Delay);

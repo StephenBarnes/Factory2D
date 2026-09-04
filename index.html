@@ -151,6 +151,15 @@
           >
             <span class="swatch editable-region-swatch"></span>
           </button>
+          <button
+            class="palette-item palette-tool"
+            data-tool="text-box"
+            type="button"
+            aria-label="Text box tool"
+            title="Text boxes: left-click to add or edit, drag to draw or move, right-click to delete"
+          >
+            <span class="swatch text-box-swatch" aria-hidden="true">T</span>
+          </button>
         </div>
         <div class="panel-heading panel-tabs" role="tablist" aria-label="Palette panels">
           <button
@@ -492,6 +501,26 @@
           <div class="workshop-info-actions">
             <button type="button" data-workshop-info-close>CLOSE</button>
             <button type="submit" data-workshop-properties-save hidden>SAVE</button>
+          </div>
+        </form>
+      </dialog>
+      <dialog
+        class="component-configuration-dialog text-box-dialog"
+        id="text-box-dialog"
+        aria-labelledby="text-box-title"
+        aria-describedby="text-box-help"
+      >
+        <form>
+          <div class="component-configuration-status">BOARD ANNOTATION</div>
+          <h2 id="text-box-title">Text box</h2>
+          <p id="text-box-help">Enter saves. Shift+Enter adds a new line. Escape cancels. Text wraps inside the box; drag a larger rectangle for longer notes.</p>
+          <label class="text-box-input-panel" for="text-box-input">
+            TEXT
+            <textarea id="text-box-input" rows="6" required spellcheck="true"></textarea>
+          </label>
+          <div class="component-configuration-actions">
+            <button type="button" data-text-box-cancel>CANCEL</button>
+            <button class="primary-control" type="submit">SAVE</button>
           </div>
         </form>
       </dialog>

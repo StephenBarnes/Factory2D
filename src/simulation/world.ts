@@ -20,6 +20,7 @@ import {
 import { isCharge, type Charge } from "./circuit";
 import { furnaceRecipeFor } from "./furnace";
 import { PuzzleResult } from "./puzzle-result";
+import { validateTextBoxes, type TextBox } from "./text-box";
 import {
   requireRuneArrayDimension,
   transformRuneArrayPorts,
@@ -75,6 +76,7 @@ export class World {
   private revisionValue = 0;
   private geometryRevisionValue = 0;
   private puzzleResultValue = PuzzleResult.InProgress;
+  private textBoxesValue: readonly TextBox[] = Object.freeze([]);
   private readonly featureIndex: WorldFeatureIndex;
 
   constructor(width: number, height: number) {
@@ -116,6 +118,16 @@ export class World {
   /** Monotonically increases whenever this world's rendered body geometry may have changed. */
   get geometryRevision(): number {
     return this.geometryRevisionValue;
+  }
+
+  get textBoxes(): readonly TextBox[] {
+    return this.textBoxesValue;
+  }
+
+  setTextBoxes(boxes: readonly TextBox[]): void {
+    validateTextBoxes(boxes, this.width, this.height);
+    this.textBoxesValue = Object.freeze(boxes.map((box) => Object.freeze({ ...box })));
+    this.touchVisualRevision();
   }
 
   hasFeature(feature: WorldFeature): boolean {
@@ -1417,6 +1429,7 @@ export class World {
     this.furnaceProgress.fill(0);
     this.furnaceTargetIds.fill(0);
     this.componentStates.clear();
+    this.textBoxesValue = Object.freeze([]);
     this.rightWelds.fill(0);
     this.downWelds.fill(0);
     this.puzzleResultValue = PuzzleResult.InProgress;
@@ -1464,6 +1477,8 @@ export class World {
         this.componentStates.set(id, cloneComponentState(state));
       }
     }
+    // Frozen snapshots can be shared safely, including the per-tick render-state copy.
+    this.textBoxesValue = source.textBoxesValue;
     this.puzzleResultValue = source.puzzleResultValue;
     this.nextTileId = source.nextTileId;
     this.touchGeometryRevision();
@@ -1983,6 +1998,7 @@ export class World {
    * Builds a new world holding this board flipped, then rotated clockwise by
    * `quarterTurns`, with tile orientations, nested rune arrays, circuit charges, and welds
    * mapped along. Furnace progress is dropped and tiles receive fresh identities.
+   * Annotation rectangles follow the board transform, with their text remaining upright.
    */
   transformed(
     quarterTurns: number,
@@ -1995,6 +2011,25 @@ export class World {
       swapAxes ? this.height : this.width,
       swapAxes ? this.width : this.height,
     );
+    result.setTextBoxes(this.textBoxesValue.map((box) => {
+      let x = flippedHorizontally ? this.width - (box.x + box.width) : box.x;
+      let y = flippedVertically ? this.height - (box.y + box.height) : box.y;
+      let width = box.width;
+      let height = box.height;
+      for (let turn = 0; turn < turns; turn += 1) {
+        const boardHeight = (turn & 1) === 0 ? this.height : this.width;
+        const rotatedX = Math.max(0, boardHeight - (y + height));
+        y = x;
+        x = rotatedX;
+        [width, height] = [height, width];
+      }
+      // Clamp rounding at the boundary without rotating or mirroring the text itself.
+      return {
+        ...box, x, y,
+        width: Math.min(width, result.width - x),
+        height: Math.min(height, result.height - y),
+      };
+    }));
     const mapCell = (x: number, y: number): { x: number; y: number } => {
       let sourceX = flippedHorizontally ? this.width - 1 - x : x;
       let sourceY = flippedVertically ? this.height - 1 - y : y;
@@ -2080,6 +2115,7 @@ export class World {
    * Copies every tile, component state, charge, and weld of `source` into this world with
    * both centers aligned, dropping whatever falls outside. Both dimensions must share the
    * source's parity so the centers coincide on whole cells.
+   * Annotations move by the same offset and are clipped to the destination board.
    */
   copyCenteredFrom(source: World): void {
     const offsetX = (this.width - source.width) / 2;
@@ -2087,6 +2123,18 @@ export class World {
     if (!Number.isInteger(offsetX) || !Number.isInteger(offsetY)) {
       throw new RangeError("Centered copies require dimensions of matching parity");
     }
+    // Keep the visible part of each annotation when resizing around the board center.
+    const boxes: TextBox[] = [];
+    for (const box of source.textBoxesValue) {
+      const x = Math.max(0, box.x + offsetX);
+      const y = Math.max(0, box.y + offsetY);
+      const right = Math.min(this.width, box.x + box.width + offsetX);
+      const bottom = Math.min(this.height, box.y + box.height + offsetY);
+      if (right > x && bottom > y) {
+        boxes.push({ ...box, x, y, width: right - x, height: bottom - y });
+      }
+    }
+    this.setTextBoxes(boxes);
     const inside = (x: number, y: number): boolean =>
       x >= 0 && x < this.width && y >= 0 && y < this.height;
     for (let y = 0; y < source.height; y += 1) {

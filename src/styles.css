@@ -1067,6 +1067,15 @@ canvas {
   box-shadow: 0 0 5px rgb(240 199 94 / 55%);
 }
 
+.text-box-swatch {
+  display: grid;
+  place-items: center;
+  border-color: var(--gold);
+  color: var(--gold-bright);
+  background: var(--inset);
+  font: 700 26px var(--font-display);
+}
+
 .selection-swatch {
   border-color: #315e5b;
   background: rgb(120 220 202 / 8%);
@@ -2176,6 +2185,21 @@ kbd {
   line-height: 1.5;
 }
 
+.text-box-input-panel {
+  display: grid;
+  gap: 8px;
+  margin: 0 24px 24px;
+  color: var(--text-mid);
+  font: 700 0.7rem var(--font-mono);
+}
+
+.text-box-dialog textarea {
+  width: 100%;
+  min-height: 140px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
 .component-numeric-panel,
 .component-rom-panel {
   margin: 0 24px 24px;
@@ -2196,7 +2220,8 @@ kbd {
   display: none;
 }
 
-.component-configuration-dialog input {
+.component-configuration-dialog input,
+.text-box-dialog textarea {
   min-width: 0;
   padding: 10px 12px;
   border: 1px solid var(--border-strong);
@@ -2207,6 +2232,7 @@ kbd {
 }
 
 .component-configuration-dialog input:focus-visible,
+.text-box-dialog textarea:focus-visible,
 .rom-configuration-cell:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 2px;

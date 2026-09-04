@@ -56,6 +56,7 @@ import {
   type SnippetPlacementPointer,
 } from "./ui/snippet-panel";
 import { SignalTraceRecorder } from "./game/signal-traces";
+import { TextBoxTool } from "./ui/text-box-tool";
 import { populateComponentPalette } from "./ui/component-palette";
 
 const MAX_AUTOMATIC_ANIMATION_MS = 250;
@@ -195,10 +196,15 @@ const TOOL_INSPECTOR_DETAILS: Readonly<Record<InspectorTool, ToolInspectorDetail
     description: "Marks the board areas where a puzzle solution may place and remove tiles.",
     controls: "LEFT DRAG ADD RECTANGLE · RIGHT CLICK REMOVE RECTANGLE",
   },
+  "text-box": {
+    name: "Text box tool",
+    description: "Adds free-positioned notes without tiles or cost. Puzzle instructions and labels inside fixed arrays are read-only.",
+    controls: "LEFT CLICK ADD / EDIT · LEFT DRAG DRAW / MOVE · RIGHT CLICK DELETE · ENTER SAVE · SHIFT+ENTER NEWLINE · ESC CANCEL",
+  },
 };
 
 function isInspectorTool(value: string | undefined): value is InspectorTool {
-  return value === "weld" || value === "selection" || value === "editable-region";
+  return value === "weld" || value === "selection" || value === "editable-region" || value === "text-box";
 }
 
 
@@ -449,7 +455,7 @@ function refreshTileInspector(): void {
     showInspectorReference(surface.hoveredPaletteButton);
     return;
   }
-  if (surface.hoveredCell !== null) {
+  if (surface.hoveredCell !== null && selectedTool !== "text-box") {
     const kind = surface.world.kindAt(surface.hoveredCell.x, surface.hoveredCell.y);
     surface.inspector.update(surface.hoveredCell, componentInspectorReferences[kind] ?? null);
     return;
@@ -458,7 +464,9 @@ function refreshTileInspector(): void {
 }
 
 function refreshPointerHover(): void {
-  if (!surface.session.editingState.editable) {
+  if (selectedTool === "text-box") {
+    surface.renderer.setHover(null);
+  } else if (!surface.session.editingState.editable) {
     surface.renderer.setHover(surface.hoveredCell);
   } else if (selectedTool === "weld") {
     surface.renderer.setHoverEdge(surface.hoveredEdge);
@@ -559,6 +567,8 @@ function configureComponentPalette(): void {
   const editableRegionButton = sidebarControls.querySelector<HTMLButtonElement>(
     "[data-tool=\"editable-region\"]",
   );
+  const textBoxButton = sidebarControls.querySelector<HTMLButtonElement>("[data-tool=\"text-box\"]");
+  textBoxButton?.classList.toggle("selected", selectedTool === "text-box");
   if (weldButton === null || selectionButton === null || editableRegionButton === null) {
     throw new Error("Tool palette buttons are missing");
   }
@@ -732,6 +742,7 @@ function selectTile(kind: TileKind): void {
   if (!componentIsAvailable(kind)) {
     return;
   }
+  if (selectedTool === "text-box") canvasInteraction.cancel();
   if (selectedTool === "selection") {
     commitTileSelection();
   }
@@ -824,6 +835,7 @@ function setSelectedOrientation(orientation: Direction): void {
 }
 
 function selectWeldTool(): void {
+  if (selectedTool === "text-box") canvasInteraction.cancel();
   if (selectedTool === "selection") {
     commitTileSelection();
   }
@@ -835,6 +847,7 @@ function selectWeldTool(): void {
   refreshPointerHover();
 }
 function selectSelectionTool(): void {
+  if (selectedTool === "text-box") canvasInteraction.cancel();
   selectedTool = "selection";
   for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
     item.classList.toggle("selected", item.dataset.tool === "selection");
@@ -846,6 +859,7 @@ function selectSelectionTool(): void {
 
 
 function selectEditableRegionTool(): void {
+  if (selectedTool === "text-box") canvasInteraction.cancel();
   if (surface.editableRegionAuthoring === null) {
     return;
   }
@@ -855,6 +869,19 @@ function selectEditableRegionTool(): void {
   selectedTool = "editable-region";
   for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
     item.classList.toggle("selected", item.dataset.tool === "editable-region");
+  }
+  syncEditableRegionAuthoringOverlay();
+  syncTileSelectionOverlay();
+  refreshPointerHover();
+}
+
+function selectTextBoxTool(): void {
+  finalizeActivePointerGesture();
+  if (selectedTool === "selection") commitTileSelection();
+  temporaryWeldActive = false;
+  selectedTool = "text-box";
+  for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
+    item.classList.toggle("selected", item.dataset.tool === "text-box");
   }
   syncEditableRegionAuthoringOverlay();
   syncTileSelectionOverlay();
@@ -1088,8 +1115,14 @@ function editWeldSegment(
 const componentConfigurationView = new ComponentConfigurationDialog(
   componentConfigurationDialogElement,
 );
+const textBoxTool = new TextBoxTool(
+  surface,
+  requiredElement<HTMLDialogElement>("text-box-dialog"),
+  commitEditedWorld,
+);
 const canvasInteraction = new CanvasInteractionController(surface, {
   getSelectedTool: () => selectedTool,
+  textBoxTool,
   getSelectedKind: () => selectedKind,
   editCellLine,
   editWeld,
@@ -1104,6 +1137,7 @@ const canvasInteraction = new CanvasInteractionController(surface, {
 });
 surface.setInteractionCanceler(() => {
   canvasInteraction.cancel();
+  textBoxTool.cancel();
   snippetPanel.cancelPlacement();
 });
 const snippets = new SnippetLibraryController(window.localStorage);
@@ -1351,6 +1385,8 @@ if (import.meta.env.DEV) {
         ? { kind: "selection" }
         : selectedTool === "editable-region"
         ? { kind: "editable-region" }
+        : selectedTool === "text-box"
+        ? { kind: "text-box" }
         : {
           kind: "tile",
           tileKind: TILE_DEFINITIONS[selectedKind].name,
@@ -1457,6 +1493,8 @@ sidebarControls.addEventListener("click", (event) => {
     selectSelectionTool();
   } else if (button?.dataset.tool === "editable-region") {
     selectEditableRegionTool();
+  } else if (button?.dataset.tool === "text-box") {
+    selectTextBoxTool();
   }
 });
 function copyTileSelection(): void {
@@ -1621,6 +1659,11 @@ clearButton.addEventListener("click", () => {
   if (!surface.session.editingState.editable) {
     return;
   }
+  finalizeActivePointerGesture();
+  const preserveTextBoxes = surface.session.puzzleAuthoring === null;
+  const retainedTextBoxes = preserveTextBoxes
+    ? surface.world.textBoxes.filter((box) => box.owner === "author")
+    : [];
   if (surface.selection.active) {
     commitTileSelection();
   }
@@ -1634,6 +1677,9 @@ clearButton.addEventListener("click", () => {
         }
       }
     }
+  }
+  if (surface.viewDepth === 0 || surface.editableRegion === null) {
+    surface.world.setTextBoxes(retainedTextBoxes);
   }
   commitEditedWorld();
 });
@@ -1694,6 +1740,7 @@ copySceneButton.addEventListener("click", () => {
 
 downloadImageButton.addEventListener("click", () => {
   closeExportOptions();
+  surface.renderer.render(surface.previousWorld, 1, performance.now());
   canvas.toBlob((blob) => {
     if (blob === null) {
       throw new Error("Could not encode the grid image as PNG");
@@ -1766,11 +1813,13 @@ importFile.addEventListener("change", async () => {
 
 function finalizeActiveEditGesture(): void {
   snippetPanel.cancelPlacement();
+  textBoxTool.cancel();
   canvasInteraction.cancelEditGesture();
 }
 
 function finalizeActivePointerGesture(): boolean {
   snippetPanel.cancelPlacement();
+  textBoxTool.cancel();
   return canvasInteraction.cancel();
 }
 
@@ -1791,6 +1840,7 @@ canvas.addEventListener("wheel", (event) => {
 }, { passive: false });
 
 document.addEventListener("keydown", (event) => {
+  if (textBoxTool.open || event.isComposing || event.keyCode === 229) return;
   if (!exportOptions.hidden) {
     if (event.key === "Escape") {
       event.preventDefault();
@@ -1998,6 +2048,7 @@ document.addEventListener("keydown", (event) => {
 });
 
 document.addEventListener("keyup", (event) => {
+  if (textBoxTool.open || event.isComposing) return;
   if (event.key === "Control" && temporaryWeldActive) {
     temporaryWeldActive = false;
     if (selectedTool === "weld") {
