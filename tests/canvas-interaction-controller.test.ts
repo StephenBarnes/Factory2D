@@ -276,6 +276,37 @@ describe("canvas interaction controller", () => {
     expect(panHarness.renderer.pans).toEqual([[10, 0]]);
   });
 
+  it("keeps middle-button and Alt-secondary-button pans active across simulation steps", () => {
+    const middleHarness = interactionHarness();
+    middleHarness.controller.handlePointerDown(event("pointerdown", { button: 1 }));
+    middleHarness.controller.handlePointerMove(event("pointermove", {
+      button: 1,
+      clientX: 10.5,
+    }));
+    middleHarness.controller.cancelEditGesture();
+    middleHarness.controller.handlePointerMove(event("pointermove", {
+      button: 1,
+      clientX: 15.5,
+    }));
+
+    expect(middleHarness.canvas.captured.has(1)).toBe(true);
+    expect(middleHarness.renderer.pans).toEqual([[10, 0], [5, 0]]);
+
+    const alternateHarness = interactionHarness();
+    alternateHarness.controller.handlePointerDown(event("pointerdown", {
+      button: 2,
+      altKey: true,
+    }));
+    alternateHarness.controller.cancelEditGesture();
+    alternateHarness.controller.handlePointerMove(event("pointermove", {
+      button: 2,
+      clientX: 5.5,
+    }));
+
+    expect(alternateHarness.canvas.captured.has(1)).toBe(true);
+    expect(alternateHarness.renderer.pans).toEqual([[5, 0]]);
+  });
+
   it("uses the tool captured at pointer-down for the entire gesture", () => {
     const harness = interactionHarness();
     harness.controller.handlePointerDown(event("pointerdown"));

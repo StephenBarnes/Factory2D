@@ -373,7 +373,7 @@ function finishAnimationIfDisabled(): void {
 
 
 function advanceSimulation(duration: number, startedAt = performance.now()): void {
-  finalizeActivePointerGesture();
+  finalizeActiveEditGesture();
   if (surface.selection.active) {
     commitTileSelection();
   }
@@ -1699,6 +1699,11 @@ importFile.addEventListener("change", async () => {
     importButton.disabled = surface.session.editableRegion !== null;
   }
 });
+
+function finalizeActiveEditGesture(): void {
+  snippetPanel.cancelPlacement();
+  canvasInteraction.cancelEditGesture();
+}
 
 function finalizeActivePointerGesture(): boolean {
   snippetPanel.cancelPlacement();

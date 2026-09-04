@@ -1,4 +1,6 @@
 Tasks that are not actionable yet due to prerequisites, or are lower priority, are marked as DEFER.
+Tasks that are key blockers to shipping the first version are marked as PRIORITY.
+Tasks that are likely to be easy to implement marked as EASY.
 
 # Game flow
 
@@ -80,7 +82,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 ## New circuit components
 
 * A sensor that detects when the sensor's own tile moves, and outputs +1 on that side, -1 on the other side.
-* Add comparer component that compares front neighbor to back neighbor, outputs +1 on sides if they're equal, else output 0. Make it compare entire bodies, exactly like the delivery box but without consuming.
+* PRIORITY (for some key puzzles): Add comparer component that compares front neighbor to back neighbor, outputs +1 on sides if they're equal, else output 0. Make it compare entire bodies, exactly like the delivery box but without consuming.
 * Add a ternary LUT component. Two input lines, two identical outputs, similar to the ROM. Make it configurable (via E-key config modal) using a 3x3 grid, similar to the grids we have for ROMs but with fixed size. Each tick, it should read its two inputs and map them to a unique configured cell in the 3x3 grid, then output the value stored there. We probably won't allow this for most puzzles, or make it expensive, since it subsumes various other components (rectifier, combiner, inverter), but it could still be useful. This is overall similar to the ROM, except that (1) it doesn't have a cursor moved in (0, 1) or (1, 0) increments but instead uses direct addresses given by the two inputs; and (2) it has a fixed 3x3 grid size for the possible 2-trit input combinations. We also don't need to support the ROM grapher component for this LUT.
 * Add a "rune engine" component that's like a programmable logic array / gate array, but more native to signed ternary than binary. Details: probably take 2 inputs and produce 2 outputs. The rune engine has a grid of ternary bits which determine the I/O relation. Details to be determined. Could include an internal latch for feedback, like the PGA in Shenzhen IO.
 * Add a stack block with push/pop to store arbitrary amounts of data. Maybe front inputs of +1 and -1 are placed on the stack, while front input 0 is ignored. Side input of +1 pops one value, writing it to the back for one tick.
@@ -91,6 +93,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 
 ## Circuit component modifications
 
+* EASY The charge sensor rune should not allow circuit connections on the side it's facing, because that connection doesn't do anything. It should allow welds, but not connect to circuits on that side.
 * Show signal monitors placed inside rune arrays on the signal panel. `SignalTraceRecorder` and the panel only walk the root board today; nested monitors would need composite keys (array ID path plus inner tile ID) and a label showing which array they sit in.
 * For signal traces drawn in the signals panel, allow click and drag to reorder them. Probably store ordering on the signal monitor and ROM-grapher components, but hide that number - don't add a box to edit the number directly in the config modal. Only allow reordering inside each category, once categories are added.
 * For the signal monitor and ROM grapher: in their configuration modals, add a text input for "category", defaulting to blank. Then on the signal panel, group each category together, instead of board row-major order. Show category names above the traces. Useful for grouping inputs vs outputs.
@@ -118,92 +121,90 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * For each tile, in addition to the description, add an extended, potentially multi-paragraph description. Include things like details of how ROM rune's cursor movement works, and a color-coded truth table for the combiner rune, etc. Display these in the inspector, when the mouse is over the palette. When the mouse is over the tile grid, instead only show the short description.
 * When saving an image using the image button, crop out parts of the screen that are over the background, outside the grid, if this can be implemented easily.
 * Implement undo and redo when editing.
-* Bug: when the sim/test is running, middle-click-drag panning only seems to work briefly, maybe until the next tick; then middle mouse button has to be released and clicked again to continue panning.
-* Animate text like "+2⚙" rising off the current puzzle price as components are placed.
-* The charge sensor rune should not allow circuit connections on the side it's facing, because that connection doesn't do anything. It should allow welds, but not connect to circuits on that side.
+* Show brief text like "+2⚙" above the current puzzle price as components are placed; make it fade to transparent after a brief delay. Animate negative numbers when removing blocks. Color them blue for positive, red for negative, same as circuit charges. When many components are added/removed in rapid succession, grow the current number instead of making many separate text boxes.
 * Add support for mobile and touch screens. Check if it's playable.
 * Modify sizing to make things more visible on 4k monitors. For example the prices of components are currently displayed very small in the inspector. Might also be an issue on 1080p though, so this may be a general sizing issue rather than UI scaling.
-* In the sandbox, instead of showing `0 (gear symbol)` next to components, show nothing, because prices don't make sense for the sandbox.
-* On the puzzle results screen, add a button to go directly to the next puzzle's briefing screen - if the solution succeeded, and there's a defined next puzzle, and it's unlocked. Display the next puzzle's name. This is meant to help reduce menu navigation needed when we have several easy tutorial puzzles in rapid succession.
-* For the ROM's configuration modal, allow click and drag to set multiple cells. Add three buttons to fill with red, blue, or black.
+* EASY In the sandbox, instead of showing `0 (gear symbol)` next to components, show nothing, because prices don't make sense for the sandbox.
+* EASY? On the puzzle results screen, add a button to go directly to the next puzzle's briefing screen - if the solution succeeded, and there's a defined next puzzle, and it's unlocked. Display the next puzzle's name. This is meant to help reduce menu navigation needed when we have several easy tutorial puzzles in rapid succession.
+* EASY? For the ROM's configuration modal, allow click and drag to set multiple cells. Add three buttons to fill with red, blue, or black.
 * Allow mirroring components with some hotkey. Because we allow mirroring selections, and we'll add components like flippers. But this probably currently breaks things like ROMs which do not have mirror symmetry. Also check all components for any that have rotational asymmetry that may cause a rotated machine to behave differently, e.g. ROM cursor's wrapping behavior may break rotational symmetry. Actually, I think ROMs could be made to work with only rotation - a flip is equivalent to some rotation for them, as long as we keep the two input sides in the correct positions.
-* Currently, if I change the tick speed, and then try to use space key to run/pause, it instead opens/closes the tick speed dropup menu. Same for animation checkbox. Modify it to instead do test/play and pause.
+* EASY Currently, if I change the tick speed, and then try to use space key to run/pause, it instead opens/closes the tick speed dropup menu. Same for animation checkbox. Modify it to instead do test/play and pause.
 * Modify the tick speed menu to use our own drop-up widget (like the export button).
-* When using selection tool, on the line of buttons (flip, rotate, save snippet) add a delete button. It's already possible by pressing the delete key, but this would make it more visible, and it's necessary for devices that don't have keyboards.
-* Allow opening the configuration modal on blocks outside the player's modifiable region, but ban actually changing any of the config values - just to see the values.
+* EASY When using selection tool, on the line of buttons (flip, rotate, save snippet) add a delete button. It's already possible by pressing the delete key, but this would make it more visible, and it's necessary for devices that don't have keyboards.
+* EASY? Allow opening the configuration modal on blocks outside the player's modifiable region, but ban actually changing any of the config values - just to see the values.
 * Add an option to the export menu, in puzzles, to open the current puzzle in the sandbox.
 * DEFER Maybe support selections that are a union of rectangles, created by shift-LMB-drag.
-* When a region is selected using the selection tool, in the sandbox, add a new tool that will crop the board to that selection. (Currently it requires using the puzzle properties modal to set the grid size to specific numbers; this selection path would be easier and more intuitive.)
+* EASY? When a region is selected using the selection tool, in the sandbox, add a new tool that will crop the board to that selection. (Currently it requires using the puzzle properties modal to set the grid size to specific numbers; this selection path would be easier and more intuitive.)
 
 ## Main menu
 
-* On the main menu, apply the gold gradient fill to any puzzles that are unlocked and not completed yet, and also give them the decorated border.
+* EASY On the main menu, apply the gold gradient fill to any puzzles that are unlocked and not completed yet, and also give them the decorated border.
 
 ## Puzzle briefing screen
 
-* On the puzzle briefing screen, we currently have 3 buttons on each solution (duplicate/edit/delete) on a row below the scores, with solution name on the left of the top row. For screens that are wide, rather make this one row. Also replace the "Confirmed successful" green text with a checkmark after the solution name.
-* On the puzzle briefing screen, we currently apply a brighter border and a gold gradient to the topmost solution. Instead, apply it to all solutions with the minimum combined score.
+* EASY On the puzzle briefing screen, we currently have 3 buttons on each solution (duplicate/edit/delete) on a row below the scores, with solution name on the left of the top row. For screens that are wide, rather make this one row. Also replace the "Confirmed successful" green text with a checkmark after the solution name.
+* EASY On the puzzle briefing screen, we currently apply a brighter border and a gold gradient to the topmost solution. Instead, apply it to all solutions with the minimum combined score.
 * DEFER Later instead of a gold highlight, choose color according to a grade decided by percentile on the histogram - iron, gold, diamond, mithril. Also, on the main menu, color completed puzzles' buttons by the grade of the player's best solution.
 * DEFER Also style the 4 scores of each solution according to their grade in the histogram for that specific metric.
 
 ## Palette panel
 
 * If the player clicks and drags from a palette tile, treat it as a left-click - select that palette tile. Ideally also place the tile on mouse up on the grid, as though they clicked. So they can click and drag components from palette to grid, in addition to the current flow (click on palette, then click on grid).
-* Middle-click on palette should act like left-click on palette.
+* EASY Middle-click on palette should act like left-click on palette.
 
 ## Settings menu
 
-* Add color-blindness options for people who can't distinguish red and blue circuit wires. Maybe just let them specify colors (from a short menu) for charges +1 and -1.
-* Add option to clear all puzzle solutions and other saved state. Keep the user's UUID.
+* Add color-blindness options for people who can't distinguish red and blue circuit wires. Maybe just let them specify colors (from a short menu) for charges +1 and -1. Also apply these to the cost change popups.
+* PRIORITY EASY? Add option to clear all puzzle solutions and other saved state. Keep the user's UUID, once we track that.
 * Add a button to download all player data (everything in localStorage), and a button to import that, so players could transfer data to another device.
 
 ## Workshop (puzzle/sandbox) screen
 
 * Show a small icon to the right of the cursor, for the currently-selected tile or tool - the weld icon, the "place player-modifiable regions" tool icon, and the icon for a tile. When ctrl is held down (to weld), it should switch to the weld icon.
 * Make the palette panel resizable. Modify the icon sizes, shrinking them as the palette becomes narrower.
-* Modify the overall layout when solving a puzzle, and in the sandbox. Add a section at the top of the palette panel, always visible even when the palette is scrolled. Move the "back" button (back to puzzle or main menu), the puzzle title, and the info button to that top-left region - currently they're all in the bottom-left `workshop-identity` region. Keep the total price and the footprint readout in that workshop-identity region. Increase display size of the puzzle title (unless the name is long), and increase display size of the live puzzle metrics (cost and footprint readouts). Add the decorated border (`src/styles.css:178`) to the top-left region.
+* PRIORITY Modify the overall layout when solving a puzzle, and in the sandbox. Add a section at the top of the palette panel, always visible even when the palette is scrolled. Move the "back" button (back to puzzle or main menu), the puzzle title, and the info button to that top-left region - currently they're all in the bottom-left `workshop-identity` region. Keep the total price and the footprint readout in that workshop-identity region. Increase display size of the puzzle title (unless the name is long), and increase display size of the live puzzle metrics (cost and footprint readouts). Add the decorated border (`src/styles.css:178`) to the top-left region.
 * If the player tries to place a block, or weld, and we don't allow it, indicate the reason. (1) If it's because they're testing a puzzle, flash the reset button. (2) If it's a weld or tile edit outside the allowed region, flash the region border red. (3) If they're trying to weld an edge that can't be welded because one of the neighboring blocks can't be welded on that side, e.g. sand blocks or empty blocks or the front/back of a duplicator , draw a brief low-opacity red square overlay on those tiles.
-* Modify block placement: when using LMB-drag to place multiple blocks, automatically weld them together (if allowed) along the edge that was dragged. So e.g. dragging a boustrophedon pattern will weld in the same snake pattern. This is different from shift+LMB which welds along all edges.
+* PRIORITY Modify block placement: when using LMB-drag to place multiple blocks, automatically weld them together (if allowed) along the edge that was dragged. So e.g. dragging a boustrophedon pattern will weld in the same snake pattern. This is different from shift+LMB which welds along all edges.
 * When we show the success screen / puzzle solution results screen, show the delta vs the player's previous best solution in each metric, if they have any previous solutions. So they can see easily whether their new solution improved on the previous one in each metric.
 * Add some way to copy-paste per-component configuration between configurable components. Maybe when the selection tool is used to select some components, add a "copy config from..." button which allows clicking on one component and then copies its config to all selected components of the same type.
-* On mouseover on a trace line (in the signal panel), highlight the relevant component in the grid - the signal monitor or ROM grapher that produced that graph.
+* EASY? On mouseover on a trace line (in the signal panel), highlight the relevant component in the grid - the signal monitor or ROM grapher that produced that graph.
 
 ## Shortcuts
 
-* Add shift + mousewheel to scroll through palette entries, when mouse is not over a number configurable component (because in that case shift+mousewheel configures the number).
-* Add hotkeys for game controls: step-forward, step-back, reset, clear, and speed controls.
-* Allow pressing enter to commit selection to its position and unselect.
-* Add a shortcut for the selection tool. Maybe alt key, similar to how we have ctrl for the weld tool.
-* With a rune array opened, pressing enter key should exit out of it (analogous to pressing enter to go inside it). Exception if there's a current selection to be committed (so enter-to-commit takes precedence) or if the player's mouse is over a nested rune array (in which case enter key enters that rune array).
+* EASY? Add shift + mousewheel to scroll through palette entries, when mouse is not over a number configurable component (because in that case shift+mousewheel configures the number).
+* EASY Add hotkeys for game controls: step-forward, step-back, reset, clear, and speed controls.
+* EASY Allow pressing enter to commit selection to its position and unselect.
+* EASY Add a shortcut for the selection tool. Maybe alt key, similar to how we have ctrl for the weld tool.
+* EASY With a rune array opened, pressing enter key should exit out of it (analogous to pressing enter to go inside it). Exception if there's a current selection to be committed (so enter-to-commit takes precedence) or if the player's mouse is over a nested rune array (in which case enter key enters that rune array).
 
 # Visuals
 
 * Bug: When using the selection tool, ROMs in the selected region don't show their configured values - they show black for all cells. Seems to be a general issue with not tracking or rendering the configuration details - delay runes also don't show values.
 * Add backgrounds for puzzles, maybe with parallax as the player pans.
-* Rename runes; prefer metaphorical, arcane, or Anglish-style names. ROM rune -> rune of wisdom, sensor rune -> watchful rune, inverter -> gainsayer rune, delay rune -> recall rune, rectifier -> rightener, etc. Maybe rename +1, -1, and 0 to right, left, and center, or some other natural ternary system, if we can find a way to explain sum, multiply, and subtraction concisely in that system. Also rename the assembler - anvil or forge or something else?
-* Swap the symbols used for the selection tool and the player-modifiable region tool, but keep them with the same colors. (Selection should be dotted line, cyan, while modifiable-region tool should be two 90-degree lines, yellow.)
-* Consider letting the rune array modal show a read-only thumbnail of the inner board next to the dimension inputs, so players can judge what a shrink will crop before saving.
+* EASY Rename runes; prefer metaphorical, arcane, or Anglish-style names. ROM rune -> rune of wisdom, sensor rune -> watchful rune, inverter -> gainsayer rune, delay rune -> recall rune, rectifier -> rightener, etc. Maybe rename +1, -1, and 0 to right, left, and center, or some other natural ternary system, if we can find a way to explain sum, multiply, and subtraction concisely in that system. Also rename the assembler - anvil or forge or something else?
+* EASY Swap the symbols used for the selection tool and the player-modifiable region tool, but keep them with the same colors. (Selection should be dotted line, cyan, while modifiable-region tool should be two 90-degree lines, yellow.)
+* Make the rune array modal show a read-only thumbnail of the inner board next to the dimension inputs, so players can judge what a shrink will crop before saving.
 
 ## Specific block appearance changes
 
 * Make the glass block look more like transparent glass. (By adding some specular, and making it darker in the middle and brighter on the rim to simulate Fresnel, I think. We don't need actual rendered transparency.)
 * For the piston base block, don't show the small rectangle that's meant to represent the head/arm of the piston. Only show it on the combined / retracted base+arm block, and on the extended arm block.
-* Mark the "wire crossing" tile in a way that makes it apparent it's a wire-crossing block regardless of how many circuit connections it has. Currently with one wire, or two opposite-side wires connected, it looks like a conduit block except for the background color. Maybe draw the central cross regardless of how many sides are wired.
+* EASY Mark the "wire crossing" tile in a way that makes it apparent it's a wire-crossing block regardless of how many circuit connections it has. Currently with one wire, or two opposite-side wires connected, it looks like a conduit block except for the background color. Maybe draw the central cross regardless of how many sides are wired.
 * Replace the current rune icon set with more intuitive or pretty symbols, matching the rune theme. Make stone/glass/platform have two parallel lines instead of the Z-lightning-bolt. Block sensor should have angular rune-like eye symbol (hollow diamond with center diamond for the pupil); charge sensor should be the same eye with lighting bolt replacing pupil. Fixed charge should have 3 lighting bolts, not plus symbol and circle. Inverter should be "hagalaz" N/H symbol. Subtractor should mark back with a small plus. Rectifier should be "thurisaz" `|>` instead of current `>|` diode symbol. Victory block should have "jera" rune symbol. Magnet should be reworked, but defer until we change its mechanics. Also give them sensible background colors, e.g. shades of purple for all sensors, teal/blue for all 3-input mathematical transforms.
 * When placing welders/splitters, show additional bars for where the welds/splits will happen.
-* Standardize side output and input arrows on our components. The "ROM grapher" component's side arrow looks good. Change arrows on delay rune, charge counter, and ROM rune to match that (except flip direction for inputs). Also similarly change arrows on combiner, multiplier, and subtractor, to match these, though note their arrows light up with a color. Also we don't need to add new arrows to any of these - some of them like the combiner have 3 inputs and 1 output, but we don't need to mark the inputs since it's already clear visually.
+* EASY Standardize side output and input arrows on our components. The "ROM grapher" component's side arrow looks good. Change arrows on delay rune, charge counter, and ROM rune to match that (except flip direction for inputs). Also similarly change arrows on combiner, multiplier, and subtractor, to match these, though note their arrows light up with a color. Also we don't need to add new arrows to any of these - some of them like the combiner have 3 inputs and 1 output, but we don't need to mark the inputs since it's already clear visually.
 * Make circuit components (logic gates, sensors) look more like shiny gemstones instead of smooth pebbles. Maybe they just need specular highlights.
 * Modify colors for all runes. In general they're too pastel and muted. The teal of the platform block looks especially bad; it's also used by combiner and ROM.
+* For the rotator component, we should modify rendering to make behavior more obvious. Maybe draw as a welded block with only around a third of the width, on welded side, and then draw the rotator arm separately. Also mark red/blue on the sides of the base to show which charge rotates in which direction. Also animate the rotator arm itself turning (different from animating the bodies it rotated).
 
 ## Styling
 
 * Refine the dwarven UI theme: the palette now lives in CSS custom properties on `:root` in `src/styles.css` (stone browns, bronze, gold, ember, gem accents) with gilded corner ornaments on major panels; consider richer Art Deco corner motifs (diagonals, doubled lines) and reviewing tile fill/decoration colors in `src/simulation/tile.ts` for warmth.
-* Add a dark/light mode toggle. Set to dark by default, or browser default. The `:root` custom-property palette is the switching point: add a `[data-theme="light"]` override block and a persisted toggle.
+* EASY? Add a dark/light mode toggle. Set to dark by default, or browser default. The `:root` custom-property palette is the switching point: add a `[data-theme="light"]` override block and a persisted toggle.
 * Add some more gradients. The current gradients on e.g. the "Sandbox" button and solution list look really good. Use them for more buttons, and for the editor panels (palette panel, bottom bar, inspector).
-* Modify selection tool color - make it purple instead of teal.
-* Convert more text regions to a serif font, instead of small-caps or sans-serif.
-* Change color of the game-canvas region outside the game board - currently it's black, change it to a very dark brown (darker than game board and panels).
-* Check button styles - some of them are grey, using the system/browser default style, which clashes. For example in the edit-configuration modal. In fact, we're setting the text color to greyish, but not setting the background or border style, so it's grey on grey which is unreadable.
+* EASY Convert more text regions to a serif font, instead of small-caps or sans-serif.
+* EASY Change color of the game-canvas region outside the game board - currently it's black, change it to a very dark brown (darker than game board and panels).
+* EASY? Check button styles - some of them are grey, using the system/browser default style, which clashes. For example in the edit-configuration modal. In fact, we're setting the text color to greyish, but not setting the background or border style, so it's grey on grey which is unreadable.
 
 ## Animations
 
@@ -226,4 +227,5 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 
 * Count up to N pulses from two separate sources and decide which source gave more pulses in total. One solution idea: use a counter block, with an inverter on one of the two inputs, and then check whether final value is positive or negative? But wrap-arounds are possible, so maybe use spark blocks to initialize it to N. Also we can't read the value of the counter block directly, would need to decrement it until it reaches zero and compare number of decrements to initial value; but that seems like almost the same problem we started with?
 * A suite of basic circuit problems, where you only have: conduit, combiner, inverter, and fixed source. Add puzzles to build most of the more advanced circuit components out of these. The combiner is effectively a sum or vote/majority rune. Combiner also gives a 1-tick delay, so you can chain them to make the delay rune with arbitrary memory size. Combiner with duplicate inputs, one delayed and inverted, gives edge detection. Spark is fixed value plus edge detection. For the rectifier/diode, we have a puzzle and reference solution, which needs two combiners and a multiplier. Rectifier could also be built using two combiners, fixed source, and inverter: use fixed source and inverter to get -1, then compute `Combiner(x, x, -1)` which takes (-1, 0, 1) to (-1, -1, 1), and then combine that with +1.
-* The player's machine receives gold blocks and amethyst blocks in some order; they must be output in reverse order. Requires building a physical contraption that behaves like a push/pop stack. The player presses a button to drop the next block, and we drop a stone block to signal the end of the sequence.
+* The player's machine receives ruby blocks and sapphire blocks in some order; they must be output in reverse order. Requires building a physical contraption that behaves like a push/pop stack, or maybe putting them in a box and physically rotating it. The player presses a button to drop the next block, and we drop a stone block to signal the end of the sequence. (How do we build the infra to test? Maybe a delivery box, swapping which block is below it. Or maybe use block-comparer to produce +1 and -1 charge for each one received, and then compare sequences omitting zeros. Or maybe put the entire sequence we expect on a conveyor belt below the delivery box.)
+* Physical subtraction: Receive some number of stone blocks and some number of iron blocks; output a number of blocks equal to the absolute value of the difference, then press a button to validate answer.

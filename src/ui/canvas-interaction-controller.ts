@@ -371,6 +371,16 @@ export class CanvasInteractionController {
     this.callbacks.refreshHover();
   }
 
+  /**
+   * Ends a world-editing gesture before a simulation step without interrupting camera navigation.
+   * Middle-button and Alt-secondary-button pans remain captured across ticks.
+   */
+  cancelEditGesture(): void {
+    if (this.active?.kind === "edit") {
+      this.cancel();
+    }
+  }
+
   cancel(): boolean {
     const active = this.active;
     if (active === null) {
