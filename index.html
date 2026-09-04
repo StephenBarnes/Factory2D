@@ -32,6 +32,39 @@
         </div>
       </section>
 
+      <section class="sandbox-info-screen" id="sandbox-info-screen" aria-labelledby="sandbox-info-title" hidden>
+        <div class="puzzle-info-content">
+          <button class="info-back-button" id="sandbox-info-back-button" type="button">← MAIN MENU</button>
+          <header class="puzzle-info-header">
+            <p class="eyebrow">WORKSHOP BRIEFING</p>
+            <h1 id="sandbox-info-title">Sandbox</h1>
+          </header>
+          <div class="puzzle-info-layout">
+            <section class="puzzle-brief" aria-labelledby="sandbox-brief-title">
+              <h2 id="sandbox-brief-title">BUILD FREELY</h2>
+              <p class="puzzle-info-description">
+                Experiment with every component, build your own puzzles, and keep independent workshop designs.
+              </p>
+              <div class="puzzle-goal">
+                <span>WORKSHOP</span>
+                <strong>No limits, objectives, or component costs.</strong>
+              </div>
+            </section>
+            <section class="solutions-panel" aria-labelledby="sandboxes-title">
+              <div class="solutions-heading">
+                <div>
+                  <p class="eyebrow">SAVED DESIGNS</p>
+                  <h2 id="sandboxes-title">SANDBOXES</h2>
+                </div>
+                <button class="solution-primary-action" id="new-sandbox-button" type="button">+ NEW SANDBOX</button>
+              </div>
+              <div class="solution-list" id="sandbox-list" role="list" aria-label="Saved sandboxes"></div>
+              <p class="empty-solutions" id="empty-sandboxes">No saved sandboxes. Create one to enter the workshop.</p>
+            </section>
+          </div>
+        </div>
+      </section>
+
       <section class="puzzle-info-screen" id="puzzle-info-screen" aria-labelledby="puzzle-info-title" hidden>
         <div class="puzzle-info-content">
           <button class="info-back-button" id="puzzle-info-back-button" type="button">← PUZZLE MAP</button>

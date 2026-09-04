@@ -26,6 +26,11 @@ export interface WorkshopSession {
   readonly editingState: WorkshopEditingState;
 }
 
+export interface SandboxWorkshopSnapshot {
+  readonly source: string;
+  readonly selectedTestCaseId: string;
+}
+
 function createWorkshopSession(
   world: World,
   puzzle: PuzzleDefinition | null = null,
@@ -48,21 +53,36 @@ function createWorkshopSession(
 }
 
 export class WorkshopSessionController {
-  private readonly sandboxSession: WorkshopSession;
+  private readonly sandboxSessions = new Map<string, WorkshopSession>();
   private readonly solutionSessions = new Map<string, WorkshopSession>();
   private currentSession: WorkshopSession;
 
   constructor(sandboxWorld: World) {
-    this.sandboxSession = createWorkshopSession(sandboxWorld);
-    this.currentSession = this.sandboxSession;
+    this.currentSession = createWorkshopSession(sandboxWorld);
   }
 
   get active(): WorkshopSession {
     return this.currentSession;
   }
 
-  activateSandbox(): boolean {
-    return this.activate(this.sandboxSession);
+  activateSandbox(sandboxId: string, imported: SandboxPuzzleImport): boolean {
+    let session = this.sandboxSessions.get(sandboxId);
+    if (session === undefined) {
+      session = createWorkshopSession(imported.world);
+      session.simulation.tick = imported.tick;
+      session.puzzleAuthoring = imported.authoring;
+      const regionAuthoring = session.editableRegionAuthoring;
+      if (regionAuthoring === null) {
+        throw new Error("Sandbox editable-region authoring state is missing");
+      }
+      regionAuthoring.replaceForBoard(
+        imported.world.width,
+        imported.world.height,
+        imported.editableRegion,
+      );
+      this.sandboxSessions.set(sandboxId, session);
+    }
+    return this.activate(session);
   }
 
   activateSolution(
@@ -80,6 +100,10 @@ export class WorkshopSessionController {
       this.solutionSessions.set(solution.id, session);
     }
     return this.activate(session);
+  }
+
+  forgetSandbox(sandboxId: string): void {
+    this.sandboxSessions.delete(sandboxId);
   }
 
   forgetSolution(solutionId: string): void {
@@ -196,9 +220,23 @@ export class WorkshopSessionController {
     this.currentSession.previousWorld = world.clone();
   }
 
+  snapshotActiveSandbox(): SandboxWorkshopSnapshot {
+    this.requireActiveSandbox();
+    const authoring = this.activeSandboxAuthoring();
+    const regionAuthoring = this.currentSession.editableRegionAuthoring;
+    if (regionAuthoring === null) {
+      throw new Error("Sandbox editable-region authoring state is missing");
+    }
+    authoring.saveSelectedWorld(this.currentSession.baseline);
+    return {
+      source: authoring.serialize(regionAuthoring.region),
+      selectedTestCaseId: authoring.selectedTestCaseId,
+    };
+  }
+
   private requireActiveSandbox(): void {
-    if (this.currentSession !== this.sandboxSession) {
-      throw new Error("Sandbox authoring can only change the active sandbox session");
+    if (this.currentSession.puzzleAuthoring === null) {
+      throw new Error("Sandbox authoring can only change an active sandbox session");
     }
   }
   private activeSandboxAuthoring(): SandboxPuzzleAuthoringState {

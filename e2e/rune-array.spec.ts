@@ -21,6 +21,13 @@ async function diagnosticSnapshot(page: Page): Promise<DevelopmentDiagnosticSnap
   });
 }
 
+async function openNewSandbox(page: Page): Promise<void> {
+  await page.goto("/sandbox");
+  await page.getByRole("button", { name: "+ NEW SANDBOX" }).click();
+  await expect(page).toHaveURL(/\/sandbox\/sandbox-\d+$/);
+}
+
+
 /** Screen center of a cell on the displayed board, which is fitted with a one-cell margin when nested. */
 async function viewCellCenter(
   page: Page,
@@ -61,7 +68,7 @@ async function rootBoard(page: Page): Promise<NestedBoardJson> {
 }
 
 test("rune arrays open as nested boards that share the workshop tools", async ({ page }) => {
-  await page.goto("/sandbox");
+  await openNewSandbox(page);
   const bar = page.locator("#nested-view-bar");
   await expect(bar).toBeHidden();
 

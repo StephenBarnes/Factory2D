@@ -1,17 +1,21 @@
-import { isPuzzleUnlocked, PUZZLES, type PuzzleId } from "./puzzles";
+import { isPuzzleUnlocked, PUZZLES } from "./puzzles";
+import type { PuzzleId } from "./puzzles";
 import type { AppScreen } from "./screen";
 
 export interface AppRouteAccess {
   readonly completedPuzzleIds: ReadonlySet<PuzzleId>;
   readonly solutionExists: (puzzleId: PuzzleId, solutionId: string) => boolean;
+  readonly sandboxExists: (sandboxId: string) => boolean;
 }
 
 export function appScreenPath(screen: AppScreen): string {
   switch (screen.kind) {
     case "main-menu":
       return "/";
-    case "sandbox":
+    case "sandbox-info":
       return "/sandbox";
+    case "sandbox":
+      return `/sandbox/${encodeURIComponent(screen.sandboxId)}`;
     case "puzzle-info":
       return `/puzzles/${encodeURIComponent(screen.puzzleId)}`;
     case "puzzle":
@@ -20,8 +24,11 @@ export function appScreenPath(screen: AppScreen): string {
 }
 
 export function resolveAppScreen(screen: AppScreen, access: AppRouteAccess): AppScreen {
-  if (screen.kind === "main-menu" || screen.kind === "sandbox") {
+  if (screen.kind === "main-menu" || screen.kind === "sandbox-info") {
     return screen;
+  }
+  if (screen.kind === "sandbox") {
+    return access.sandboxExists(screen.sandboxId) ? screen : { kind: "sandbox-info" };
   }
 
   const puzzle = PUZZLES.find((candidate) => candidate.id === screen.puzzleId);
@@ -45,8 +52,18 @@ export function resolveAppPath(pathname: string, access: AppRouteAccess): AppScr
   if (segments.length === 0) {
     return { kind: "main-menu" };
   }
-  if (segments.length === 1 && segments[0] === "sandbox") {
-    return { kind: "sandbox" };
+  if (segments[0] === "sandbox") {
+    if (segments.length === 1) {
+      return { kind: "sandbox-info" };
+    }
+    if (segments.length === 2) {
+      const sandboxId = segments[1];
+      if (sandboxId === undefined || sandboxId.length === 0) {
+        return { kind: "sandbox-info" };
+      }
+      return resolveAppScreen({ kind: "sandbox", sandboxId }, access);
+    }
+    return { kind: "main-menu" };
   }
   if (segments.length !== 2 && segments.length !== 4) {
     return { kind: "main-menu" };

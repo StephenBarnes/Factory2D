@@ -98,15 +98,30 @@ export interface ParsedPuzzleFile {
 }
 
 export function parsePuzzleFile(value: unknown, fileName: string): ParsedPuzzleFile {
+  return parsePuzzleFileWithVictoryRequirement(value, fileName, true);
+}
+
+export function parsePuzzleAuthoringSnapshot(
+  value: unknown,
+  label: string,
+): ParsedPuzzleFile {
+  return parsePuzzleFileWithVictoryRequirement(value, label, false);
+}
+
+function parsePuzzleFileWithVictoryRequirement(
+  value: unknown,
+  fileName: string,
+  requireVictory: boolean,
+): ParsedPuzzleFile {
   try {
-    return parsePuzzleFileValue(value);
+    return parsePuzzleFileValue(value, requireVictory);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`${fileName}: ${message}`);
   }
 }
 
-function parsePuzzleFileValue(value: unknown): ParsedPuzzleFile {
+function parsePuzzleFileValue(value: unknown, requireVictory: boolean): ParsedPuzzleFile {
   const puzzle = requireExactObject(
     value,
     "Puzzle",
@@ -155,14 +170,20 @@ function parsePuzzleFileValue(value: unknown): ParsedPuzzleFile {
     BOARD_FIELDS,
     OPTIONAL_BOARD_FIELDS,
   );
-  const initialWorld = parseInitialWorld(board, "Puzzle initialBoard");
+  const initialWorld = parseInitialWorld(board, "Puzzle initialBoard", requireVictory);
   if (initialWorld.width !== width || initialWorld.height !== height) {
     throw new Error("Puzzle initialBoard dimensions must match Puzzle width and height");
   }
   if (!editableRegion.fitsWithin(initialWorld.width, initialWorld.height)) {
     throw new Error("Puzzle editableRegions must fit within initialBoard dimensions");
   }
-  const testCases = parseTestCases(puzzle.testCases, board, initialWorld, cycleLimit);
+  const testCases = parseTestCases(
+    puzzle.testCases,
+    board,
+    initialWorld,
+    cycleLimit,
+    requireVictory,
+  );
   return Object.freeze({
     id,
     groupId,
@@ -178,7 +199,11 @@ function parsePuzzleFileValue(value: unknown): ParsedPuzzleFile {
   });
 }
 
-function parseInitialWorld(board: Record<string, unknown>, label: string): World {
+function parseInitialWorld(
+  board: Record<string, unknown>,
+  label: string,
+  requireVictory: boolean,
+): World {
   let importedBoard: ImportedBoard;
   try {
     importedBoard = deserializeBoardValue(board);
@@ -192,7 +217,9 @@ function parseInitialWorld(board: Record<string, unknown>, label: string): World
   if (importedBoard.world.puzzleResult !== PuzzleResult.InProgress) {
     throw new Error(`${label} result must be "in-progress"`);
   }
-  requireVictoryBlock(importedBoard.world, label);
+  if (requireVictory) {
+    requireVictoryBlock(importedBoard.world, label);
+  }
   return importedBoard.world;
 }
 function requireVictoryBlock(world: World, label: string): void {
@@ -210,6 +237,7 @@ function parseTestCases(
   baseBoard: Record<string, unknown>,
   baseWorld: World,
   puzzleCycleLimit: number,
+  requireVictory: boolean,
 ): readonly ParsedPuzzleTestCase[] {
   const entries = requireArray(value, "Puzzle testCases");
   const testCases: ParsedPuzzleTestCase[] = [
@@ -259,6 +287,7 @@ function parseTestCases(
     const initialWorld = parseInitialWorld(
       { ...baseBoard, ...initialBoardOverrides },
       `${label} initialBoard`,
+      requireVictory,
     );
     if (
       initialWorld.width !== baseWorld.width ||

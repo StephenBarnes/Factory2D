@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+import { GridRegion } from "../src/game/grid-region";
+import { SavedSandboxController } from "../src/game/saved-sandbox-controller";
 import { SavedSolutionController } from "../src/game/saved-solution-controller";
 import { loadPuzzleSolutions } from "../src/game/puzzle-solutions";
 import { createSandboxWorld, puzzleById } from "../src/game/puzzles";
 import { WorkshopSessionController } from "../src/game/workshop-session";
+import { SandboxPuzzleAuthoringState } from "../src/game/sandbox-puzzle-authoring";
 import { serializeBoard } from "../src/simulation/board-export";
 import { TileKind } from "../src/simulation/tile";
 
@@ -26,7 +29,15 @@ describe("workshop session controller", () => {
       board: serializeBoard(initialWorld, 0),
       scores: null,
     } as const;
-    const sessions = new WorkshopSessionController(createSandboxWorld());
+    const sandboxWorld = createSandboxWorld();
+    const sessions = new WorkshopSessionController(sandboxWorld);
+    const sandboxAuthoring = SandboxPuzzleAuthoringState.createDefault(sandboxWorld);
+    expect(sessions.activateSandbox("sandbox-1", {
+      world: sandboxWorld,
+      tick: 0,
+      editableRegion: new GridRegion([]),
+      authoring: sandboxAuthoring,
+    })).toBe(true);
     const sandbox = sessions.active;
     expect(sandbox.editableRegionAuthoring).not.toBeNull();
 
@@ -44,7 +55,12 @@ describe("workshop session controller", () => {
     expect(puzzleSession.world.kindAt(8, 3)).toBe(TileKind.Stone);
     expect(puzzleSession.editingState.editable).toBe(true);
 
-    expect(sessions.activateSandbox()).toBe(true);
+    expect(sessions.activateSandbox("sandbox-1", {
+      world: sandboxWorld,
+      tick: 0,
+      editableRegion: new GridRegion([]),
+      authoring: sandboxAuthoring,
+    })).toBe(true);
     expect(sessions.active).toBe(sandbox);
     expect(sessions.activateSolution(solution, puzzle)).toBe(true);
     expect(sessions.active).toBe(puzzleSession);
@@ -116,5 +132,35 @@ describe("saved solution controller", () => {
     ]);
     controller.delete(duplicate.id);
     expect(controller.forPuzzle(puzzle.id).map(({ id }) => id)).toEqual([solution.id]);
+  });
+});
+
+describe("saved sandbox controller", () => {
+  it("owns dirty snapshot persistence and restores independent sessions", () => {
+    const storage = createStorage();
+    const controller = new SavedSandboxController(storage);
+    const saved = controller.create();
+    const sessions = new WorkshopSessionController(createSandboxWorld());
+    sessions.activateSandbox(saved.id, controller.import(saved.id));
+
+    sessions.active.world.place(0, 0, TileKind.Iron);
+    sessions.saveEditedBaseline();
+    sessions.duplicateActiveSandboxTestCase();
+    sessions.active.world.place(1, 0, TileKind.Stone);
+    sessions.saveEditedBaseline();
+    controller.markDirty(saved.id);
+    controller.persistSnapshotIfDirty(saved.id, sessions.snapshotActiveSandbox());
+
+    const restored = new SavedSandboxController(storage);
+    const imported = restored.import(saved.id);
+    expect(imported.authoring.selectedTestCaseId).toBe("case-1");
+    expect(imported.authoring.testCases).toHaveLength(2);
+    expect(imported.world.kindAt(0, 0)).toBe(TileKind.Iron);
+    expect(imported.world.kindAt(1, 0)).toBe(TileKind.Stone);
+
+    const duplicate = restored.duplicate(saved.id);
+    expect(restored.entries.map(({ id }) => id)).toEqual([saved.id, duplicate.id]);
+    restored.delete(duplicate.id);
+    expect(restored.entries.map(({ id }) => id)).toEqual([saved.id]);
   });
 });

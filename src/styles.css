@@ -92,6 +92,7 @@ canvas:focus-visible {
 
 .game-screen[hidden],
 .main-menu-screen[hidden],
+.sandbox-info-screen[hidden],
 .puzzle-info-screen[hidden] {
   display: none;
 }
@@ -392,6 +393,7 @@ canvas:focus-visible {
   color: #ffe9bb;
 }
 
+.sandbox-info-screen,
 .puzzle-info-screen {
   position: absolute;
   z-index: 4;
@@ -565,6 +567,10 @@ canvas:focus-visible {
   color: inherit;
   background: #191309;
   text-align: left;
+}
+
+.sandbox-row {
+  grid-template-columns: 1fr;
 }
 
 .solution-row:hover {

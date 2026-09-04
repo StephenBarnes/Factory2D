@@ -1,6 +1,7 @@
 import { GridRegion } from "./grid-region";
 import {
   MAX_PUZZLE_CYCLE_LIMIT,
+  parsePuzzleAuthoringSnapshot,
   parsePuzzleFile,
   PUZZLE_FORMAT,
   PUZZLE_ID_PATTERN,
@@ -458,6 +459,31 @@ export function parseSandboxImport(source: string, fileName: string): SandboxPuz
     tick: imported.tick,
     editableRegion: new GridRegion([]),
     authoring: SandboxPuzzleAuthoringState.createDefault(imported.world),
+  };
+}
+
+export function parseSandboxSnapshot(
+  source: string,
+  label: string,
+  selectedTestCaseId: string,
+): SandboxPuzzleImport {
+  let value: unknown;
+  try {
+    value = JSON.parse(source);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`${label}: Invalid JSON: ${message}`);
+  }
+  const parsed = parsePuzzleAuthoringSnapshot(value, label);
+  if (!isRecord(value)) {
+    throw new Error(`${label}: Saved sandbox snapshot must be an object`);
+  }
+  const authoring = SandboxPuzzleAuthoringState.fromParsedPuzzle(parsed, value);
+  return {
+    world: authoring.selectTestCase(selectedTestCaseId),
+    tick: 0,
+    editableRegion: parsed.editableRegion,
+    authoring,
   };
 }
 

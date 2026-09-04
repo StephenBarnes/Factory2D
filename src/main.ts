@@ -4,6 +4,7 @@ import type {
   DiagnosticDirection,
 } from "./dev/diagnostic-snapshot";
 import { NavigationController } from "./game/navigation-controller";
+import { SavedSandboxController } from "./game/saved-sandbox-controller";
 import { SavedSolutionController } from "./game/saved-solution-controller";
 import { PuzzleTestController } from "./game/puzzle-test-controller";
 import { parseSandboxImport } from "./game/sandbox-puzzle-authoring";
@@ -77,6 +78,7 @@ const sessions = new WorkshopSessionController(createSandboxWorld());
 const canvas = requiredElement<HTMLCanvasElement>("game-canvas");
 const gameScreen = requiredElement<HTMLElement>("game-screen");
 const mainMenuScreen = requiredElement<HTMLElement>("main-menu-screen");
+const sandboxInfoScreen = requiredElement<HTMLElement>("sandbox-info-screen");
 const puzzleInfoScreen = requiredElement<HTMLElement>("puzzle-info-screen");
 const puzzleMap = requiredElement<HTMLElement>("puzzle-map");
 const sandboxButton = requiredElement<HTMLButtonElement>("sandbox-button");
@@ -855,8 +857,8 @@ function commitEditedWorld(): void {
   }
   sessions.saveEditedBaseline();
   finishAnimation();
-  navigation.markActiveSolutionDirty();
-  navigation.persistActiveSolutionBoard();
+  navigation.markActiveWorkshopDirty();
+  navigation.persistActiveWorkshop();
   refreshPuzzleMetrics();
 }
 
@@ -1244,6 +1246,8 @@ function changeSandboxTestCase(updateSession: () => void): void {
     cancelInteraction: true,
     updateSession,
   });
+  navigation.markActiveWorkshopDirty();
+  navigation.persistActiveWorkshop();
   configureSandboxTestCaseMenu();
   updateTransportState();
   refreshPointerHover();
@@ -1251,10 +1255,12 @@ function changeSandboxTestCase(updateSession: () => void): void {
 
 
 const savedSolutions = new SavedSolutionController(window.localStorage);
+const savedSandboxes = new SavedSandboxController(window.localStorage);
 const navigation = new NavigationController(
   {
     gameScreen,
     mainMenuScreen,
+    sandboxInfoScreen,
     puzzleInfoScreen,
     puzzleMap,
     screenTitle,
@@ -1284,6 +1290,8 @@ const navigation = new NavigationController(
         properties.height !== surface.session.world.height;
       if (!dimensionsChanged) {
         sessions.updateActiveSandboxProperties(properties);
+        navigation.markActiveWorkshopDirty();
+        navigation.persistActiveWorkshop();
         return;
       }
       stopWorkshopActivity();
@@ -1294,6 +1302,8 @@ const navigation = new NavigationController(
           sessions.updateActiveSandboxProperties(properties);
         },
       });
+      navigation.markActiveWorkshopDirty();
+      navigation.persistActiveWorkshop();
       configureComponentPalette();
       updateTransportState();
       refreshPointerHover();
@@ -1301,6 +1311,7 @@ const navigation = new NavigationController(
   },
   sessions,
   savedSolutions,
+  savedSandboxes,
   window.localStorage,
   window.history,
 );
@@ -1363,7 +1374,7 @@ puzzlePrice.addEventListener("pointerleave", () => {
 });
 
 sandboxButton.addEventListener("click", () => {
-  navigation.navigate({ kind: "sandbox" });
+  navigation.navigate({ kind: "sandbox-info" });
 });
 settingsButton.addEventListener("click", () => {
   settingsDialog.showModal();
@@ -1679,6 +1690,8 @@ importFile.addEventListener("change", async () => {
       cancelInteraction: true,
       updateSession: () => sessions.replaceActiveSandboxImport(imported),
     });
+    navigation.markActiveWorkshopDirty();
+    navigation.persistActiveWorkshop();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     window.alert(`Could not import file: ${message}`);
@@ -1923,7 +1936,7 @@ window.addEventListener("popstate", () => {
 });
 window.addEventListener("pagehide", () => {
   if (!finalizeActivePointerGesture()) {
-    navigation.persistActiveSolutionBoard();
+    navigation.persistActiveWorkshop();
   }
 });
 window.addEventListener("resize", renderPalettePreviews);
@@ -1932,7 +1945,9 @@ window.addEventListener("resize", renderPalettePreviews);
 function frame(currentTime: number): void {
   const elapsed = Math.min(currentTime - previousFrameTime, 250);
   previousFrameTime = currentTime;
-  if (navigation.screen.kind === "main-menu" || navigation.screen.kind === "puzzle-info") {
+  if (navigation.screen.kind === "main-menu" ||
+      navigation.screen.kind === "sandbox-info" ||
+      navigation.screen.kind === "puzzle-info") {
     requestAnimationFrame(frame);
     return;
   }

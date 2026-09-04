@@ -12,6 +12,7 @@ import { expectDefined } from "../src/util/assert";
 function routeAccess(
   completedPuzzleIds: readonly PuzzleId[] = [],
   solutions: readonly (readonly [PuzzleId, string])[] = [],
+  sandboxIds: readonly string[] = [],
 ): AppRouteAccess {
   return {
     completedPuzzleIds: new Set(completedPuzzleIds),
@@ -19,6 +20,7 @@ function routeAccess(
       solutions.some(([candidatePuzzleId, candidateSolutionId]) =>
         candidatePuzzleId === puzzleId && candidateSolutionId === solutionId
       ),
+    sandboxExists: (sandboxId) => sandboxIds.includes(sandboxId),
   };
 }
 
@@ -31,7 +33,10 @@ const ROOT_PUZZLE_PATH = `/puzzles/${ROOT_PUZZLE.id}`;
 describe("application routes", () => {
   it("formats every screen as a stable URL path", () => {
     expect(appScreenPath({ kind: "main-menu" })).toBe("/");
-    expect(appScreenPath({ kind: "sandbox" })).toBe("/sandbox");
+    expect(appScreenPath({ kind: "sandbox-info" })).toBe("/sandbox");
+    expect(appScreenPath({ kind: "sandbox", sandboxId: "sandbox/one" })).toBe(
+      "/sandbox/sandbox%2Fone",
+    );
     expect(appScreenPath({ kind: "puzzle-info", puzzleId: "puzzle-id" })).toBe(
       "/puzzles/puzzle-id",
     );
@@ -43,10 +48,14 @@ describe("application routes", () => {
   });
 
   it("resolves menu, sandbox, puzzle, and saved-solution paths", () => {
-    const access = routeAccess([], [[ROOT_PUZZLE.id, "solution/one"]]);
+    const access = routeAccess([], [[ROOT_PUZZLE.id, "solution/one"]], ["sandbox/one"]);
 
     expect(resolveAppPath("/", access)).toEqual({ kind: "main-menu" });
-    expect(resolveAppPath("/sandbox/", access)).toEqual({ kind: "sandbox" });
+    expect(resolveAppPath("/sandbox/", access)).toEqual({ kind: "sandbox-info" });
+    expect(resolveAppPath("/sandbox/sandbox%2Fone", access)).toEqual({
+      kind: "sandbox",
+      sandboxId: "sandbox/one",
+    });
     expect(resolveAppPath(ROOT_PUZZLE_PATH, access)).toEqual({
       kind: "puzzle-info",
       puzzleId: ROOT_PUZZLE.id,
@@ -72,6 +81,16 @@ describe("application routes", () => {
     });
     expect(resolveAppPath("/puzzles/%", access)).toEqual({ kind: "main-menu" });
     expect(resolveAppPath("//sandbox", access)).toEqual({ kind: "main-menu" });
+  });
+
+  it("falls back to sandbox info for a missing saved sandbox", () => {
+    expect(resolveAppPath("/sandbox/missing", routeAccess())).toEqual({
+      kind: "sandbox-info",
+    });
+    expect(resolveAppScreen(
+      { kind: "sandbox", sandboxId: "missing" },
+      routeAccess(),
+    )).toEqual({ kind: "sandbox-info" });
   });
 
   it("enforces group progression for direct puzzle routes", () => {

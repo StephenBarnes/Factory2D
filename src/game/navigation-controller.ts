@@ -2,21 +2,24 @@ import {
   appScreenPath,
   resolveAppPath,
   resolveAppScreen,
-  type AppRouteAccess,
 } from "./app-route";
+import type { AppRouteAccess } from "./app-route";
 import {
   loadCompletedPuzzleIds,
   recordPuzzleResult,
   saveCompletedPuzzleIds,
 } from "./puzzle-progress";
-import { PUZZLES, puzzleById, type PuzzleId } from "./puzzles";
+import { PUZZLES, puzzleById } from "./puzzles";
+import type { PuzzleId } from "./puzzles";
 import type { AppScreen } from "./screen";
 import type { SandboxPuzzleProperties } from "./sandbox-puzzle-authoring";
-import { SavedSolutionController } from "./saved-solution-controller";
+import type { SavedSandboxController } from "./saved-sandbox-controller";
+import type { SavedSolutionController } from "./saved-solution-controller";
 import type { PuzzleScores } from "./puzzle-scores";
-import { WorkshopSessionController } from "./workshop-session";
+import type { WorkshopSessionController } from "./workshop-session";
 import { populatePuzzleMap } from "../ui/main-menu";
 import { PuzzleInfoView } from "../ui/puzzle-info";
+import { SandboxInfoView } from "../ui/sandbox-info";
 import { WorkshopInfoDialog } from "../ui/workshop-info-dialog";
 import { PuzzleResult } from "../simulation/puzzle-result";
 
@@ -27,6 +30,7 @@ type NavigationHistory = Pick<History, "pushState" | "replaceState">;
 export interface NavigationElements {
   readonly gameScreen: HTMLElement;
   readonly mainMenuScreen: HTMLElement;
+  readonly sandboxInfoScreen: HTMLElement;
   readonly puzzleInfoScreen: HTMLElement;
   readonly puzzleMap: HTMLElement;
   readonly screenTitle: HTMLElement;
@@ -45,6 +49,7 @@ export interface NavigationCallbacks {
 export class NavigationController {
   private readonly puzzleInfoView: PuzzleInfoView;
   private readonly workshopInfoDialog: WorkshopInfoDialog;
+  private readonly sandboxInfoView: SandboxInfoView;
   private readonly completedPuzzleIds: Set<PuzzleId>;
   private currentScreen: AppScreen = { kind: "main-menu" };
   private readonly routeAccess: AppRouteAccess;
@@ -55,10 +60,12 @@ export class NavigationController {
     private readonly callbacks: NavigationCallbacks,
     private readonly sessions: WorkshopSessionController,
     private readonly solutions: SavedSolutionController,
+    private readonly sandboxes: SavedSandboxController,
     private readonly storage: PuzzleProgressStorage,
     private readonly history: NavigationHistory,
   ) {
     this.puzzleInfoView = new PuzzleInfoView(elements.puzzleInfoScreen);
+    this.sandboxInfoView = new SandboxInfoView(elements.sandboxInfoScreen);
     this.workshopInfoDialog = new WorkshopInfoDialog(elements.workshopInfoDialog);
     try {
       this.completedPuzzleIds = loadCompletedPuzzleIds(storage);
@@ -70,6 +77,7 @@ export class NavigationController {
       completedPuzzleIds: this.completedPuzzleIds,
       solutionExists: (puzzleId, solutionId) =>
         this.solutions.findById(solutionId)?.puzzleId === puzzleId,
+      sandboxExists: (sandboxId) => this.sandboxes.findById(sandboxId) !== undefined,
     };
   }
 
@@ -95,14 +103,17 @@ export class NavigationController {
   private showScreen(screen: AppScreen): void {
     this.workshopInfoDialog.close();
     this.callbacks.stopSimulation();
-    this.persistActiveSolutionBoard();
+    this.persistActiveWorkshop();
     this.currentScreen = screen;
 
     const showingMainMenu = screen.kind === "main-menu";
+    const showingSandboxInfo = screen.kind === "sandbox-info";
     const showingPuzzleInfo = screen.kind === "puzzle-info";
     this.elements.mainMenuScreen.hidden = !showingMainMenu;
+    this.elements.sandboxInfoScreen.hidden = !showingSandboxInfo;
     this.elements.puzzleInfoScreen.hidden = !showingPuzzleInfo;
-    this.elements.gameScreen.hidden = showingMainMenu || showingPuzzleInfo;
+    this.elements.gameScreen.hidden =
+      showingMainMenu || showingSandboxInfo || showingPuzzleInfo;
 
     if (showingMainMenu) {
       populatePuzzleMap(this.elements.puzzleMap, {
@@ -115,6 +126,11 @@ export class NavigationController {
       return;
     }
 
+    if (showingSandboxInfo) {
+      this.renderSandboxInfo();
+      return;
+    }
+
     if (showingPuzzleInfo) {
       this.renderPuzzleInfo(screen.puzzleId);
       return;
@@ -122,9 +138,13 @@ export class NavigationController {
 
     let sessionChanged: boolean;
     if (screen.kind === "sandbox") {
-      sessionChanged = this.sessions.activateSandbox();
-      this.elements.menuButton.textContent = "← MENU";
-      this.elements.screenTitle.textContent = "SANDBOX";
+      const sandbox = this.sandboxes.byId(screen.sandboxId);
+      sessionChanged = this.sessions.activateSandbox(
+        sandbox.id,
+        this.sandboxes.import(sandbox.id),
+      );
+      this.elements.menuButton.textContent = "← SANDBOX";
+      this.elements.screenTitle.textContent = sandbox.name.toUpperCase();
       this.elements.workshopInfoButton.setAttribute("aria-label", "Puzzle properties");
       this.elements.workshopInfoButton.title = "Puzzle properties";
       this.elements.workshopInfoButton.onclick = () => {
@@ -171,20 +191,31 @@ export class NavigationController {
       });
       return;
     }
+    if (this.currentScreen.kind === "sandbox") {
+      this.navigate({ kind: "sandbox-info" });
+      return;
+    }
     this.navigate({ kind: "main-menu" });
   }
 
-  markActiveSolutionDirty(): void {
+  markActiveWorkshopDirty(): void {
     if (this.currentScreen.kind === "puzzle") {
       this.solutions.markDirty(this.currentScreen.solutionId);
+    } else if (this.currentScreen.kind === "sandbox") {
+      this.sandboxes.markDirty(this.currentScreen.sandboxId);
     }
   }
 
-  persistActiveSolutionBoard(): void {
+  persistActiveWorkshop(): void {
     if (this.currentScreen.kind === "puzzle") {
       this.solutions.persistBoardIfDirty(
         this.currentScreen.solutionId,
         this.sessions.active.baseline,
+      );
+    } else if (this.currentScreen.kind === "sandbox") {
+      this.sandboxes.persistSnapshotIfDirty(
+        this.currentScreen.sandboxId,
+        this.sessions.snapshotActiveSandbox(),
       );
     }
   }
@@ -213,6 +244,35 @@ export class NavigationController {
     } catch (error) {
       console.error("Could not save puzzle progress:", error);
     }
+  }
+
+  private openSandbox(sandboxId: string): void {
+    this.navigate({ kind: "sandbox", sandboxId });
+  }
+
+  private renderSandboxInfo(): void {
+    this.sandboxInfoView.render({
+      sandboxes: this.sandboxes.entries,
+      onBack: () => this.navigate({ kind: "main-menu" }),
+      onCreate: () => {
+        const sandbox = this.sandboxes.create();
+        this.openSandbox(sandbox.id);
+      },
+      onDuplicate: (sandboxId) => {
+        this.sandboxes.duplicate(sandboxId);
+        this.renderSandboxInfo();
+      },
+      onEdit: (sandboxId) => this.openSandbox(sandboxId),
+      onDelete: (sandboxId) => {
+        const sandbox = this.sandboxes.byId(sandboxId);
+        if (!window.confirm(`Delete ${sandbox.name}? This cannot be undone.`)) {
+          return;
+        }
+        this.sandboxes.delete(sandboxId);
+        this.sessions.forgetSandbox(sandboxId);
+        this.renderSandboxInfo();
+      },
+    });
   }
 
   private openSolution(puzzleId: PuzzleId, solutionId: string): void {

@@ -17,6 +17,14 @@ async function diagnosticSnapshot(page: Page): Promise<DevelopmentDiagnosticSnap
   });
 }
 
+async function openNewSandbox(page: Page): Promise<void> {
+  await page.goto("/sandbox");
+  await expect(page.getByRole("heading", { name: "Sandbox", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "+ NEW SANDBOX" }).click();
+  await expect(page).toHaveURL(/\/sandbox\/sandbox-\d+$/);
+}
+
+
 async function boardCellCenter(
   page: Page,
   x: number,
@@ -96,9 +104,38 @@ async function placeStone(page: Page, x: number, y: number): Promise<void> {
   await page.mouse.click(point.x, point.y);
 }
 
+test("creates, persists, duplicates, and deletes saved sandboxes", async ({ page }) => {
+  await seedBrowserStorage(page, "empty");
+  await page.goto("/");
+  await page.getByRole("button", { name: /Sandbox/ }).click();
+  await expect(page).toHaveURL(/\/sandbox$/);
+  await expect(page.getByText("No saved sandboxes. Create one to enter the workshop.")).toBeVisible();
+
+  await page.getByRole("button", { name: "+ NEW SANDBOX" }).click();
+  await expect(page).toHaveURL(/\/sandbox\/sandbox-1$/);
+  await expect(page.locator("#screen-title")).toHaveText("SANDBOX 1");
+  await placeStone(page, 0, 0);
+  await page.getByRole("button", { name: "← SANDBOX" }).click();
+  await expect(page.getByText("Sandbox 1", { exact: true })).toBeVisible();
+
+  await page.reload();
+  await page.getByRole("button", { name: "Edit Sandbox 1" }).click();
+  const board = JSON.parse((await diagnosticSnapshot(page)).serializedBoard) as {
+    readonly grid: readonly string[];
+  };
+  expect(board.grid[0]?.[0]).toBe("#");
+  await page.getByRole("button", { name: "← SANDBOX" }).click();
+
+  await page.getByRole("button", { name: "Duplicate Sandbox 1" }).click();
+  await expect(page.getByText("Sandbox 1 Copy", { exact: true })).toBeVisible();
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Delete Sandbox 1 Copy" }).click();
+  await expect(page.getByText("Sandbox 1 Copy", { exact: true })).toHaveCount(0);
+});
+
 test("selection shortcuts use occupied bounds and grid clicks unselect", async ({ page }) => {
   await seedBrowserStorage(page, "empty");
-  await page.goto("/sandbox");
+  await openNewSandbox(page);
   await page.getByRole("button", { name: "Selection tool" }).click();
 
   await page.keyboard.press("Control+A");
@@ -151,7 +188,7 @@ test("opens settings and credits from the main menu", async ({ page }) => {
 
 test("edge panels reserve a non-overlapping canvas region", async ({ page }) => {
   await seedBrowserStorage(page, "empty");
-  await page.goto("/sandbox");
+  await openNewSandbox(page);
 
   for (const viewport of [
     { width: 1280, height: 800 },
@@ -240,9 +277,9 @@ test("workshop identity exposes information and live puzzle metrics", async ({ p
   await expect(metrics).toHaveText("1⚙ | 1×1");
   await expect(palette).not.toHaveClass(/show-prices/);
 
-  await page.goto("/sandbox");
+  await openNewSandbox(page);
   await expect(page.locator("#puzzle-metrics")).toBeHidden();
-  await expect(page.locator("#screen-title")).toHaveText("SANDBOX");
+  await expect(page.locator("#screen-title")).toHaveText("SANDBOX 1");
   await page.getByRole("button", { name: "Puzzle properties" }).click();
   await expect(dialog.getByRole("textbox", { name: "ID" })).toHaveValue("untitled-puzzle");
   await expect(dialog.getByRole("combobox", { name: "GROUP" })).toHaveValue("basics");
@@ -277,7 +314,7 @@ test("workshop identity exposes information and live puzzle metrics", async ({ p
 
 test("sandbox test-case menu duplicates, switches, and deletes independent boards", async ({ page }) => {
   await seedBrowserStorage(page, "empty");
-  await page.goto("/sandbox");
+  await openNewSandbox(page);
 
   const caseButton = page.getByRole("button", { name: "CASE: Standard case" });
   await expect(caseButton).toBeVisible();
@@ -310,7 +347,7 @@ test("sandbox test-case menu duplicates, switches, and deletes independent board
 
 test("tile inspector follows palette, tool, and occupied-board hover", async ({ page }) => {
   await seedBrowserStorage(page, "empty");
-  await page.goto("/sandbox");
+  await openNewSandbox(page);
 
   const inspector = page.locator("#tile-inspector");
   const inspectorName = inspector.locator("[data-inspector-name]");
@@ -573,7 +610,7 @@ test("renders puzzle cases and leaves the failed case paused on the board", asyn
   await page.locator("#menu-button").click();
   await expect(page).toHaveURL(/\/puzzles\/first-shift$/);
 
-  await page.goto("/sandbox");
+  await openNewSandbox(page);
   await expect(page.getByRole("button", { name: "▶ RUN" })).toBeVisible();
   await expect(report).not.toBeVisible();
 });
@@ -688,7 +725,7 @@ test("malformed storage falls back to a usable empty state", async ({ page }) =>
 
 test("export dropup exposes scene actions and sandbox puzzle authoring", async ({ page }) => {
   await seedBrowserStorage(page, "empty");
-  await page.goto("/sandbox");
+  await openNewSandbox(page);
   await page.getByRole("button", { name: "Puzzle properties" }).click();
   const propertiesDialog = page.locator("#workshop-info-dialog");
   await propertiesDialog.getByRole("textbox", { name: "ID" }).fill("authored-puzzle");
