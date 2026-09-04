@@ -3,6 +3,7 @@ import { DeliveryResolver } from "./delivery-resolver";
 import { DuplicatorResolver } from "./duplicator-resolver";
 import { FurnaceResolver } from "./furnace-resolver";
 import { MotionWorkspace } from "./motion-workspace";
+import { RotatorResolver } from "./rotator-resolver";
 import { WeldOperationResolver } from "./weld-operation-resolver";
 import { WeldedBodyIndex } from "./welded-body-index";
 import type { World } from "./world";
@@ -21,6 +22,7 @@ export class WorldRuntime {
   readonly duplicatorResolver: DuplicatorResolver;
   readonly furnaceResolver: FurnaceResolver;
   readonly motionWorkspace: MotionWorkspace;
+  readonly rotatorResolver: RotatorResolver;
   readonly weldOperationResolver: WeldOperationResolver;
   readonly nextCharges: Int8Array;
   readonly nextCrossingVerticalCharges: Int8Array;
@@ -53,6 +55,7 @@ export class WorldRuntime {
     this.duplicatorResolver = new DuplicatorResolver(world, this.weldedBodies);
     this.furnaceResolver = new FurnaceResolver(world);
     this.motionWorkspace = new MotionWorkspace(world);
+    this.rotatorResolver = new RotatorResolver(world);
     this.weldOperationResolver = new WeldOperationResolver(world);
     this.nextCharges = new Int8Array(world.cellCount);
     this.nextCrossingVerticalCharges = new Int8Array(world.cellCount);
@@ -105,6 +108,9 @@ export class WorldRuntime {
     let movementCount = this.world.hasFeature(WorldFeature.Gravity)
       ? this.motionWorkspace.resolveOrdinaryMovements(tick)
       : 0;
+    if (this.world.hasFeature(WorldFeature.Rotator)) {
+      movementCount += this.rotatorResolver.resolve();
+    }
     if (this.world.hasFeature(WorldFeature.Piston)) {
       movementCount += this.motionWorkspace.resolvePistons();
     }

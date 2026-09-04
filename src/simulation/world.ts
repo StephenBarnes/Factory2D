@@ -535,12 +535,41 @@ export class World {
     if (!componentStateMatchesKind(snapshot, kind)) {
       throw new Error(`Component state at (${x}, ${y}) does not match ${TILE_DEFINITIONS[kind].name}`);
     }
+    if (
+      snapshot.type === "rotator" &&
+      snapshot.direction === oppositeDirection(this.orientationAtIndex(index))
+    ) {
+      throw new Error(`Rotator at (${x}, ${y}) cannot point toward its rear input`);
+    }
     const id = this.ids[index] ?? 0;
     if (id === 0) {
       throw new Error(`Configurable component at (${x}, ${y}) has no tile identity`);
     }
     this.componentStates.set(id, stateFromSnapshot(snapshot));
     this.touchVisualRevision();
+  }
+
+  rotatorDirectionAtIndex(index: number): Direction {
+    const state = this.requireComponentStateAtIndex(index);
+    if (state.type !== "rotator") {
+      throw new Error(`Tile at index ${index} is not a rotator`);
+    }
+    return state.direction;
+  }
+
+  setRotatorDirectionAtIndex(index: number, direction: Direction): void {
+    const state = this.requireComponentStateAtIndex(index);
+    if (state.type !== "rotator") {
+      throw new Error(`Tile at index ${index} is not a rotator`);
+    }
+    const orientation = this.orientationAtIndex(index);
+    if (direction === oppositeDirection(orientation)) {
+      throw new Error(`Rotator at index ${index} cannot point toward its rear input`);
+    }
+    if (state.direction !== direction) {
+      state.direction = direction;
+      this.touchVisualRevision();
+    }
   }
 
   advanceDelayAtIndex(index: number, input: Charge): Charge {
@@ -1062,6 +1091,10 @@ export class World {
           copiedState.ports = Int8Array.from(
             transformRuneArrayPorts(copiedState.ports, 0, !mirrorVertically, mirrorVertically),
           );
+        } else if (copiedState.type === "rotator") {
+          copiedState.direction = mirrorVertically
+            ? flipDirectionVertically(copiedState.direction)
+            : flipDirectionHorizontally(copiedState.direction);
         } else if (copiedState.type === "assembler") {
           for (let slot = 0; slot < copiedState.pendingOrientations.length; slot += 1) {
             const pendingKind = copiedState.pendingKinds[slot] as TileKind;
@@ -1326,6 +1359,14 @@ export class World {
 
     if (this.kinds[index] === kind) {
       if (this.orientations[index] !== orientation) {
+        if (this.kinds[index] === TileKind.Rotator) {
+          const state = this.requireComponentStateAtIndex(index);
+          if (state.type !== "rotator") {
+            throw new Error(`Rotator at index ${index} has invalid component state`);
+          }
+          const turns = (orientation - (this.orientations[index] as Direction) + 4) & 3;
+          state.direction = ((state.direction + turns) & 3) as Direction;
+        }
         this.orientations[index] = orientation;
         this.charges[index] = 0;
         this.crossingVerticalCharges[index] = 0;
@@ -1355,6 +1396,7 @@ export class World {
     this.orientations[index] = orientation;
     const componentState = createDefaultComponentState(
       kind,
+      orientation,
       (width, height) => new World(width, height),
     );
     if (componentState !== null) {
@@ -1737,6 +1779,202 @@ export class World {
     this.downWelds.set(this.movedDownWelds);
     this.touchGeometryRevision();
     return movementCount;
+  }
+
+  /**
+   * Atomically rotates the selected occupied cells around a stationary pivot cell.
+   * `quarterTurn` is +1 clockwise or -1 counterclockwise in screen coordinates.
+   */
+  rotateCells(
+    selected: Uint8Array,
+    pivot: number,
+    quarterTurn: -1 | 1,
+  ): number {
+    if (selected.length !== this.cellCount) {
+      throw new RangeError("Rotation selection must match the world cell count");
+    }
+    this.assertIndex(pivot);
+    const pivotX = pivot % this.width;
+    const pivotY = (pivot - pivotX) / this.width;
+    const destinationFor = (source: number): number => {
+      const sourceX = source % this.width;
+      const sourceY = (source - sourceX) / this.width;
+      const deltaX = sourceX - pivotX;
+      const deltaY = sourceY - pivotY;
+      const destinationX = pivotX + (quarterTurn === 1 ? -deltaY : deltaY);
+      const destinationY = pivotY + (quarterTurn === 1 ? deltaX : -deltaX);
+      return destinationX < 0 ||
+          destinationX >= this.width ||
+          destinationY < 0 ||
+          destinationY >= this.height
+        ? -1
+        : destinationY * this.width + destinationX;
+    };
+
+    let rotatedCellCount = 0;
+    for (let source = 0; source < this.cellCount; source += 1) {
+      if (selected[source] === 0) {
+        continue;
+      }
+      if (selected[source] !== 1 || this.kinds[source] === TileKind.Empty) {
+        throw new Error(`Rotation selection contains invalid cell ${source}`);
+      }
+      const destination = destinationFor(source);
+      if (destination < 0) {
+        throw new Error(`Rotation from index ${source} leaves the world`);
+      }
+      if (this.kinds[destination] !== TileKind.Empty && selected[destination] === 0) {
+        throw new Error(`Rotation from index ${source} collides at index ${destination}`);
+      }
+      const x = source % this.width;
+      if (
+        this.rightWelds[source] === 1 &&
+        (x >= this.width - 1 || selected[source + 1] === 0)
+      ) {
+        throw new Error(`Rotation selection splits a right weld at index ${source}`);
+      }
+      if (
+        this.downWelds[source] === 1 &&
+        (source >= this.cellCount - this.width || selected[source + this.width] === 0)
+      ) {
+        throw new Error(`Rotation selection splits a down weld at index ${source}`);
+      }
+      if (x > 0 && this.rightWelds[source - 1] === 1 && selected[source - 1] === 0) {
+        throw new Error(`Rotation selection splits a left weld at index ${source}`);
+      }
+      if (
+        source >= this.width &&
+        this.downWelds[source - this.width] === 1 &&
+        selected[source - this.width] === 0
+      ) {
+        throw new Error(`Rotation selection splits an up weld at index ${source}`);
+      }
+      rotatedCellCount += 1;
+    }
+    if (rotatedCellCount === 0) {
+      return 0;
+    }
+
+    this.movedKinds.set(this.kinds);
+    this.movedIds.set(this.ids);
+    this.movedOrientations.set(this.orientations);
+    this.movedCharges.set(this.charges);
+    this.movedCrossingVerticalCharges.set(this.crossingVerticalCharges);
+    this.movedIsolatedOutputCharges.set(this.isolatedOutputCharges);
+    this.movedFurnaceProgress.set(this.furnaceProgress);
+    this.movedFurnaceTargetIds.set(this.furnaceTargetIds);
+    this.movedRightWelds.set(this.rightWelds);
+    this.movedDownWelds.set(this.downWelds);
+
+    for (let source = 0; source < this.cellCount; source += 1) {
+      if (selected[source] === 0) {
+        continue;
+      }
+      const destination = destinationFor(source);
+      this.movedKinds[source] = TileKind.Empty;
+      this.movedIds[source] = 0;
+      this.movedOrientations[source] = Direction.Up;
+      this.movedCharges[source] = 0;
+      this.movedCrossingVerticalCharges[source] = 0;
+      this.movedIsolatedOutputCharges[source] = 0;
+      this.movedFurnaceProgress[source] = 0;
+      this.movedFurnaceTargetIds[source] = 0;
+      this.movedRightWelds[source] = 0;
+      this.movedDownWelds[source] = 0;
+      this.movedRightWelds[destination] = 0;
+      this.movedDownWelds[destination] = 0;
+    }
+
+    const turns = quarterTurn === 1 ? 1 : 3;
+    for (let source = 0; source < this.cellCount; source += 1) {
+      if (selected[source] === 0) {
+        continue;
+      }
+      const destination = destinationFor(source);
+      const kind = this.kinds[source] as TileKind;
+      const id = expectDefined(this.ids[source], "rotating tile ID");
+      this.movedKinds[destination] = kind;
+      this.movedIds[destination] = id;
+      this.movedOrientations[destination] = orientationForKind(
+        kind,
+        (((this.orientations[source] as Direction) + quarterTurn + 4) & 3) as Direction,
+      );
+      if (kind === TileKind.WireCrossing) {
+        this.movedCharges[destination] = expectDefined(
+          this.crossingVerticalCharges[source],
+          "rotating vertical crossing charge",
+        );
+        this.movedCrossingVerticalCharges[destination] = expectDefined(
+          this.charges[source],
+          "rotating horizontal crossing charge",
+        );
+      } else {
+        this.movedCharges[destination] = expectDefined(
+          this.charges[source],
+          "rotating tile charge",
+        );
+        this.movedCrossingVerticalCharges[destination] = 0;
+      }
+      this.movedIsolatedOutputCharges[destination] = expectDefined(
+        this.isolatedOutputCharges[source],
+        "rotating isolated output charge",
+      );
+      this.movedFurnaceProgress[destination] = expectDefined(
+        this.furnaceProgress[source],
+        "rotating furnace progress",
+      );
+      this.movedFurnaceTargetIds[destination] = expectDefined(
+        this.furnaceTargetIds[source],
+        "rotating furnace target ID",
+      );
+      if (hasComponentState(kind)) {
+        const snapshot = snapshotComponentState(this.requireComponentStateAtIndex(source));
+        this.componentStates.set(
+          id,
+          stateFromSnapshot(transformComponentSnapshot(snapshot, turns, false, false)),
+        );
+      }
+    }
+
+    const setRotatedWeld = (first: number, second: number): void => {
+      if (second === first + 1) {
+        this.movedRightWelds[first] = 1;
+      } else if (first === second + 1) {
+        this.movedRightWelds[second] = 1;
+      } else if (second === first + this.width) {
+        this.movedDownWelds[first] = 1;
+      } else if (first === second + this.width) {
+        this.movedDownWelds[second] = 1;
+      } else {
+        throw new Error(`Rotated weld endpoints ${first} and ${second} are not adjacent`);
+      }
+    };
+    for (let source = 0; source < this.cellCount; source += 1) {
+      if (selected[source] === 0) {
+        continue;
+      }
+      const destination = destinationFor(source);
+      if (this.rightWelds[source] === 1) {
+        setRotatedWeld(destination, destinationFor(source + 1));
+      }
+      if (this.downWelds[source] === 1) {
+        setRotatedWeld(destination, destinationFor(source + this.width));
+      }
+    }
+
+    this.kinds.set(this.movedKinds);
+    this.featureIndex.rebuild(this.movedKinds);
+    this.ids.set(this.movedIds);
+    this.orientations.set(this.movedOrientations);
+    this.charges.set(this.movedCharges);
+    this.crossingVerticalCharges.set(this.movedCrossingVerticalCharges);
+    this.isolatedOutputCharges.set(this.movedIsolatedOutputCharges);
+    this.furnaceProgress.set(this.movedFurnaceProgress);
+    this.furnaceTargetIds.set(this.movedFurnaceTargetIds);
+    this.rightWelds.set(this.movedRightWelds);
+    this.downWelds.set(this.movedDownWelds);
+    this.touchGeometryRevision();
+    return rotatedCellCount;
   }
 
 

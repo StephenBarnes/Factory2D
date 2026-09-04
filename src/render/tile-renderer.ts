@@ -610,6 +610,27 @@ function drawDecoration(
       context.restore();
       break;
     }
+    case TileDecorationStyle.Rotator: {
+      const gripDirection = componentState?.type === "rotator"
+        ? componentState.direction
+        : orientation;
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(gripDirection * Math.PI / 2);
+      context.lineWidth = Math.max(1.5, size * 0.055);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.beginPath();
+      context.arc(0, 0, size * 0.13, 0, Math.PI * 2);
+      context.moveTo(0, -size * 0.13);
+      context.lineTo(0, -size * 0.31);
+      context.moveTo(-size * 0.1, -size * 0.24);
+      context.lineTo(0, -size * 0.34);
+      context.lineTo(size * 0.1, -size * 0.24);
+      context.stroke();
+      context.restore();
+      break;
+    }
     case TileDecorationStyle.Assembler: {
       context.save();
       context.translate(left + size / 2, top + size / 2);

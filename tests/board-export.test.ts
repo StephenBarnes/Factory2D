@@ -19,7 +19,7 @@ describe("board export", () => {
 
     expect(serializeBoard(world, 17)).toBe(`${JSON.stringify({
       format: "factory2d-board",
-      version: 14,
+      version: 15,
       width: 3,
       height: 2,
       tick: 17,
@@ -49,7 +49,7 @@ describe("board export", () => {
     const serialized = serializeBoard(world, 0);
     expect(JSON.parse(serialized)).toEqual({
       format: "factory2d-board",
-      version: 14,
+      version: 15,
       width: 2,
       height: 1,
       tick: 0,
@@ -132,7 +132,7 @@ describe("board export", () => {
   it("imports grid dimensions, state, orientation, and welds", () => {
     const source = JSON.stringify({
       format: "factory2d-board",
-      version: 14,
+      version: 15,
       width: 2,
       height: 3,
       tick: 42,
@@ -237,7 +237,7 @@ describe("board export", () => {
     const imported = deserializeBoard(serialized);
 
     expect(JSON.parse(serialized)).toMatchObject({
-      version: 14,
+      version: 15,
       width: 1,
       height: 1,
       grid: ["W"],
@@ -261,7 +261,7 @@ describe("board export", () => {
     const imported = deserializeBoard(serialized);
 
     expect(JSON.parse(serialized)).toMatchObject({
-      version: 14,
+      version: 15,
       width: 2,
       height: 1,
       grid: ["F:"],
@@ -347,7 +347,7 @@ describe("board export", () => {
   it("rejects furnace progress without a valid in-progress recipe", () => {
     const base = {
       format: "factory2d-board",
-      version: 14,
+      version: 15,
       width: 2,
       height: 1,
       tick: 0,
@@ -373,7 +373,7 @@ describe("board export", () => {
   it("rejects malformed grid rows and unknown tile codes", () => {
     const unevenRows = JSON.stringify({
       format: "factory2d-board",
-      version: 14,
+      version: 15,
       width: 2,
       height: 2,
       tick: 0,
@@ -387,7 +387,7 @@ describe("board export", () => {
     });
     const unknownCode = JSON.stringify({
       format: "factory2d-board",
-      version: 14,
+      version: 15,
       width: 1,
       height: 1,
       tick: 0,
@@ -411,7 +411,7 @@ describe("board export", () => {
   it("rejects duplicate or inapplicable orientation state", () => {
     const duplicate = JSON.stringify({
       format: "factory2d-board",
-      version: 14,
+      version: 15,
       width: 1,
       height: 1,
       tick: 0,
@@ -428,7 +428,7 @@ describe("board export", () => {
     });
     const inapplicable = JSON.stringify({
       format: "factory2d-board",
-      version: 14,
+      version: 15,
       width: 1,
       height: 1,
       tick: 0,
@@ -452,7 +452,7 @@ describe("board export", () => {
   it("rejects malformed weld grids and welds that cannot be applied", () => {
     const wrongHeight = JSON.stringify({
       format: "factory2d-board",
-      version: 14,
+      version: 15,
       width: 2,
       height: 2,
       tick: 0,
@@ -466,7 +466,7 @@ describe("board export", () => {
     });
     const wrongWidth = JSON.stringify({
       format: "factory2d-board",
-      version: 14,
+      version: 15,
       width: 2,
       height: 1,
       tick: 0,
@@ -480,7 +480,7 @@ describe("board export", () => {
     });
     const unknownCode = JSON.stringify({
       format: "factory2d-board",
-      version: 14,
+      version: 15,
       width: 1,
       height: 1,
       tick: 0,
@@ -494,7 +494,7 @@ describe("board export", () => {
     });
     const outside = JSON.stringify({
       format: "factory2d-board",
-      version: 14,
+      version: 15,
       width: 1,
       height: 1,
       tick: 0,
@@ -508,7 +508,7 @@ describe("board export", () => {
     });
     const incompatible = JSON.stringify({
       format: "factory2d-board",
-      version: 14,
+      version: 15,
       width: 2,
       height: 1,
       tick: 0,
@@ -541,7 +541,7 @@ describe("board export", () => {
   it("rejects crossing charge state on the wrong tile or with no charge", () => {
     const wrongTile = JSON.stringify({
       format: "factory2d-board",
-      version: 14,
+      version: 15,
       width: 1,
       height: 1,
       tick: 0,
@@ -555,7 +555,7 @@ describe("board export", () => {
     });
     const neutralCrossing = JSON.stringify({
       format: "factory2d-board",
-      version: 14,
+      version: 15,
       width: 1,
       height: 1,
       tick: 0,
@@ -579,7 +579,7 @@ describe("board export", () => {
   it("rejects invalid charge values and charged non-circuit tiles", () => {
     const invalidValue = JSON.stringify({
       format: "factory2d-board",
-      version: 14,
+      version: 15,
       width: 1,
       height: 1,
       tick: 0,
@@ -593,7 +593,7 @@ describe("board export", () => {
     });
     const invalidTile = JSON.stringify({
       format: "factory2d-board",
-      version: 14,
+      version: 15,
       width: 1,
       height: 1,
       tick: 0,

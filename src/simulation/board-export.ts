@@ -34,7 +34,7 @@ import { World } from "./world";
 import { expectDefined } from "../util/assert";
 
 const FORMAT_NAME = "factory2d-board";
-const FORMAT_VERSION = 14;
+const FORMAT_VERSION = 15;
 export const MIN_BOARD_WIDTH = 1;
 export const MAX_BOARD_WIDTH = 400;
 export const MIN_BOARD_HEIGHT = 1;
@@ -148,6 +148,13 @@ interface ExportedAssembler {
   readonly pending: readonly ExportedAssemblerOutput[];
 }
 
+interface ExportedRotator {
+  readonly x: number;
+  readonly y: number;
+  readonly type: "rotator";
+  readonly direction: string;
+}
+
 /** Rune array whose inner board nests the same contents format without tick or result. */
 interface ExportedRuneArray {
   readonly x: number;
@@ -160,6 +167,7 @@ interface ExportedRuneArray {
 
 type ExportedComponent =
   | ExportedAssembler
+  | ExportedRotator
   | ExportedDelay
   | ExportedCounter
   | ExportedRom
@@ -313,6 +321,13 @@ function exportBoardContents(world: World): ExportedBoardContents {
             description: componentState.description,
             ports: componentState.ports,
             board: exportBoardContents(componentState.world),
+          });
+        } else if (componentState.type === "rotator") {
+          components.push({
+            x,
+            y,
+            type: "rotator",
+            direction: DIRECTION_NAMES[componentState.direction],
           });
         } else if (componentState.type === "assembler") {
           components.push({
@@ -647,23 +662,26 @@ function importBoardContents(
       "ports",
       "board",
       "pending",
+      "direction",
     ]);
     const type = requireString(entry.type, `${componentLabel} type`);
     const fields = type === "assembler"
       ? ["x", "y", "type", "pending"]
-      : type === "delay"
-      ? ["x", "y", "type", "length", "cursor", "data"]
-      : type === "counter"
-        ? ["x", "y", "type", "threshold", "count"]
-        : type === "rom"
-          ? ["x", "y", "type", "width", "height", "cursor", "values"]
-          : type === "checker"
-            ? ["x", "y", "type", "width", "height", "cursor", "failed", "values"]
-            : type === "monitor" || type === "grapher"
-              ? ["x", "y", "type", "label"]
-              : type === "array"
-                ? ["x", "y", "type", "description", "ports", "board"]
-                : null;
+      : type === "rotator"
+        ? ["x", "y", "type", "direction"]
+        : type === "delay"
+          ? ["x", "y", "type", "length", "cursor", "data"]
+          : type === "counter"
+            ? ["x", "y", "type", "threshold", "count"]
+            : type === "rom"
+              ? ["x", "y", "type", "width", "height", "cursor", "values"]
+              : type === "checker"
+                ? ["x", "y", "type", "width", "height", "cursor", "failed", "values"]
+                : type === "monitor" || type === "grapher"
+                  ? ["x", "y", "type", "label"]
+                  : type === "array"
+                    ? ["x", "y", "type", "description", "ports", "board"]
+                    : null;
     if (fields === null) {
       throw new Error(`${componentLabel} has unknown type "${type}"`);
     }
@@ -701,6 +719,13 @@ function importBoardContents(
           return { kind: outputKind, orientation: orientationForKind(outputKind, direction) };
         }),
       };
+    } else if (type === "rotator") {
+      const directionName = requireString(state.direction, `${componentLabel} direction`);
+      const direction = DIRECTIONS_BY_NAME[directionName];
+      if (direction === undefined) {
+        throw new Error(`${componentLabel} has unknown direction "${directionName}"`);
+      }
+      snapshot = { type: "rotator", direction };
     } else if (type === "delay") {
       const length = requireInteger(
         state.length,
@@ -804,6 +829,7 @@ function importBoardContents(
     if (
       !hasComponentState(kind) ||
       (snapshot.type === "assembler" && kind !== TileKind.Assembler) ||
+      (snapshot.type === "rotator" && kind !== TileKind.Rotator) ||
       (snapshot.type === "delay" && kind !== TileKind.Delay) ||
       (snapshot.type === "counter" && kind !== TileKind.Counter) ||
       (snapshot.type === "rom" && kind !== TileKind.Rom) ||

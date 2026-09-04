@@ -97,7 +97,9 @@ const RUNE_ARRAY_CONFIGURATION: RuneArrayComponentConfiguration = Object.freeze(
  * any player-editable configuration.
  */
 export function hasComponentState(kind: TileKind): boolean {
-  return kind === TileKind.Assembler || componentConfigurationForKind(kind) !== null;
+  return kind === TileKind.Assembler ||
+    kind === TileKind.Rotator ||
+    componentConfigurationForKind(kind) !== null;
 }
 
 export function componentConfigurationForKind(
@@ -195,8 +197,14 @@ export interface AssemblerComponentState {
   cursor: number;
 }
 
+export interface RotatorComponentState {
+  readonly type: "rotator";
+  direction: Direction;
+}
+
 export type ConfigurableComponentState =
   | AssemblerComponentState
+  | RotatorComponentState
   | DelayComponentState
   | CounterComponentState
   | RomComponentState
@@ -259,8 +267,14 @@ export interface AssemblerComponentSnapshot {
   readonly pending: readonly AssemblerOutput[];
 }
 
+export interface RotatorComponentSnapshot {
+  readonly type: "rotator";
+  readonly direction: Direction;
+}
+
 export type ConfigurableComponentSnapshot =
   | AssemblerComponentSnapshot
+  | RotatorComponentSnapshot
   | DelayComponentSnapshot
   | CounterComponentSnapshot
   | RomComponentSnapshot
@@ -275,6 +289,7 @@ export type ConfigurableComponentSnapshot =
  */
 export function createDefaultComponentState(
   kind: TileKind,
+  orientation: Direction,
   createWorld: (width: number, height: number) => World,
 ): ConfigurableComponentState | null {
   switch (kind) {
@@ -285,6 +300,8 @@ export function createDefaultComponentState(
         pendingOrientations: new Uint8Array(0),
         cursor: 0,
       };
+    case TileKind.Rotator:
+      return { type: "rotator", direction: orientation };
     case TileKind.Delay:
       return {
         type: "delay",
@@ -342,6 +359,8 @@ export function cloneComponentState(
         pendingOrientations: state.pendingOrientations.slice(),
         cursor: state.cursor,
       };
+    case "rotator":
+      return { type: "rotator", direction: state.direction };
     case "delay":
       return {
         type: "delay",
@@ -399,6 +418,8 @@ export function snapshotComponentState(
       }
       return { type: "assembler", pending };
     }
+    case "rotator":
+      return { type: "rotator", direction: state.direction };
     case "delay":
       return {
         type: "delay",
@@ -458,6 +479,9 @@ export function validateComponentSnapshot(
         }
         requireInteger(output.orientation, "Assembler output orientation", Direction.Up, Direction.Left);
       }
+      break;
+    case "rotator":
+      requireInteger(snapshot.direction, "Rotator direction", Direction.Up, Direction.Left);
       break;
     case "delay":
       requireInteger(snapshot.length, "Delay length", MIN_DELAY_LENGTH, MAX_DELAY_LENGTH);
@@ -535,6 +559,8 @@ export function stateFromSnapshot(
         ),
         cursor: 0,
       };
+    case "rotator":
+      return { type: "rotator", direction: snapshot.direction };
     case "delay":
       return {
         type: "delay",
@@ -605,6 +631,19 @@ export function transformComponentSnapshot(
       )),
     };
   }
+  if (snapshot.type === "rotator") {
+    let direction = snapshot.direction;
+    if (flippedHorizontally) {
+      direction = flipDirectionHorizontally(direction);
+    }
+    if (flippedVertically) {
+      direction = flipDirectionVertically(direction);
+    }
+    return {
+      type: "rotator",
+      direction: ((direction + turns) & 3) as Direction,
+    };
+  }
   if (snapshot.type !== "array") {
     return snapshot;
   }
@@ -641,6 +680,7 @@ export function componentStateMatchesKind(
   return (
     (state.type === "assembler" && kind === TileKind.Assembler) ||
     (state.type === "delay" && kind === TileKind.Delay) ||
+    (state.type === "rotator" && kind === TileKind.Rotator) ||
     (state.type === "counter" && kind === TileKind.Counter) ||
     (state.type === "rom" && kind === TileKind.Rom) ||
     (state.type === "checker" && kind === TileKind.Checker) ||

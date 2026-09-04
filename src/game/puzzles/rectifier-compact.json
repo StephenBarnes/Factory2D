@@ -38,7 +38,7 @@
   ],
   "initialBoard": {
     "format": "factory2d-board",
-    "version": 14,
+    "version": 15,
     "width": 15,
     "height": 3,
     "tick": 0,

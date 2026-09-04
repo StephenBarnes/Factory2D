@@ -40,6 +40,7 @@ export const enum TileKind {
   Equality = 38,
   Minimum = 39,
   Maximum = 40,
+  Rotator = 41,
 }
 
 export const enum Direction {
@@ -97,6 +98,7 @@ export const enum TileDecorationStyle {
   Equality = 35,
   Minimum = 36,
   Maximum = 37,
+  Rotator = 38,
 }
 
 export const enum PaletteCategory {
@@ -1036,6 +1038,29 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     shadow: "#342c25",
     decorationStyle: TileDecorationStyle.Assembler,
     decorationColor: "#e2b96a",
+  },
+  [TileKind.Rotator]: {
+    name: "Rotator",
+    boardCode: "r",
+    palette: {
+      order: 34,
+      category: PaletteCategory.Mechanisms,
+      description: "Turns its gripped body 90° with +1 clockwise or -1 counterclockwise rear input",
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.Down,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Down,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#5c5368",
+    shadow: "#332d3b",
+    decorationStyle: TileDecorationStyle.Rotator,
+    decorationColor: "#e1c3f2",
   },
   [TileKind.Piston]: {
     name: "Piston",
