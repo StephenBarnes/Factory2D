@@ -108,6 +108,46 @@ async function placeStone(page: Page, x: number, y: number): Promise<void> {
   await page.mouse.click(point.x, point.y);
 }
 
+test("placement drags weld only their path, including fast diagonals", async ({ page }) => {
+  await seedBrowserStorage(page, "empty");
+  await openNewSandbox(page);
+  await page.getByRole("button", { name: /^Stone/ }).click();
+  const drag = async (cells: readonly (readonly [number, number])[]) => {
+    for (const [index, [x, y]] of cells.entries()) {
+      const point = await boardCellCenter(page, x, y);
+      await page.mouse.move(point.x, point.y);
+      if (index === 0) await page.mouse.down();
+    }
+    await page.mouse.up();
+  };
+  await drag([[1, 1], [4, 1], [4, 2], [1, 2]]);
+  let board = JSON.parse((await diagnosticSnapshot(page)).serializedBoard);
+  expect(board.welds[1].slice(1, 5)).toBe("---|");
+  expect(board.welds[2].slice(1, 5)).toBe("---.");
+
+  await drag([[6, 1], [8, 3]]);
+  board = JSON.parse((await diagnosticSnapshot(page)).serializedBoard);
+  expect(board.grid[1].slice(6, 9)).toBe("##.");
+  expect(board.grid[2].slice(6, 9)).toBe(".##");
+  expect(board.grid[3][8]).toBe("#");
+  expect(board.welds[1].slice(6, 9)).toBe("-|.");
+  expect(board.welds[2].slice(6, 9)).toBe(".-|");
+
+  await page.keyboard.down("Shift");
+  await drag([[2, 1]]);
+  await page.keyboard.up("Shift");
+  board = JSON.parse((await diagnosticSnapshot(page)).serializedBoard);
+  expect(board.welds[1][2]).toBe("+");
+
+  await page.getByRole("button", { name: /^Sand / }).click();
+  await drag([[10, 1], [12, 1]]);
+  board = JSON.parse((await diagnosticSnapshot(page)).serializedBoard);
+  expect(board.welds[1].slice(10, 13)).toBe("...");
+  await page.reload();
+  board = JSON.parse((await diagnosticSnapshot(page)).serializedBoard);
+  expect(board.welds[1].slice(1, 5)).toBe("-+-|");
+});
+
 test("creates, persists, duplicates, and deletes saved sandboxes", async ({ page }) => {
   await seedBrowserStorage(page, "empty");
   await page.goto("/");
