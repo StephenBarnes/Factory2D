@@ -431,6 +431,17 @@ function drawDecoration(
       definition.decorationStyle === TileDecorationStyle.Rom ||
       definition.decorationStyle === TileDecorationStyle.Checker ||
       definition.decorationStyle === TileDecorationStyle.RuneArray;
+    const hasOutputArrow =
+      definition.decorationStyle === TileDecorationStyle.Rectifier ||
+      definition.decorationStyle === TileDecorationStyle.Combiner ||
+      definition.decorationStyle === TileDecorationStyle.Multiplier ||
+      definition.decorationStyle === TileDecorationStyle.Subtractor ||
+      definition.decorationStyle === TileDecorationStyle.Equality ||
+      definition.decorationStyle === TileDecorationStyle.Minimum ||
+      definition.decorationStyle === TileDecorationStyle.Maximum ||
+      definition.decorationStyle === TileDecorationStyle.Delay ||
+      definition.decorationStyle === TileDecorationStyle.Counter ||
+      definition.decorationStyle === TileDecorationStyle.Checker;
     drawCircuitConnections(
       context,
       left,
@@ -447,6 +458,7 @@ function drawDecoration(
           ? WeldSide.All
           : WeldSide.None)) as WeldSide,
       hasComponentDisplay ? 0.39 : 0.26,
+      hasOutputArrow ? orientedSides(WeldSide.Up, orientation) : WeldSide.None,
     );
   }
   context.fillStyle = definition.decorationColor;
@@ -911,6 +923,8 @@ function drawDecoration(
       context.moveTo(-size * 0.18, -size * 0.18);
       context.lineTo(size * 0.18, -size * 0.18);
       context.stroke();
+      drawPortArrows(context, -size / 2, -size / 2, size, Direction.Up,
+        WeldSide.None, WeldSide.Up, CIRCUIT_CHARGE_COLORS[outputCharge]);
       context.restore();
       break;
     }
@@ -1452,6 +1466,7 @@ function drawCircuitConnections(
   portCharges: number,
   isolatedPorts: WeldSide,
   innerOffsetRatio: number,
+  outputArrowPorts: WeldSide,
 ): void {
   const centerX = left + size / 2;
   const centerY = top + size / 2;
@@ -1474,13 +1489,17 @@ function drawCircuitConnections(
       const offsetX = directionX(direction);
       const offsetY = directionY(direction);
       if ((isolatedPorts & (1 << direction)) !== 0) {
+        // Stop the rounded trace cap in the outward caret's tip, not behind its wings.
+        const innerOffset = (outputArrowPorts & (1 << direction)) !== 0
+          ? Math.min(size / 2, size * 0.37 + context.lineWidth / 2) // 0.37 is manually tuned
+          : size * innerOffsetRatio;
         context.moveTo(
           centerX + offsetX * size / 2,
           centerY + offsetY * size / 2,
         );
         context.lineTo(
-          centerX + offsetX * size * innerOffsetRatio,
-          centerY + offsetY * size * innerOffsetRatio,
+          centerX + offsetX * innerOffset,
+          centerY + offsetY * innerOffset,
         );
       } else {
         context.moveTo(centerX, centerY);
