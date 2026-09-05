@@ -465,6 +465,29 @@ function drawDecoration(
   context.strokeStyle = definition.decorationColor;
 
   switch (definition.decorationStyle) {
+    case TileDecorationStyle.Glass:
+      context.lineWidth = size * 0.09;
+      context.strokeStyle = "rgba(157, 221, 230, 0.32)";
+      context.beginPath();
+      context.roundRect(left + size * 0.14, top + size * 0.14, size * 0.72, size * 0.72, size * 0.09);
+      context.stroke();
+      context.lineWidth = Math.max(1, size * 0.025);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.strokeStyle = definition.decorationColor;
+      context.beginPath();
+      context.moveTo(left + size * 0.18, top + size * 0.48);
+      context.lineTo(left + size * 0.18, top + size * 0.24);
+      context.quadraticCurveTo(left + size * 0.18, top + size * 0.18, left + size * 0.24, top + size * 0.18);
+      context.lineTo(left + size * 0.55, top + size * 0.18);
+      context.moveTo(left + size * 0.65, top + size * 0.82);
+      context.lineTo(left + size * 0.78, top + size * 0.82);
+      context.quadraticCurveTo(left + size * 0.82, top + size * 0.82, left + size * 0.82, top + size * 0.78);
+      context.lineTo(left + size * 0.82, top + size * 0.66);
+      context.moveTo(left + size * 0.3, top + size * 0.43);
+      context.lineTo(left + size * 0.43, top + size * 0.3);
+      context.stroke();
+      break;
     case TileDecorationStyle.Crack:
       context.lineWidth = Math.max(1, size / 24);
       context.lineCap = "round";
