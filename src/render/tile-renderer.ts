@@ -608,6 +608,8 @@ function drawDecoration(
       drawDot(context, 0, -size * 0.29, Math.max(1.5, size * 0.06));
       context.fill();
       context.restore();
+      drawPortArrows(context, left, top, size, orientation,
+        WeldSide.Left | WeldSide.Right, WeldSide.None, circuitPortCharges);
       break;
     }
     case TileDecorationStyle.Rotator: {
@@ -629,6 +631,8 @@ function drawDecoration(
       context.lineTo(size * 0.1, -size * 0.24);
       context.stroke();
       context.restore();
+      drawPortArrows(context, left, top, size, orientation,
+        WeldSide.Down, WeldSide.None, circuitPortCharges);
       break;
     }
     case TileDecorationStyle.Assembler: {
@@ -1098,7 +1102,7 @@ function drawDecoration(
         orientation,
         WeldSide.Down,
         WeldSide.Up,
-        definition.decorationColor,
+        circuitPortCharges,
       );
       break;
     }
@@ -1126,7 +1130,7 @@ function drawDecoration(
         orientation,
         WeldSide.Down,
         WeldSide.Up,
-        definition.decorationColor,
+        circuitPortCharges,
       );
       break;
     }
@@ -1169,7 +1173,7 @@ function drawDecoration(
         orientation,
         WeldSide.Left | WeldSide.Down,
         WeldSide.None,
-        definition.decorationColor,
+        circuitPortCharges,
       );
       break;
     }
@@ -1502,22 +1506,27 @@ function drawPortArrows(
   orientation: Direction,
   inputSides: WeldSide,
   outputSides: WeldSide,
-  color: string,
+  color: string | number,
 ): void {
   context.save();
   context.translate(left + size / 2, top + size / 2);
   context.rotate(orientation * Math.PI / 2);
-  context.strokeStyle = color;
+  // Packed charges use absolute board directions; arrow masks are tile-relative.
   context.lineWidth = Math.max(1.5, size * 0.05);
   context.lineCap = "round";
   context.lineJoin = "round";
-  context.beginPath();
   for (let value = Direction.Up; value <= Direction.Left; value += 1) {
     const direction = value as Direction;
     const side = 1 << direction;
     if ((inputSides & side) === 0 && (outputSides & side) === 0) {
       continue;
     }
+    context.strokeStyle = typeof color === "string"
+      ? color
+      : CIRCUIT_CHARGE_COLORS[circuitPortCharge(
+        color, ((orientation + direction) & 3) as Direction,
+      )];
+    context.beginPath();
     const sideX = directionX(direction);
     const sideY = directionY(direction);
     const flowSign = (outputSides & side) !== 0 ? 1 : -1;
@@ -1534,8 +1543,8 @@ function drawPortArrows(
     context.moveTo(baseX + wingX, baseY + wingY);
     context.lineTo(tipX, tipY);
     context.lineTo(baseX - wingX, baseY - wingY);
+    context.stroke();
   }
-  context.stroke();
   context.restore();
 }
 

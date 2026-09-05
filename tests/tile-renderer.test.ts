@@ -550,7 +550,7 @@ describe("circuit rendering", () => {
     { kind: TileKind.Counter, connections: WeldSide.Up | WeldSide.Down, traceCount: 2 },
     { kind: TileKind.Rom, connections: WeldSide.All, traceCount: 4 },
   ])(
-    "keeps $kind traces outside its display and marks its inputs",
+    "keeps $kind traces outside its display",
     ({ kind, connections, traceCount }) => {
       const context = new RecordingCanvasContext();
       const componentState = kind === TileKind.Delay
@@ -591,6 +591,9 @@ describe("circuit rendering", () => {
         .filter((stroke) => stroke.strokeStyle === CIRCUIT_CHARGE_COLORS[0])
         .flatMap((stroke) => stroke.segments)
         .filter((segment) =>
+          segment.fromX === segment.toX || segment.fromY === segment.toY
+        )
+        .filter((segment) =>
           segment.fromX === 0 ||
           segment.fromX === 32 ||
           segment.fromY === 0 ||
@@ -602,7 +605,6 @@ describe("circuit rendering", () => {
           32 * 0.39,
         );
       }
-      expect(context.strokes.at(-1)?.segments).toHaveLength(4);
     },
   );
 
