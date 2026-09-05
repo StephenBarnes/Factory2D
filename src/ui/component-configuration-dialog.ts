@@ -50,6 +50,8 @@ export class ComponentConfigurationDialog {
   private readonly arrayHeight: HTMLInputElement;
   private readonly arrayDescription: HTMLInputElement;
   private readonly arrayOpenButton: HTMLButtonElement;
+  private readonly cancelButton: HTMLButtonElement;
+  private readonly saveButton: HTMLButtonElement;
   private submit: ((submission: ComponentConfigurationSubmission) => void) | null = null;
   private romValues: Charge[] = [];
   private currentKind = TileKind.Empty;
@@ -92,8 +94,22 @@ export class ComponentConfigurationDialog {
       this.form.requestSubmit();
     });
 
-    requiredDescendant<HTMLButtonElement>(dialog, "[data-component-configuration-cancel]")
-      .addEventListener("click", () => this.close());
+    this.cancelButton = requiredDescendant(dialog, "[data-component-configuration-cancel]");
+    this.saveButton = requiredDescendant(this.form, 'button[type="submit"]');
+    this.cancelButton.addEventListener("click", () => this.close());
+    this.dialog.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.isComposing || event.keyCode === 229 || event.repeat) return;
+      this.openArrayAfterSave = false;
+      this.commit();
+    });
+    this.dialog.addEventListener("cancel", (event) => {
+      event.preventDefault();
+      this.openArrayAfterSave = false;
+      this.commit();
+    });
     this.form.addEventListener("submit", (event) => {
       event.preventDefault();
       this.commit();
@@ -112,7 +128,7 @@ export class ComponentConfigurationDialog {
       });
     }
     this.romGrid.addEventListener("pointerdown", (event) => {
-      if (this.romStroke !== null || (event.button !== 0 && event.button !== 2)) return;
+      if (this.submit === null || this.romStroke !== null || (event.button !== 0 && event.button !== 2)) return;
       const cell = this.romCellAt(event.clientX, event.clientY);
       if (cell === null) return;
       event.preventDefault();
@@ -166,7 +182,7 @@ export class ComponentConfigurationDialog {
   show(
     kind: TileKind,
     state: ConfigurableComponentSnapshot,
-    submit: (submission: ComponentConfigurationSubmission) => void,
+    submit: ((submission: ComponentConfigurationSubmission) => void) | null,
   ): void {
     const configuration = componentConfigurationForKind(kind);
     if (configuration === null) {
@@ -174,7 +190,8 @@ export class ComponentConfigurationDialog {
     }
     this.currentKind = kind;
     this.submit = submit;
-    this.title.textContent = `CONFIGURE ${TILE_DEFINITIONS[kind].name.toUpperCase()}`;
+    this.title.textContent =
+      `${submit === null ? "VIEW" : "CONFIGURE"} ${TILE_DEFINITIONS[kind].name.toUpperCase()}`;
     this.numericPanel.hidden = configuration.type !== "number";
     this.romPanel.hidden = configuration.type !== "grid";
     this.textPanel.hidden = configuration.type !== "text";
@@ -186,6 +203,15 @@ export class ComponentConfigurationDialog {
     this.arrayWidth.disabled = configuration.type !== "array";
     this.arrayHeight.disabled = configuration.type !== "array";
     this.arrayDescription.disabled = configuration.type !== "array";
+    for (const input of this.form.querySelectorAll<HTMLInputElement>("input")) {
+      input.readOnly = submit === null;
+    }
+    for (const button of this.form.querySelectorAll<HTMLButtonElement>("[data-rom-fill]")) {
+      button.hidden = submit === null;
+    }
+    this.arrayOpenButton.hidden = submit === null;
+    this.saveButton.hidden = submit === null;
+    this.cancelButton.textContent = submit === null ? "CLOSE" : "CANCEL";
     this.openArrayAfterSave = false;
 
     if (configuration.type === "number") {
@@ -235,9 +261,14 @@ export class ComponentConfigurationDialog {
         "Right-click or right-drag clears to 0. Fill buttons replace the whole grid.";
       this.renderRomGrid(state.width, state.height);
     }
+    if (submit === null) {
+      this.description.textContent = "Read-only: this component is outside the editable region.";
+    }
 
     this.dialog.showModal();
-    if (configuration.type === "number") {
+    if (submit === null) {
+      this.cancelButton.focus();
+    } else if (configuration.type === "number") {
       this.numericInput.focus();
       this.numericInput.select();
     } else if (configuration.type === "text") {
@@ -259,8 +290,12 @@ export class ComponentConfigurationDialog {
   }
 
   private commit(): void {
+    if (this.submit === null) {
+      this.close();
+      return;
+    }
     const configuration = componentConfigurationForKind(this.currentKind);
-    if (configuration === null || this.submit === null) {
+    if (configuration === null) {
       throw new Error("Configuration dialog has no active component");
     }
     if (!this.form.reportValidity()) {
@@ -326,6 +361,7 @@ export class ComponentConfigurationDialog {
       const cell = document.createElement("button");
       cell.type = "button";
       cell.className = "rom-configuration-cell";
+      cell.disabled = this.submit === null;
       cell.dataset.romIndex = String(index);
       this.updateRomCell(cell, expectDefined(this.romValues[index], "ROM draft value"));
       cell.addEventListener("click", (event) => {

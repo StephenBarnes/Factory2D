@@ -127,7 +127,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * PRIORITY EASY? On the puzzle results screen, add a button to go directly to the next puzzle's briefing screen - if the solution succeeded, and there's a defined next puzzle, and it's unlocked. Display the next puzzle's name. This is meant to help reduce menu navigation needed when we have several easy tutorial puzzles in rapid succession.
 * Allow mirroring components with some hotkey. Because we allow mirroring selections, and we'll add components like flippers. But this probably currently breaks things like ROMs which do not have mirror symmetry. Also check all components for any that have rotational asymmetry that may cause a rotated machine to behave differently, e.g. ROM cursor's wrapping behavior may break rotational symmetry.
 * Modify the tick speed menu to use our own drop-up widget (like the export button).
-* EASY? Allow opening the configuration modal on blocks outside the player's modifiable region, but ban actually changing any of the config values - just to see the values.
 * Add an option to the export menu, in puzzles, to open the current puzzle in the sandbox.
 * DEFER Maybe support selections that are a union of rectangles, created by shift-LMB-drag.
 * EASY? When a region is selected using the selection tool, in the sandbox, add a new tool that will crop the board to that selection. (Currently it requires using the puzzle properties modal to set the grid size to specific numbers; this selection path would be easier and more intuitive.)
@@ -151,7 +150,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * When we show the success screen / puzzle solution results screen, show the delta vs the player's previous best solution in each metric, if they have any previous solutions. So they can see easily whether their new solution improved on the previous one in each metric.
 * Add some way to copy-paste per-component configuration between configurable components. Maybe when the selection tool is used to select some components, add a "copy config from..." button which allows clicking on one component and then copies its config to all selected components of the same type.
 * EASY? On mouseover on a trace line (in the signal panel), highlight the relevant component in the grid - the signal monitor or ROM grapher that produced that graph.
-* EASY When editing the ROM rune, or configuration for any other block, pressing the escape key should act like pressing "save", not like pressing "cancel".
 
 ## Shortcuts
 

@@ -988,7 +988,7 @@ function editCellLine(
   return changed;
 }
 function openComponentConfiguration(cell: GridCell): void {
-  if (!surface.session.editingState.editable || !canEditCell(cell.x, cell.y)) {
+  if (!surface.session.editingState.editable) {
     return;
   }
   const kind = surface.world.kindAt(cell.x, cell.y);
@@ -1003,9 +1003,10 @@ function openComponentConfiguration(cell: GridCell): void {
   componentConfigurationView.show(
     kind,
     state,
-    (submission: ComponentConfigurationSubmission) => {
+    canEditCell(cell.x, cell.y) ? (submission: ComponentConfigurationSubmission) => {
       if (
         !surface.session.editingState.editable ||
+        !canEditCell(cell.x, cell.y) ||
         surface.world.idAt(cell.x, cell.y) !== tileId ||
         surface.world.kindAt(cell.x, cell.y) !== kind
       ) {
@@ -1037,7 +1038,7 @@ function openComponentConfiguration(cell: GridCell): void {
       if (submission.type === "array" && submission.open) {
         enterHoveredRuneArray(cell);
       }
-    },
+    } : null,
   );
 }
 
