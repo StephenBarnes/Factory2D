@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, type Mock, vi } from "vitest";
 
+import { TileSelectionState } from "../src/game/tile-selection";
 import { CanvasRenderer } from "../src/render/canvas-renderer";
 import { CIRCUIT_CHARGE_COLORS } from "../src/simulation/circuit";
 import { World } from "../src/simulation/world";
@@ -170,6 +171,34 @@ describe("CanvasRenderer viewport fitting", () => {
 });
 
 describe("CanvasRenderer scalable tile rendering", () => {
+  it("draws configured ROM values in a moved selection rather than an empty default grid", () => {
+    vi.stubGlobal("window", { devicePixelRatio: 1 });
+    vi.stubGlobal("Path2D", RecordingPath2D);
+    const world = new World(4, 2);
+    world.place(0, 0, TileKind.Rom);
+    world.configureTernaryGrid(0, 0, 2, 1, [1, -1]);
+    const selection = new TileSelectionState(world.width, world.height);
+    selection.beginSelection(0, 0);
+    selection.updateSelection(0, 0);
+    selection.finishSelection(world, null);
+    selection.beginMove(0, 0);
+    selection.updateMove(2, 0);
+    selection.finishMove();
+    const { canvas, context } = createRecordingCanvas(400, 200);
+    world.place(0, 0, TileKind.Empty);
+    const rectangleColors: string[] = [];
+    vi.mocked(context.fillRect).mockImplementation(() => {
+      rectangleColors.push(context.fillStyle as string);
+    });
+    const renderer = new CanvasRenderer(canvas, world);
+    renderer.setTileSelection(selection.overlay(() => true, () => true), null);
+
+    renderer.render();
+
+    expect(rectangleColors).toContain(CIRCUIT_CHARGE_COLORS[1]);
+    expect(rectangleColors).toContain(CIRCUIT_CHARGE_COLORS[-1]);
+  });
+
   it("batches same-kind cells without procedural body drawing below six screen pixels", () => {
     vi.stubGlobal("window", { devicePixelRatio: 1 });
     vi.stubGlobal("Path2D", RecordingPath2D);

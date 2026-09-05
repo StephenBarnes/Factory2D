@@ -17,6 +17,7 @@ export interface SelectionPreviewCell {
   readonly y: number;
   readonly kind: TileKind;
   readonly orientation: Direction;
+  readonly componentState: ConfigurableComponentSnapshot | null;
   readonly weldRight: boolean;
   readonly weldDown: boolean;
 }
@@ -591,6 +592,7 @@ function createPreviewCells(
       y: cell.destinationY,
       kind: cell.kind,
       orientation: cell.orientation,
+      componentState: cell.componentState,
       weldRight: false,
       weldDown: false,
     };

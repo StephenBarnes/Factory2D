@@ -157,7 +157,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 # Visuals
 
-* Bug: When using the selection tool, ROMs in the selected region don't show their configured values - they show black for all cells. Seems to be a general issue with not tracking or rendering the configuration details - delay runes also don't show values.
 * Add backgrounds for puzzles, maybe with parallax as the player pans.
 * EASY Rename runes; prefer metaphorical, arcane, or Anglish-style names. ROM rune -> rune of wisdom, sensor rune -> watchful rune, inverter -> gainsayer rune, delay rune -> recall rune, rectifier -> rightener, etc. Maybe rename +1, -1, and 0 to right, left, and center, or some other natural ternary system, if we can find a way to explain sum, multiply, and subtraction concisely in that system. Also rename the assembler - anvil or forge or something else?
 * Make the rune array modal show a read-only thumbnail of the inner board next to the dimension inputs, so players can judge what a shrink will crop before saving.

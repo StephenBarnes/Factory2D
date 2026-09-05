@@ -905,8 +905,10 @@ export class CanvasRenderer {
       cell.outputCharge = 0;
       cell.circuitConnections = WeldSide.None;
       cell.circuitPortCharges = 0;
-      cell.componentState = null;
-      cell.nestedWorld = null;
+      cell.componentState = preview.componentState;
+      cell.nestedWorld = preview.componentState?.type === "array"
+        ? preview.componentState.world
+        : null;
       cell.seamRight = false;
       cell.seamDown = false;
 
