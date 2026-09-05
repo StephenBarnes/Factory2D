@@ -1,9 +1,11 @@
 import type { PuzzleTestReport } from "../game/puzzle-test-runner";
+import type { PuzzleDefinition } from "../game/puzzles";
 import { expectDefined } from "../util/assert";
 
 export interface PuzzleTestReportCallbacks {
   readonly onContinueEditing: () => void;
   readonly onBackToPuzzle: () => void;
+  readonly onNextPuzzle: (puzzleId: string) => void;
 }
 
 export class PuzzleTestReportView {
@@ -15,6 +17,8 @@ export class PuzzleTestReportView {
   private readonly cycles: HTMLElement;
   private readonly footprint: HTMLElement;
   private readonly combined: HTMLElement;
+  private readonly nextButton: HTMLButtonElement;
+  private nextPuzzleId: string | null = null;
 
   constructor(
     private readonly dialog: HTMLDialogElement,
@@ -28,6 +32,15 @@ export class PuzzleTestReportView {
     this.cycles = requiredDescendant(dialog, "[data-test-report-cycles]");
     this.footprint = requiredDescendant(dialog, "[data-test-report-footprint]");
     this.combined = requiredDescendant(dialog, "[data-test-report-combined]");
+    this.nextButton = requiredDescendant<HTMLButtonElement>(dialog, "[data-test-report-next]");
+    this.nextButton.addEventListener("click", () => {
+      if (this.nextPuzzleId === null) {
+        return;
+      }
+      const puzzleId = this.nextPuzzleId;
+      this.close();
+      callbacks.onNextPuzzle(puzzleId);
+    });
     requiredDescendant<HTMLButtonElement>(dialog, "[data-test-report-continue]")
       .addEventListener("click", () => {
         this.close();
@@ -40,7 +53,11 @@ export class PuzzleTestReportView {
       });
   }
 
-  show(report: PuzzleTestReport): void {
+  show(report: PuzzleTestReport, nextPuzzle: PuzzleDefinition | null): void {
+    const availableNext = report.succeeded ? nextPuzzle : null;
+    this.nextPuzzleId = availableNext?.id ?? null;
+    this.nextButton.hidden = availableNext === null;
+    this.nextButton.textContent = availableNext === null ? "" : `NEXT: ${availableNext.name}`;
     const passed = report.results.reduce(
       (count, result) => count + (result.outcome === "won" ? 1 : 0),
       0,
@@ -85,6 +102,7 @@ export class PuzzleTestReportView {
   }
 
   close(): void {
+    this.nextPuzzleId = null;
     if (this.dialog.open) {
       this.dialog.close();
     }

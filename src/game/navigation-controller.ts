@@ -9,8 +9,8 @@ import {
   recordPuzzleResult,
   saveCompletedPuzzleIds,
 } from "./puzzle-progress";
-import { PUZZLES, puzzleById } from "./puzzles";
-import type { PuzzleId } from "./puzzles";
+import { PUZZLES, puzzleById, isPuzzleUnlocked } from "./puzzles";
+import type { PuzzleDefinition, PuzzleId } from "./puzzles";
 import type { AppScreen } from "./screen";
 import type { SandboxPuzzleProperties } from "./sandbox-puzzle-authoring";
 import type { SavedSandboxController } from "./saved-sandbox-controller";
@@ -83,6 +83,18 @@ export class NavigationController {
 
   get screen(): AppScreen {
     return this.currentScreen;
+  }
+
+  get nextPuzzle(): PuzzleDefinition | null {
+    const screen = this.currentScreen;
+    if (screen.kind !== "puzzle") {
+      return null;
+    }
+    const index = PUZZLES.indexOf(puzzleById(screen.puzzleId));
+    const next = PUZZLES[index + 1];
+    return next !== undefined && isPuzzleUnlocked(next, this.completedPuzzleIds)
+      ? next
+      : null;
   }
 
   navigate(screen: AppScreen): void {

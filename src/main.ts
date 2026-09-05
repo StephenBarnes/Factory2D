@@ -1221,6 +1221,8 @@ const puzzleTests = new PuzzleTestController(
     refreshTransport: updateTransportState,
     refreshHover: refreshPointerHover,
     leaveWorkshop: () => navigation.leaveWorkshop(),
+    getNextPuzzle: () => navigation.nextPuzzle,
+    openPuzzle: (puzzleId) => navigation.navigate({ kind: "puzzle-info", puzzleId }),
   },
 );
 

@@ -2614,6 +2614,7 @@ kbd {
 .test-report-actions {
   padding: 15px 20px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
   border-top: 1px solid var(--border-faint);
@@ -2622,7 +2623,9 @@ kbd {
 
 .test-report-actions button {
   min-height: 38px;
-  padding: 0 14px;
+  max-width: 100%;
+  padding: 8px 14px;
+  overflow-wrap: anywhere;
   border: 1px solid var(--border-strong);
   color: var(--text-body);
   background: var(--raised);
@@ -2637,7 +2640,8 @@ kbd {
   background: var(--raised-hover);
 }
 
-.test-report-actions .test-report-back {
+.test-report-actions .test-report-back,
+.test-report-actions .test-report-next {
   border-color: #d6993c;
   color: #16120b;
   background: #e7ad4f;

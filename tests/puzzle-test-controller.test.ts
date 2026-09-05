@@ -162,6 +162,8 @@ function controllerHarness(solution: World): ControllerHarness {
       counts.hover += 1;
     },
     leaveWorkshop: () => undefined,
+    getNextPuzzle: () => null,
+    openPuzzle: () => undefined,
   };
   const controller = new PuzzleTestController(
     {} as PuzzleTestControllerElements,

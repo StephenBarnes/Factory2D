@@ -77,11 +77,14 @@ export interface PuzzleTestControllerDependencies {
   readonly refreshTransport: () => void;
   readonly refreshHover: () => void;
   readonly leaveWorkshop: () => void;
+  readonly getNextPuzzle: () => PuzzleDefinition | null;
+  readonly openPuzzle: (puzzleId: string) => void;
 }
 
 interface PuzzleTestViewCallbacks {
   readonly onContinueEditing: () => void;
   readonly onBackToPuzzle: () => void;
+  readonly onNextPuzzle: (puzzleId: string) => void;
   readonly onSelectCase: (testCaseId: string) => void;
 }
 
@@ -92,7 +95,7 @@ export interface PuzzleTestControllerView {
   toggleCaseOptions(): void;
   hideStatus(): void;
   showFailure(message: string): void;
-  showReport(report: PuzzleTestReport): void;
+  showReport(report: PuzzleTestReport, nextPuzzle: PuzzleDefinition | null): void;
   closeReport(): void;
 }
 
@@ -116,6 +119,7 @@ export class PuzzleTestController {
     this.view = createView({
       onContinueEditing: () => this.reset(),
       onBackToPuzzle: dependencies.leaveWorkshop,
+      onNextPuzzle: dependencies.openPuzzle,
       onSelectCase: (testCaseId) => this.showCase(testCaseId),
     });
   }
@@ -408,7 +412,7 @@ export class PuzzleTestController {
     };
     if (report.succeeded) {
       this.view.hideStatus();
-      this.view.showReport(report);
+      this.view.showReport(report, this.dependencies.getNextPuzzle());
     } else {
       const failed = expectDefined(
         report.results[report.results.length - 1],
@@ -452,6 +456,7 @@ class DomPuzzleTestControllerView implements PuzzleTestControllerView {
     this.report = new PuzzleTestReportView(elements.reportDialog, {
       onContinueEditing: callbacks.onContinueEditing,
       onBackToPuzzle: callbacks.onBackToPuzzle,
+      onNextPuzzle: callbacks.onNextPuzzle,
     });
   }
 
@@ -513,8 +518,8 @@ class DomPuzzleTestControllerView implements PuzzleTestControllerView {
     this.elements.statusToast.hidden = false;
   }
 
-  showReport(report: PuzzleTestReport): void {
-    this.report.show(report);
+  showReport(report: PuzzleTestReport, nextPuzzle: PuzzleDefinition | null): void {
+    this.report.show(report, nextPuzzle);
   }
 
   closeReport(): void {
