@@ -299,11 +299,13 @@ export class TileInspector {
   }
 
   private showComponentReference(reference: InspectorComponentReference | null): void {
-    this.componentReference.hidden = reference === null;
+    this.componentReference.hidden = reference === null ||
+      (reference.price === null && reference.shortcut === null);
     if (reference === null) {
       return;
     }
-    this.price.textContent = `${reference.price ?? 0} ⚙`;
+    this.price.hidden = reference.price === null;
+    this.price.textContent = reference.price === null ? "" : `${reference.price} ⚙`;
     this.shortcut.hidden = reference.shortcut === null;
     this.shortcut.textContent = reference.shortcut ?? "";
   }

@@ -439,7 +439,7 @@ test("tile inspector follows palette, tool, and occupied-board hover", async ({ 
   await sandButton.hover();
   await expect(inspectorName).toHaveText("SAND");
   await expect(inspectorPosition).toBeHidden();
-  await expect(inspector.locator("[data-inspector-price]")).toHaveText("0 ⚙");
+  await expect(inspector.locator("[data-inspector-price]")).toBeHidden();
   await expect(inspector.locator("[data-inspector-shortcut]")).toHaveText("1");
   await expect(inspector).not.toContainText("PALETTE COMPONENT");
   await expect(inspector).toContainText("Falls downward and can fall diagonally around obstacles");
@@ -451,7 +451,7 @@ test("tile inspector follows palette, tool, and occupied-board hover", async ({ 
   await expect(inspectorName).toHaveText("STONE");
   await expect(inspectorPosition).toHaveText(/X 10\s+Y 08\s+ID #\d{4}/);
   await expect(inspectorHint).toHaveText("Solid block affected by gravity");
-  await expect(inspector.locator("[data-inspector-price]")).toHaveText("0 ⚙");
+  await expect(inspector.locator("[data-inspector-price]")).toBeHidden();
   await expect(inspector.locator("[data-inspector-shortcut]")).toHaveText("2");
   for (const removedLabel of [
     "TILE ID",

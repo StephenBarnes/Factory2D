@@ -939,7 +939,8 @@ canvas {
 .inspector-price {
   color: #cfa05a;
   font-family: var(--font-mono);
-  font-size: 0.62rem;
+  font-size: 0.8rem;
+  font-weight: 600;
   letter-spacing: 0;
   white-space: nowrap;
 }

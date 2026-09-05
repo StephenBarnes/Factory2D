@@ -124,8 +124,7 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Implement undo and redo when editing.
 * Show brief text like "+2⚙" above the current puzzle price as components are placed; make it fade to transparent after a brief delay. Animate negative numbers when removing blocks. Color them blue for positive, red for negative, same as circuit charges. When many components are added/removed in rapid succession, grow the current number instead of making many separate text boxes.
 * Add support for mobile and touch screens. Check if it's playable.
-* Modify sizing to make things more visible on 4k monitors. For example the prices of components are currently displayed very small in the inspector. Might also be an issue on 1080p though, so this may be a general sizing issue rather than UI scaling.
-* EASY In the sandbox, instead of showing `0 (gear symbol)` next to components, show nothing, because prices don't make sense for the sandbox.
+* Review general UI scaling on 4k monitors beyond inspector prices (now enlarged to match component names).
 * Allow mirroring components with some hotkey. Because we allow mirroring selections, and we'll add components like flippers. But this probably currently breaks things like ROMs which do not have mirror symmetry. Also check all components for any that have rotational asymmetry that may cause a rotated machine to behave differently, e.g. ROM cursor's wrapping behavior may break rotational symmetry.
 * Modify the tick speed menu to use our own drop-up widget (like the export button).
 * Add an option to the export menu, in puzzles, to open the current puzzle in the sandbox.
