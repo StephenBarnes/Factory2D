@@ -652,8 +652,6 @@ function drawDecoration(
       context.lineJoin = "round";
       context.beginPath();
       context.arc(0, 0, size * 0.13, 0, Math.PI * 2);
-      context.moveTo(0, -size * 0.13);
-      context.lineTo(0, -size * 0.31);
       context.moveTo(-size * 0.1, -size * 0.24);
       context.lineTo(0, -size * 0.34);
       context.lineTo(size * 0.1, -size * 0.24);

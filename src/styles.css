@@ -1517,7 +1517,6 @@ kbd {
   padding: 12px 14px;
   display: flex;
   align-items: center;
-  border-right: 1px solid var(--panel-border);
 }
 
 .workshop-header {
@@ -1525,7 +1524,6 @@ kbd {
   flex: none;
   padding: 14px var(--sidebar-padding);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   border-bottom: 1px solid var(--panel-border);
@@ -1533,17 +1531,22 @@ kbd {
 }
 
 .workshop-header .menu-button {
+  grid-column: 1;
   justify-self: start;
 }
 
-.workshop-header strong {
-  grid-column: 1 / -1;
+.workshop-header #screen-title {
+  grid-column: 2;
   min-width: 0;
   color: var(--text-bright);
   font-family: var(--font-display);
-  font-size: clamp(1.1rem, 1.6vw, 1.5rem);
+  font-size: clamp(0.9rem, 1.6vw, 1.1rem);
   line-height: 1.2;
   overflow-wrap: anywhere;
+}
+
+#workshop-info-button {
+  grid-column: 3;
 }
 
 .puzzle-metrics {
