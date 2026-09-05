@@ -1538,11 +1538,14 @@ export class World {
     const orientation = this.orientations[index] as Direction;
     const sensedX = x + directionX(orientation);
     const sensedY = y + directionY(orientation);
-    return sensedX >= 0 &&
-        sensedX < this.width &&
-        sensedY >= 0 &&
-        sensedY < this.height &&
-        this.kinds[sensedY * this.width + sensedX] !== TileKind.Empty
+    if (
+      sensedX < 0 || sensedX >= this.width ||
+      sensedY < 0 || sensedY >= this.height
+    ) {
+      return 0;
+    }
+    const sensedKind = this.kinds[sensedY * this.width + sensedX] as TileKind;
+    return sensedKind !== TileKind.Empty && !TILE_DEFINITIONS[sensedKind].invisibleToSensor
       ? 1
       : 0;
   }

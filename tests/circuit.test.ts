@@ -158,6 +158,28 @@ describe("circuit networks", () => {
     expect(world.chargeAt(1, 1)).toBe(1);
   });
 
+  it("ignores glass without sensing through it, then detects its replacement", () => {
+    const world = new World(4, 1);
+    world.place(0, 0, TileKind.Conduit);
+    world.place(1, 0, TileKind.Sensor, Direction.Right);
+    world.place(2, 0, TileKind.Glass);
+    world.place(3, 0, TileKind.Stone);
+    world.setWeld(0, 0, 1, 0, true);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+    expect(world.chargeAt(0, 0)).toBe(0);
+    expect(world.tileAt(2, 0).kind).toBe(TileKind.Glass);
+
+    world.place(2, 0, TileKind.Stone);
+    simulation.step();
+    expect(world.chargeAt(0, 0)).toBe(1);
+
+    world.place(2, 0, TileKind.Glass);
+    simulation.step();
+    expect(world.chargeAt(0, 0)).toBe(0);
+  });
+
   it.each([
     Direction.Up,
     Direction.Right,

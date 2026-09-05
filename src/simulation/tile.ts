@@ -119,6 +119,8 @@ export interface TileDefinition {
     readonly description: string;
   } | null;
   readonly affectedByGravity: boolean;
+  /** Opts a solid tile out of occupancy sensing; omitted means detectable. */
+  readonly invisibleToSensor?: boolean;
   readonly weldableSides: WeldSide;
   readonly excludesFacingWeld: boolean;
   readonly usesOrientation: boolean;
@@ -332,7 +334,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 10,
       category: PaletteCategory.Circuits,
-      description: "Emits +1 when its pointed side is occupied",
+      description: "Emits +1 when its pointed neighbor is occupied, except by glass",
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -654,9 +656,10 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 5,
       category: PaletteCategory.RawMaterials,
-      description: "Solid block baked from sand",
+      description: "Solid block baked from sand; invisible to sensor runes",
     },
     affectedByGravity: true,
+    invisibleToSensor: true,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
