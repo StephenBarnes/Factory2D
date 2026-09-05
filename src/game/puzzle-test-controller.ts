@@ -306,7 +306,14 @@ export class PuzzleTestController {
   }
 
   fastForward(): void {
-    const state = this.lifecycleValue;
+    let state = this.lifecycleValue;
+    if (
+      state.kind === "viewing-case" ||
+      state.kind === "failed" ||
+      state.kind === "succeeded"
+    ) {
+      state = this.beginRun(state, "automatic", performance.now());
+    }
     if (state.kind !== "running" && state.kind !== "between-cases") {
       return;
     }

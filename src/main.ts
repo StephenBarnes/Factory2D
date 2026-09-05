@@ -239,8 +239,8 @@ function updateTransportState(): void {
     : running ? "Ⅱ PAUSE" : "▶ RUN";
   playButton.disabled = testingPuzzleSolution;
   playButton.classList.toggle("running", !puzzleWorkshop && running);
-  fastForwardButton.hidden = !testingPuzzleSolution;
-  fastForwardButton.disabled = !testingPuzzleSolution;
+  fastForwardButton.hidden = !puzzleWorkshop;
+  fastForwardButton.disabled = !puzzleWorkshop;
   testCaseButton.disabled = testingPuzzleSolution;
   stateLight.classList.toggle("running", running || testingPuzzleSolution);
   stateLight.classList.toggle("failed", testFailed);
@@ -1952,8 +1952,7 @@ document.addEventListener("keydown", (event) => {
     }
   }
   if (
-    navigation.screen.kind === "main-menu" ||
-    navigation.screen.kind === "puzzle-info" ||
+    (navigation.screen.kind !== "sandbox" && navigation.screen.kind !== "puzzle") ||
     testReportDialog.open ||
     componentConfigurationView.open
   ) {
@@ -2129,15 +2128,20 @@ document.addEventListener("keydown", (event) => {
     } else {
       setRunning(!running);
     }
-  } else if (event.code === "KeyN" && !running) {
-    const duration = animationsEnabled() ? MANUAL_STEP_ANIMATION_MS : 0;
-    if (navigation.screen.kind === "puzzle") {
-      puzzleTests.step(duration);
-    } else {
-      advanceSimulation(duration);
+  } else if (
+    event.code === "KeyN" ||
+    event.code === "KeyR" ||
+    event.code === "KeyF"
+  ) {
+    event.preventDefault();
+    if (event.repeat) {
+      return;
     }
-  } else if (event.code === "KeyR") {
-    resetSimulation();
+    const button = event.code === "KeyN" ? stepButton
+      : event.code === "KeyR" ? resetButton : fastForwardButton;
+    if (!button.hidden && !button.disabled) {
+      button.click();
+    }
   } else {
     const shortcutKind = tileKindsByShortcut[event.code];
     if (shortcutKind !== undefined) {

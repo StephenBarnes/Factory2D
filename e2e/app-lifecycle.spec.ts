@@ -682,18 +682,30 @@ test("renders puzzle cases and leaves the failed case paused on the board", asyn
   );
   await expect(page.locator("#tick-counter")).toHaveText("TICK 0010");
   await expect(page.locator("#state-label")).toHaveText("TEST FAILED");
-  await expect(fastForwardButton).not.toBeVisible();
+  await expect(fastForwardButton).toBeVisible();
 
   await page.getByRole("button", { name: "RESET" }).click();
   await expect(page.getByRole("status")).not.toBeVisible();
   await expect(page.locator("#tick-counter")).toHaveText("TICK 0000");
   await expect(page.locator("#state-label")).toHaveText("BUILD MODE");
 
+  await fastForwardButton.click();
+  await expect(page.locator("#tick-counter")).toHaveText("TICK 0010");
+  await page.keyboard.press("r");
+  await expect(page.locator("#tick-counter")).toHaveText("TICK 0000");
+  await page.keyboard.press("n");
+  await expect(page.locator("#tick-counter")).toHaveText("TICK 0001");
+  await page.keyboard.press("r");
+  await page.keyboard.press("f");
+  await expect(page.locator("#state-label")).toHaveText("TEST FAILED");
+  await expect(page.locator("#tick-counter")).toHaveText("TICK 0010");
+
   await page.locator("#menu-button").click();
   await expect(page).toHaveURL(/\/puzzles\/first-shift$/);
 
   await openNewSandbox(page);
   await expect(page.getByRole("button", { name: "▶ RUN" })).toBeVisible();
+  await expect(fastForwardButton).not.toBeVisible();
   await expect(report).not.toBeVisible();
 });
 

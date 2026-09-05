@@ -8,7 +8,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 * Add tick speeds above 60 ticks per second; for those, step the simulation multiple times between renders. This is useful for testing solutions fast while still showing what's going on.
 * Modify our "fast" test option to still render sometimes, say every n ticks or at 60 FPS. Currently it runs the sim only, skipping rendering entirely, which may be undesirable since e.g. it makes infinite loops not visible.
-* Modify UI: instead of only showing "fast" button after "test" has already been pressed, rather always show it, and allow pressing it to test fully in the fast mode. Some players would want to test mostly in fast mode.
 * DEFER Add a step-back button to the control panel at the bottom, maybe? Requires keeping previous state in memory, or several so we can step back multiple ticks.
 * DEFER If we do the "asleep vs active regions" change below, or if we store previous state for step-back, then as a follow-up: when testing a solution, check for loops (no active regions, or previous state equals current state) and end the test early.
 
@@ -155,7 +154,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 ## Shortcuts
 
-* EASY Add hotkeys for game controls: step, reset, and test-fast. We'll modify the "fast" button to be visible even before "test" is clicked - separate item in this doc. (Don't add shortcuts for for "clear", test cases, export, or speed control.)
 * EASY Add a shortcut for the selection tool. Maybe alt key, similar to how we have ctrl for the weld tool.
 
 # Visuals

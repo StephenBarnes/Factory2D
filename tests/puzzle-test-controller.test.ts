@@ -197,14 +197,19 @@ describe("puzzle test controller", () => {
     expect(harness.mountedCaseKinds).toHaveLength(2);
   });
 
-  it("fast-forwards all remaining cases and presents success", () => {
+  it.each(["ready", "running", "succeeded"] as const)("fast-forwards all cases from %s and presents success", (initialState) => {
     const harness = controllerHarness(winningSolution());
     harness.controller.configure(puzzleWith([
       caseDefinition("first", 5, emptyVictoryWorld),
       caseDefinition("second", 5, emptyVictoryWorld),
     ]));
 
-    harness.controller.start(0);
+    if (initialState !== "ready") {
+      harness.controller.start(0);
+    }
+    if (initialState === "succeeded") {
+      harness.controller.fastForward();
+    }
     harness.controller.fastForward();
 
     expect(harness.controller.lifecycle.kind).toBe("succeeded");
