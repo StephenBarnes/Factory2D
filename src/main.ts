@@ -764,6 +764,17 @@ function selectTile(kind: TileKind): void {
 }
 
 function pickTileAt(cell: GridCell): void {
+  const { width, height } = surface.world;
+  if (cell.x < 0 || cell.y < 0 || cell.x >= width || cell.y >= height) {
+    if (
+      surface.viewDepth > 0 &&
+      ((cell.x === Math.floor(width / 2) && (cell.y === -1 || cell.y === height)) ||
+        (cell.y === Math.floor(height / 2) && (cell.x === -1 || cell.x === width)))
+    ) {
+      selectTile(TileKind.Conduit);
+    }
+    return;
+  }
   const kind = surface.world.kindAt(cell.x, cell.y);
   if (kind === TileKind.Empty) {
     selectTile(previousSelectedKind);
@@ -1906,11 +1917,21 @@ canvas.addEventListener("wheel", (event) => {
   const point = surface.renderer.gridPointFromClientPoint(event.clientX, event.clientY);
   surface.hoveredCell = surface.renderer.cellFromGridPoint(point);
   surface.hoveredEdge = surface.renderer.edgeFromGridPoint(point);
-  if (
-    event.shiftKey &&
-    event.deltaY !== 0 &&
-    adjustHoveredNumericComponent(event.deltaY < 0 ? 1 : -1)
-  ) {
+  if (event.shiftKey) {
+    if (event.deltaY === 0) return;
+    if (adjustHoveredNumericComponent(event.deltaY < 0 ? 1 : -1)) return;
+    const buttons = [...componentPalette.querySelectorAll<HTMLButtonElement>("[data-tile]")];
+    if (buttons.length === 0) return;
+    const current = buttons.findIndex((button) => Number(button.dataset.tile) === selectedKind);
+    const direction = event.deltaY > 0 ? 1 : -1;
+    const index = current < 0
+      ? (direction > 0 ? 0 : buttons.length - 1)
+      : (current + direction + buttons.length) % buttons.length;
+    const button = expectDefined(buttons[index], "Palette cycle target is missing");
+    const kind = Number(button.dataset.tile);
+    if (!isTileKind(kind)) throw new Error("Palette cycle target has invalid tile metadata");
+    selectTile(kind);
+    button.scrollIntoView({ block: "nearest" });
     return;
   }
   surface.renderer.zoomAtClientPoint(event.clientX, event.clientY, event.deltaY);

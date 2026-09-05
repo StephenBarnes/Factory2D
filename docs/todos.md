@@ -155,10 +155,8 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 ## Shortcuts
 
-* EASY? Add shift + mousewheel to scroll through palette entries, when mouse is not over a number configurable component (because in that case shift+mousewheel configures the number).
 * EASY Add hotkeys for game controls: step, reset, and test-fast. We'll modify the "fast" button to be visible even before "test" is clicked - separate item in this doc. (Don't add shortcuts for for "clear", test cases, export, or speed control.)
 * EASY Add a shortcut for the selection tool. Maybe alt key, similar to how we have ctrl for the weld tool.
-* When the player has entered a rune array, allow middle-click to pick the virtual conduit blocks at the edge midpoints.
 
 # Visuals
 

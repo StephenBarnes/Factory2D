@@ -150,7 +150,7 @@ export class CanvasInteractionController {
         pointerId: event.pointerId,
         buttonMask,
         session,
-        pendingPickCell: cell,
+        pendingPickCell: cell ?? { x: Math.floor(point.x), y: Math.floor(point.y) },
         originClientX: event.clientX,
         originClientY: event.clientY,
       };
