@@ -145,7 +145,8 @@ canvas:focus-visible {
   max-width: 570px;
   margin: 20px 0 0;
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-family: var(--font-display);
+  font-size: 1rem;
   line-height: 1.6;
 }
 
@@ -482,7 +483,8 @@ canvas:focus-visible {
 .puzzle-info-description {
   margin: 18px 0 0;
   color: var(--text-mid);
-  font-size: 0.9rem;
+  font-family: var(--font-display);
+  font-size: 1rem;
   line-height: 1.65;
 }
 
@@ -509,7 +511,8 @@ canvas:focus-visible {
 
 .puzzle-goal strong {
   color: var(--text-body);
-  font-size: 0.82rem;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
   line-height: 1.5;
 }
 
@@ -801,6 +804,14 @@ canvas {
   border-width: 0 1px 0 0;
 }
 
+.sidebar,
+.controls,
+.tile-inspector {
+  background:
+    linear-gradient(135deg, rgb(226 179 87 / 7%), transparent 55%),
+    linear-gradient(180deg, var(--panel-bg), var(--bg-cavern));
+}
+
 .sidebar-content {
   min-height: 0;
   padding: var(--sidebar-padding);
@@ -956,8 +967,9 @@ canvas {
 .inspector-tool > p {
   margin: 8px 0 0;
   color: var(--text-mid);
-  font-size: 0.7rem;
-  line-height: 1.45;
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  line-height: 1.5;
 }
 
 .inspector-properties {
@@ -1638,7 +1650,7 @@ kbd {
   min-height: 38px;
   border: 1px solid var(--panel-border);
   border-radius: 1px;
-  background: var(--raised);
+  background: linear-gradient(180deg, var(--raised-hover), var(--raised));
   font-family: var(--font-mono);
   font-size: 0.68rem;
   font-weight: 700;
@@ -1803,7 +1815,8 @@ kbd {
 .main-menu-dialog-content p {
   margin: 0;
   color: var(--text-mid);
-  font-size: 0.86rem;
+  font-family: var(--font-display);
+  font-size: 1rem;
   line-height: 1.55;
 }
 
@@ -1978,7 +1991,8 @@ kbd {
 .workshop-info-content > p {
   margin: 0;
   color: var(--text-mid);
-  font-size: 0.86rem;
+  font-family: var(--font-display);
+  font-size: 1rem;
   line-height: 1.55;
 }
 .workshop-properties {
@@ -2176,7 +2190,8 @@ kbd {
 
 .workshop-info-goal strong {
   color: var(--text-bright);
-  font-size: 0.88rem;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
 }
 
 .workshop-info-actions {
@@ -2254,7 +2269,8 @@ kbd {
 .component-configuration-dialog form > p {
   margin: 0 24px 20px;
   color: var(--text-mid);
-  font-size: 0.86rem;
+  font-family: var(--font-display);
+  font-size: 1rem;
   line-height: 1.5;
 }
 

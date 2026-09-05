@@ -167,8 +167,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 * Refine the dwarven UI theme: the palette now lives in CSS custom properties on `:root` in `src/styles.css` (stone browns, bronze, gold, ember, gem accents) with gilded corner ornaments on major panels; consider richer Art Deco corner motifs (diagonals, doubled lines) and reviewing tile fill/decoration colors in `src/simulation/tile.ts` for warmth.
 * EASY? Add a dark/light mode toggle. Set to dark by default, or browser default. The `:root` custom-property palette is the switching point: add a `[data-theme="light"]` override block and a persisted toggle.
-* Add some more gradients. The current gradients on e.g. the "Sandbox" button and solution list look really good. Use them for more buttons, and for the editor panels (palette panel, bottom bar, inspector).
-* EASY Convert more text regions to a serif font, instead of small-caps or sans-serif.
 * EASY? Check remaining button styles for system/browser defaults. The component-configuration and text-box modal actions now use themed bronze buttons and gold Save buttons; audit other surfaces for similar contrast issues.
 
 ## Animations
