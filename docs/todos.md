@@ -6,7 +6,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 ## Sim test/play flow
 
-* Add tick speeds above 60 ticks per second; for those, step the simulation multiple times between renders. This is useful for testing solutions fast while still showing what's going on.
 * Modify our "fast" test option to still render sometimes, say every n ticks or at 60 FPS. Currently it runs the sim only, skipping rendering entirely, which may be undesirable since e.g. it makes infinite loops not visible.
 * DEFER Add a step-back button to the control panel at the bottom, maybe? Requires keeping previous state in memory, or several so we can step back multiple ticks.
 * DEFER If we do the "asleep vs active regions" change below, or if we store previous state for step-back, then as a follow-up: when testing a solution, check for loops (no active regions, or previous state equals current state) and end the test early.
@@ -148,10 +147,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * When we show the success screen / puzzle solution results screen, show the delta vs the player's previous best solution in each metric, if they have any previous solutions. So they can see easily whether their new solution improved on the previous one in each metric.
 * Add some way to copy-paste per-component configuration between configurable components. Maybe when the selection tool is used to select some components, add a "copy config from..." button which allows clicking on one component and then copies its config to all selected components of the same type.
 * EASY? On mouseover on a trace line (in the signal panel), highlight the relevant component in the grid - the signal monitor or ROM grapher that produced that graph.
-
-## Shortcuts
-
-* EASY Add a shortcut for the selection tool. Maybe alt key, similar to how we have ctrl for the weld tool.
 
 # Visuals
 

@@ -378,7 +378,7 @@ function finishAnimation(): void {
   animationDuration = 0;
 }
 function animationsEnabled(ticksPerSecond = Number(speedSelect.value)): boolean {
-  return animationToggle.checked && ticksPerSecond !== HIGH_SPEED_TICKS_PER_SECOND;
+  return animationToggle.checked && ticksPerSecond < HIGH_SPEED_TICKS_PER_SECOND;
 }
 
 function finishAnimationIfDisabled(): void {
@@ -2033,6 +2033,13 @@ document.addEventListener("keydown", (event) => {
     surface.hoveredCell = null;
     surface.hoveredEdge = null;
     refreshPointerHover();
+    return;
+  }
+  if (event.code === "KeyV") {
+    event.preventDefault();
+    if (!event.repeat) {
+      selectSelectionTool();
+    }
     return;
   }
   if (event.code === "KeyQ") {
