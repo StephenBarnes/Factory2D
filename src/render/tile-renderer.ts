@@ -923,12 +923,8 @@ function drawDecoration(
       context.moveTo(0, -size * 0.11);
       context.lineTo(0, size * 0.11);
       context.stroke();
-      context.strokeStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
-      context.beginPath();
-      context.moveTo(-size * 0.14, -size * 0.14);
-      context.lineTo(0, -size * 0.22);
-      context.lineTo(size * 0.14, -size * 0.14);
-      context.stroke();
+      drawPortArrows(context, -size / 2, -size / 2, size, Direction.Up,
+        WeldSide.None, WeldSide.Up, CIRCUIT_CHARGE_COLORS[outputCharge]);
       context.restore();
       break;
     }
@@ -945,12 +941,8 @@ function drawDecoration(
       context.moveTo(size * 0.1, -size * 0.1);
       context.lineTo(-size * 0.1, size * 0.1);
       context.stroke();
-      context.strokeStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
-      context.beginPath();
-      context.moveTo(-size * 0.14, -size * 0.14);
-      context.lineTo(0, -size * 0.22);
-      context.lineTo(size * 0.14, -size * 0.14);
-      context.stroke();
+      drawPortArrows(context, -size / 2, -size / 2, size, Direction.Up,
+        WeldSide.None, WeldSide.Up, CIRCUIT_CHARGE_COLORS[outputCharge]);
       context.restore();
       break;
     }
@@ -965,12 +957,8 @@ function drawDecoration(
       context.moveTo(-size * 0.12, 0);
       context.lineTo(size * 0.12, 0);
       context.stroke();
-      context.strokeStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
-      context.beginPath();
-      context.moveTo(-size * 0.14, -size * 0.14);
-      context.lineTo(0, -size * 0.22);
-      context.lineTo(size * 0.14, -size * 0.14);
-      context.stroke();
+      drawPortArrows(context, -size / 2, -size / 2, size, Direction.Up,
+        WeldSide.None, WeldSide.Up, CIRCUIT_CHARGE_COLORS[outputCharge]);
       context.restore();
       break;
     }
@@ -1024,12 +1012,8 @@ function drawDecoration(
         context.lineTo(size * 0.14, armY);
       }
       context.stroke();
-      context.strokeStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
-      context.beginPath();
-      context.moveTo(-size * 0.14, -size * 0.14);
-      context.lineTo(0, -size * 0.22);
-      context.lineTo(size * 0.14, -size * 0.14);
-      context.stroke();
+      drawPortArrows(context, -size / 2, -size / 2, size, Direction.Up,
+        WeldSide.None, WeldSide.Up, CIRCUIT_CHARGE_COLORS[outputCharge]);
       context.restore();
       break;
     }
@@ -1293,11 +1277,8 @@ function drawDecoration(
       context.lineCap = "round";
       context.lineJoin = "round";
       context.strokeStyle = definition.decorationColor;
-      context.beginPath();
-      context.moveTo(-size * 0.1, -size * 0.32);
-      context.lineTo(0, -size * 0.42);
-      context.lineTo(size * 0.1, -size * 0.32);
-      context.stroke();
+      drawPortArrows(context, -size / 2, -size / 2, size, Direction.Up,
+        WeldSide.None, WeldSide.Up, definition.decorationColor);
       const barHeights = [0.14, 0.26, 0.08, 0.2];
       const barWidth = size * 0.08;
       const gap = size * 0.04;
@@ -1527,7 +1508,7 @@ function drawPortArrows(
   context.translate(left + size / 2, top + size / 2);
   context.rotate(orientation * Math.PI / 2);
   context.strokeStyle = color;
-  context.lineWidth = Math.max(1, size * 0.035);
+  context.lineWidth = Math.max(1.5, size * 0.05);
   context.lineCap = "round";
   context.lineJoin = "round";
   context.beginPath();
@@ -1542,14 +1523,14 @@ function drawPortArrows(
     const flowSign = (outputSides & side) !== 0 ? 1 : -1;
     const flowX = sideX * flowSign;
     const flowY = sideY * flowSign;
-    const centerX = sideX * size * 0.33;
-    const centerY = sideY * size * 0.33;
-    const tipX = centerX + flowX * size * 0.045;
-    const tipY = centerY + flowY * size * 0.045;
-    const baseX = tipX - flowX * size * 0.09;
-    const baseY = tipY - flowY * size * 0.09;
-    const wingX = -flowY * size * 0.055;
-    const wingY = flowX * size * 0.055;
+    const centerX = sideX * size * 0.37;
+    const centerY = sideY * size * 0.37;
+    const tipX = centerX + flowX * size * 0.05;
+    const tipY = centerY + flowY * size * 0.05;
+    const baseX = tipX - flowX * size * 0.1;
+    const baseY = tipY - flowY * size * 0.1;
+    const wingX = -flowY * size * 0.1;
+    const wingY = flowX * size * 0.1;
     context.moveTo(baseX + wingX, baseY + wingY);
     context.lineTo(tipX, tipY);
     context.lineTo(baseX - wingX, baseY - wingY);

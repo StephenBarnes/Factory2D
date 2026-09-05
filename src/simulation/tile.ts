@@ -671,8 +671,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     attractionRange: 0,
     fill: "#8ebbc2",
     shadow: "#4e7880",
-    decorationStyle: TileDecorationStyle.Crack,
-    decorationColor: "#c8edf0",
+    decorationStyle: TileDecorationStyle.None,
   },
   [TileKind.IronOre]: {
     name: "Iron Ore",
