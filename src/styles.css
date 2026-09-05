@@ -185,6 +185,7 @@ canvas:focus-visible {
 .solutions-panel::after,
 .tile-inspector::after,
 .component-configuration-dialog::after,
+.workshop-header::after,
 .test-report-dialog::after {
   content: "";
   position: absolute;
@@ -792,12 +793,18 @@ canvas {
 .sidebar {
   grid-column: 1;
   grid-row: 1;
-  padding: 17px;
+  --sidebar-padding: 17px;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
   border-width: 0 1px 0 0;
+}
+
+.sidebar-content {
+  min-height: 0;
+  padding: var(--sidebar-padding);
+  overflow-y: auto;
   scrollbar-color: var(--panel-border) transparent;
   scrollbar-width: thin;
 }
@@ -1118,20 +1125,20 @@ canvas {
   background: rgb(120 220 202 / 8%);
 }
 
-.selection-swatch::before,
-.selection-swatch::after {
+.editable-region-swatch::before,
+.editable-region-swatch::after {
   content: "";
   position: absolute;
-  border-color: var(--gem);
+  border-color: #d6ad61;
 }
 
-.selection-swatch::before {
+.editable-region-swatch::before {
   inset: 7px;
   border-style: solid;
   border-width: 2px 0 0 2px;
 }
 
-.selection-swatch::after {
+.editable-region-swatch::after {
   inset: 15px 7px 7px 15px;
   border-style: solid;
   border-width: 0 2px 2px 0;
@@ -1142,12 +1149,12 @@ canvas {
   background: rgb(214 173 97 / 8%);
 }
 
-.editable-region-swatch::after {
+.selection-swatch::after {
   content: "";
   position: absolute;
   inset: 7px;
-  border: 2px dashed #d6ad61;
-  background: rgb(214 173 97 / 12%);
+  border: 2px dashed var(--gem);
+  background: rgb(120 220 202 / 12%);
 }
 
 kbd {
@@ -1495,35 +1502,45 @@ kbd {
 .workshop-identity {
   min-width: 0;
   padding: 12px 14px;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  display: flex;
   align-items: center;
-  gap: 9px;
   border-right: 1px solid var(--panel-border);
 }
 
-.workshop-identity-details {
-  min-width: 0;
+.workshop-header {
+  position: relative;
+  flex: none;
+  padding: 14px var(--sidebar-padding);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--panel-border);
+  background: linear-gradient(135deg, var(--raised), var(--panel-bg));
 }
 
-.workshop-identity-details strong {
-  display: block;
-  overflow: hidden;
+.workshop-header .menu-button {
+  justify-self: start;
+}
+
+.workshop-header strong {
+  grid-column: 1 / -1;
+  min-width: 0;
   color: var(--text-bright);
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 1.6vw, 1.5rem);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .puzzle-metrics {
-  margin-top: 4px;
+  flex-wrap: wrap;
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--text-muted);
+  color: var(--text-body);
   font-family: var(--font-mono);
-  font-size: 0.62rem;
+  font-size: clamp(1rem, 1.5vw, 1.25rem);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -1614,6 +1631,7 @@ kbd {
   margin-top: 4px;
 }
 
+.workshop-info-button,
 .controls button,
 .speed-control select {
   min-height: 38px;
@@ -1631,14 +1649,8 @@ kbd {
   padding: 0 13px;
 }
 
-.controls .menu-button,
-.controls .workshop-info-button {
-  min-width: 32px;
+.workshop-info-button {
   min-height: 32px;
-  padding: 0 8px;
-}
-
-.controls .workshop-info-button {
   width: 32px;
   padding: 0;
   border-color: var(--bronze);
@@ -1648,6 +1660,7 @@ kbd {
   text-transform: none;
 }
 
+.workshop-info-button:hover,
 .controls button:hover:not(:disabled) {
   border-color: #7a6540;
   background: var(--raised-hover);
@@ -2638,7 +2651,7 @@ kbd {
   }
 
   .sidebar {
-    padding: 12px;
+    --sidebar-padding: 12px;
   }
 
   .tile-inspector {
@@ -2677,6 +2690,19 @@ kbd {
   .sidebar {
     grid-row: 1;
   }
+  .controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .workshop-identity {
+    border-right: 0;
+    border-bottom: 1px solid var(--panel-border);
+  }
+
+  .workshop-identity:has(.puzzle-metrics[hidden]) {
+    display: none;
+  }
+
 
   .tile-inspector {
     width: 180px;
@@ -2751,7 +2777,7 @@ kbd {
   }
 
   .sidebar {
-    padding: 9px;
+    --sidebar-padding: 9px;
   }
 
   .tile-inspector {

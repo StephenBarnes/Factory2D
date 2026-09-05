@@ -277,15 +277,13 @@ test("edge panels reserve a non-overlapping canvas region", async ({ page }) => 
       const canvas = document.querySelector<HTMLCanvasElement>("#game-canvas");
       const sidebar = document.querySelector<HTMLElement>("#sidebar-controls");
       const controls = document.querySelector<HTMLElement>("#bottom-controls");
-      const identity = document.querySelector<HTMLElement>(".workshop-identity");
-      if (canvas === null || sidebar === null || controls === null || identity === null) {
+      if (canvas === null || sidebar === null || controls === null) {
         throw new Error("Workshop layout is incomplete");
       }
 
       const canvasBounds = canvas.getBoundingClientRect();
       const sidebarBounds = sidebar.getBoundingClientRect();
       const controlsBounds = controls.getBoundingClientRect();
-      const identityBounds = identity.getBoundingClientRect();
       return {
         canvasWidth: canvasBounds.width,
         canvasHeight: canvasBounds.height,
@@ -298,8 +296,6 @@ test("edge panels reserve a non-overlapping canvas region", async ({ page }) => 
         sidebarLeft: sidebarBounds.left,
         sidebarTop: sidebarBounds.top,
         sidebarBottomGap: controlsBounds.top - sidebarBounds.bottom,
-        identityLeftGap: identityBounds.left - controlsBounds.left,
-        identityBottomGap: controlsBounds.bottom - identityBounds.bottom,
       };
     });
 
@@ -314,8 +310,15 @@ test("edge panels reserve a non-overlapping canvas region", async ({ page }) => 
     expect(Math.abs(layout.sidebarTop)).toBeLessThanOrEqual(1);
     expect(Math.abs(layout.controlsLeft)).toBeLessThanOrEqual(1);
     expect(Math.abs(layout.sidebarBottomGap)).toBeLessThanOrEqual(1);
-    expect(Math.abs(layout.identityLeftGap)).toBeLessThanOrEqual(1);
-    expect(Math.abs(layout.identityBottomGap)).toBeLessThanOrEqual(1);
+    const header = page.locator(".workshop-header");
+    const beforeScroll = await header.boundingBox();
+    await page.locator(".sidebar-content").evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+    });
+    expect(await header.boundingBox()).toEqual(beforeScroll);
+    await expect(header.locator("#menu-button")).toBeInViewport();
+    await expect(header.locator("#workshop-info-button")).toBeInViewport();
+    await expect(page.locator("#reset-button")).toBeInViewport();
   }
 });
 
@@ -325,14 +328,15 @@ test("workshop identity exposes information and live puzzle metrics", async ({ p
 
   const controls = page.locator("#bottom-controls");
   const identity = controls.locator(".workshop-identity");
+  const header = page.locator(".workshop-header");
   const metrics = identity.locator("#puzzle-metrics");
   const price = identity.locator("#puzzle-price");
   const palette = page.locator("#component-palette");
-  await expect(identity.locator("#screen-title")).toHaveText("FIRST SHIFT");
+  await expect(header.locator("#screen-title")).toHaveText("FIRST SHIFT");
   await expect(metrics).toHaveText("0⚙ | 0×0");
   await expect(page.locator("#screen-description")).toHaveCount(0);
 
-  await identity.getByRole("button", { name: "Workshop information" }).click();
+  await header.getByRole("button", { name: "Workshop information" }).click();
   const dialog = page.locator("#workshop-info-dialog");
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("heading", { name: "First Shift" })).toBeVisible();

@@ -118,6 +118,20 @@
       </section>
 
       <aside class="sidebar edge-panel" id="sidebar-controls" aria-label="Build tools and components">
+        <header class="workshop-header">
+          <button class="menu-button" id="menu-button" type="button">← MENU</button>
+          <button
+            class="workshop-info-button"
+            id="workshop-info-button"
+            type="button"
+            aria-label="Workshop information"
+            aria-haspopup="dialog"
+            aria-controls="workshop-info-dialog"
+            title="Workshop information"
+          >i</button>
+          <strong id="screen-title">SANDBOX</strong>
+        </header>
+        <div class="sidebar-content">
         <div class="panel-heading">
           <span>TOOLS</span>
           <span class="panel-number">01</span>
@@ -209,6 +223,7 @@
           <p><span>STEP</span> N</p>
         </div>
         <div class="coordinates" id="coordinates">X -- &nbsp; Y --</div>
+        </div>
       </aside>
 
       <aside class="tile-inspector floating-panel" id="tile-inspector" aria-label="Inspector details">
@@ -286,24 +301,11 @@
 
       <footer class="controls edge-panel" id="bottom-controls">
         <div class="workshop-identity">
-          <button class="menu-button" id="menu-button" type="button">← MENU</button>
-          <div class="workshop-identity-details">
-            <strong id="screen-title">SANDBOX</strong>
             <div class="puzzle-metrics" id="puzzle-metrics" hidden>
               <span class="puzzle-price" id="puzzle-price">0⚙</span>
               <span aria-hidden="true">|</span>
               <span id="puzzle-footprint">0×0</span>
             </div>
-          </div>
-          <button
-            class="workshop-info-button"
-            id="workshop-info-button"
-            type="button"
-            aria-label="Workshop information"
-            aria-haspopup="dialog"
-            aria-controls="workshop-info-dialog"
-            title="Workshop information"
-          >i</button>
         </div>
         <div class="workshop-controls">
           <div class="transport">
