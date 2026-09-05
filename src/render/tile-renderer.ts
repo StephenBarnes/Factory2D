@@ -430,6 +430,7 @@ function drawDecoration(
       definition.decorationStyle === TileDecorationStyle.Counter ||
       definition.decorationStyle === TileDecorationStyle.Rom ||
       definition.decorationStyle === TileDecorationStyle.Checker ||
+      definition.decorationStyle === TileDecorationStyle.Rotator ||
       definition.decorationStyle === TileDecorationStyle.RuneArray;
     const hasOutputArrow =
       definition.decorationStyle === TileDecorationStyle.Rectifier ||
@@ -450,7 +451,10 @@ function drawDecoration(
       circuitConnections,
       circuitPortCharges,
       (orientedSides(
-        (definition.circuitInputPorts | definition.circuitOutputPorts) as WeldSide,
+        (definition.circuitInputPorts | definition.circuitOutputPorts |
+          (definition.decorationStyle === TileDecorationStyle.Rotator
+            ? WeldSide.Down
+            : WeldSide.None)) as WeldSide,
         orientation,
       ) |
         (definition.decorationStyle === TileDecorationStyle.WireCrossing ||

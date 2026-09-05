@@ -1443,6 +1443,50 @@ export class CanvasRenderer {
   }
 
 
+  private drawWeldOperationPreview(): void {
+    const forwardX = directionX(this.hoverOrientation);
+    const forwardY = directionY(this.hoverOrientation);
+    const targetX = this.hoverX + forwardX;
+    const targetY = this.hoverY + forwardY;
+    if (
+      targetX < 0 || targetX >= this.world.width ||
+      targetY < 0 || targetY >= this.world.height
+    ) {
+      return;
+    }
+
+    const { context, cellSize } = this;
+    context.save();
+    context.strokeStyle = this.hoverKind === TileKind.Welder ? "#78dcca" : "#e15a4f";
+    context.lineWidth = Math.max(2, cellSize * 0.07);
+    context.lineCap = "round";
+    context.globalAlpha = 0.8;
+    context.beginPath();
+    // The operator changes the two transverse edges of its forward neighbor.
+    for (let side = -1; side <= 1; side += 2) {
+      const neighborX = targetX - forwardY * side;
+      const neighborY = targetY + forwardX * side;
+      if (
+        neighborX < 0 || neighborX >= this.world.width ||
+        neighborY < 0 || neighborY >= this.world.height
+      ) {
+        continue;
+      }
+      const centerX = this.originX + (targetX + 0.5 - forwardY * side / 2) * cellSize;
+      const centerY = this.originY + (targetY + 0.5 + forwardX * side / 2) * cellSize;
+      context.moveTo(
+        centerX - forwardX * cellSize * 0.38,
+        centerY - forwardY * cellSize * 0.38,
+      );
+      context.lineTo(
+        centerX + forwardX * cellSize * 0.38,
+        centerY + forwardY * cellSize * 0.38,
+      );
+    }
+    context.stroke();
+    context.restore();
+  }
+
   private drawHover(animationTime: number): void {
     if (this.hoverEdge !== null) {
       const { x1, y1, x2, y2 } = this.hoverEdge;
@@ -1489,6 +1533,9 @@ export class CanvasRenderer {
         animationTime,
       );
       this.context.restore();
+      if (this.hoverKind === TileKind.Welder || this.hoverKind === TileKind.Splitter) {
+        this.drawWeldOperationPreview();
+      }
     }
 
     this.context.strokeStyle = editable ? "#78dcca" : "#e15a4f";
