@@ -598,29 +598,45 @@
             <div class="rom-configuration-grid" data-component-rom-grid></div>
           </div>
           <div class="component-rom-panel component-array-panel" data-component-array-panel hidden>
-            <div class="component-rom-dimensions">
-              <label>
-                WIDTH
-                <input
-                  data-component-array-width
-                  type="number"
-                  min="1"
-                  max="15"
-                  step="2"
-                  required
-                />
-              </label>
-              <label>
-                HEIGHT
-                <input
-                  data-component-array-height
-                  type="number"
-                  min="1"
-                  max="15"
-                  step="2"
-                  required
-                />
-              </label>
+            <div class="component-array-size-preview">
+              <div class="component-rom-dimensions component-array-dimensions">
+                <label>
+                  WIDTH
+                  <input
+                    data-component-array-width
+                    type="number"
+                    min="1"
+                    max="15"
+                    step="2"
+                    required
+                  />
+                </label>
+                <label>
+                  HEIGHT
+                  <input
+                    data-component-array-height
+                    type="number"
+                    min="1"
+                    max="15"
+                    step="2"
+                    required
+                  />
+                </label>
+              </div>
+              <figure class="component-array-preview">
+                <canvas
+                  class="component-array-thumbnail"
+                  data-component-array-thumbnail
+                  role="img"
+                  aria-label="Rune array contents"
+                  aria-describedby="component-array-thumbnail-caption"
+                ></canvas>
+                <figcaption
+                  id="component-array-thumbnail-caption"
+                  data-component-array-thumbnail-caption
+                  aria-live="polite"
+                ></figcaption>
+              </figure>
             </div>
             <label class="component-numeric-panel component-array-description">
               <span>DESCRIPTION</span>

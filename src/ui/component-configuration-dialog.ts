@@ -1,3 +1,5 @@
+import { collectWorldBodies } from "../render/body-cells";
+import { drawBody, type BodyCell } from "../render/tile-renderer";
 import {
   componentConfigurationForKind,
   MAX_ROM_DIMENSION,
@@ -50,6 +52,14 @@ export class ComponentConfigurationDialog {
   private readonly arrayHeight: HTMLInputElement;
   private readonly arrayDescription: HTMLInputElement;
   private readonly arrayOpenButton: HTMLButtonElement;
+  private readonly arrayThumbnail: HTMLCanvasElement;
+  private readonly arrayThumbnailCaption: HTMLElement;
+  private readonly arrayThumbnailObserver: ResizeObserver;
+  private arrayPreview: {
+    readonly width: number;
+    readonly height: number;
+    readonly bodies: BodyCell[][];
+  } | null = null;
   private readonly cancelButton: HTMLButtonElement;
   private readonly saveButton: HTMLButtonElement;
   private submit: ((submission: ComponentConfigurationSubmission) => void) | null = null;
@@ -83,10 +93,14 @@ export class ComponentConfigurationDialog {
     this.arrayHeight = requiredDescendant(dialog, "[data-component-array-height]");
     this.arrayDescription = requiredDescendant(dialog, "[data-component-array-description]");
     this.arrayOpenButton = requiredDescendant(dialog, "[data-component-array-open]");
+    this.arrayThumbnail = requiredDescendant(dialog, "[data-component-array-thumbnail]");
+    this.arrayThumbnailCaption = requiredDescendant(dialog, "[data-component-array-thumbnail-caption]");
+    this.arrayThumbnailObserver = new ResizeObserver(() => this.renderArrayThumbnail());
     for (const input of [this.arrayWidth, this.arrayHeight]) {
       input.min = String(MIN_RUNE_ARRAY_DIMENSION);
       input.max = String(MAX_RUNE_ARRAY_DIMENSION);
       input.step = "2";
+      input.addEventListener("input", () => this.renderArrayThumbnail());
     }
     this.arrayDescription.maxLength = MAX_RUNE_ARRAY_DESCRIPTION_LENGTH;
     this.arrayOpenButton.addEventListener("click", () => {
@@ -172,7 +186,10 @@ export class ComponentConfigurationDialog {
     }
     this.romGrid.addEventListener("contextmenu", (event) => event.preventDefault());
     window.addEventListener("blur", () => this.endRomStroke());
-    this.dialog.addEventListener("close", () => this.endRomStroke());
+    this.dialog.addEventListener("close", () => {
+      this.endRomStroke();
+      if (!this.dialog.open) this.clearArrayPreview();
+    });
   }
 
   get open(): boolean {
@@ -189,6 +206,7 @@ export class ComponentConfigurationDialog {
       throw new Error(`${TILE_DEFINITIONS[kind].name} is not configurable`);
     }
     this.currentKind = kind;
+    this.clearArrayPreview();
     this.submit = submit;
     this.title.textContent =
       `${submit === null ? "VIEW" : "CONFIGURE"} ${TILE_DEFINITIONS[kind].name.toUpperCase()}`;
@@ -243,6 +261,11 @@ export class ComponentConfigurationDialog {
       this.arrayWidth.value = String(state.world.width);
       this.arrayHeight.value = String(state.world.height);
       this.arrayDescription.value = state.description;
+      this.arrayPreview = {
+        width: state.world.width,
+        height: state.world.height,
+        bodies: collectWorldBodies(state.world),
+      };
       this.description.textContent =
         `Choose odd dimensions from ${MIN_RUNE_ARRAY_DIMENSION} through ` +
         `${MAX_RUNE_ARRAY_DIMENSION}; existing contents stay centered. The four edge-center ` +
@@ -266,6 +289,10 @@ export class ComponentConfigurationDialog {
     }
 
     this.dialog.showModal();
+    if (this.arrayPreview !== null) {
+      this.arrayThumbnailObserver.observe(this.arrayThumbnail);
+      this.renderArrayThumbnail();
+    }
     if (submit === null) {
       this.cancelButton.focus();
     } else if (configuration.type === "number") {
@@ -283,6 +310,7 @@ export class ComponentConfigurationDialog {
 
   close(): void {
     this.endRomStroke();
+    this.clearArrayPreview();
     this.submit = null;
     if (this.dialog.open) {
       this.dialog.close();
@@ -326,6 +354,97 @@ export class ComponentConfigurationDialog {
       submit({ type: "grid", width, height, values: [...this.romValues] });
     }
     this.close();
+  }
+
+  private clearArrayPreview(): void {
+    this.arrayThumbnailObserver.disconnect();
+    this.arrayPreview = null;
+  }
+
+  private renderArrayThumbnail(): void {
+    const preview = this.arrayPreview;
+    if (preview === null || !this.dialog.open) return;
+    const valid = [this.arrayWidth, this.arrayHeight].every((input) =>
+      input.validity.valid && Number.isInteger(input.valueAsNumber) &&
+      input.valueAsNumber >= MIN_RUNE_ARRAY_DIMENSION &&
+      input.valueAsNumber <= MAX_RUNE_ARRAY_DIMENSION &&
+      input.valueAsNumber % 2 === 1,
+    );
+    const width = valid ? this.arrayWidth.valueAsNumber : preview.width;
+    const height = valid ? this.arrayHeight.valueAsNumber : preview.height;
+    const shrinking = width < preview.width || height < preview.height;
+    this.arrayThumbnailCaption.textContent = valid
+      ? `${width} × ${height} centered bounds (gold outline). ` +
+        (shrinking ? "Shaded contents will be cropped on save." : "Read-only preview of current contents.")
+      : "Current contents shown. Enter valid odd dimensions to preview the centered bounds.";
+    this.arrayThumbnail.setAttribute(
+      "aria-label",
+      `Rune array contents, currently ${preview.width} by ${preview.height}. ` +
+      this.arrayThumbnailCaption.textContent,
+    );
+
+    const canvas = this.arrayThumbnail;
+    const logicalWidth = canvas.clientWidth;
+    const logicalHeight = canvas.clientHeight;
+    if (logicalWidth === 0 || logicalHeight === 0) return;
+    // Match snippet thumbnails: supersample the shared tile/body renderer.
+    const pixelRatio = (window.devicePixelRatio || 1) * 2;
+    const backingWidth = Math.max(1, Math.round(logicalWidth * pixelRatio));
+    const backingHeight = Math.max(1, Math.round(logicalHeight * pixelRatio));
+    if (canvas.width !== backingWidth || canvas.height !== backingHeight) {
+      canvas.width = backingWidth;
+      canvas.height = backingHeight;
+    }
+    const context = canvas.getContext("2d");
+    if (context === null) throw new Error("Canvas 2D is not supported by this browser");
+    context.setTransform(backingWidth / logicalWidth, 0, 0, backingHeight / logicalHeight, 0, 0);
+    context.clearRect(0, 0, logicalWidth, logicalHeight);
+    const columns = Math.max(preview.width, width);
+    const rows = Math.max(preview.height, height);
+    const cellSize = Math.min((logicalWidth - 12) / columns, (logicalHeight - 12) / rows, 32);
+    if (cellSize <= 0) return;
+    const originX = (logicalWidth - preview.width * cellSize) / 2;
+    const originY = (logicalHeight - preview.height * cellSize) / 2;
+    const left = (logicalWidth - width * cellSize) / 2;
+    const top = (logicalHeight - height * cellSize) / 2;
+    const gridLeft = (logicalWidth - columns * cellSize) / 2;
+    const gridTop = (logicalHeight - rows * cellSize) / 2;
+    context.fillStyle = "#191309";
+    context.fillRect(originX, originY, preview.width * cellSize, preview.height * cellSize);
+    context.strokeStyle = "#55412b";
+    context.lineWidth = 0.5;
+    context.beginPath();
+    for (let x = 0; x <= columns; x += 1) {
+      context.moveTo(gridLeft + x * cellSize, gridTop);
+      context.lineTo(gridLeft + x * cellSize, gridTop + rows * cellSize);
+    }
+    for (let y = 0; y <= rows; y += 1) {
+      context.moveTo(gridLeft, gridTop + y * cellSize);
+      context.lineTo(gridLeft + columns * cellSize, gridTop + y * cellSize);
+    }
+    context.stroke();
+    for (const body of preview.bodies) {
+      drawBody(context, originX, originY, cellSize, body);
+    }
+    if (valid && shrinking) {
+      context.save();
+      context.beginPath();
+      context.rect(originX, originY, preview.width * cellSize, preview.height * cellSize);
+      context.clip();
+      context.beginPath();
+      context.rect(originX, originY, preview.width * cellSize, preview.height * cellSize);
+      context.rect(left, top, width * cellSize, height * cellSize);
+      context.fillStyle = "rgb(125 26 26 / 58%)";
+      context.fill("evenodd");
+      context.restore();
+    }
+    if (valid) {
+      context.strokeStyle = "#edc779";
+      context.lineWidth = 2;
+      context.setLineDash([5, 3]);
+      context.strokeRect(left, top, width * cellSize, height * cellSize);
+      context.setLineDash([]);
+    }
   }
 
   private resizeRomDraft(): void {

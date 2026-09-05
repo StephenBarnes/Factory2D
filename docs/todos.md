@@ -119,7 +119,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 # UI
 
 * For each tile, in addition to the description, add an extended, potentially multi-paragraph description. Include things like details of how ROM rune's cursor movement works, and a color-coded truth table for the combiner rune, etc. Display these in the inspector, when the mouse is over the palette. When the mouse is over the tile grid, instead only show the short description.
-* When saving an image using the image button, crop out parts of the screen that are over the background, outside the grid, if this can be implemented easily.
 * Implement undo and redo when editing.
 * Show brief text like "+2⚙" above the current puzzle price as components are placed; make it fade to transparent after a brief delay. Animate negative numbers when removing blocks. Color them blue for positive, red for negative, same as circuit charges. When many components are added/removed in rapid succession, grow the current number instead of making many separate text boxes.
 * Add support for mobile and touch screens. Check if it's playable.
@@ -152,7 +151,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 * Add backgrounds for puzzles, maybe with parallax as the player pans.
 * EASY Rename runes; prefer metaphorical, arcane, or Anglish-style names. ROM rune -> rune of wisdom, sensor rune -> watchful rune, inverter -> gainsayer rune, delay rune -> recall rune, rectifier -> rightener, etc. Maybe rename +1, -1, and 0 to right, left, and center, or some other natural ternary system, if we can find a way to explain sum, multiply, and subtraction concisely in that system. Also rename the assembler - anvil or forge or something else?
-* Make the rune array modal show a read-only thumbnail of the inner board next to the dimension inputs, so players can judge what a shrink will crop before saving.
 
 ## Specific block appearance changes
 

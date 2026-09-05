@@ -307,6 +307,46 @@ export class CanvasRenderer {
     this.renderedNestedPortCharges = nestedPortCharges;
   }
 
+  /** Copies the visible board from the last rendered frame, excluding off-board port cells. */
+  cropRenderedBoard(): HTMLCanvasElement {
+    // Use the rendering transform: rounded backing dimensions can differ from CSS size × DPR.
+    const transform = this.context.getTransform();
+    const left = Math.max(0, Math.floor(this.originX * transform.a));
+    const top = Math.max(0, Math.floor(this.originY * transform.d));
+    const right = Math.min(
+      this.canvas.width,
+      Math.ceil((this.originX + this.world.width * this.cellSize) * transform.a),
+    );
+    const bottom = Math.min(
+      this.canvas.height,
+      Math.ceil((this.originY + this.world.height * this.cellSize) * transform.d),
+    );
+    if (!(right > left && bottom > top)) {
+      throw new Error("Cannot export the grid image: the rendered board is not visible");
+    }
+
+    // Round outwards to retain antialiased edge pixels, then copy without resampling.
+    const image = document.createElement("canvas");
+    image.width = right - left;
+    image.height = bottom - top;
+    const context = image.getContext("2d");
+    if (context === null) {
+      throw new Error("Canvas 2D is not supported by this browser");
+    }
+    context.drawImage(
+      this.canvas,
+      left,
+      top,
+      image.width,
+      image.height,
+      0,
+      0,
+      image.width,
+      image.height,
+    );
+    return image;
+  }
+
   /** Fits both dimensions to the text, wrapping only at the board's full width. */
   fitTextBox(box: TextBox): TextBox | null {
     this.context.save();

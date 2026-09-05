@@ -1857,7 +1857,7 @@ copySceneButton.addEventListener("click", () => {
 downloadImageButton.addEventListener("click", () => {
   closeExportOptions();
   surface.renderer.render(surface.previousWorld, 1, performance.now());
-  canvas.toBlob((blob) => {
+  surface.renderer.cropRenderedBoard().toBlob((blob) => {
     if (blob === null) {
       throw new Error("Could not encode the grid image as PNG");
     }
