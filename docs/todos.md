@@ -10,7 +10,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Allow pausing during testing, using the test button or space key. While paused, allow stepping, resuming test, or fast-forward.
 * DEFER Add a step-back button to the control panel at the bottom, maybe? Requires keeping previous state in memory, or several so we can step back multiple ticks.
 * DEFER If we do the "asleep vs active regions" change below, or if we store previous state for step-back, then as a follow-up: when testing a solution, check for loops (no active regions, or previous state equals current state) and end the test early.
-* While the sandbox is running, RMB-drag to delete blocks works, but seems to stop after one tick. Rather make it continue. We previously had a similar problem with drag panning, which was fixed in commit 117e3c1 - so likely we need to extend that solution to other forms of click-and-drag interaction, maybe all of them. (Note this isn't an issue in puzzles, only in the sandbox, because in puzzles we don't allow editing the solution after testing starts running.)
 
 ## New puzzle types
 

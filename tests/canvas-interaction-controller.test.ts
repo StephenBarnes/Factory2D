@@ -283,7 +283,7 @@ describe("canvas interaction controller", () => {
       button: 1,
       clientX: 10.5,
     }));
-    middleHarness.controller.cancelEditGesture();
+    middleHarness.controller.prepareSimulationStep();
     middleHarness.controller.handlePointerMove(event("pointermove", {
       button: 1,
       clientX: 15.5,
@@ -297,7 +297,7 @@ describe("canvas interaction controller", () => {
       button: 2,
       altKey: true,
     }));
-    alternateHarness.controller.cancelEditGesture();
+    alternateHarness.controller.prepareSimulationStep();
     alternateHarness.controller.handlePointerMove(event("pointermove", {
       button: 2,
       clientX: 5.5,

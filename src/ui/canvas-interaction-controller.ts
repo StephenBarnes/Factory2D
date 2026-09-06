@@ -404,10 +404,23 @@ export class CanvasInteractionController {
   }
 
   /**
-   * Ends a world-editing gesture before a simulation step without interrupting camera navigation.
-   * Middle-button and Alt-secondary-button pans remain captured across ticks.
+   * Commits sandbox painting before each tick while retaining its pointer capture.
+   * Other edits finish before stepping; camera navigation remains uninterrupted.
    */
-  cancelEditGesture(): void {
+  prepareSimulationStep(): void {
+    const active = this.active;
+    if (
+      active?.kind === "edit" &&
+      active.session === this.surface.session &&
+      active.session.editableRegion === null &&
+      (active.tool === "tile" || active.tool === "weld")
+    ) {
+      this.active = { ...active, changed: false };
+      if (active.changed) {
+        this.callbacks.commitEditTransaction();
+      }
+      return;
+    }
     if (this.active?.kind === "edit" || this.active?.kind === "text-box") {
       this.cancel();
     }

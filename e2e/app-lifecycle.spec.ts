@@ -619,6 +619,34 @@ test("creates, edits, persists, and restores a solution on reload", async ({ pag
   expect(storedBoard).toBe(edited.serializedBoard);
 });
 
+test("sandbox painting and erasure continue across simulation ticks", async ({ page }) => {
+  await seedBrowserStorage(page, "empty");
+  await openNewSandbox(page);
+  await page.getByRole("button", { name: /^Platform/ }).click();
+  await page.keyboard.press("Space");
+
+  for (const button of ["left", "right"] as const) {
+    const start = await boardCellCenter(page, 1, 3);
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down({ button });
+    for (let x = 2; x <= 4; x++) {
+      const tick = (await diagnosticSnapshot(page)).simulation.tick;
+      await expect.poll(async () => (await diagnosticSnapshot(page)).simulation.tick)
+        .toBeGreaterThan(tick);
+      const point = await boardCellCenter(page, x, 3);
+      await page.mouse.move(point.x, point.y);
+    }
+    await page.mouse.up({ button });
+    const board = JSON.parse((await diagnosticSnapshot(page)).serializedBoard);
+    expect(board.grid[3].slice(1, 5)).toBe(button === "left" ? "====" : "....");
+  }
+
+  await page.keyboard.press("Space");
+  await page.reload();
+  const board = JSON.parse((await diagnosticSnapshot(page)).serializedBoard);
+  expect(board.grid[3].slice(1, 5)).toBe("....");
+});
+
 test("commits multi-event tile drags once on pointer up or cancellation", async ({ page }) => {
   await seedBrowserStorage(page, "populated");
   await page.goto("/puzzles/first-shift/solutions/solution-1");

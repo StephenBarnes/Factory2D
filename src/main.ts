@@ -2039,7 +2039,7 @@ importFile.addEventListener("change", async () => {
 function finalizeActiveEditGesture(): void {
   snippetPanel.cancelPlacement();
   textBoxTool.cancel();
-  canvasInteraction.cancelEditGesture();
+  canvasInteraction.prepareSimulationStep();
 }
 
 function finalizeActivePointerGesture(): boolean {
