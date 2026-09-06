@@ -183,7 +183,7 @@ describe("puzzle test controller", () => {
     ]);
     harness.controller.configure(puzzle);
 
-    harness.controller.start(0);
+    harness.controller.togglePlayback(0);
     harness.controller.advanceFrame(400, 400);
     expect(harness.controller.lifecycle.kind).toBe("between-cases");
     expect(harness.view.selectedCaseId).toBe("first");
@@ -200,6 +200,58 @@ describe("puzzle test controller", () => {
     expect(harness.mountedCaseKinds).toHaveLength(2);
   });
 
+  it("pauses without losing progress, steps once, and resumes without catching up paused time", () => {
+    const harness = controllerHarness(emptyVictoryWorld());
+    harness.controller.configure(puzzleWith([
+      caseDefinition("timeout", 5, emptyVictoryWorld),
+    ]));
+    harness.controller.togglePlayback(0);
+    harness.controller.advanceFrame(200, 200);
+    harness.controller.togglePlayback(200);
+    harness.controller.advanceFrame(10_000, 9_800);
+    harness.controller.step(0, 10_000);
+    const state = harness.controller.lifecycle;
+    if (state.kind !== "running") throw new Error("Expected paused running case");
+    expect(state.run.simulation.tick).toBe(2);
+    expect(harness.controller.manualStepping).toBe(true);
+    harness.controller.togglePlayback(10_000);
+    harness.controller.advanceFrame(10_200, 200);
+    expect(state.run.simulation.tick).toBe(3);
+    harness.controller.fastForward();
+    expect(harness.controller.lifecycle.kind).toBe("failed");
+  });
+
+  it.each(["step", "resume", "fast-forward"] as const)(
+    "pauses between cases and completes through %s without restarting",
+    (action) => {
+      const harness = controllerHarness(winningSolution());
+      harness.controller.configure(puzzleWith([
+        caseDefinition("first", 5, emptyVictoryWorld),
+        caseDefinition("second", 5, emptyVictoryWorld),
+      ]));
+      harness.controller.togglePlayback(0);
+      harness.controller.advanceFrame(400, 400);
+      harness.controller.togglePlayback(400);
+      harness.controller.advanceFrame(10_000, 9_600);
+      expect(harness.view.selectedCaseId).toBe("first");
+      expect(harness.controller.lifecycle.kind).toBe("between-cases");
+      expect(harness.recordedReports).toEqual([]);
+      if (action === "step") {
+        harness.controller.step(0, 10_000);
+        harness.controller.step(0, 10_001);
+      } else if (action === "resume") {
+        harness.controller.togglePlayback(10_000);
+        harness.controller.advanceFrame(10_600, 600);
+        harness.controller.advanceFrame(11_000, 400);
+      } else {
+        harness.controller.fastForward();
+      }
+      expect(harness.view.report?.results.map(({ id }) => id)).toEqual(["first", "second"]);
+      expect(harness.controller.lifecycle.kind).toBe("succeeded");
+      expect(harness.recordedReports).toHaveLength(1);
+    },
+  );
+
   it.each(["ready", "running", "succeeded"] as const)("fast-forwards all cases from %s and presents success", (initialState) => {
     const harness = controllerHarness(winningSolution());
     harness.controller.configure(puzzleWith([
@@ -208,7 +260,7 @@ describe("puzzle test controller", () => {
     ]));
 
     if (initialState !== "ready") {
-      harness.controller.start(0);
+      harness.controller.togglePlayback(0);
     }
     if (initialState === "succeeded") {
       harness.controller.fastForward();
@@ -226,7 +278,7 @@ describe("puzzle test controller", () => {
       caseDefinition("timeout", 1, emptyVictoryWorld),
     ]));
 
-    harness.controller.start(0);
+    harness.controller.togglePlayback(0);
     harness.controller.advanceFrame(200, 200);
 
     expect(harness.controller.lifecycle.kind).toBe("failed");
@@ -247,7 +299,7 @@ describe("puzzle test controller", () => {
     ]);
     harness.controller.configure(puzzle);
 
-    harness.controller.start(0);
+    harness.controller.togglePlayback(0);
     harness.controller.advanceFrame(400, 400);
     expect(harness.controller.lifecycle.kind).toBe("failed");
     expect(harness.view.failure).toContain('test case "Case loss"');

@@ -243,23 +243,25 @@ function updateTransportState(): void {
   const testingPuzzleSolution = puzzleTests.testing;
   const testLifecycle = puzzleTests.lifecycle.kind;
   const testFailed = testLifecycle === "failed";
+  const testPlaying = testingPuzzleSolution && !puzzleTests.manualStepping;
   playButton.textContent = puzzleWorkshop
-    ? testingPuzzleSolution ? "⏯ TESTING…" : "▶ TEST"
+    ? testingPuzzleSolution ? testPlaying ? "Ⅱ PAUSE" : "▶ RESUME" : "▶ TEST"
     : running ? "Ⅱ PAUSE" : "▶ RUN";
-  playButton.disabled = testingPuzzleSolution;
-  playButton.classList.toggle("running", !puzzleWorkshop && running);
+  playButton.disabled = false;
+  playButton.classList.toggle("running", puzzleWorkshop ? testPlaying : running);
   fastForwardButton.hidden = !puzzleWorkshop;
   fastForwardButton.disabled = !puzzleWorkshop;
   testCaseButton.disabled = testingPuzzleSolution;
-  stateLight.classList.toggle("running", running || testingPuzzleSolution);
+  stateLight.classList.toggle("running", running || testPlaying);
   stateLight.classList.toggle("failed", testFailed);
   stateLabel.textContent = testingPuzzleSolution
-    ? testLifecycle === "between-cases" ? "CASE PASSED" : "TESTING CASE"
+    ? !testPlaying ? "TEST PAUSED"
+      : testLifecycle === "between-cases" ? "CASE PASSED" : "TESTING CASE"
     : testFailed ? "TEST FAILED"
     : running ? "SIMULATING" : editingEnabled ? "BUILD MODE" : "RESET TO EDIT";
   stepButton.disabled = running || (testingPuzzleSolution && !puzzleTests.manualStepping);
   clearButton.disabled = !editingEnabled || testingPuzzleSolution;
-  transportShortcutLabel.textContent = puzzleWorkshop ? "TEST SOLUTION" : "RUN / PAUSE";
+  transportShortcutLabel.textContent = puzzleWorkshop ? "TEST / PAUSE" : "RUN / PAUSE";
   for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
     item.disabled = !editingEnabled || testingPuzzleSolution;
   }
@@ -1766,7 +1768,7 @@ sidebarControls.addEventListener("pointerout", (event) => {
 
 playButton.addEventListener("click", () => {
   if (navigation.screen.kind === "puzzle") {
-    puzzleTests.start();
+    puzzleTests.togglePlayback();
   } else {
     setRunning(!running);
   }
@@ -2270,7 +2272,7 @@ document.addEventListener("keydown", (event) => {
       return;
     }
     if (navigation.screen.kind === "puzzle") {
-      puzzleTests.start();
+      puzzleTests.togglePlayback();
     } else {
       setRunning(!running);
     }

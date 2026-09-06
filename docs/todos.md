@@ -7,7 +7,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 ## Sim test/play flow
 
 * Modify our "fast" test option to still render sometimes, say every n ticks or at 60 FPS. Currently it runs the sim only, skipping rendering entirely, which may be undesirable since e.g. it makes infinite loops not visible.
-* Allow pausing during testing, using the test button or space key. While paused, allow stepping, resuming test, or fast-forward.
 * DEFER Add a step-back button to the control panel at the bottom, maybe? Requires keeping previous state in memory, or several so we can step back multiple ticks.
 * DEFER If we do the "asleep vs active regions" change below, or if we store previous state for step-back, then as a follow-up: when testing a solution, check for loops (no active regions, or previous state equals current state) and end the test early.
 

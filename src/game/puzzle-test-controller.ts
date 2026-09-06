@@ -187,9 +187,18 @@ export class PuzzleTestController {
     this.refreshPresentation();
   }
 
-  start(startedAt = performance.now()): void {
+  togglePlayback(startedAt = performance.now()): void {
     const state = this.lifecycleValue;
-    if (state.kind === "idle" || state.kind === "running" || state.kind === "between-cases") {
+    if (state.kind === "idle") {
+      return;
+    }
+    if (state.kind === "running" || state.kind === "between-cases") {
+      const mode = state.mode === "automatic" ? "manual" : "automatic";
+      this.lifecycleValue = state.kind === "running"
+        ? { ...state, mode, caseStartedAt: startedAt, accumulatedMs: 0 }
+        : { ...state, mode, nextCaseAt: startedAt + TEST_CASE_TRANSITION_MS };
+      this.dependencies.finishAnimation();
+      this.refreshPresentation();
       return;
     }
     this.beginRun(state, "automatic", startedAt);
