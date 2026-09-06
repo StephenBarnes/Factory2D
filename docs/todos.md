@@ -7,6 +7,7 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 ## Sim test/play flow
 
 * Modify our "fast" test option to still render sometimes, say every n ticks or at 60 FPS. Currently it runs the sim only, skipping rendering entirely, which may be undesirable since e.g. it makes infinite loops not visible.
+* Allow pausing during testing, using the test button or space key. While paused, allow stepping, resuming test, or fast-forward.
 * DEFER Add a step-back button to the control panel at the bottom, maybe? Requires keeping previous state in memory, or several so we can step back multiple ticks.
 * DEFER If we do the "asleep vs active regions" change below, or if we store previous state for step-back, then as a follow-up: when testing a solution, check for loops (no active regions, or previous state equals current state) and end the test early.
 
@@ -23,6 +24,8 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 # Authoring tools, player-created puzzles, histograms
 
+* In puzzle screens, add an option to the export list to export as a puzzle, populating all fields. This is basically just a direct download of the relevant file in `src/game/puzzles/` - but players don't have access to those files directly, so we want to allow them to download the puzzle, import in sandbox, and edit to create a new puzzle or to expriment.
+* In the sandbox, when pressing the info button, we allow editing the current puzzle, and enabling/disabling components. In this view: (1) disable all components by default, instead of enabling all by default; (2) add a field in TileDefinition defining a default cost for each component, and pre-populate the prices with that value instead of 1 for all components. Pick any price that seems reasonable - 2 for conduit or stone, 10 for runes, 20 for assemblers, etc.
 * Add back-end server and database. Probably Cloudflare Workers + D1 + R2. Then make the game request histogram data and (later) shared puzzles, and allow submitting scores and shared puzzles. Use `crypto.randomUUID()` to assign each install an ID.
 * DEFER Allow voting community-created puzzles up and down. We can assume users aren't malicious, this is a zero-stakes indie game; expect under 10 players per day. We want to avoid setting up a whole auth system or requiring email addresses, etc. Using a simple unique ID allows exploits (e.g. clear browser data and double-vote) but we'll assume nobody does that. Version the database and roll back manually if needed. If the game becomes popular enough to need more than that, upgrade to a more robust system.
 	* Also, when using the "clear all player data" button, do not erase the UUID. Unclear what we should do when importing/exporting - maybe transfer the UUID.
@@ -151,13 +154,15 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 ## Specific block appearance changes
 
-* Currently all unwelded blocks have a brighter region in the bottom-left corner. I think this is because the curved shadow path has a slightly smaller radius, or extends slightly less far, to the bottom-right corner, allowing the main color to leak through in that corner. Same bug occurs in the bottom-right of a block if it has welded bottom and right neighbors.
+* Currently all unwelded blocks have a brighter region in the bottom-left corner. I think this is because the curved shadow path has a slightly smaller radius, or extends slightly less far, to the bottom-right corner, allowing the main color to leak through in that corner. Same bug occurs in the bottom-right of a block if it has welded bottom and right neighbors / at bottom-right fillet corners.
 * Replace the current rune icon set with more intuitive or pretty symbols, matching the rune theme. Make stone/glass/platform have two parallel lines instead of the Z-lightning-bolt. Block sensor should have angular rune-like eye symbol (hollow diamond with center diamond for the pupil); charge sensor should be the same eye with lighting bolt replacing pupil. Fixed charge should have 3 lighting bolts, not plus symbol and circle. Inverter should be "hagalaz" N/H symbol. Subtractor should mark back with a small plus. Rectifier should be "thurisaz" `|>` instead of current `>|` diode symbol. Victory block should have "jera" rune symbol. Magnet should be reworked, but defer until we change its mechanics. Also give them sensible background colors, e.g. shades of purple for all sensors, teal/blue for all 3-input mathematical transforms.
 * Modify colors for all runes. In general they're too pastel and muted. The teal of the platform block looks especially bad; it's also used by combiner and ROM.
 * DEFER For the rotator component, we should modify rendering to make behavior more obvious. Maybe draw as a welded block with only around a third of the width, on welded side, and then draw the rotator arm separately. Also mark red/blue on the sides of the base to show which charge rotates in which direction. Also animate the rotator arm itself turning (different from animating the bodies it rotated).
 
 ## Styling
 
+* For unchecked checkboxes, use a dark brown color, rather than white. For checked checkboxes, use the same dark brown but with a bright yellow checkmark (instead of the current bright yellow background and brown checkmark).
+* For the "test" and "fast" buttons, modify styles. Currently the run/test button interior becomes much darker while the mouse is over it - seems to be matching other hovered buttons, but since it's yellow and the other buttons are brown, we should change it to rather a darker yellow or something. Also, the other buttons have visible gradients while run/test/fast don't; maybe make those buttons also brown, but give them a more visible gradient to differentiate them, similar to the gradient applied in the main menu to the sandbox button or to available unsolved buttons.
 * Refine the dwarven UI theme: the palette now lives in CSS custom properties on `:root` in `src/styles.css` (stone browns, bronze, gold, ember, gem accents) with gilded corner ornaments on major panels; consider richer Art Deco corner motifs (diagonals, doubled lines) and reviewing tile fill/decoration colors in `src/simulation/tile.ts` for warmth.
 * EASY? Add a dark/light mode toggle. Set to dark by default, or browser default. The `:root` custom-property palette is the switching point: add a `[data-theme="light"]` override block and a persisted toggle.
 

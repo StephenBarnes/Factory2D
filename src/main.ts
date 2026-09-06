@@ -242,7 +242,7 @@ function updateTransportState(): void {
   const testLifecycle = puzzleTests.lifecycle.kind;
   const testFailed = testLifecycle === "failed";
   playButton.textContent = puzzleWorkshop
-    ? testingPuzzleSolution ? "TESTING…" : "◆ TEST"
+    ? testingPuzzleSolution ? "⏯ TESTING…" : "▶ TEST"
     : running ? "Ⅱ PAUSE" : "▶ RUN";
   playButton.disabled = testingPuzzleSolution;
   playButton.classList.toggle("running", !puzzleWorkshop && running);

@@ -1728,8 +1728,8 @@ kbd {
   opacity: 0.38;
 }
 
-.controls .primary-control {
-  min-width: 100px;
+.controls .primary-control, .controls #fast-forward-button {
+  min-width: 80px;
   border-color: #d6993c;
   color: #16120b;
   background: #e7ad4f;

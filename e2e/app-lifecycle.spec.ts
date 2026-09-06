@@ -701,7 +701,7 @@ test("renders puzzle cases and leaves the failed case paused on the board", asyn
   await seedBrowserStorage(page, "populated");
   await page.goto("/puzzles/first-shift/solutions/solution-1");
 
-  const testButton = page.getByRole("button", { name: "◆ TEST" });
+  const testButton = page.getByRole("button", { name: "▶ TEST" });
   const fastForwardButton = page.getByRole("button", { name: /FAST/ });
   const report = page.getByRole("dialog");
   await expect(testButton).toBeVisible();
@@ -753,7 +753,7 @@ test("persists successful solution scores on the puzzle briefing", async ({ page
   await seedBrowserStorage(page, "populated");
   await page.goto("/puzzles/first-shift/solutions/solution-1");
   await placeStone(page, 9, 3);
-  await page.getByRole("button", { name: "◆ TEST" }).click();
+  await page.getByRole("button", { name: "▶ TEST" }).click();
   await page.getByRole("button", { name: /FAST/ }).click();
 
   const report = page.getByRole("dialog");
