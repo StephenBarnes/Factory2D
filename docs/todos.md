@@ -149,7 +149,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 # Visuals
 
-* On mouseover on an already-placed welder or unwelder, show the visualization of which edges it welds/unwelds. (We show this already when the player is placing them, but not on mouseover.)
 * Add similar visualizations for othe components. For the sensor, draw a circle around the one it's looking at, on mouseover. For the rotator, highlight the 3 neighboring cells it can interact with, with arrows.
 * Add backgrounds for puzzles, maybe with parallax as the player pans.
 * EASY Rename runes; prefer metaphorical, arcane, or Anglish-style names. ROM rune -> rune of wisdom, sensor rune -> watchful rune, inverter -> gainsayer rune, delay rune -> recall rune, rectifier -> rightener, etc. Maybe rename +1, -1, and 0 to right, left, and center, or some other natural ternary system, if we can find a way to explain sum, multiply, and subtraction concisely in that system. Also rename the assembler - anvil or forge or something else?

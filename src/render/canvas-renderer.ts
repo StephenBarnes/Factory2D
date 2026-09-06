@@ -1499,9 +1499,9 @@ export class CanvasRenderer {
   }
 
 
-  private drawWeldOperationPreview(): void {
-    const forwardX = directionX(this.hoverOrientation);
-    const forwardY = directionY(this.hoverOrientation);
+  private drawWeldOperationPreview(kind: TileKind, orientation: Direction): void {
+    const forwardX = directionX(orientation);
+    const forwardY = directionY(orientation);
     const targetX = this.hoverX + forwardX;
     const targetY = this.hoverY + forwardY;
     if (
@@ -1513,7 +1513,7 @@ export class CanvasRenderer {
 
     const { context, cellSize } = this;
     context.save();
-    context.strokeStyle = this.hoverKind === TileKind.Welder ? "#78dcca" : "#e15a4f";
+    context.strokeStyle = kind === TileKind.Welder ? "#78dcca" : "#e15a4f";
     context.lineWidth = Math.max(2, cellSize * 0.07);
     context.lineCap = "round";
     context.globalAlpha = 0.8;
@@ -1635,11 +1635,18 @@ export class CanvasRenderer {
     }
     const editable = this.editableRegion === null ||
       this.editableRegion.contains(this.hoverX, this.hoverY);
+    const placedKind = this.world.kindAt(this.hoverX, this.hoverY);
+    if (placedKind === TileKind.Welder || placedKind === TileKind.Splitter) {
+      this.drawWeldOperationPreview(
+        placedKind,
+        this.world.orientationAt(this.hoverX, this.hoverY),
+      );
+    }
 
     if (
       editable &&
       this.hoverKind !== TileKind.Empty &&
-      this.world.kindAt(this.hoverX, this.hoverY) === TileKind.Empty
+      placedKind === TileKind.Empty
     ) {
       this.context.save();
       this.context.globalAlpha = 0.55;
@@ -1654,7 +1661,7 @@ export class CanvasRenderer {
       );
       this.context.restore();
       if (this.hoverKind === TileKind.Welder || this.hoverKind === TileKind.Splitter) {
-        this.drawWeldOperationPreview();
+        this.drawWeldOperationPreview(this.hoverKind, this.hoverOrientation);
       }
     }
 
