@@ -66,12 +66,9 @@ const CORNER_RADIUS_RATIO = 0.15;
 const INSET_RATIO = 0.05;
 /** Thickness of the top-left highlight and bottom-right shade bands. */
 const BEVEL_RATIO = 0.05;
-const DROP_SHADOW_X_RATIO = 0.05;
-const DROP_SHADOW_Y_RATIO = 0.1;
 
 const HIGHLIGHT_STYLE = "rgba(255, 255, 255, 0.25)";
 const SHADE_STYLE = "rgba(0, 0, 0, 0.28)";
-const DROP_SHADOW_STYLE = "rgba(0, 0, 0, 0.35)";
 
 /** Cells and vertices are keyed on a fixed grid stride; supports coordinates up to 4095. */
 const KEY_STRIDE = 4096;
@@ -118,12 +115,6 @@ export function drawBody(
   }
   const bodyPath = path ?? createBodyPath(originX, originY, cellSize, cells, cellCount);
 
-
-  context.save();
-  context.translate(cellSize * DROP_SHADOW_X_RATIO, cellSize * DROP_SHADOW_Y_RATIO);
-  context.fillStyle = DROP_SHADOW_STYLE;
-  context.fill(bodyPath);
-  context.restore();
 
   context.save();
   context.clip(bodyPath);
