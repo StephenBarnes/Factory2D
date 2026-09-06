@@ -262,7 +262,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationColor: "#405b52",
   },
   [TileKind.Magnet]: {
-    name: "Magnet",
+    name: "Lodestone",
     boardCode: "L",
     defaultPrice: 10,
     palette: {
@@ -308,7 +308,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationColor: "#d5e1e7",
   },
   [TileKind.Conduit]: {
-    name: "Conduit",
+    name: "Channel",
     boardCode: "C",
     defaultPrice: 2,
     palette: {
@@ -515,7 +515,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationColor: "#f0d7ca",
   },
   [TileKind.ChargeSensor]: {
-    name: "Charge Sensor Rune",
+    name: "Mana Sensor Rune",
     boardCode: "Q",
     defaultPrice: 10,
     palette: {
@@ -538,7 +538,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationColor: "#d3eff4",
   },
   [TileKind.Selector]: {
-    name: "Selector Rune",
+    name: "Discernment Rune",
     boardCode: "T",
     defaultPrice: 10,
     palette: {
@@ -630,13 +630,13 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationColor: "#f0d3c1",
   },
   [TileKind.WireCrossing]: {
-    name: "Wire Crossing",
+    name: "Crossing Rune",
     boardCode: "W",
     defaultPrice: 4,
     palette: {
       order: 23,
       category: PaletteCategory.Circuits,
-      description: "Keeps horizontal and vertical circuit networks separate",
+      description: "Keeps horizontal and vertical conduits separate",
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -769,7 +769,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationColor: "#e8c987",
   },
   [TileKind.Victory]: {
-    name: "Victory Block",
+    name: "Judgment Stone",
     boardCode: "V",
     defaultPrice: 0,
     palette: {
@@ -815,7 +815,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationColor: "#d3e3f2",
   },
   [TileKind.Counter]: {
-    name: "Charge Counter",
+    name: "Counter Rune",
     boardCode: "N",
     defaultPrice: 10,
     palette: {
@@ -838,13 +838,13 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationColor: "#eadcf7",
   },
   [TileKind.Rom]: {
-    name: "ROM Rune",
+    name: "Lore Rune",
     boardCode: "U",
     defaultPrice: 20,
     palette: {
       order: 29,
       category: PaletteCategory.Circuits,
-      description: "Positive left/rear inputs move the 2D cursor away from their side; negative inputs reverse it. Outputs the selected value. Press E to configure",
+      description: "Read-only memory. Positive left/rear inputs move the 2D cursor away from their side; negative inputs reverse it. Outputs the selected value. Press E to configure",
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -953,7 +953,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationColor: "#d8e4f4",
   },
   [TileKind.Grapher]: {
-    name: "ROM Grapher",
+    name: "Lore Grapher",
     boardCode: "g",
     defaultPrice: 0,
     palette: {

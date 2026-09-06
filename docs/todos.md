@@ -16,6 +16,7 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 * DEFER Add support for a new puzzle type, where the player starts with a machine that doesn't work. They have to modify as few tiles as possible to make it work. Same scoring rules but we only count modified tiles. Add some way to view what tiles have been modified - maybe color grid lines yellow if their contained cell is modified. Could auto-generate some of these puzzles from reference solutions.
 * DEFER After the last set of puzzles is unlocked, also unlock a "full toolbelt" equivalent of every puzzle - a variant where all components are available, with the same list of prices for each. This adds some content, lets players compete on more histograms.
+* DEFER Add a variant of puzzle pricing, where instead of a price per block, you have a fixed number of each block, shown on the palette. We still allow placing more than that, but if a test with that succeeds, we don't register it as a solved puzzle; replace the victory modal with a modal explaining this. Show warning in bottom-left if puzzle exceeds allowed amount.
 
 # Storage format, import/export
 
