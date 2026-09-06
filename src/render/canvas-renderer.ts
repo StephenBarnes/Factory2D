@@ -137,6 +137,7 @@ export class CanvasRenderer {
   private highlightedTileIndex = -1;
   private highlightedGeometryRevision = -1;
   private renderInvalidated = true;
+  private lightMode = false;
   private renderedWorldRevision = -1;
   private renderedPreviousWorld: World | null = null;
   private renderedPreviousWorldRevision = -1;
@@ -271,7 +272,11 @@ export class CanvasRenderer {
     this.renderInvalidated = true;
   }
 
-  render(previousWorld: World | null = null, progress = 1, animationTime = 0): void {
+  render(previousWorld: World | null = null, progress = 1, animationTime = 0, lightMode = false): void {
+    if (this.lightMode !== lightMode) {
+      this.lightMode = lightMode;
+      this.renderInvalidated = true;
+    }
     this.resizeBackingStore();
     const boundedProgress = Math.max(0, Math.min(1, progress));
     const previousWorldRevision = previousWorld?.revision ?? -1;
@@ -291,7 +296,7 @@ export class CanvasRenderer {
     this.hasTimeDependentVisuals = false;
     const { context } = this;
     context.clearRect(0, 0, this.viewportWidth, this.viewportHeight);
-    context.fillStyle = "#0d0a07";
+    context.fillStyle = this.lightMode ? "#d8ccb5" : "#0d0a07";
     context.fillRect(0, 0, this.viewportWidth, this.viewportHeight);
 
     this.drawGrid();
@@ -645,9 +650,9 @@ export class CanvasRenderer {
     const boardHeight = this.world.height * this.cellSize;
     const { context } = this;
 
-    context.fillStyle = "#191309";
+    context.fillStyle = this.lightMode ? "#f4eddf" : "#191309";
     context.fillRect(this.originX, this.originY, boardWidth, boardHeight);
-    context.strokeStyle = "#2b2213";
+    context.strokeStyle = this.lightMode ? "#dbceb7" : "#2b2213";
     context.lineWidth = 1;
     context.beginPath();
 
@@ -663,7 +668,9 @@ export class CanvasRenderer {
     }
     context.stroke();
 
-    context.strokeStyle = this.nestedView === null ? "#4c3d24" : NESTED_FRAME_COLOR;
+    context.strokeStyle = this.nestedView === null
+      ? (this.lightMode ? "#917951" : "#4c3d24")
+      : NESTED_FRAME_COLOR;
     context.strokeRect(this.originX + 0.5, this.originY + 0.5, boardWidth, boardHeight);
   }
 

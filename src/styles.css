@@ -1687,6 +1687,7 @@ kbd {
   padding: 12px 14px;
   display: flex;
   align-items: center;
+  gap: 12px;
 }
 
 .workshop-header {
@@ -1837,6 +1838,15 @@ kbd {
 .controls button {
   min-width: 72px;
   padding: 0 13px;
+}
+
+.controls #workshop-theme-button {
+  flex: none;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  font-size: 1.25rem;
+  line-height: 1;
 }
 
 .workshop-info-button {

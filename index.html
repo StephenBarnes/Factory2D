@@ -305,6 +305,7 @@
 
       <footer class="controls edge-panel" id="bottom-controls">
         <div class="workshop-identity">
+            <button id="workshop-theme-button" type="button" aria-label="Switch to light mode" title="Switch to light mode">☀</button>
             <div class="puzzle-metrics" id="puzzle-metrics" hidden>
               <span class="puzzle-price" id="puzzle-price">0⚙</span>
               <span aria-hidden="true">|</span>
@@ -436,21 +437,21 @@
             <h2 id="about-title">Factory 2D</h2>
             <section aria-labelledby="about-credits-title">
               <h3 id="about-credits-title">Credits</h3>
-              <p>Primarily developed by ChatGPT 5.6 Sol and ChatGPT 6 Astra, with some help from Fable 5.1. Design and orchestration by Stephen Barnes.</p>
+              <p>Primarily developed by ChatGPT 6 Astra and ChatGPT 5.6 Sol, with some help from Fable 5.1. Design and orchestration by Stephen Barnes.</p>
             </section>
             <section aria-labelledby="about-inspirations-title">
               <h3 id="about-inspirations-title">Inspirations</h3>
-              <p>Inspired by the block-built machines of
+              <p>Inspired by
                 <a href="https://store.steampowered.com/app/2345220/Roody2d/" target="_blank" rel="noopener noreferrer">Roody:2d</a>
-                and the factory puzzles of
+                and
                 <a href="https://store.steampowered.com/app/300570/Infinifactory/" target="_blank" rel="noopener noreferrer">Infinifactory</a>.
                 If you enjoy building machines here, we recommend both games.</p>
             </section>
             <section aria-labelledby="about-technology-title">
               <h3 id="about-technology-title">Under the hood</h3>
               <p>Built in TypeScript with plain HTML and CSS, without a UI framework. Canvas 2D draws the board and its procedural tiles; Vite builds the browser application.</p>
-              <p>The simulation advances in deterministic, discrete ticks: components observe the board, competing actions are resolved, and changes commit together. Welded tiles move as rigid bodies, while signed-ternary circuits carry negative, neutral, or positive charge. Animation only draws between committed states; it never changes the physics.</p>
-              <p>Rune arrays contain nested boards using the same simulation. Browser storage keeps your designs and progress locally. Vitest checks simulation behavior, and Playwright exercises browser workflows.</p>
+              <p>The simulation advances in deterministic, discrete ticks: components observe the board, competing actions are resolved, and changes commit together. Welded tiles move as rigid bodies, while signed-ternary circuits carry negative, neutral, or positive charge. Animation draws between committed states.</p>
+              <p>Browser storage keeps your designs and progress locally.</p>
             </section>
             <a href="https://github.com/StephenBarnes/Factory2D" target="_blank" rel="noopener noreferrer">
               VIEW SOURCE ON GITHUB

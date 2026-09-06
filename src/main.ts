@@ -92,7 +92,10 @@ const puzzleMap = requiredElement<HTMLElement>("puzzle-map");
 const sandboxButton = requiredElement<HTMLButtonElement>("sandbox-button");
 const settingsButton = requiredElement<HTMLButtonElement>("settings-button");
 const settingsDialog = requiredElement<HTMLDialogElement>("settings-dialog");
-initializeTheme(requiredElement<HTMLButtonElement>("light-theme-button"));
+const theme = initializeTheme(
+  requiredElement<HTMLButtonElement>("light-theme-button"),
+  requiredElement<HTMLButtonElement>("workshop-theme-button"),
+);
 const exportPlayerDataButton = requiredElement<HTMLButtonElement>("export-player-data-button");
 const importPlayerDataButton = requiredElement<HTMLButtonElement>("import-player-data-button");
 const importPlayerDataFile = requiredElement<HTMLInputElement>("import-player-data-file");
@@ -1950,7 +1953,7 @@ copySceneButton.addEventListener("click", () => {
 
 downloadImageButton.addEventListener("click", () => {
   closeExportOptions();
-  surface.renderer.render(surface.previousWorld, 1, performance.now());
+  surface.renderer.render(surface.previousWorld, 1, performance.now(), theme.isLight);
   surface.renderer.cropRenderedBoard().toBlob((blob) => {
     if (blob === null) {
       throw new Error("Could not encode the grid image as PNG");
@@ -2362,6 +2365,7 @@ function frame(currentTime: number): void {
     animationDuration === 0 ? null : surface.previousWorld,
     animationProgress,
     currentTime,
+    theme.isLight,
   );
   positionSelectionActions();
   requestAnimationFrame(frame);
