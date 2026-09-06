@@ -59,6 +59,7 @@ import {
 import { SignalTraceRecorder } from "./game/signal-traces";
 import { TextBoxTool } from "./ui/text-box-tool";
 import { populateComponentPalette } from "./ui/component-palette";
+import { initializeTheme } from "./ui/theme";
 
 const MAX_AUTOMATIC_ANIMATION_MS = 250;
 const MANUAL_STEP_ANIMATION_MS = 200;
@@ -91,6 +92,7 @@ const puzzleMap = requiredElement<HTMLElement>("puzzle-map");
 const sandboxButton = requiredElement<HTMLButtonElement>("sandbox-button");
 const settingsButton = requiredElement<HTMLButtonElement>("settings-button");
 const settingsDialog = requiredElement<HTMLDialogElement>("settings-dialog");
+initializeTheme(requiredElement<HTMLButtonElement>("light-theme-button"));
 const exportPlayerDataButton = requiredElement<HTMLButtonElement>("export-player-data-button");
 const importPlayerDataButton = requiredElement<HTMLButtonElement>("import-player-data-button");
 const importPlayerDataFile = requiredElement<HTMLInputElement>("import-player-data-file");

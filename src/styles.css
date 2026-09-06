@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   /* Dwarven mine palette: dark stone, bronze, gilded gold, ember lava, gem accents. */
   --bg-deep: #0b0806;
   --bg-cavern: #171009;
@@ -23,6 +24,34 @@
   --emerald: #8ecf8b;
   --emerald-border: #5d8a58;
   --ruby: #e3858a;
+  --node-hover-bg: #2a2013;
+  --goal-bg: #221a10;
+  --solution-primary-bg: #2c2312;
+  --solution-bg: #191309;
+  --solution-hover-bg: #241b10;
+  --solution-best-bg: #1c1509;
+  --selection-hover-bg: #22271f;
+  --palette-selected-bg: #2d2310;
+  --dialog-bg: #1a130c;
+  --puzzle-group-bg: rgb(21 16 10 / 88%);
+  --shortcut-bg: rgb(24 16 8 / 92%);
+  --unlocked-wash: rgb(84 58 25 / 70%);
+  --best-score-wash: rgb(84 62 24 / 60%);
+  --action-hover-text: #ffe9bb;
+  --solution-primary-text: #f0cf8a;
+  --price-text: #cfa05a;
+  --state-accent: #e7ad4f;
+  --key-text: #a08d68;
+  --array-text: #c7d3f4;
+  --delete-text: #bd777d;
+  --delete-hover-text: #f1a1a7;
+  --danger-text: #ffb3a1;
+  --danger-hover-text: #ffd0c5;
+  --score-worse-text: #e8a099;
+  --danger-surface: #3a1d17;
+  --success-surface: #141a0e;
+  --success-text: #bcd9a8;
+  --success-label: #7d8a68;
   --font-display: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
   --font-mono: "SFMono-Regular", Consolas, monospace;
   color: var(--text-body);
@@ -30,6 +59,61 @@
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg-deep: #e6dcc9;
+  --bg-cavern: #f4eddf;
+  --panel-bg: rgb(250 245 233 / 96%);
+  --panel-border: #b5a184;
+  --border-strong: #917951;
+  --border-faint: #cfc0a7;
+  --raised: #eee3cf;
+  --raised-hover: #e2d2b4;
+  --inset: #fffaf0;
+  --text-bright: #281d10;
+  --text-body: #392b1b;
+  --text-mid: #5e4b32;
+  --text-muted: #715c40;
+  --text-faint: #826c4e;
+  --gild: #80581c;
+  --gold: #79500e;
+  --gold-bright: #674009;
+  --bronze: #92713f;
+  --ember: #a83e0b;
+  --gem: #18675d;
+  --emerald: #366a30;
+  --emerald-border: #527c46;
+  --ruby: #a33440;
+  --node-hover-bg: var(--raised);
+  --goal-bg: var(--raised);
+  --solution-primary-bg: var(--raised);
+  --solution-bg: var(--raised);
+  --solution-hover-bg: var(--raised);
+  --solution-best-bg: var(--raised);
+  --selection-hover-bg: var(--raised);
+  --palette-selected-bg: var(--raised);
+  --dialog-bg: var(--raised);
+  --puzzle-group-bg: var(--raised);
+  --shortcut-bg: var(--raised);
+  --unlocked-wash: var(--raised-hover);
+  --best-score-wash: var(--raised-hover);
+  --action-hover-text: var(--gold-bright);
+  --solution-primary-text: var(--gold-bright);
+  --price-text: var(--gold-bright);
+  --state-accent: var(--gold-bright);
+  --key-text: var(--text-muted);
+  --array-text: var(--gem);
+  --delete-text: var(--ruby);
+  --delete-hover-text: var(--ruby);
+  --danger-text: var(--ruby);
+  --danger-hover-text: var(--ruby);
+  --score-worse-text: var(--ruby);
+  --danger-surface: var(--raised-hover);
+  --success-surface: var(--inset);
+  --success-text: var(--emerald);
+  --success-label: var(--text-muted);
 }
 
 * {
@@ -255,13 +339,13 @@ body:has(dialog[open]) .tool-cursor {
   align-items: center;
   gap: 14px;
   border-color: var(--bronze);
-  background: linear-gradient(90deg, rgb(84 58 25 / 70%), var(--panel-bg) 42%);
+  background: linear-gradient(90deg, var(--unlocked-wash), var(--panel-bg) 42%);
 }
 
 .sandbox-node:hover,
 .puzzle-node:hover:not(:disabled) {
   border-color: var(--gold);
-  background-color: #2a2013;
+  background-color: var(--node-hover-bg);
   transform: translateY(-1px);
 }
 
@@ -322,7 +406,7 @@ body:has(dialog[open]) .tool-cursor {
 .puzzle-group {
   width: 100%;
   border: 1px solid var(--gold-bright);
-  background: rgb(21 16 10 / 88%);
+  background: var(--puzzle-group-bg);
 }
 
 .puzzle-group-heading {
@@ -399,7 +483,7 @@ body:has(dialog[open]) .tool-cursor {
 }
 
 .puzzle-node[data-state="unlocked"] {
-  background: linear-gradient(90deg, rgb(84 58 25 / 70%), var(--panel-bg) 42%);
+  background: linear-gradient(90deg, var(--unlocked-wash), var(--panel-bg) 42%);
 }
 
 .puzzle-node:disabled {
@@ -486,7 +570,7 @@ body:has(dialog[open]) .tool-cursor {
 
 .main-menu-actions button:hover {
   border-color: var(--gold-bright);
-  color: #ffe9bb;
+  color: var(--action-hover-text);
 }
 
 .sandbox-info-screen,
@@ -578,7 +662,7 @@ body:has(dialog[open]) .tool-cursor {
   margin-top: 26px;
   padding: 16px;
   border-left: 2px solid var(--gold);
-  background: #221a10;
+  background: var(--goal-bg);
 }
 
 .puzzle-goal span,
@@ -638,14 +722,14 @@ body:has(dialog[open]) .tool-cursor {
 
 .solution-primary-action {
   border-color: #a4823f;
-  color: #f0cf8a;
-  background: #2c2312;
+  color: var(--solution-primary-text);
+  background: var(--solution-primary-bg);
 }
 
 .solution-primary-action:hover,
 .solution-row-actions button:hover {
   border-color: var(--gold-bright);
-  color: #ffe9bb;
+  color: var(--action-hover-text);
 }
 
 .solution-list {
@@ -665,7 +749,7 @@ body:has(dialog[open]) .tool-cursor {
   gap: 16px;
   border: 1px solid #3e3221;
   color: inherit;
-  background: #191309;
+  background: var(--solution-bg);
   text-align: left;
 }
 
@@ -675,12 +759,12 @@ body:has(dialog[open]) .tool-cursor {
 
 .solution-row:hover {
   border-color: var(--border-strong);
-  background: #241b10;
+  background: var(--solution-hover-bg);
 }
 
 .solution-row.best-score {
   border-color: var(--gold);
-  background: linear-gradient(90deg, rgb(84 62 24 / 60%), #1c1509 48%);
+  background: linear-gradient(90deg, var(--best-score-wash), var(--solution-best-bg) 48%);
   box-shadow: inset 3px 0 var(--gold);
 }
 
@@ -759,12 +843,12 @@ body:has(dialog[open]) .tool-cursor {
 
 .solution-row-actions .solution-delete-action {
   border-color: #684044;
-  color: #bd777d;
+  color: var(--delete-text);
 }
 
 .solution-row-actions .solution-delete-action:hover {
   border-color: #c66a71;
-  color: #f1a1a7;
+  color: var(--delete-hover-text);
 }
 @container solutions (min-width: 720px) {
   .solution-row:not(.sandbox-row) {
@@ -853,7 +937,7 @@ canvas {
 
 .selection-actions button:hover:not(:disabled) {
   border-color: var(--gem);
-  background: #22271f;
+  background: var(--selection-hover-bg);
 }
 
 .selection-actions button:disabled {
@@ -1034,7 +1118,7 @@ canvas {
 }
 
 .inspector-price {
-  color: #cfa05a;
+  color: var(--price-text);
   font-family: var(--font-mono);
   font-size: 0.8rem;
   font-weight: 600;
@@ -1176,7 +1260,7 @@ canvas {
 
 .palette-item.selected {
   border-color: var(--gold);
-  background: #2d2310;
+  background: var(--palette-selected-bg);
   box-shadow: inset 0 -3px var(--gold);
 }
 
@@ -1262,7 +1346,7 @@ kbd {
   border: 1px solid #453823;
   border-bottom-width: 2px;
   border-radius: 2px;
-  color: #a08d68;
+  color: var(--key-text);
   background: var(--inset);
   font-family: var(--font-mono);
   font-size: 0.62rem;
@@ -1291,7 +1375,7 @@ kbd {
   border: 1px solid #5e4925;
   border-radius: 2px;
   color: var(--gold-bright);
-  background: rgb(24 16 8 / 92%);
+  background: var(--shortcut-bg);
   font-family: var(--font-mono);
   font-size: 0.54rem;
   font-weight: 700;
@@ -1685,7 +1769,7 @@ kbd {
   display: grid;
   gap: 5px;
   border: 1px solid var(--border-strong);
-  background: #1a130c;
+  background: var(--dialog-bg);
   box-shadow: 0 10px 24px rgb(0 0 0 / 45%);
 }
 
@@ -1710,7 +1794,7 @@ kbd {
 .controls .test-case-options button[aria-pressed="true"],
 .controls .speed-options button[aria-pressed="true"] {
   border-color: var(--gold);
-  color: #e7ad4f;
+  color: var(--state-accent);
 }
 .test-case-authoring-actions {
   display: grid;
@@ -1781,7 +1865,7 @@ kbd {
 .controls #fast-forward-button {
   min-width: 80px;
   border-color: var(--gild);
-  color: var(--gold-bright);
+  color: #f6cf7e;
   background: linear-gradient(180deg, #70502a, #392713);
 }
 
@@ -1820,7 +1904,7 @@ kbd {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #e7ad4f;
+  background: var(--state-accent);
   box-shadow: 0 0 10px rgb(231 173 79 / 45%);
 }
 
@@ -1880,7 +1964,7 @@ kbd {
   border: 1px solid var(--bronze);
   border-radius: 2px;
   color: var(--text-body);
-  background: #1a130c;
+  background: var(--dialog-bg);
   box-shadow: 0 24px 80px rgb(0 0 0 / 68%);
 }
 
@@ -1972,19 +2056,24 @@ kbd {
   background: var(--raised-hover);
 }
 
+.settings-action-row button[aria-pressed="true"] {
+  border-color: var(--gold);
+  box-shadow: inset 0 -3px var(--gold);
+}
+
 .settings-danger-section {
   border-color: #6d3328;
 }
 
 .settings-action-row .danger-button {
   border-color: #93493a;
-  color: #ffb3a1;
+  color: var(--danger-text);
 }
 
 .settings-action-row .danger-button:hover {
   border-color: #d2674f;
-  color: #ffd0c5;
-  background: #3a1d17;
+  color: var(--danger-hover-text);
+  background: var(--danger-surface);
 }
 
 .main-menu-dialog-content a {
@@ -2057,7 +2146,7 @@ kbd {
   border: 1px solid var(--bronze);
   border-radius: 2px;
   color: var(--text-body);
-  background: #1a130c;
+  background: var(--dialog-bg);
   box-shadow: 0 24px 80px rgb(0 0 0 / 68%);
 }
 
@@ -2338,7 +2427,7 @@ kbd {
   border: 1px solid var(--bronze);
   border-radius: 2px;
   color: var(--text-body);
-  background: #1a130c;
+  background: var(--dialog-bg);
   box-shadow: 0 24px 80px rgb(0 0 0 / 68%);
 }
 
@@ -2575,7 +2664,7 @@ kbd {
   padding: 5px 9px;
   border: 1px solid #566494;
   border-radius: 2px;
-  color: #c7d3f4;
+  color: var(--array-text);
   background: var(--raised);
   font: inherit;
   cursor: pointer;
@@ -2592,7 +2681,7 @@ kbd {
 }
 
 .nested-view-trail em {
-  color: #c7d3f4;
+  color: var(--array-text);
   font-style: normal;
 }
 
@@ -2641,7 +2730,7 @@ kbd {
   border: 1px solid #74484b;
   border-radius: 2px;
   color: var(--text-body);
-  background: #1a130c;
+  background: var(--dialog-bg);
   box-shadow: 0 24px 80px rgb(0 0 0 / 68%);
 }
 
@@ -2698,7 +2787,7 @@ kbd {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   border: 1px solid #4c5f3c;
-  background: #141a0e;
+  background: var(--success-surface);
 }
 
 .test-report-scores[hidden] {
@@ -2723,14 +2812,14 @@ kbd {
 }
 
 .test-report-scores dt {
-  color: #7d8a68;
+  color: var(--success-label);
   font-size: 0.52rem;
   letter-spacing: 0.08em;
 }
 
 .test-report-scores dd {
   margin-top: 6px;
-  color: #bcd9a8;
+  color: var(--success-text);
   font-size: 0.82rem;
   font-weight: 700;
 }
@@ -2744,11 +2833,11 @@ kbd {
 }
 
 .test-report-delta.improved {
-  color: #bcd9a8;
+  color: var(--success-text);
 }
 
 .test-report-delta.worse {
-  color: #e8a099;
+  color: var(--score-worse-text);
 }
 
 .test-report-result {

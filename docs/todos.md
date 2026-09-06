@@ -154,7 +154,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 ## Styling
 
 * Refine the dwarven UI theme: the palette now lives in CSS custom properties on `:root` in `src/styles.css` (stone browns, bronze, gold, ember, gem accents) with gilded corner ornaments on major panels; consider richer Art Deco corner motifs (diagonals, doubled lines) and reviewing tile fill/decoration colors in `src/simulation/tile.ts` for warmth.
-* EASY? Add a dark/light mode toggle. Set to dark by default, or browser default. The `:root` custom-property palette is the switching point: add a `[data-theme="light"]` override block and a persisted toggle.
 
 ## Animations
 

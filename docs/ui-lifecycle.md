@@ -69,6 +69,8 @@ The session world, simulation, baseline, and previous world stay root-level even
 
 Scene and puzzle JSON are deterministic/versioned and fully validated before replacing live state; see the simulation reference for nested-board fields and fresh runtime IDs. `player-data.ts` exports all localStorage entries deterministically and imports an exact replacement with rollback on failure. Successful import/clear reloads the app; destructive actions require confirmation. There is no backend sharing yet.
 
+Settings includes a persisted Light Mode toggle, defaulting to dark. `src/ui/theme.ts` applies `data-theme` on the document root and stores `factory2d.theme`; the existing player-data export/import/clear includes this preference. `src/styles.css` owns both UI palettes and native-control color schemes. Canvas board rendering, tile artwork, and circuit signal colors remain independent of the UI theme.
+
 `src/dev/diagnostic-snapshot.ts` exposes a development-only read-only snapshot of routes, tool/hover state, simulation, revisions, serialized boards, and nested view depth/dimensions. Use it with browser automation; Vite removes it from production.
 
 Focused model/controller tests live in `tests/` alongside subsystem names. Playwright cases in `e2e/` exercise persisted production-format fixtures, routing, edit/cancel behavior, nested arrays, successful/failed verification, downloads, and responsive layout. For lifecycle changes, check navigation away/back and reload as well as the immediate on-screen result.
