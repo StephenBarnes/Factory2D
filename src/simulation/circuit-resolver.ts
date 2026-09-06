@@ -224,6 +224,24 @@ export class CircuitResolver {
       index = world.nextFeatureIndex(WorldFeature.CircuitSource, index)
     ) {
       const kind = world.kindAtIndex(index);
+      if (kind === TileKind.Furnace) {
+        const orientation = world.orientationAtIndex(index);
+        const leftSide = ((orientation + Direction.Left) & 3) as Direction;
+        const disabled = world.chargeAtPortIndex(index, leftSide) === -1;
+        runtime.furnaceDisabled[index] = disabled ? 1 : 0;
+        const targetIndex = neighborIndex(world, index, orientation);
+        const targetKind = targetIndex < 0 ? TileKind.Empty : world.kindAtIndex(targetIndex);
+        const outputCharge = !disabled && furnaceRecipeFor(targetKind) !== undefined ? 1 : 0;
+        runtime.nextIsolatedOutputCharges[index] = outputCharge;
+        this.driveOutputs(
+          runtime,
+          index,
+          orientedSides(TILE_DEFINITIONS[kind].circuitOutputPorts, orientation),
+          outputCharge,
+          false,
+        );
+        continue;
+      }
       if (kind === TileKind.Welder || kind === TileKind.Splitter) {
         const outputCharge = successfulWeldOperations[index] === 1 ? 1 : 0;
         runtime.nextIsolatedOutputCharges[index] = outputCharge;
@@ -393,16 +411,6 @@ export class CircuitResolver {
               directionY(rearInputSide) * rearInput,
           );
           outputCharge = world.advanceRomAtIndex(index, cursorDeltaX, cursorDeltaY);
-          break;
-        }
-        case TileKind.Furnace: {
-          const disabled = rearInput !== 0;
-          runtime.furnaceDisabled[index] = disabled ? 1 : 0;
-          const targetIndex = neighborIndex(world, index, orientation);
-          const targetKind = targetIndex < 0
-            ? TileKind.Empty
-            : world.kindAtIndex(targetIndex);
-          outputCharge = !disabled && furnaceRecipeFor(targetKind) !== undefined ? 1 : 0;
           break;
         }
         default:

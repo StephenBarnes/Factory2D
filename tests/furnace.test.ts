@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { deserializeBoard, serializeBoard } from "../src/simulation/board-export";
 import { Simulation } from "../src/simulation/simulation";
 import { Direction, TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
@@ -64,7 +65,7 @@ describe("directional furnaces", () => {
     expect(world.furnaceProgressAt(0, 0)).toBe(0);
   });
 
-  it("pauses on rear charge and drives both side outputs while active", () => {
+  it("pauses only on negative side charge and isolates its rear baking output", () => {
     const world = new World(5, 3);
     world.place(2, 0, TileKind.Sand);
     world.place(2, 1, TileKind.Furnace, Direction.Up);
@@ -76,34 +77,67 @@ describe("directional furnaces", () => {
     world.setWeld(2, 1, 2, 2, true);
     const simulation = new Simulation(world);
 
-    simulation.step();
-    expect(world.furnaceProgressAt(2, 1)).toBe(1);
-    expect(world.chargeAt(1, 1)).toBe(1);
-    expect(world.chargeAt(2, 1)).toBe(1);
-    expect(world.chargeAt(3, 1)).toBe(1);
-
     world.setCharge(2, 2, -1);
     simulation.step();
     expect(world.furnaceProgressAt(2, 1)).toBe(1);
+    expect(world.chargeAt(2, 2)).toBe(1);
     expect(world.chargeAt(1, 1)).toBe(0);
-    expect(world.chargeAt(2, 1)).toBe(0);
     expect(world.chargeAt(3, 1)).toBe(0);
 
+    world.setCharge(2, 1, -1);
+    simulation.step();
+    expect(world.furnaceProgressAt(2, 1)).toBe(1);
+    expect(world.chargeAt(2, 2)).toBe(0);
+
+    world.setCharge(2, 1, 1);
     simulation.step();
     expect(world.furnaceProgressAt(2, 1)).toBe(2);
-    expect(world.chargeAt(1, 1)).toBe(1);
-    expect(world.chargeAt(3, 1)).toBe(1);
+    expect(world.chargeAtPort(2, 1, Direction.Down)).toBe(1);
+    expect(world.chargeAtPort(2, 1, Direction.Left)).toBe(0);
+
+    const imported = deserializeBoard(serializeBoard(world, simulation.tick)).world;
+    expect(imported.furnaceProgressAt(2, 1)).toBe(2);
+    expect(imported.chargeAtPort(2, 1, Direction.Down)).toBe(1);
+    expect(imported.chargeAtPort(2, 1, Direction.Left)).toBe(0);
 
     simulation.step();
     simulation.step();
     expect(world.kindAt(2, 0)).toBe(TileKind.Glass);
-    expect(world.chargeAt(1, 1)).toBe(1);
-    expect(world.chargeAt(3, 1)).toBe(1);
-
+    expect(world.chargeAt(2, 2)).toBe(1);
     simulation.step();
-    expect(world.chargeAt(1, 1)).toBe(0);
-    expect(world.chargeAt(2, 1)).toBe(0);
-    expect(world.chargeAt(3, 1)).toBe(0);
+    expect(world.chargeAt(2, 2)).toBe(0);
+  });
+
+  it("disables a welded row together and resumes after disconnecting the negative source", () => {
+    const world = new World(4, 3);
+    world.place(0, 1, TileKind.FixedCharge);
+    world.place(1, 1, TileKind.Inverter, Direction.Right);
+    world.place(1, 2, TileKind.Platform);
+    world.setWeld(0, 1, 1, 1, true);
+    for (const x of [2, 3]) {
+      world.place(x, 0, TileKind.Sand);
+      world.place(x, 1, TileKind.Furnace, Direction.Up);
+      world.place(x, 2, TileKind.Conduit);
+      world.setWeld(x - 1, 1, x, 1, true);
+      world.setWeld(x, 1, x, 2, true);
+    }
+    const simulation = new Simulation(world);
+    for (let tick = 0; tick < 6; tick += 1) simulation.step();
+    for (const x of [2, 3]) {
+      expect(world.furnaceProgressAt(x, 1)).toBe(2);
+      expect(world.chargeAt(x, 1)).toBe(-1);
+      expect(world.chargeAt(x, 2)).toBe(0);
+      expect(world.kindAt(x, 0)).toBe(TileKind.Sand);
+    }
+
+    world.setWeld(1, 1, 2, 1, false);
+    simulation.step();
+    simulation.step();
+    simulation.step();
+    for (const x of [2, 3]) {
+      expect(world.kindAt(x, 0)).toBe(TileKind.Glass);
+      expect(world.chargeAt(x, 2)).toBe(1);
+    }
   });
 
   it("restores bake progress with a simulation snapshot", () => {

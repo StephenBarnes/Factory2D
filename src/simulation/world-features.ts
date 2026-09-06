@@ -46,7 +46,8 @@ for (const kind of TILE_KINDS) {
     kind === TileKind.Sensor ||
     kind === TileKind.Delivery ||
     kind === TileKind.Welder ||
-    kind === TileKind.Splitter
+    kind === TileKind.Splitter ||
+    kind === TileKind.Furnace
   ) {
     mask |= 1 << WorldFeature.CircuitSource;
   }

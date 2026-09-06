@@ -288,7 +288,7 @@ function exportBoardContents(world: World): ExportedBoardContents {
           charges.push({ x, y, charge });
         }
       }
-      if (kind === TileKind.Welder || kind === TileKind.Splitter) {
+      if (kind === TileKind.Welder || kind === TileKind.Splitter || kind === TileKind.Furnace) {
         const outputCharge = world.chargeAtPort(
           x,
           y,
@@ -628,7 +628,7 @@ function importBoardContents(
       throw new Error(`${chargeLabel} duplicates cell (${x}, ${y})`);
     }
     const kind = expectDefined(kinds[cellIndex], `tile kind at (${x}, ${y})`) as TileKind;
-    if (kind !== TileKind.Welder && kind !== TileKind.Splitter) {
+    if (kind !== TileKind.Welder && kind !== TileKind.Splitter && kind !== TileKind.Furnace) {
       throw new Error(`${chargeLabel} targets a tile without a separate isolated output`);
     }
     const charge = requireInteger(state.charge, `${chargeLabel} value`, -1, 1) as Charge;

@@ -78,8 +78,8 @@ describe("world feature index", () => {
     expect(featureIndices(world, WorldFeature.Conveyor)).toEqual([7]);
     expect(featureIndices(world, WorldFeature.RuneArray)).toEqual([8]);
     expect(featureIndices(world, WorldFeature.WeldedBodyObserver)).toEqual([1, 2, 3]);
-    expect(featureIndices(world, WorldFeature.CircuitSource)).toEqual([1, 4]);
-    expect(featureIndices(world, WorldFeature.CircuitGate)).toEqual([5, 9]);
+    expect(featureIndices(world, WorldFeature.CircuitSource)).toEqual([1, 4, 5]);
+    expect(featureIndices(world, WorldFeature.CircuitGate)).toEqual([9]);
   });
 
   it("copies feature indices with cloned and reset worlds", () => {
