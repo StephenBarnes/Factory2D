@@ -133,11 +133,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * DEFER Maybe support selections that are a union of rectangles, created by shift-LMB-drag.
 * EASY? When a region is selected using the selection tool, in the sandbox, add a button that will crop the board to that selection. (Currently it requires using the puzzle properties modal to set the grid size to specific numbers; this selection path would be easier and more intuitive.)
 
-## Shortcuts
-
-* After pressing V to switch to the selection tool, allow pressing V again to switch back to previous tool or tile.
-* Currently ctrl switches to weld tool; releasing ctrl switches back to previous tile. However, this doesn't work when the selection or text tools are selected; we should allow switching temporarily to weld tool when those are selected. Probably instead of storing previously-selected tile, we should store previously-selected tile *or tool* and switch back to that.
-
 ## Puzzle briefing screen
 
 * DEFER Later instead of a gold highlight, choose color according to a grade decided by percentile on the histogram - iron, gold, diamond, mithril. Also, on the main menu, color completed puzzles' buttons by the grade of the player's best solution.

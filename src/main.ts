@@ -222,7 +222,8 @@ let selectedKind = TileKind.Sand;
 let previousSelectedKind: TileKind = selectedKind;
 let selectedOrientation = Direction.Up;
 let selectedTool: BuildTool = "tile";
-let temporaryWeldActive = false;
+let previousSelectionTool: BuildTool = "tile";
+let temporaryWeldTool: BuildTool | null = null;
 let running = false;
 let accumulatedTime = 0;
 let previousFrameTime = performance.now();
@@ -758,7 +759,8 @@ function selectTile(kind: TileKind): void {
     previousSelectedKind = selectedKind;
     selectedKind = kind;
   }
-  if (temporaryWeldActive) {
+  if (temporaryWeldTool !== null) {
+    temporaryWeldTool = "tile";
     selectWeldTool();
     return;
   }
@@ -856,7 +858,7 @@ function setSelectedOrientation(orientation: Direction): void {
 
 function selectWeldTool(): void {
   if (selectedTool === "text-box") canvasInteraction.cancel();
-  if (selectedTool === "selection") {
+  if (selectedTool === "selection" && temporaryWeldTool === null) {
     commitTileSelection();
   }
   selectedTool = "weld";
@@ -864,10 +866,14 @@ function selectWeldTool(): void {
     item.classList.toggle("selected", item.dataset.tool === "weld");
   }
   syncEditableRegionAuthoringOverlay();
+  syncTileSelectionOverlay();
   refreshPointerHover();
 }
-function selectSelectionTool(): void {
+function selectSelectionTool(rememberPrevious = true): void {
   if (selectedTool === "text-box") canvasInteraction.cancel();
+  const previousTool = temporaryWeldTool ?? selectedTool;
+  if (rememberPrevious && previousTool !== "selection") previousSelectionTool = previousTool;
+  temporaryWeldTool = null;
   selectedTool = "selection";
   for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
     item.classList.toggle("selected", item.dataset.tool === "selection");
@@ -898,7 +904,7 @@ function selectEditableRegionTool(): void {
 function selectTextBoxTool(): void {
   finalizeActivePointerGesture();
   if (selectedTool === "selection") commitTileSelection();
-  temporaryWeldActive = false;
+  temporaryWeldTool = null;
   selectedTool = "text-box";
   for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
     item.classList.toggle("selected", item.dataset.tool === "text-box");
@@ -906,6 +912,28 @@ function selectTextBoxTool(): void {
   syncEditableRegionAuthoringOverlay();
   syncTileSelectionOverlay();
   refreshPointerHover();
+}
+
+function restoreTool(tool: BuildTool): void {
+  switch (tool) {
+    case "tile": selectTile(selectedKind); break;
+    case "weld": selectWeldTool(); break;
+    case "selection": selectSelectionTool(false); break;
+    case "text-box": selectTextBoxTool(); break;
+    case "editable-region":
+      if (surface.editableRegionAuthoring !== null) selectEditableRegionTool();
+      else selectTile(selectedKind);
+      break;
+  }
+}
+
+function releaseTemporaryWeld(): void {
+  const tool = temporaryWeldTool;
+  temporaryWeldTool = null;
+  if (tool !== null && selectedTool === "weld") {
+    finalizeActivePointerGesture();
+    restoreTool(tool);
+  }
 }
 
 function commitEditedWorld(): void {
@@ -1121,6 +1149,7 @@ function adjustHoveredNumericComponent(delta: number): boolean {
 
 
 function editWeld(edge: GridEdge, erase: boolean): boolean {
+  if (surface.session.editingState.editable && surface.selection.active) commitTileSelection();
   return (
     surface.session.editingState.editable &&
     canEditEdge(edge.x1, edge.y1, edge.x2, edge.y2) &&
@@ -1137,6 +1166,7 @@ function editWeldSegment(
   if (!surface.session.editingState.editable) {
     return false;
   }
+  if (surface.selection.active) commitTileSelection();
 
   let changed = false;
   visitCrossedGridEdges(from, to, surface.world.width, surface.world.height, (x1, y1, x2, y2) => {
@@ -2044,17 +2074,19 @@ document.addEventListener("keydown", (event) => {
   ) {
     return;
   }
+  const textEntryTarget =
+    event.target instanceof HTMLInputElement ||
+    event.target instanceof HTMLTextAreaElement ||
+    event.target instanceof HTMLSelectElement ||
+    (event.target instanceof HTMLElement && event.target.isContentEditable);
   if (event.key === "Control") {
-    if (!event.repeat && selectedTool === "tile") {
-      temporaryWeldActive = true;
+    if (!event.repeat && !textEntryTarget && selectedTool !== "weld" && temporaryWeldTool === null) {
+      finalizeActivePointerGesture();
+      temporaryWeldTool = selectedTool;
       selectWeldTool();
     }
     return;
   }
-  const textEntryTarget =
-    event.target instanceof HTMLInputElement ||
-    event.target instanceof HTMLTextAreaElement ||
-    event.target instanceof HTMLSelectElement;
   if (
     (event.ctrlKey || event.metaKey) &&
     !event.altKey &&
@@ -2122,7 +2154,8 @@ document.addEventListener("keydown", (event) => {
   if (event.code === "KeyV") {
     event.preventDefault();
     if (!event.repeat) {
-      selectSelectionTool();
+      if (selectedTool === "selection") restoreTool(previousSelectionTool);
+      else selectSelectionTool();
     }
     return;
   }
@@ -2244,23 +2277,12 @@ document.addEventListener("keydown", (event) => {
 });
 
 document.addEventListener("keyup", (event) => {
-  if (textBoxTool.open || event.isComposing) return;
-  if (event.key === "Control" && temporaryWeldActive) {
-    temporaryWeldActive = false;
-    if (selectedTool === "weld") {
-      selectTile(selectedKind);
-    }
-  }
+  if (event.key === "Control") releaseTemporaryWeld();
 });
 
 window.addEventListener("blur", () => {
   finalizeActivePointerGesture();
-  if (temporaryWeldActive) {
-    temporaryWeldActive = false;
-    if (selectedTool === "weld") {
-      selectTile(selectedKind);
-    }
-  }
+  releaseTemporaryWeld();
 });
 window.addEventListener("popstate", () => {
   navigation.navigatePath(window.location.pathname);
