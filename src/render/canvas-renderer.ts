@@ -1543,6 +1543,66 @@ export class CanvasRenderer {
     context.restore();
   }
 
+  private drawSensorObservation(orientation: Direction): void {
+    const x = this.hoverX + directionX(orientation);
+    const y = this.hoverY + directionY(orientation);
+    if (x < 0 || x >= this.world.width || y < 0 || y >= this.world.height) {
+      return;
+    }
+    const { context, cellSize } = this;
+    context.save();
+    context.strokeStyle = "#78dcca";
+    context.lineWidth = Math.max(2, cellSize * 0.04);
+    context.globalAlpha = 0.8;
+    context.beginPath();
+    context.arc(
+      this.originX + (x + 0.5) * cellSize,
+      this.originY + (y + 0.5) * cellSize,
+      cellSize * 0.43,
+      0,
+      Math.PI * 2,
+    );
+    context.stroke();
+    context.restore();
+  }
+
+  private drawRotatorReach(orientation: Direction): void {
+    const { context, cellSize } = this;
+    context.save();
+    // Clip both cells and arrows to the board when the pivot is near a wall.
+    context.beginPath();
+    context.rect(this.originX, this.originY, this.world.width * cellSize, this.world.height * cellSize);
+    context.clip();
+    context.translate(
+      this.originX + (this.hoverX + 0.5) * cellSize,
+      this.originY + (this.hoverY + 0.5) * cellSize,
+    );
+    context.rotate(orientation * Math.PI / 2);
+    context.scale(cellSize, cellSize);
+    context.strokeStyle = "#78dcca";
+    context.fillStyle = "rgb(120 220 202 / 12%)";
+    context.lineWidth = 0.035;
+    for (let side = -1; side <= 1; side += 1) {
+      const x = side;
+      const y = side === 0 ? -1 : 0;
+      context.fillRect(x - 0.44, y - 0.44, 0.88, 0.88);
+      context.strokeRect(x - 0.44, y - 0.44, 0.88, 0.88);
+    }
+    // Both turn directions are possible, but the grip never enters the rear.
+    context.lineWidth = 0.045;
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.beginPath();
+    context.arc(0, 0, 0.8, Math.PI, Math.PI * 2);
+    for (let side = -1; side <= 1; side += 2) {
+      context.moveTo(side * 0.65, -0.15);
+      context.lineTo(side * 0.8, 0);
+      context.lineTo(side * 0.95, -0.15);
+    }
+    context.stroke();
+    context.restore();
+  }
+
   private drawHighlightedTile(previousWorld: World | null, progress: number): void {
     const tileId = this.highlightedTileId;
     if (tileId === null) {
@@ -1641,6 +1701,11 @@ export class CanvasRenderer {
         placedKind,
         this.world.orientationAt(this.hoverX, this.hoverY),
       );
+    }
+    if (placedKind === TileKind.Sensor) {
+      this.drawSensorObservation(this.world.orientationAt(this.hoverX, this.hoverY));
+    } else if (placedKind === TileKind.Rotator) {
+      this.drawRotatorReach(this.world.orientationAt(this.hoverX, this.hoverY));
     }
 
     if (
