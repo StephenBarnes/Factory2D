@@ -14,6 +14,8 @@ const MAX_TEST_TICKS_PER_SECOND = 60;
 const TEST_SPEED_DOUBLING_MS = 3_000;
 const TEST_CASE_TRANSITION_MS = 600;
 const MAX_AUTOMATIC_ANIMATION_MS = 250;
+const FAST_TEST_FRAME_BUDGET_MS = 8;
+const MAX_FAST_TEST_TICKS_PER_FRAME = 100;
 
 export type PuzzleTestLifecycle =
   | { readonly kind: "idle" }
@@ -28,7 +30,7 @@ interface PuzzleTestContext {
 }
 
 
-type PuzzleTestRunMode = "automatic" | "manual";
+type PuzzleTestRunMode = "automatic" | "manual" | "fast";
 interface PuzzleTestViewingState extends PuzzleTestContext {
   readonly kind: "viewing-case";
 }
@@ -193,7 +195,7 @@ export class PuzzleTestController {
       return;
     }
     if (state.kind === "running" || state.kind === "between-cases") {
-      const mode = state.mode === "automatic" ? "manual" : "automatic";
+      const mode = state.mode === "manual" ? "automatic" : "manual";
       this.lifecycleValue = state.kind === "running"
         ? { ...state, mode, caseStartedAt: startedAt, accumulatedMs: 0 }
         : { ...state, mode, nextCaseAt: startedAt + TEST_CASE_TRANSITION_MS };
@@ -288,15 +290,24 @@ export class PuzzleTestController {
       return;
     }
 
-    let accumulatedMs = state.accumulatedMs + elapsed;
+    const fast = state.mode === "fast";
+    let accumulatedMs = fast ? 0 : state.accumulatedMs + elapsed;
     const ticksPerSecond = this.testTicksPerSecond(currentTime, state.caseStartedAt);
     const tickDuration = 1000 / ticksPerSecond;
-    while (accumulatedMs >= tickDuration && state.run.status === "running") {
-      accumulatedMs -= tickDuration;
-      const interpolationSource = this.dependencies.beforeStep();
-      const animationDuration = this.dependencies.animationsEnabled(ticksPerSecond)
+    const deadline = fast ? performance.now() + FAST_TEST_FRAME_BUDGET_MS : 0;
+    let steps = 0;
+    while (
+      state.run.status === "running" &&
+      (fast
+        ? steps < MAX_FAST_TEST_TICKS_PER_FRAME && (steps === 0 || performance.now() < deadline)
+        : accumulatedMs >= tickDuration)
+    ) {
+      steps += 1;
+      if (!fast) accumulatedMs -= tickDuration;
+      const animationDuration = !fast && this.dependencies.animationsEnabled(ticksPerSecond)
         ? Math.min(tickDuration, MAX_AUTOMATIC_ANIMATION_MS)
         : 0;
+      const interpolationSource = animationDuration > 0 ? this.dependencies.beforeStep() : undefined;
       const status = state.run.step(animationDuration > 0 ? interpolationSource : undefined);
       this.dependencies.afterStep(state.run.world, state.run.simulation.tick);
       this.dependencies.setStepAnimation(
@@ -310,7 +321,7 @@ export class PuzzleTestController {
           viewedCaseId: state.run.currentCase.id,
           mode: state.mode,
           run: state.run,
-          nextCaseAt: currentTime + TEST_CASE_TRANSITION_MS,
+          nextCaseAt: currentTime + (fast ? 0 : TEST_CASE_TRANSITION_MS),
         };
         this.refreshPresentation();
         return;
@@ -330,16 +341,16 @@ export class PuzzleTestController {
       state.kind === "failed" ||
       state.kind === "succeeded"
     ) {
-      state = this.beginRun(state, "automatic", performance.now());
+      state = this.beginRun(state, "fast", performance.now());
     }
     if (state.kind !== "running" && state.kind !== "between-cases") {
       return;
     }
     this.dependencies.finishAnimation();
-    const report = state.run.runRemaining(this.dependencies.afterStep);
-    this.dependencies.mountRuntime(state.run.world, state.run.simulation);
-    this.view.selectCase(state.run.currentCase.id);
-    this.finish(report);
+    this.lifecycleValue = state.kind === "running"
+      ? { ...state, mode: "fast", accumulatedMs: 0 }
+      : { ...state, mode: "fast", nextCaseAt: 0 };
+    this.refreshPresentation();
   }
 
   reset(): void {

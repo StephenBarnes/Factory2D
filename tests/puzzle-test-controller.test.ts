@@ -174,6 +174,13 @@ function controllerHarness(solution: World): ControllerHarness {
   return { controller, view, mountedCaseKinds, recordedReports, counts };
 }
 
+function advanceUntilComplete(controller: PuzzleTestController): void {
+  for (let frame = 1; controller.testing && frame <= 1_000; frame += 1) {
+    controller.advanceFrame(frame * 16, 16);
+  }
+  if (controller.testing) throw new Error("Test run did not complete");
+}
+
 describe("puzzle test controller", () => {
   it("runs visible cases through the explicit between-cases transition", () => {
     const harness = controllerHarness(winningSolution());
@@ -200,6 +207,33 @@ describe("puzzle test controller", () => {
     expect(harness.mountedCaseKinds).toHaveLength(2);
   });
 
+  it("yields fast tests between frames and allows pausing and resetting unfinished runs", () => {
+    const harness = controllerHarness(emptyVictoryWorld());
+    harness.controller.configure(puzzleWith([
+      caseDefinition("timeout", 10_000, emptyVictoryWorld),
+    ]));
+    harness.controller.fastForward();
+    harness.controller.advanceFrame(16, 16);
+    const state = harness.controller.lifecycle;
+    if (state.kind !== "running") throw new Error("Expected unfinished fast case");
+    const tick = state.run.simulation.tick;
+    expect(tick).toBeGreaterThan(0);
+    expect(tick).toBeLessThan(10_000);
+    expect(harness.recordedReports).toEqual([]);
+    harness.controller.togglePlayback(16);
+    harness.controller.advanceFrame(1_000, 984);
+    expect(state.run.simulation.tick).toBe(tick);
+    harness.controller.step(0, 1_000);
+    expect(state.run.simulation.tick).toBe(tick + 1);
+    harness.controller.fastForward();
+    harness.controller.advanceFrame(1_016, 16);
+    expect(state.run.simulation.tick).toBeGreaterThan(tick + 1);
+    harness.controller.reset();
+    harness.controller.advanceFrame(2_000, 984);
+    expect(harness.controller.lifecycle.kind).toBe("viewing-case");
+    expect(harness.recordedReports).toEqual([]);
+  });
+
   it("pauses without losing progress, steps once, and resumes without catching up paused time", () => {
     const harness = controllerHarness(emptyVictoryWorld());
     harness.controller.configure(puzzleWith([
@@ -218,6 +252,7 @@ describe("puzzle test controller", () => {
     harness.controller.advanceFrame(10_200, 200);
     expect(state.run.simulation.tick).toBe(3);
     harness.controller.fastForward();
+    advanceUntilComplete(harness.controller);
     expect(harness.controller.lifecycle.kind).toBe("failed");
   });
 
@@ -245,6 +280,7 @@ describe("puzzle test controller", () => {
         harness.controller.advanceFrame(11_000, 400);
       } else {
         harness.controller.fastForward();
+        advanceUntilComplete(harness.controller);
       }
       expect(harness.view.report?.results.map(({ id }) => id)).toEqual(["first", "second"]);
       expect(harness.controller.lifecycle.kind).toBe("succeeded");
@@ -264,8 +300,10 @@ describe("puzzle test controller", () => {
     }
     if (initialState === "succeeded") {
       harness.controller.fastForward();
+      advanceUntilComplete(harness.controller);
     }
     harness.controller.fastForward();
+    advanceUntilComplete(harness.controller);
 
     expect(harness.controller.lifecycle.kind).toBe("succeeded");
     expect(harness.view.report?.succeeded).toBe(true);
