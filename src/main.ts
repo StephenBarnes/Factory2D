@@ -50,6 +50,7 @@ import {
 } from "./ui/canvas-interaction-controller";
 import type { InspectorComponentReference } from "./ui/tile-inspector";
 import { SignalPanel } from "./ui/signal-panel";
+import { ToolCursor } from "./ui/tool-cursor";
 import {
   SnippetPanel,
   type SnippetCardModel,
@@ -107,6 +108,7 @@ const sidebarControls = requiredElement<HTMLElement>("sidebar-controls");
 const componentPalette = requiredElement<HTMLElement>("component-palette");
 const inspectorPanel = requiredElement<HTMLElement>("tile-inspector");
 const surface = new WorkshopSurfaceController(sessions, canvas, inspectorPanel);
+const toolCursor = new ToolCursor(canvas, requiredElement<HTMLElement>("tool-cursor"));
 const playButton = requiredElement<HTMLButtonElement>("play-button");
 const transportShortcutLabel = requiredElement<HTMLElement>("transport-shortcut-label");
 const testReportDialog = requiredElement<HTMLDialogElement>("test-report-dialog");
@@ -166,6 +168,7 @@ const importSnippetsButton = requiredElement<HTMLButtonElement>("import-snippets
 const exportSnippetsButton = requiredElement<HTMLButtonElement>("export-snippets-button");
 const importSnippetsFile = requiredElement<HTMLInputElement>("import-snippets-file");
 const signalTraces = new SignalTraceRecorder();
+let hoveredSignalTileId: number | null = null;
 const signalPanel = new SignalPanel(
   {
     root: requiredElement<HTMLElement>("signal-panel"),
@@ -173,6 +176,7 @@ const signalPanel = new SignalPanel(
     toggleButton: requiredElement<HTMLButtonElement>("signal-panel-toggle"),
   },
   window.localStorage,
+  (tileId) => { hoveredSignalTileId = tileId; },
 );
 
 type InspectorTool = Exclude<BuildTool, "tile">;
@@ -467,6 +471,7 @@ function refreshTileInspector(): void {
 }
 
 function refreshPointerHover(): void {
+  toolCursor.update(selectedTool, selectedKind, selectedOrientation);
   if (selectedTool === "text-box") {
     surface.renderer.setHover(null);
   } else if (!surface.session.editingState.editable) {
@@ -840,6 +845,7 @@ function renderPalettePreviews(): void {
       orientationForKind(kind, selectedOrientation),
     );
   }
+  toolCursor.update(selectedTool, selectedKind, selectedOrientation);
 }
 
 function setSelectedOrientation(orientation: Direction): void {
@@ -1260,6 +1266,7 @@ function stopWorkshopActivity(): void {
   componentConfigurationView.close();
   closeExportOptions();
   setSpeedOptionsOpen(false);
+  toolCursor.hide();
   setRunning(false);
 }
 function setSandboxTestCaseOptionsOpen(open: boolean): void {
@@ -2303,6 +2310,7 @@ function frame(currentTime: number): void {
   refreshTileInspector();
   signalTraces.sync(surface.session.world, surface.simulation.tick);
   signalPanel.update(signalTraces, surface.session.world, surface.simulation.tick);
+  surface.renderer.setHighlightedTileId(surface.viewDepth === 0 ? hoveredSignalTileId : null);
   const animationProgress = easedAnimationProgress(currentTime);
   surface.renderer.render(
     animationDuration === 0 ? null : surface.previousWorld,

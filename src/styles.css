@@ -67,6 +67,43 @@ canvas:focus-visible {
   outline-offset: 3px;
 }
 
+.tool-cursor {
+  position: fixed;
+  z-index: 10;
+  top: 0;
+  left: 0;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  opacity: 0.9;
+  filter: drop-shadow(0 2px 3px #000);
+}
+
+.tool-cursor canvas {
+  width: 14px;
+  height: 14px;
+}
+
+.tool-cursor .swatch {
+  display: block;
+  width: 40px;
+  max-width: none;
+  height: 40px;
+  transform: scale(0.35);
+  transform-origin: top left;
+}
+
+.tool-cursor .text-box-swatch {
+  display: grid;
+  line-height: 1;
+}
+
+.tool-cursor[hidden],
+.tool-cursor [hidden],
+body:has(dialog[open]) .tool-cursor {
+  display: none;
+}
+
 .app-shell,
 .board-panel {
   width: 100%;

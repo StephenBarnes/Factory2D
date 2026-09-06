@@ -14,6 +14,7 @@ import {
 } from "../simulation/tile";
 import type { World } from "../simulation/world";
 import type { TextBox } from "../simulation/text-box";
+import { WorldFeature } from "../simulation/world-features";
 import { expectDefined } from "../util/assert";
 import type { GridCell, GridEdge, GridPoint } from "./grid-drag";
 import { createBodyCell, populateBodyCell } from "./body-cells";
@@ -132,6 +133,9 @@ export class CanvasRenderer {
   private hoverEdge: GridEdge | null = null;
   private hoverKind = TileKind.Empty;
   private hoverOrientation = Direction.Up;
+  private highlightedTileId: number | null = null;
+  private highlightedTileIndex = -1;
+  private highlightedGeometryRevision = -1;
   private renderInvalidated = true;
   private renderedWorldRevision = -1;
   private renderedPreviousWorld: World | null = null;
@@ -298,6 +302,7 @@ export class CanvasRenderer {
     this.drawTileSelection(animationTime);
     this.drawHover(animationTime);
     this.drawTextBoxes();
+    this.drawHighlightedTile(previousWorld, boundedProgress);
 
     this.renderInvalidated = false;
     this.renderedWorldRevision = this.world.revision;
@@ -567,6 +572,17 @@ export class CanvasRenderer {
       this.hoverX = -1;
       this.hoverY = -1;
     }
+  }
+
+  /** Highlights a signal source independently of the placement cursor. */
+  setHighlightedTileId(tileId: number | null): void {
+    if (this.highlightedTileId === tileId) {
+      return;
+    }
+    this.highlightedTileId = tileId;
+    this.highlightedTileIndex = -1;
+    this.highlightedGeometryRevision = -1;
+    this.renderInvalidated = true;
   }
 
   private resizeBackingStore(): void {
@@ -1524,6 +1540,70 @@ export class CanvasRenderer {
       );
     }
     context.stroke();
+    context.restore();
+  }
+
+  private drawHighlightedTile(previousWorld: World | null, progress: number): void {
+    const tileId = this.highlightedTileId;
+    if (tileId === null) {
+      return;
+    }
+    const { world, context, cellSize } = this;
+    if (this.highlightedGeometryRevision !== world.geometryRevision) {
+      this.highlightedGeometryRevision = world.geometryRevision;
+      if (
+        this.highlightedTileIndex < 0 ||
+        world.idAtIndex(this.highlightedTileIndex) !== tileId
+      ) {
+        this.highlightedTileIndex = -1;
+        for (
+          let index = world.firstFeatureIndex(WorldFeature.Occupied);
+          index >= 0;
+          index = world.nextFeatureIndex(WorldFeature.Occupied, index)
+        ) {
+          if (world.idAtIndex(index) === tileId) {
+            this.highlightedTileIndex = index;
+            break;
+          }
+        }
+      }
+    }
+    if (this.highlightedTileIndex < 0) {
+      return;
+    }
+    const x = this.highlightedTileIndex % world.width;
+    const y = Math.floor(this.highlightedTileIndex / world.width);
+    let offsetX = 0;
+    let offsetY = 0;
+    // Match the one-cell motion interpolation used by tile bodies.
+    if (previousWorld !== null && progress < 1 && previousWorld.idAt(x, y) !== tileId) {
+      searchPreviousPosition:
+      for (let verticalMove = -1; verticalMove <= 1; verticalMove += 1) {
+        for (let horizontalMove = -1; horizontalMove <= 1; horizontalMove += 1) {
+          const previousX = x - horizontalMove;
+          const previousY = y - verticalMove;
+          if (
+            previousX >= 0 && previousX < previousWorld.width &&
+            previousY >= 0 && previousY < previousWorld.height &&
+            previousWorld.idAt(previousX, previousY) === tileId
+          ) {
+            offsetX = -horizontalMove * cellSize * (1 - progress);
+            offsetY = -verticalMove * cellSize * (1 - progress);
+            break searchPreviousPosition;
+          }
+        }
+      }
+    }
+    const left = this.originX + x * cellSize + offsetX;
+    const top = this.originY + y * cellSize + offsetY;
+    const inset = Math.min(3, cellSize * 0.15);
+    context.save();
+    context.strokeStyle = "#f1cc38";
+    context.lineWidth = 3;
+    context.strokeRect(left, top, cellSize, cellSize);
+    context.strokeStyle = "#78dcca";
+    context.lineWidth = 1;
+    context.strokeRect(left + inset, top + inset, cellSize - inset * 2, cellSize - inset * 2);
     context.restore();
   }
 

@@ -51,10 +51,14 @@ export class SignalPanel {
   private following = true;
   private collapsedValue: boolean;
   private drawnKey = "";
+  private pointerClientX: number | null = null;
+  private pointerClientY = 0;
+  private hoveredTileId: number | null = null;
 
   constructor(
     private readonly elements: SignalPanelElements,
     private readonly storage: Storage | null,
+    private readonly onHover: (tileId: number | null) => void = () => {},
   ) {
     const context = elements.canvas.getContext("2d");
     if (context === null) {
@@ -70,6 +74,13 @@ export class SignalPanel {
       event.preventDefault();
       this.scrollBy(Math.sign(event.deltaY) * SCROLL_ROWS_PER_WHEEL_STEP);
     }, { passive: false });
+    elements.canvas.addEventListener("pointermove", (event) => {
+      this.pointerClientX = event.clientX;
+      this.pointerClientY = event.clientY;
+      this.refreshHover();
+    });
+    elements.canvas.addEventListener("pointerleave", () => this.clearHover());
+    elements.canvas.addEventListener("pointercancel", () => this.clearHover());
   }
 
   get visible(): boolean {
@@ -95,6 +106,9 @@ export class SignalPanel {
 
   /** Synchronizes visibility with the board and redraws when any displayed state changed. */
   update(recorder: SignalTraceRecorder, world: World, currentTick: number): void {
+    if (this.linesWorld !== world) {
+      this.clearHover();
+    }
     if (
       this.linesWorld !== world ||
       this.linesVersion !== recorder.version ||
@@ -111,9 +125,11 @@ export class SignalPanel {
       this.elements.root.hidden = !shouldShow;
     }
     if (!shouldShow || this.collapsedValue) {
+      this.clearHover();
       return;
     }
     this.draw(currentTick);
+    this.refreshHover();
   }
 
   private scrollBy(rows: number): void {
@@ -123,6 +139,51 @@ export class SignalPanel {
     this.firstRow = nextFirstRow;
     this.following = rows > 0 && nextFirstRow === maxFirstRow;
     this.drawnKey = "";
+  }
+
+  private columnWidth(width: number): number {
+    const columnsWidth = width - PANEL_PADDING * 2 - TICK_GUTTER_WIDTH;
+    return Math.max(
+      MIN_COLUMN_WIDTH,
+      Math.min(MAX_COLUMN_WIDTH, columnsWidth / this.lines.length),
+    );
+  }
+
+  private refreshHover(): void {
+    if (this.pointerClientX === null) {
+      return;
+    }
+    const { canvas } = this.elements;
+    if (!this.visible || this.collapsedValue || canvas.hidden || this.lines.length === 0) {
+      this.clearHover();
+      return;
+    }
+    const bounds = canvas.getBoundingClientRect();
+    const x = this.pointerClientX - bounds.left;
+    const y = this.pointerClientY - bounds.top;
+    const columnsLeft = PANEL_PADDING + TICK_GUTTER_WIDTH;
+    const columnsBottom = Math.min(
+      canvas.clientHeight - PANEL_PADDING,
+      HEADER_HEIGHT + this.visibleRowCount() * ROW_HEIGHT,
+    );
+    const lineIndex = Math.floor((x - columnsLeft) / this.columnWidth(canvas.clientWidth));
+    const tileId = x >= columnsLeft && x < canvas.clientWidth - PANEL_PADDING &&
+      y >= PANEL_PADDING && y < columnsBottom
+      ? this.lines[lineIndex]?.id ?? null
+      : null;
+    this.setHoveredTileId(tileId);
+  }
+
+  private clearHover(): void {
+    this.pointerClientX = null;
+    this.setHoveredTileId(null);
+  }
+
+  private setHoveredTileId(tileId: number | null): void {
+    if (tileId !== this.hoveredTileId) {
+      this.hoveredTileId = tileId;
+      this.onHover(tileId);
+    }
   }
 
   private draw(currentTick: number): void {
@@ -159,10 +220,7 @@ export class SignalPanel {
 
     const columnsLeft = PANEL_PADDING + TICK_GUTTER_WIDTH;
     const columnsWidth = width - columnsLeft - PANEL_PADDING;
-    const columnWidth = Math.max(
-      MIN_COLUMN_WIDTH,
-      Math.min(MAX_COLUMN_WIDTH, columnsWidth / this.lines.length),
-    );
+    const columnWidth = this.columnWidth(width);
     const trackWidth = Math.min(MAX_TRACK_WIDTH, columnWidth * 0.55);
     const rowsTop = HEADER_HEIGHT;
     const lastRow = this.firstRow + visibleRows;
@@ -263,6 +321,9 @@ export class SignalPanel {
   }
 
   private applyCollapsed(): void {
+    if (this.collapsedValue) {
+      this.clearHover();
+    }
     this.elements.root.classList.toggle("collapsed", this.collapsedValue);
     this.elements.canvas.hidden = this.collapsedValue;
     this.elements.toggleButton.textContent = this.collapsedValue ? "◀" : "▶";
