@@ -10,6 +10,7 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Allow pausing during testing, using the test button or space key. While paused, allow stepping, resuming test, or fast-forward.
 * DEFER Add a step-back button to the control panel at the bottom, maybe? Requires keeping previous state in memory, or several so we can step back multiple ticks.
 * DEFER If we do the "asleep vs active regions" change below, or if we store previous state for step-back, then as a follow-up: when testing a solution, check for loops (no active regions, or previous state equals current state) and end the test early.
+* While the sandbox is running, RMB-drag to delete blocks works, but seems to stop after one tick. Rather make it continue. We previously had a similar problem with drag panning, which was fixed in commit 117e3c1 - so likely we need to extend that solution to other forms of click-and-drag interaction, maybe all of them. (Note this isn't an issue in puzzles, only in the sandbox, because in puzzles we don't allow editing the solution after testing starts running.)
 
 ## New puzzle types
 
@@ -54,6 +55,7 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Add a "box" component that has an internal grid of miniature components. Similar to the implemented rune array (reuse its nested `World` state, `WorldRuntime` tree, entering/leaving view, and nested board format), but instead of circuit signal ports, add holes where blocks can fall in/out or be pushed in/out. A miniature block that falls out through a hole becomes a full block on that side of the box; a full block that falls in becomes a miniature block. Similar to Factorio's warehouse mods, or Patrick's Parabox.
 * Add a slider component that cannot be moved in one axis, only the other axis. Allow rotation, which changes which axis is fixed. A welded body with sliders has all of their constraints - so with both horizontal and vertical sliders, it can't move at all.
 * Add a fastener block. It makes its welded body immune to gravity, but as soon as the body is pushed by any force besides gravity (currently pistons, conveyor belts), the fastener block is destroyed. If another block falls onto the fastened body, that doesn't break the fastener (because otherwise there'd be weird behaviors where unwelding one block in the fastened body makes the fastener break).
+* Add various raw material blocks - no new behaviors, but different visuals. Namely: dirt, gold, silver, ruby, sapphire, emerald, diamond, amethyst, mithril, copper (ore and block), wood.
 
 # New component behaviors
 
@@ -129,7 +131,12 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Allow mirroring components with some hotkey. Because we allow mirroring selections, and we'll add components like flippers. But this probably currently breaks things like ROMs which do not have mirror symmetry. Also check all components for any that have rotational asymmetry that may cause a rotated machine to behave differently, e.g. ROM cursor's wrapping behavior may break rotational symmetry.
 * Add an option to the export menu, in puzzles, to open the current puzzle in the sandbox.
 * DEFER Maybe support selections that are a union of rectangles, created by shift-LMB-drag.
-* EASY? When a region is selected using the selection tool, in the sandbox, add a new tool that will crop the board to that selection. (Currently it requires using the puzzle properties modal to set the grid size to specific numbers; this selection path would be easier and more intuitive.)
+* EASY? When a region is selected using the selection tool, in the sandbox, add a button that will crop the board to that selection. (Currently it requires using the puzzle properties modal to set the grid size to specific numbers; this selection path would be easier and more intuitive.)
+
+## Shortcuts
+
+* After pressing V to switch to the selection tool, allow pressing V again to switch back to previous tool or tile.
+* Currently ctrl switches to weld tool; releasing ctrl switches back to previous tile. However, this doesn't work when the selection or text tools are selected; we should allow switching temporarily to weld tool when those are selected. Probably instead of storing previously-selected tile, we should store previously-selected tile *or tool* and switch back to that.
 
 ## Puzzle briefing screen
 
@@ -149,6 +156,8 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 # Visuals
 
+* On mouseover on an already-placed welder or unwelder, show the visualization of which edges it welds/unwelds. (We show this already when the player is placing them, but not on mouseover.)
+* Add similar visualizations for othe components. For the sensor, draw a circle around the one it's looking at, on mouseover. For the rotator, highlight the 3 neighboring cells it can interact with, with arrows.
 * Add backgrounds for puzzles, maybe with parallax as the player pans.
 * EASY Rename runes; prefer metaphorical, arcane, or Anglish-style names. ROM rune -> rune of wisdom, sensor rune -> watchful rune, inverter -> gainsayer rune, delay rune -> recall rune, rectifier -> rightener, etc. Maybe rename +1, -1, and 0 to right, left, and center, or some other natural ternary system, if we can find a way to explain sum, multiply, and subtraction concisely in that system. Also rename the assembler - anvil or forge or something else?
 
@@ -161,8 +170,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 ## Styling
 
-* For unchecked checkboxes, use a dark brown color, rather than white. For checked checkboxes, use the same dark brown but with a bright yellow checkmark (instead of the current bright yellow background and brown checkmark).
-* For the "test" and "fast" buttons, modify styles. Currently the run/test button interior becomes much darker while the mouse is over it - seems to be matching other hovered buttons, but since it's yellow and the other buttons are brown, we should change it to rather a darker yellow or something. Also, the other buttons have visible gradients while run/test/fast don't; maybe make those buttons also brown, but give them a more visible gradient to differentiate them, similar to the gradient applied in the main menu to the sandbox button or to available unsolved buttons.
 * Refine the dwarven UI theme: the palette now lives in CSS custom properties on `:root` in `src/styles.css` (stone browns, bronze, gold, ember, gem accents) with gilded corner ornaments on major panels; consider richer Art Deco corner motifs (diagonals, doubled lines) and reviewing tile fill/decoration colors in `src/simulation/tile.ts` for warmth.
 * EASY? Add a dark/light mode toggle. Set to dark by default, or browser default. The `:root` custom-property palette is the switching point: add a `[data-theme="light"]` override block and a persisted toggle.
 
@@ -190,5 +197,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Physically reverse a list: The player's machine receives ruby blocks and sapphire blocks in some order; they must be output in reverse order. Requires building a physical contraption that behaves like a push/pop stack, or maybe putting them in a box and physically rotating it. The player presses a button to drop the next block, and we drop a stone block to signal the end of the sequence. (How do we build the infra to test? Maybe a delivery box, swapping which block is below it. Or maybe use block-comparer to produce +1 and -1 charge for each one received, and then compare sequences omitting zeros. Or maybe put the entire sequence we expect on a conveyor belt below the delivery box.)
 * Physical subtraction: Receive some number of stone blocks and some number of iron blocks; output a number of blocks equal to the absolute value of the difference, then press a button to validate answer.
 * Puzzle: Given a supply of sand blocks, and a conduit that pulses N times, move N sand blocks to the output, and the rest to a different output.
+* Puzzle: ROM implemented in-world with basic components. Given an NxM rectangle of ruby and sapphire blocks, and circuit impulses on a given column or row, read the ruby/sapphire state at that specific 2-dimensional index. Repeat for several lookups in the same NxM rectangle.
 * PRIORITY Create a few puzzles that are actually difficult - maybe some of those above.
 * PRIORITY Create a few better tutorial puzzles. Use the text box component we've added.

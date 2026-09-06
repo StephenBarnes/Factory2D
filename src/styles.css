@@ -61,10 +61,59 @@ button {
 
 button:focus-visible,
 select:focus-visible,
-.animation-control input:focus-visible,
+input[type="checkbox"]:focus-visible,
 canvas:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 3px;
+}
+
+input[type="checkbox"] {
+  appearance: none;
+  display: inline-grid;
+  flex-shrink: 0;
+  place-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--bronze);
+  border-radius: 2px;
+  background: var(--inset);
+  color: var(--gold-bright);
+  cursor: pointer;
+}
+
+input[type="checkbox"]::before {
+  content: "";
+  width: 9px;
+  height: 5px;
+  margin-top: -2px;
+  border-bottom: 2px solid currentColor;
+  border-left: 2px solid currentColor;
+  transform: rotate(-45deg);
+  visibility: hidden;
+}
+
+input[type="checkbox"]:checked::before {
+  visibility: visible;
+}
+
+input[type="checkbox"]:hover:not(:disabled) {
+  border-color: var(--gold-bright);
+}
+
+input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+@media (forced-colors: active) {
+  input[type="checkbox"] {
+    appearance: auto;
+  }
+
+  input[type="checkbox"]::before {
+    content: none;
+  }
 }
 
 .tool-cursor {
@@ -1728,18 +1777,30 @@ kbd {
   opacity: 0.38;
 }
 
-.controls .primary-control, .controls #fast-forward-button {
+.controls .primary-control,
+.controls #fast-forward-button {
   min-width: 80px;
-  border-color: #d6993c;
-  color: #16120b;
-  background: #e7ad4f;
+  border-color: var(--gild);
+  color: var(--gold-bright);
+  background: linear-gradient(180deg, #70502a, #392713);
 }
 
-.controls .primary-control:hover,
+.controls .primary-control:hover:not(:disabled),
+.controls #fast-forward-button:hover:not(:disabled) {
+  border-color: var(--gold-bright);
+  color: #ffe9bb;
+  background: linear-gradient(180deg, #896332, #4c3419);
+}
+
 .controls .primary-control.running {
+  border-color: var(--ember);
+  color: #ffd4ae;
+  background: linear-gradient(180deg, #794322, #3e2112);
+}
+
+.controls .primary-control.running:hover:not(:disabled) {
   border-color: #ffab72;
-  color: #1c0d05;
-  background: var(--ember);
+  background: linear-gradient(180deg, #92532b, #512c18);
 }
 
 .simulation-state {
@@ -1802,7 +1863,6 @@ kbd {
   width: 16px;
   height: 16px;
   margin: 0;
-  accent-color: var(--gold);
 }
 
 
@@ -2191,7 +2251,6 @@ kbd {
 .workshop-properties-component input[type="checkbox"] {
   width: 15px;
   height: 15px;
-  accent-color: var(--gold);
 }
 
 .workshop-properties-price {
