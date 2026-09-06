@@ -101,18 +101,14 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * For the signal monitor and ROM grapher: in their configuration modals, add a text input for "category", defaulting to blank. Then on the signal panel, group each category together, instead of board row-major order. Show category names above the traces. Useful for grouping inputs vs outputs.
 * Sequence checker follow-ups: the expected sequence must begin with a nonzero value because the checker starts on the player's first nonzero output, so the "bursts" rectifier-puzzle case cannot verify silence during its leading negative burst. Consider an optional arm/start input port, or an explicit "expect silence for N ticks before the first value" configuration, if a puzzle needs it. Also consider a configurable maximum latency that fails a solution outright instead of relying on the cycle limit. DEFER until a puzzle actually needs this.
 * Minor: allow charge sensor runes inside rune arrays, pointing at the wall of the array, to read values from outside the rune array.
-* DEFER Maybe reconsider our current circuit/delay model - maybe rework things to add zero-delay gates? Notes moved to docs/circuits-without-delay.md. Current status: We probably won't do this; if we do it, it'll probably be a special case, e.g. only occurring inside rune arrays.
+* DEFER Maybe reconsider our current circuit/delay model - rework things to add zero-delay gates? Notes moved to docs/circuits-without-delay.md. Current status: We won't do this; if we do it, it'll be a special case, e.g. only occurring inside rune arrays.
 
-## Circuit components to not add because they're already buildable
+## Circuit components to not add
 
-* AND/OR gates - they're binary gates not ternary, and we'll add min/max which are n-ary generalizations of them.
-* Edge detectors: can be done by using an inverter to get `-x[t-1]` and using a combiner to add `x[t] - x[t-1]`.
-* Latches: can be done by connecting a combiner's output to its input.
-* Block that writes alternating red/blue charges every tick. Because we can create this with a spark plus inverter feeding itself.
-* Absolute-value, i.e. mapping +1 to +1, 0 to 0, and -1 to +1. Because a multiplier `X * X` does this.
-* Don't extend the set of charges (0, +1, -1) to add orthogonal +i and -i charges, or add a 2-wire tile with components for reading the different wires. We'll rather keep the current ternary system since it creates interesting challenges for signal routing.
-* Mapping (+1, 0, -1) to (+1, -1, anything) - can be done with `Combine(x, x, -1)`, or if -1 isn't available then `Combine(x, x, Invert(Combine(x, 1)))`.
-* Don't add a block that's programmable in assembly or some other text language. The implemented "rune array" covers that role and fits better with our theme and the rest of the game.
+* No AND/OR gates - we have min/max.
+* Don't add dedicated edge detector, latch, absolute-value, clock - can be built from 1-2 existing blocks.
+* Don't extend the set of signed ternary values to add an orthogonal dimension, or 2-wire tiles.
+* Don't add a block that's programmable with text. The "rune array" covers that role and fits better with our game.
 
 # Game feel
 
@@ -135,6 +131,7 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 * DEFER Later instead of a gold highlight, choose color according to a grade decided by percentile on the histogram - iron, gold, diamond, mithril. Also, on the main menu, color completed puzzles' buttons by the grade of the player's best solution.
 * DEFER Also style the 4 scores of each solution according to their grade in the histogram for that specific metric.
+* DEFER Add text and art in the puzzle briefing - write a story to explain why the player is solving this puzzle.
 
 ## Settings menu
 
@@ -184,9 +181,9 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 * Count up to N pulses from two separate sources and decide which source gave more pulses in total. One solution idea: use a counter block, with an inverter on one of the two inputs, and then check whether final value is positive or negative? But wrap-arounds are possible, so maybe use spark blocks to initialize it to N. Also we can't read the value of the counter block directly, would need to decrement it until it reaches zero and compare number of decrements to initial value; but that seems like almost the same problem we started with?
 * A suite of basic circuit problems, where you only have: conduit, combiner, inverter, and fixed source. Add puzzles to build most of the more advanced circuit components out of these. The combiner is effectively a sum or vote/majority rune. Combiner also gives a 1-tick delay, so you can chain them to make a machine that acts like a delay rune with arbitrary memory size. Combiner with duplicate inputs, one delayed and inverted, gives edge detection. Spark is fixed value plus edge detection. For the rectifier/diode, we have a puzzle and reference solution, which needs two combiners and a multiplier. Rectifier could also be built using two combiners, fixed source, and inverter: use fixed source and inverter to get -1, then compute `Combiner(x, x, -1)` which takes (-1, 0, 1) to (-1, -1, 1), and then combine that with +1.
-* Physically reverse a list: The player's machine receives ruby blocks and sapphire blocks in some order; they must be output in reverse order. Requires building a physical contraption that behaves like a push/pop stack, or maybe putting them in a box and physically rotating it. The player presses a button to drop the next block, and we drop a stone block to signal the end of the sequence. (How do we build the infra to test? Maybe a delivery box, swapping which block is below it. Or maybe use block-comparer to produce +1 and -1 charge for each one received, and then compare sequences omitting zeros. Or maybe put the entire sequence we expect on a conveyor belt below the delivery box.)
+* Physically reverse a list: The player's machine receives ruby blocks and sapphire blocks in some order; they must be output in reverse order. Requires building a physical contraption that behaves like a push/pop stack, or maybe putting them in a box and physically rotating it. The player presses a button to receive the next block, and we drop a stone block (or pulse a signal) to indicate the end of the sequence. (How do we build the infra to test? Maybe a delivery box, swapping which block is below it. Or maybe use block-comparer to produce +1 and -1 charge for each one received, and then compare sequences omitting zeros. Or maybe put the entire sequence we expect on a conveyor belt below the delivery box.)
 * Physical subtraction: Receive some number of stone blocks and some number of iron blocks; output a number of blocks equal to the absolute value of the difference, then press a button to validate answer.
-* Puzzle: Given a supply of sand blocks, and a conduit that pulses N times, move N sand blocks to the output, and the rest to a different output.
+* Puzzle: Given a supply of sand blocks, and a conduit that pulses N times, move N sand blocks to the output, and the rest to a different output. Alternatively, provide the requested amount via a clock that pulses every N ticks; or via a few separate buttons for requesting different amounts (say 1, 2, 3, 5; or ternary -3, -1, +1, +3, +5, and if multiple are on, they must output the sum).
 * Puzzle: ROM implemented in-world with basic components. Given an NxM rectangle of ruby and sapphire blocks, and circuit impulses on a given column or row, read the ruby/sapphire state at that specific 2-dimensional index. Repeat for several lookups in the same NxM rectangle.
 * PRIORITY Create a few puzzles that are actually difficult - maybe some of those above.
 * PRIORITY Create a few better tutorial puzzles. Use the text box component we've added.
