@@ -73,7 +73,8 @@ export interface PuzzleTestControllerDependencies {
   readonly setStepAnimation: (startedAt: number, duration: number) => void;
   readonly finishAnimation: () => void;
   readonly animationsEnabled: (ticksPerSecond: number) => boolean;
-  readonly recordResult: (scores: PuzzleTestReport["scores"]) => void;
+  /** Records the result and returns per-metric best scores before replacing it. */
+  readonly recordResult: (scores: PuzzleTestReport["scores"]) => PuzzleTestReport["scores"];
   readonly refreshTransport: () => void;
   readonly refreshHover: () => void;
   readonly leaveWorkshop: () => void;
@@ -95,7 +96,11 @@ export interface PuzzleTestControllerView {
   toggleCaseOptions(): void;
   hideStatus(): void;
   showFailure(message: string): void;
-  showReport(report: PuzzleTestReport, nextPuzzle: PuzzleDefinition | null): void;
+  showReport(
+    report: PuzzleTestReport,
+    nextPuzzle: PuzzleDefinition | null,
+    previousBest: PuzzleTestReport["scores"],
+  ): void;
   closeReport(): void;
 }
 
@@ -403,7 +408,7 @@ export class PuzzleTestController {
       throw new Error(`Cannot finish puzzle tests while ${state.kind}`);
     }
     this.dependencies.finishAnimation();
-    this.dependencies.recordResult(report.scores);
+    const previousBest = this.dependencies.recordResult(report.scores);
     this.lifecycleValue = {
       kind: report.succeeded ? "succeeded" : "failed",
       puzzle: state.puzzle,
@@ -412,7 +417,7 @@ export class PuzzleTestController {
     };
     if (report.succeeded) {
       this.view.hideStatus();
-      this.view.showReport(report, this.dependencies.getNextPuzzle());
+      this.view.showReport(report, this.dependencies.getNextPuzzle(), previousBest);
     } else {
       const failed = expectDefined(
         report.results[report.results.length - 1],
@@ -518,8 +523,12 @@ class DomPuzzleTestControllerView implements PuzzleTestControllerView {
     this.elements.statusToast.hidden = false;
   }
 
-  showReport(report: PuzzleTestReport, nextPuzzle: PuzzleDefinition | null): void {
-    this.report.show(report, nextPuzzle);
+  showReport(
+    report: PuzzleTestReport,
+    nextPuzzle: PuzzleDefinition | null,
+    previousBest: PuzzleTestReport["scores"],
+  ): void {
+    this.report.show(report, nextPuzzle, previousBest);
   }
 
   closeReport(): void {

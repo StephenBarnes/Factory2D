@@ -154,6 +154,7 @@ function controllerHarness(solution: World): ControllerHarness {
     animationsEnabled: () => false,
     recordResult: (scores) => {
       recordedReports.push(scores);
+      return null;
     },
     refreshTransport: () => {
       counts.transport += 1;

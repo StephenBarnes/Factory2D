@@ -53,7 +53,11 @@ export class PuzzleTestReportView {
       });
   }
 
-  show(report: PuzzleTestReport, nextPuzzle: PuzzleDefinition | null): void {
+  show(
+    report: PuzzleTestReport,
+    nextPuzzle: PuzzleDefinition | null,
+    previousBest: PuzzleTestReport["scores"],
+  ): void {
     const availableNext = report.succeeded ? nextPuzzle : null;
     this.nextPuzzleId = availableNext?.id ?? null;
     this.nextButton.hidden = availableNext === null;
@@ -74,10 +78,10 @@ export class PuzzleTestReportView {
         report.scores ?? undefined,
         "Successful puzzle test report is missing scores",
       );
-      this.price.textContent = String(scores.price);
-      this.cycles.textContent = String(scores.cycles);
-      this.footprint.textContent = String(scores.footprint);
-      this.combined.textContent = String(scores.combined);
+      this.showScore(this.price, scores.price, previousBest?.price);
+      this.showScore(this.cycles, scores.cycles, previousBest?.cycles);
+      this.showScore(this.footprint, scores.footprint, previousBest?.footprint);
+      this.showScore(this.combined, scores.combined, previousBest?.combined);
     }
 
     const items = report.results.map((result) => {
@@ -99,6 +103,19 @@ export class PuzzleTestReportView {
     });
     this.results.replaceChildren(...items);
     this.dialog.showModal();
+  }
+
+  private showScore(element: HTMLElement, score: number, previousBest: number | undefined): void {
+    element.textContent = String(score);
+    if (previousBest === undefined) {
+      return;
+    }
+    const delta = score - previousBest;
+    const comparison = document.createElement("small");
+    comparison.className = `test-report-delta ${delta < 0 ? "improved" : delta > 0 ? "worse" : "equal"}`;
+    comparison.textContent = `${delta > 0 ? "+" : ""}${delta} vs best`;
+    comparison.title = `Previous best: ${previousBest}. Lower is better.`;
+    element.append(comparison);
   }
 
   close(): void {

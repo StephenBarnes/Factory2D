@@ -232,9 +232,21 @@ export class NavigationController {
     }
   }
 
-  recordActivePuzzleTestResult(scores: PuzzleScores | null): void {
+  recordActivePuzzleTestResult(scores: PuzzleScores | null): PuzzleScores | null {
     if (this.currentScreen.kind !== "puzzle") {
       throw new Error("Cannot record a puzzle test result outside a puzzle workshop");
+    }
+    let previousBest: PuzzleScores | null = null;
+    for (const solution of this.solutions.forPuzzle(this.currentScreen.puzzleId)) {
+      if (solution.scores === null) {
+        continue;
+      }
+      previousBest = previousBest === null ? solution.scores : {
+        price: Math.min(previousBest.price, solution.scores.price),
+        cycles: Math.min(previousBest.cycles, solution.scores.cycles),
+        footprint: Math.min(previousBest.footprint, solution.scores.footprint),
+        combined: Math.min(previousBest.combined, solution.scores.combined),
+      };
     }
     this.solutions.recordTestResult(
       this.currentScreen.solutionId,
@@ -249,13 +261,14 @@ export class NavigationController {
         PuzzleResult.Won,
       )
     ) {
-      return;
+      return previousBest;
     }
     try {
       saveCompletedPuzzleIds(this.storage, this.completedPuzzleIds);
     } catch (error) {
       console.error("Could not save puzzle progress:", error);
     }
+    return previousBest;
   }
 
   private openSandbox(sandboxId: string): void {

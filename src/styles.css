@@ -2735,6 +2735,22 @@ kbd {
   font-weight: 700;
 }
 
+.test-report-delta {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 0.6rem;
+  font-weight: 400;
+}
+
+.test-report-delta.improved {
+  color: #bcd9a8;
+}
+
+.test-report-delta.worse {
+  color: #e8a099;
+}
+
 .test-report-result {
   min-height: 52px;
   padding: 9px 12px;

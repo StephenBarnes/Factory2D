@@ -140,7 +140,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 * Make the palette panel resizable. Modify the icon sizes, shrinking them as the palette becomes narrower.
 * If the player tries to place a block, or weld, and we don't allow it, indicate the reason. (1) If it's because they're testing a puzzle, flash the reset button. (2) If it's a weld or tile edit outside the allowed region, flash the region border red. (3) If they're trying to weld an edge that can't be welded because one of the neighboring blocks can't be welded on that side, e.g. sand blocks or empty blocks or the front/back of a duplicator , draw a brief low-opacity red square overlay on those tiles.
-* When we show the success screen / puzzle solution results screen, show the delta vs the player's previous best solution in each metric, if they have any previous solutions. So they can see easily whether their new solution improved on the previous one in each metric.
 * Add some way to copy-paste per-component configuration between configurable components. Maybe when the selection tool is used to select some components, add a "copy config from..." button which allows clicking on one component and then copies its config to all selected components of the same type.
 
 # Visuals
