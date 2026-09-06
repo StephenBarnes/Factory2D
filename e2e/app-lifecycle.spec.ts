@@ -702,7 +702,7 @@ test("renders puzzle cases and leaves the failed case paused on the board", asyn
   await page.goto("/puzzles/first-shift/solutions/solution-1");
 
   const testButton = page.getByRole("button", { name: "◆ TEST" });
-  const fastForwardButton = page.getByRole("button", { name: "≫ FAST" });
+  const fastForwardButton = page.getByRole("button", { name: /FAST/ });
   const report = page.getByRole("dialog");
   await expect(testButton).toBeVisible();
   await expect(page.getByRole("button", { name: /RUN/ })).toHaveCount(0);
@@ -754,7 +754,7 @@ test("persists successful solution scores on the puzzle briefing", async ({ page
   await page.goto("/puzzles/first-shift/solutions/solution-1");
   await placeStone(page, 9, 3);
   await page.getByRole("button", { name: "◆ TEST" }).click();
-  await page.getByRole("button", { name: "≫ FAST" }).click();
+  await page.getByRole("button", { name: /FAST/ }).click();
 
   const report = page.getByRole("dialog");
   await expect(report.getByRole("heading", { name: "ALL TESTS PASSED" })).toBeVisible();
