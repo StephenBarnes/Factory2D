@@ -14,7 +14,7 @@ import { SavedSolutionController } from "./game/saved-solution-controller";
 import { PuzzleTestController } from "./game/puzzle-test-controller";
 import { parseSandboxImport } from "./game/sandbox-puzzle-authoring";
 import { computePuzzleDesignMetrics } from "./game/puzzle-scores";
-import { createSandboxWorld, puzzleById } from "./game/puzzles";
+import { createSandboxWorld, puzzleById, serializeShippedPuzzle } from "./game/puzzles";
 import { WorkshopSessionController } from "./game/workshop-session";
 import {
   MAX_SNIPPET_NAME_LENGTH,
@@ -130,6 +130,7 @@ const downloadSceneButton = requiredElement<HTMLButtonElement>("download-scene-b
 const copySceneButton = requiredElement<HTMLButtonElement>("copy-scene-button");
 const downloadImageButton = requiredElement<HTMLButtonElement>("download-image-button");
 const downloadPuzzleButton = requiredElement<HTMLButtonElement>("download-puzzle-button");
+const openPuzzleSandboxButton = requiredElement<HTMLButtonElement>("open-puzzle-sandbox-button");
 const sharePuzzleButton = requiredElement<HTMLButtonElement>("share-puzzle-button");
 const importButton = requiredElement<HTMLButtonElement>("import-button");
 const importFile = requiredElement<HTMLInputElement>("import-file");
@@ -1908,7 +1909,8 @@ function closeExportOptions(): void {
 
 function updateExportOptionsForSession(): void {
   const sandboxOnly = surface.session.editableRegion === null;
-  downloadPuzzleButton.hidden = !sandboxOnly;
+  downloadPuzzleButton.hidden = false;
+  openPuzzleSandboxButton.hidden = sandboxOnly;
   sharePuzzleButton.hidden = !sandboxOnly;
   sharePuzzleButton.disabled = true;
   if (!sandboxOnly) {
@@ -1952,10 +1954,15 @@ downloadImageButton.addEventListener("click", () => {
 });
 
 downloadPuzzleButton.addEventListener("click", () => {
-  if (surface.session.editableRegion !== null) {
-    throw new Error("Puzzle files can only be exported from the sandbox");
-  }
   closeExportOptions();
+  const screen = navigation.screen;
+  if (screen.kind === "puzzle") {
+    downloadBlob(
+      new Blob([serializeShippedPuzzle(screen.puzzleId)], { type: "application/json" }),
+      `${screen.puzzleId}.json`,
+    );
+    return;
+  }
   const regionAuthoring = surface.session.editableRegionAuthoring;
   const puzzleAuthoring = surface.session.puzzleAuthoring;
   if (regionAuthoring === null || puzzleAuthoring === null) {
@@ -1966,6 +1973,17 @@ downloadPuzzleButton.addEventListener("click", () => {
     new Blob([source], { type: "application/json" }),
     puzzleAuthoring.fileName,
   );
+});
+
+openPuzzleSandboxButton.addEventListener("click", () => {
+  const screen = navigation.screen;
+  if (screen.kind !== "puzzle") {
+    return;
+  }
+  closeExportOptions();
+  finalizeActivePointerGesture();
+  const sandbox = savedSandboxes.createFromPuzzle(screen.puzzleId);
+  navigation.navigate({ kind: "sandbox", sandboxId: sandbox.id });
 });
 
 document.addEventListener("click", (event) => {

@@ -174,6 +174,16 @@ export function puzzleById(id: PuzzleId): PuzzleDefinition {
   return expectDefined(PUZZLES_BY_ID[id], `Unknown puzzle id "${id}"`);
 }
 
+/** Export the authored file, never a solution or a running test world. */
+export function serializeShippedPuzzle(id: PuzzleId): string {
+  const puzzle = puzzleById(id);
+  const source = expectDefined(
+    PUZZLE_FILE_MODULES[`./puzzles/${puzzle.id}.json`],
+    `Missing shipped puzzle file "${puzzle.id}"`,
+  );
+  return JSON.stringify(source, null, 2);
+}
+
 export function isPuzzleGroupUnlocked(
   group: PuzzleGroupDefinition,
   completedPuzzleIds: ReadonlySet<PuzzleId>,

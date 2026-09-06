@@ -25,7 +25,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 # Authoring tools, player-created puzzles, histograms
 
-* In puzzle screens, add an option to the export list to export as a puzzle, populating all fields. This is basically just a direct download of the relevant file in `src/game/puzzles/` - but players don't have access to those files directly, so we want to allow them to download the puzzle, import in sandbox, and edit to create a new puzzle or to expriment.
 * In the sandbox, when pressing the info button, we allow editing the current puzzle, and enabling/disabling components. In this view: (1) disable all components by default, instead of enabling all by default; (2) add a field in TileDefinition defining a default cost for each component, and pre-populate the prices with that value instead of 1 for all components. Pick any price that seems reasonable - 2 for conduit or stone, 10 for runes, 20 for assemblers, etc.
 * Add back-end server and database. Probably Cloudflare Workers + D1 + R2. Then make the game request histogram data and (later) shared puzzles, and allow submitting scores and shared puzzles. Use `crypto.randomUUID()` to assign each install an ID.
 * DEFER Allow voting community-created puzzles up and down. We can assume users aren't malicious, this is a zero-stakes indie game; expect under 10 players per day. We want to avoid setting up a whole auth system or requiring email addresses, etc. Using a simple unique ID allows exploits (e.g. clear browser data and double-vote) but we'll assume nobody does that. Version the database and roll back manually if needed. If the game becomes popular enough to need more than that, upgrade to a more robust system.
@@ -129,7 +128,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Add support for mobile and touch screens. Check if it's playable.
 * Review general UI scaling on 4k monitors beyond inspector prices (now enlarged to match component names).
 * Allow mirroring components with some hotkey. Because we allow mirroring selections, and we'll add components like flippers. But this probably currently breaks things like ROMs which do not have mirror symmetry. Also check all components for any that have rotational asymmetry that may cause a rotated machine to behave differently, e.g. ROM cursor's wrapping behavior may break rotational symmetry.
-* Add an option to the export menu, in puzzles, to open the current puzzle in the sandbox.
 * DEFER Maybe support selections that are a union of rectangles, created by shift-LMB-drag.
 * EASY? When a region is selected using the selection tool, in the sandbox, add a button that will crop the board to that selection. (Currently it requires using the puzzle properties modal to set the grid size to specific numbers; this selection path would be easier and more intuitive.)
 

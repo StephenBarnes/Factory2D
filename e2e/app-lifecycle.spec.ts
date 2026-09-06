@@ -1004,8 +1004,28 @@ test("export dropup exposes scene actions and sandbox puzzle authoring", async (
   await exportButton.click();
   await expect(page.getByRole("button", { name: "Editable region tool" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "DOWNLOAD SCENE FILE" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "DOWNLOAD PUZZLE FILE" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "DOWNLOAD PUZZLE FILE" })).toBeVisible();
   await expect(page.getByRole("button", { name: "SHARE PUZZLE" })).toHaveCount(0);
+  const originalDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "DOWNLOAD PUZZLE FILE" }).click();
+  const originalDownload = await originalDownloadPromise;
+  expect(originalDownload.suggestedFilename()).toBe("first-shift.json");
+  const originalPath = await originalDownload.path();
+  if (originalPath === null) {
+    throw new Error("Original puzzle download is missing");
+  }
+  const shippedPuzzle = JSON.parse(await readFile("src/game/puzzles/first-shift.json", "utf8"));
+  expect(JSON.parse(await readFile(originalPath, "utf8"))).toEqual(shippedPuzzle);
+
+  await exportButton.click();
+  await page.getByRole("button", { name: "OPEN PUZZLE IN SANDBOX" }).click();
+  await expect(page).toHaveURL(/\/sandbox\/sandbox-\d+$/);
+  await page.reload();
+  await page.getByRole("button", { name: "Puzzle properties" }).click();
+  await expect(propertiesDialog.getByRole("textbox", { name: "ID" })).toHaveValue("first-shift");
+  await propertiesDialog.getByRole("button", { name: "CANCEL" }).click();
+  await exportButton.click();
+  await expect(page.getByRole("button", { name: "OPEN PUZZLE IN SANDBOX" })).toHaveCount(0);
 });
 
 test("puzzle info remains horizontally contained and vertically reachable", async ({ page }) => {

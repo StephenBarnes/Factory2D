@@ -10,7 +10,7 @@ import {
   SandboxPuzzleAuthoringState,
 } from "./sandbox-puzzle-authoring";
 import type { SandboxPuzzleImport } from "./sandbox-puzzle-authoring";
-import { createSandboxWorld } from "./puzzles";
+import { createSandboxWorld, serializeShippedPuzzle } from "./puzzles";
 import type { SandboxWorkshopSnapshot } from "./workshop-session";
 
 
@@ -48,6 +48,12 @@ export class SavedSandboxController {
       authoring.serialize(new GridRegion([])),
       authoring.selectedTestCaseId,
     );
+    this.persist();
+    return sandbox;
+  }
+
+  createFromPuzzle(puzzleId: string): SavedSandbox {
+    const sandbox = this.savedSandboxes.create(serializeShippedPuzzle(puzzleId), "standard");
     this.persist();
     return sandbox;
   }
