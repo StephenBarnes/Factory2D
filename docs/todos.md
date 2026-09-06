@@ -25,7 +25,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 # Authoring tools, player-created puzzles, histograms
 
-* In the sandbox, when pressing the info button, we allow editing the current puzzle, and enabling/disabling components. In this view: (1) disable all components by default, instead of enabling all by default; (2) add a field in TileDefinition defining a default cost for each component, and pre-populate the prices with that value instead of 1 for all components. Pick any price that seems reasonable - 2 for conduit or stone, 10 for runes, 20 for assemblers, etc.
 * Add back-end server and database. Probably Cloudflare Workers + D1 + R2. Then make the game request histogram data and (later) shared puzzles, and allow submitting scores and shared puzzles. Use `crypto.randomUUID()` to assign each install an ID.
 * DEFER Allow voting community-created puzzles up and down. We can assume users aren't malicious, this is a zero-stakes indie game; expect under 10 players per day. We want to avoid setting up a whole auth system or requiring email addresses, etc. Using a simple unique ID allows exploits (e.g. clear browser data and double-vote) but we'll assume nobody does that. Version the database and roll back manually if needed. If the game becomes popular enough to need more than that, upgrade to a more robust system.
 	* Also, when using the "clear all player data" button, do not erase the UUID. Unclear what we should do when importing/exporting - maybe transfer the UUID.

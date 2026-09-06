@@ -113,6 +113,8 @@ export interface TileDefinition {
   readonly name: string;
   /** Single UTF-16 code unit used by the compact board format. */
   readonly boardCode: string;
+  /** Suggested puzzle-authoring price; individual puzzle catalogs override it. */
+  readonly defaultPrice: number;
   /** Sandbox component-palette presentation. Empty tiles are not palette entries. */
   readonly palette: {
     readonly order: number;
@@ -174,6 +176,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Empty]: {
     name: "Empty",
     boardCode: ".",
+    defaultPrice: 0,
     palette: null,
     affectedByGravity: false,
     slidesDiagonally: false,
@@ -192,6 +195,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Stone]: {
     name: "Stone",
     boardCode: "#",
+    defaultPrice: 2,
     palette: {
       order: 1,
       category: PaletteCategory.RawMaterials,
@@ -214,6 +218,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Sand]: {
     name: "Sand",
     boardCode: ":",
+    defaultPrice: 1,
     palette: {
       order: 0,
       category: PaletteCategory.RawMaterials,
@@ -236,6 +241,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Platform]: {
     name: "Platform",
     boardCode: "=",
+    defaultPrice: 2,
     palette: {
       order: 2,
       category: PaletteCategory.RawMaterials,
@@ -258,6 +264,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Magnet]: {
     name: "Magnet",
     boardCode: "L",
+    defaultPrice: 10,
     palette: {
       order: 3,
       category: PaletteCategory.Mechanisms,
@@ -280,6 +287,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Iron]: {
     name: "Iron",
     boardCode: "i",
+    defaultPrice: 4,
     palette: {
       order: 4,
       category: PaletteCategory.RawMaterials,
@@ -302,6 +310,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Conduit]: {
     name: "Conduit",
     boardCode: "C",
+    defaultPrice: 2,
     palette: {
       order: 9,
       category: PaletteCategory.Circuits,
@@ -324,6 +333,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Sensor]: {
     name: "Sensor Rune",
     boardCode: "S",
+    defaultPrice: 10,
     palette: {
       order: 10,
       category: PaletteCategory.Circuits,
@@ -346,6 +356,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.FixedCharge]: {
     name: "Fixed Charge Rune",
     boardCode: "1",
+    defaultPrice: 10,
     palette: {
       order: 11,
       category: PaletteCategory.Circuits,
@@ -368,6 +379,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Spark]: {
     name: "Spark Rune",
     boardCode: "K",
+    defaultPrice: 10,
     palette: {
       order: 12,
       category: PaletteCategory.Circuits,
@@ -390,6 +402,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Inverter]: {
     name: "Inverter Rune",
     boardCode: "I",
+    defaultPrice: 10,
     palette: {
       order: 13,
       category: PaletteCategory.Circuits,
@@ -412,6 +425,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Combiner]: {
     name: "Combiner Rune",
     boardCode: "+",
+    defaultPrice: 10,
     palette: {
       order: 14,
       category: PaletteCategory.Circuits,
@@ -434,6 +448,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Rectifier]: {
     name: "Rectifier Rune",
     boardCode: "R",
+    defaultPrice: 10,
     palette: {
       order: 15,
       category: PaletteCategory.Circuits,
@@ -456,6 +471,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Multiplier]: {
     name: "Multiplier Rune",
     boardCode: "*",
+    defaultPrice: 10,
     palette: {
       order: 16,
       category: PaletteCategory.Circuits,
@@ -478,6 +494,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Subtractor]: {
     name: "Subtractor Rune",
     boardCode: "-",
+    defaultPrice: 10,
     palette: {
       order: 17,
       category: PaletteCategory.Circuits,
@@ -500,6 +517,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.ChargeSensor]: {
     name: "Charge Sensor Rune",
     boardCode: "Q",
+    defaultPrice: 10,
     palette: {
       order: 18,
       category: PaletteCategory.Circuits,
@@ -522,6 +540,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Selector]: {
     name: "Selector Rune",
     boardCode: "T",
+    defaultPrice: 10,
     palette: {
       order: 19,
       category: PaletteCategory.Circuits,
@@ -544,6 +563,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Equality]: {
     name: "Equality Rune",
     boardCode: "e",
+    defaultPrice: 10,
     palette: {
       order: 20,
       category: PaletteCategory.Circuits,
@@ -566,6 +586,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Minimum]: {
     name: "Minimum Rune",
     boardCode: "<",
+    defaultPrice: 10,
     palette: {
       order: 21,
       category: PaletteCategory.Circuits,
@@ -588,6 +609,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Maximum]: {
     name: "Maximum Rune",
     boardCode: ">",
+    defaultPrice: 10,
     palette: {
       order: 22,
       category: PaletteCategory.Circuits,
@@ -610,6 +632,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.WireCrossing]: {
     name: "Wire Crossing",
     boardCode: "W",
+    defaultPrice: 4,
     palette: {
       order: 23,
       category: PaletteCategory.Circuits,
@@ -632,6 +655,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Glass]: {
     name: "Glass",
     boardCode: "G",
+    defaultPrice: 3,
     palette: {
       order: 5,
       category: PaletteCategory.RawMaterials,
@@ -655,6 +679,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.IronOre]: {
     name: "Iron Ore",
     boardCode: "O",
+    defaultPrice: 2,
     palette: {
       order: 6,
       category: PaletteCategory.RawMaterials,
@@ -677,6 +702,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Furnace]: {
     name: "Furnace",
     boardCode: "F",
+    defaultPrice: 20,
     palette: {
       order: 7,
       category: PaletteCategory.Mechanisms,
@@ -699,6 +725,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Conveyor]: {
     name: "Conveyor Belt",
     boardCode: "B",
+    defaultPrice: 10,
     palette: {
       order: 8,
       category: PaletteCategory.Mechanisms,
@@ -721,6 +748,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Delivery]: {
     name: "Delivery Box",
     boardCode: "D",
+    defaultPrice: 20,
     palette: {
       order: 24,
       category: PaletteCategory.PuzzleTools,
@@ -743,6 +771,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Victory]: {
     name: "Victory Block",
     boardCode: "V",
+    defaultPrice: 0,
     palette: {
       order: 25,
       category: PaletteCategory.PuzzleTools,
@@ -765,6 +794,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Delay]: {
     name: "Delay Rune",
     boardCode: "Z",
+    defaultPrice: 10,
     palette: {
       order: 27,
       category: PaletteCategory.Circuits,
@@ -787,6 +817,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Counter]: {
     name: "Charge Counter",
     boardCode: "N",
+    defaultPrice: 10,
     palette: {
       order: 28,
       category: PaletteCategory.Circuits,
@@ -809,6 +840,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Rom]: {
     name: "ROM Rune",
     boardCode: "U",
+    defaultPrice: 20,
     palette: {
       order: 29,
       category: PaletteCategory.Circuits,
@@ -831,6 +863,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Welder]: {
     name: "Welder",
     boardCode: "J",
+    defaultPrice: 10,
     palette: {
       order: 30,
       category: PaletteCategory.Mechanisms,
@@ -853,6 +886,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Splitter]: {
     name: "Splitter",
     boardCode: "X",
+    defaultPrice: 10,
     palette: {
       order: 31,
       category: PaletteCategory.Mechanisms,
@@ -875,6 +909,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Duplicator]: {
     name: "Duplicator",
     boardCode: "Y",
+    defaultPrice: 20,
     palette: {
       order: 32,
       category: PaletteCategory.Mechanisms,
@@ -897,6 +932,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Monitor]: {
     name: "Signal Monitor",
     boardCode: "m",
+    defaultPrice: 0,
     palette: {
       order: 36,
       category: PaletteCategory.Circuits,
@@ -919,6 +955,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Grapher]: {
     name: "ROM Grapher",
     boardCode: "g",
+    defaultPrice: 0,
     palette: {
       order: 37,
       category: PaletteCategory.Circuits,
@@ -941,6 +978,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Checker]: {
     name: "Sequence Checker",
     boardCode: "E",
+    defaultPrice: 0,
     palette: {
       order: 38,
       category: PaletteCategory.PuzzleTools,
@@ -963,6 +1001,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.RuneArray]: {
     name: "Rune Array",
     boardCode: "A",
+    defaultPrice: 10,
     palette: {
       order: 39,
       category: PaletteCategory.Circuits,
@@ -985,6 +1024,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Assembler]: {
     name: "Assembler",
     boardCode: "H",
+    defaultPrice: 20,
     palette: {
       order: 33,
       category: PaletteCategory.Mechanisms,
@@ -1007,6 +1047,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Rotator]: {
     name: "Rotator",
     boardCode: "r",
+    defaultPrice: 20,
     palette: {
       order: 34,
       category: PaletteCategory.Mechanisms,
@@ -1029,6 +1070,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Piston]: {
     name: "Piston",
     boardCode: "P",
+    defaultPrice: 20,
     palette: {
       order: 26,
       category: PaletteCategory.Mechanisms,
@@ -1051,6 +1093,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.PistonBase]: {
     name: "Piston Base",
     boardCode: "b",
+    defaultPrice: 0,
     palette: null,
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -1069,6 +1112,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.PistonArm]: {
     name: "Piston Arm",
     boardCode: "a",
+    defaultPrice: 0,
     palette: null,
     affectedByGravity: true,
     slidesDiagonally: false,

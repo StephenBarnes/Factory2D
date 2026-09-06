@@ -10,10 +10,6 @@ export class PuzzleComponents {
   private readonly pricesByKind: readonly (number | undefined)[];
 
   constructor(entries: readonly PricedComponent[]) {
-    if (entries.length === 0) {
-      throw new Error("A puzzle must make at least one component available");
-    }
-
     const pricesByKind: (number | undefined)[] = [];
     for (const entry of entries) {
       const definition = TILE_DEFINITIONS[entry.kind];

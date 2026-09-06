@@ -81,6 +81,8 @@ The current engine implements observation, intent conflict resolution, and commi
 
 ## Development state
 
+* New sandbox and scene-import puzzle catalogs start with every player-placeable component disabled; the sandbox build palette remains complete. `TileDefinition.defaultPrice` supplies suggested authoring prices (stone/conduit 2, ordinary runes 10, major machines 20, diagnostic and victory tools 0), while imported and saved enabled-component prices remain explicit. Empty catalogs can be saved and round-trip through puzzle files; puzzle workshops with no available components select the weld tool.
+
 Keep this section up-to-date.
 
 The game is in early development. Currently implemented:

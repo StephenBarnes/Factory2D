@@ -137,7 +137,6 @@ export class WorkshopInfoDialog {
         throw new Error(`Missing puzzle property controls for tile kind ${component.kind}`);
       }
       controls.checkbox.checked = component.enabled;
-      controls.checkbox.setCustomValidity("");
       controls.price.valueAsNumber = component.price;
       controls.price.disabled = !component.enabled;
     }
@@ -223,7 +222,6 @@ export class WorkshopInfoDialog {
         priceLabel.append(priceText, price);
         checkbox.addEventListener("change", () => {
           price.disabled = !checkbox.checked;
-          checkbox.setCustomValidity("");
         });
 
         row.append(enabledLabel, priceLabel);
@@ -243,7 +241,6 @@ export class WorkshopInfoDialog {
         throw new Error(`Missing puzzle property controls for tile kind ${kind}`);
       }
       controls.checkbox.checked = enabled;
-      controls.checkbox.setCustomValidity("");
       controls.price.disabled = !enabled;
     }
   }
@@ -253,23 +250,13 @@ export class WorkshopInfoDialog {
       return;
     }
     const components: SandboxPuzzleComponentProperty[] = [];
-    let firstCheckbox: HTMLInputElement | null = null;
-    let anyEnabled = false;
     for (const [kind, controls] of this.componentControls) {
-      firstCheckbox ??= controls.checkbox;
-      anyEnabled ||= controls.checkbox.checked;
       components.push({
         kind,
         enabled: controls.checkbox.checked,
         price: controls.price.valueAsNumber,
       });
     }
-    if (!anyEnabled) {
-      firstCheckbox?.setCustomValidity("Enable at least one player-placeable component");
-      firstCheckbox?.reportValidity();
-      return;
-    }
-    firstCheckbox?.setCustomValidity("");
     this.saveProperties({
       width: this.widthInput.valueAsNumber,
       height: this.heightInput.valueAsNumber,

@@ -1,11 +1,9 @@
 import type { GridRegion } from "./grid-region";
 import { PUZZLE_FORMAT, PUZZLE_VERSION } from "./puzzle-format";
 import { serializeBoard } from "../simulation/board-export";
-import { TILE_DEFINITIONS, TILE_KINDS, type TileKind } from "../simulation/tile";
+import { TILE_DEFINITIONS, type TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
 import type { TextBox } from "../simulation/text-box";
-
-const PLACEHOLDER_COMPONENT_PRICE = 1;
 
 interface PuzzleTemplateComponent {
   readonly code: string;
@@ -23,25 +21,6 @@ export interface PuzzleExportMetadata {
   readonly cycleLimit: number | null;
   readonly components: readonly { readonly kind: TileKind; readonly price: number }[];
   readonly testCases: readonly unknown[];
-}
-
-export function placeholderPuzzleComponents(): readonly {
-  readonly kind: TileKind;
-  readonly price: number;
-}[] {
-  const components: { kind: TileKind; price: number; order: number }[] = [];
-  for (const kind of TILE_KINDS) {
-    const definition = TILE_DEFINITIONS[kind];
-    if (definition.palette !== null) {
-      components.push({
-        kind,
-        price: PLACEHOLDER_COMPONENT_PRICE,
-        order: definition.palette.order,
-      });
-    }
-  }
-  components.sort((left, right) => left.order - right.order);
-  return components.map(({ kind, price }) => ({ kind, price }));
 }
 
 function componentEntries(
@@ -71,7 +50,7 @@ function placeholderMetadata(): PuzzleExportMetadata {
     description: "TODO: Describe the puzzle setup.",
     goal: "TODO: Describe the victory condition.",
     cycleLimit: null,
-    components: placeholderPuzzleComponents(),
+    components: [],
     testCases: [],
   };
 }

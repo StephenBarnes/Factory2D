@@ -548,10 +548,12 @@ function configureComponentPalette(): void {
   }
   const availableComponents = surface.session.availableComponents;
   if (availableComponents !== null && !availableComponents.has(selectedKind)) {
-    selectedKind = expectDefined(
-      availableComponents.entries[0],
-      "Puzzle component list is unexpectedly empty",
-    ).kind;
+    const firstComponent = availableComponents.entries[0];
+    if (firstComponent === undefined) {
+      selectedTool = "weld";
+    } else {
+      selectedKind = firstComponent.kind;
+    }
   }
   if (availableComponents !== null && !availableComponents.has(previousSelectedKind)) {
     previousSelectedKind = selectedKind;

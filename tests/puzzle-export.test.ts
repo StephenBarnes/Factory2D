@@ -3,7 +3,7 @@ import { GridRegion } from "../src/game/grid-region";
 import { serializePuzzleTemplate } from "../src/game/puzzle-export";
 import { parsePuzzleFile, PUZZLE_FORMAT, PUZZLE_VERSION } from "../src/game/puzzle-format";
 import { PuzzleResult } from "../src/simulation/puzzle-result";
-import { TILE_DEFINITIONS, TileKind } from "../src/simulation/tile";
+import { TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
 
 describe("puzzle export", () => {
@@ -62,13 +62,6 @@ describe("puzzle export", () => {
     ]);
     expect(exported.testCases).toEqual([]);
     expect(exported).not.toHaveProperty("features");
-    expect(exported.components).toContainEqual({
-      code: TILE_DEFINITIONS[TileKind.Stone].boardCode,
-      price: 1,
-    });
-    expect(exported.components).not.toContainEqual(expect.objectContaining({
-      code: TILE_DEFINITIONS[TileKind.PistonArm].boardCode,
-    }));
 
     const parsed = parsePuzzleFile(exported, "exported-puzzle.json");
     expect(parsed.initialWorld.kindAt(1, 1)).toBe(TileKind.Stone);

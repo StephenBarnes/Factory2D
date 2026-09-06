@@ -86,7 +86,6 @@ describe("puzzle definitions", () => {
   });
 
   it("rejects invalid puzzle component lists", () => {
-    expect(() => new PuzzleComponents([])).toThrow("at least one component");
     expect(() => new PuzzleComponents([
       { kind: TileKind.Empty, price: 0 },
     ])).toThrow("cannot be a puzzle component");

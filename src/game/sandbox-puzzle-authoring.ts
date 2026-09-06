@@ -8,7 +8,6 @@ import {
   type ParsedPuzzleFile,
 } from "./puzzle-format";
 import {
-  placeholderPuzzleComponents,
   serializePuzzleTemplate,
   type PuzzleExportMetadata,
 } from "./puzzle-export";
@@ -31,8 +30,6 @@ import {
 } from "../simulation/tile";
 import type { World } from "../simulation/world";
 import type { TextBox } from "../simulation/text-box";
-
-const DEFAULT_COMPONENT_PRICE = 1;
 
 export interface SandboxPuzzleComponentProperty {
   readonly kind: TileKind;
@@ -135,7 +132,7 @@ export class SandboxPuzzleAuthoringState {
     this.availableComponentsValue = new PuzzleComponents(components);
     this.pricesByKind = [];
     for (const kind of PALETTE_KINDS) {
-      this.pricesByKind[kind] = DEFAULT_COMPONENT_PRICE;
+      this.pricesByKind[kind] = TILE_DEFINITIONS[kind].defaultPrice;
     }
     for (const component of components) {
       this.pricesByKind[component.kind] = component.price;
@@ -144,7 +141,6 @@ export class SandboxPuzzleAuthoringState {
 
   static createDefault(world: World): SandboxPuzzleAuthoringState {
     requireBoardDimensions(world.width, world.height);
-    const components = placeholderPuzzleComponents();
     return new SandboxPuzzleAuthoringState(
       {
         id: "untitled-puzzle",
@@ -155,7 +151,7 @@ export class SandboxPuzzleAuthoringState {
       },
       "Untitled Puzzle",
       "TODO: Describe the puzzle setup.",
-      components,
+      [],
       [{
         id: "standard",
         name: "Standard case",
@@ -293,7 +289,7 @@ export class SandboxPuzzleAuthoringState {
       components: PALETTE_KINDS.map((kind) => ({
         kind,
         enabled: this.availableComponentsValue.has(kind),
-        price: this.pricesByKind[kind] ?? DEFAULT_COMPONENT_PRICE,
+        price: this.pricesByKind[kind] ?? TILE_DEFINITIONS[kind].defaultPrice,
       })),
     };
   }
