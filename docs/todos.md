@@ -124,7 +124,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Add support for mobile and touch screens. Check if it's playable.
 * Review general UI scaling on 4k monitors beyond inspector prices (now enlarged to match component names).
 * Allow mirroring components with some hotkey. Because we allow mirroring selections, and we'll add components like flippers. But this probably currently breaks things like ROMs which do not have mirror symmetry. Also check all components for any that have rotational asymmetry that may cause a rotated machine to behave differently, e.g. ROM cursor's wrapping behavior may break rotational symmetry.
-* Modify the tick speed menu to use our own drop-up widget (like the export button).
 * Add an option to the export menu, in puzzles, to open the current puzzle in the sandbox.
 * DEFER Maybe support selections that are a union of rectangles, created by shift-LMB-drag.
 * EASY? When a region is selected using the selection tool, in the sandbox, add a new tool that will crop the board to that selection. (Currently it requires using the puzzle properties modal to set the grid size to specific numbers; this selection path would be easier and more intuitive.)
@@ -163,7 +162,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 * Refine the dwarven UI theme: the palette now lives in CSS custom properties on `:root` in `src/styles.css` (stone browns, bronze, gold, ember, gem accents) with gilded corner ornaments on major panels; consider richer Art Deco corner motifs (diagonals, doubled lines) and reviewing tile fill/decoration colors in `src/simulation/tile.ts` for warmth.
 * EASY? Add a dark/light mode toggle. Set to dark by default, or browser default. The `:root` custom-property palette is the switching point: add a `[data-theme="light"]` override block and a persisted toggle.
-* EASY? Check remaining button styles for system/browser defaults. The component-configuration and text-box modal actions now use themed bronze buttons and gold Save buttons; audit other surfaces for similar contrast issues.
 
 ## Animations
 

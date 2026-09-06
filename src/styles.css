@@ -1580,13 +1580,15 @@ kbd {
 }
 
 .export-dropup,
-.test-case-dropup {
+.test-case-dropup,
+.speed-dropup {
   position: relative;
   display: flex;
 }
 
 .export-options,
-.test-case-options {
+.test-case-options,
+.speed-options {
   position: absolute;
   z-index: 4;
   right: 0;
@@ -1603,12 +1605,14 @@ kbd {
 
 .export-options[hidden],
 .export-options button[hidden],
-.test-case-options[hidden] {
+.test-case-options[hidden],
+.speed-options[hidden] {
   display: none;
 }
 
 .controls .export-options button,
-.controls .test-case-options button {
+.controls .test-case-options button,
+.controls .speed-options button {
   flex: none;
   width: 100%;
   min-height: 34px;
@@ -1617,7 +1621,8 @@ kbd {
   white-space: nowrap;
 }
 
-.controls .test-case-options button[aria-pressed="true"] {
+.controls .test-case-options button[aria-pressed="true"],
+.controls .speed-options button[aria-pressed="true"] {
   border-color: var(--gold);
   color: #e7ad4f;
 }
@@ -1648,8 +1653,7 @@ kbd {
 }
 
 .workshop-info-button,
-.controls button,
-.speed-control select {
+.controls button {
   min-height: 38px;
   border: 1px solid var(--panel-border);
   border-radius: 1px;
@@ -1765,9 +1769,10 @@ kbd {
 }
 
 
-.speed-control select {
-  padding: 0 28px 0 9px;
-  color: var(--text-mid);
+.speed-options {
+  min-width: 170px;
+  max-height: calc(100dvh - 100px);
+  overflow-y: auto;
 }
 
 .main-menu-dialog {
@@ -1858,7 +1863,7 @@ kbd {
   padding: 0 12px;
   border: 1px solid var(--border-strong);
   color: var(--text-body);
-  background: var(--raised);
+  background: linear-gradient(180deg, var(--raised-hover), var(--raised));
   font-family: var(--font-mono);
   font-size: 0.64rem;
   font-weight: 700;
@@ -1935,7 +1940,7 @@ kbd {
   padding: 0 14px;
   border: 1px solid var(--border-strong);
   color: var(--text-body);
-  background: var(--raised);
+  background: linear-gradient(180deg, var(--raised-hover), var(--raised));
   font-family: var(--font-mono);
   font-size: 0.66rem;
   font-weight: 700;
@@ -2217,7 +2222,7 @@ kbd {
   padding: 0 14px;
   border: 1px solid var(--border-strong);
   color: var(--text-body);
-  background: var(--raised);
+  background: linear-gradient(180deg, var(--raised-hover), var(--raised));
   font-family: var(--font-mono);
   font-size: 0.66rem;
   font-weight: 700;
@@ -2520,12 +2525,14 @@ kbd {
   background: var(--raised-hover);
 }
 
+.workshop-info-actions .primary-control,
 .component-configuration-actions .primary-control {
   border-color: var(--gold);
   color: var(--inset);
   background: var(--gold);
 }
 
+.workshop-info-actions .primary-control:hover,
 .component-configuration-actions .primary-control:hover {
   background: var(--gold-bright);
 }

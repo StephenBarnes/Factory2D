@@ -132,7 +132,10 @@ const sharePuzzleButton = requiredElement<HTMLButtonElement>("share-puzzle-butto
 const importButton = requiredElement<HTMLButtonElement>("import-button");
 const importFile = requiredElement<HTMLInputElement>("import-file");
 const animationToggle = requiredElement<HTMLInputElement>("animation-toggle");
-const speedSelect = requiredElement<HTMLSelectElement>("speed-select");
+const speedDropup = requiredElement<HTMLElement>("speed-dropup");
+const speedButton = requiredElement<HTMLButtonElement>("speed-button");
+const speedOptions = requiredElement<HTMLElement>("speed-options");
+let simulationSpeed = 5;
 const stateLight = requiredElement<HTMLSpanElement>("state-light");
 const stateLabel = requiredElement<HTMLSpanElement>("state-label");
 const tickCounter = requiredElement<HTMLSpanElement>("tick-counter");
@@ -377,7 +380,7 @@ function finishAnimation(): void {
   surface.session.previousWorld.copyFrom(surface.session.world);
   animationDuration = 0;
 }
-function animationsEnabled(ticksPerSecond = Number(speedSelect.value)): boolean {
+function animationsEnabled(ticksPerSecond = simulationSpeed): boolean {
   return animationToggle.checked && ticksPerSecond < HIGH_SPEED_TICKS_PER_SECOND;
 }
 
@@ -1256,6 +1259,7 @@ function stopWorkshopActivity(): void {
   puzzleTests.stop();
   componentConfigurationView.close();
   closeExportOptions();
+  setSpeedOptionsOpen(false);
   setRunning(false);
 }
 function setSandboxTestCaseOptionsOpen(open: boolean): void {
@@ -1750,9 +1754,54 @@ stepButton.addEventListener("click", () => {
 });
 animationToggle.addEventListener("change", finishAnimationIfDisabled);
 
-speedSelect.addEventListener("change", () => {
-  accumulatedTime = 0;
-  finishAnimationIfDisabled();
+function setSpeedOptionsOpen(open: boolean): void {
+  speedOptions.hidden = !open;
+  speedButton.setAttribute("aria-expanded", String(open));
+}
+
+speedButton.addEventListener("click", () => {
+  setSpeedOptionsOpen(speedOptions.hidden !== false);
+});
+const speedButtons = [...speedOptions.querySelectorAll<HTMLButtonElement>("[data-speed]")];
+for (const button of speedButtons) {
+  button.addEventListener("click", () => {
+    simulationSpeed = Number(button.dataset.speed);
+    speedButton.textContent = `SPEED: ${button.textContent}`;
+    for (const option of speedButtons) {
+      option.setAttribute("aria-pressed", String(option === button));
+    }
+    accumulatedTime = 0;
+    finishAnimationIfDisabled();
+    setSpeedOptionsOpen(false);
+    speedButton.focus();
+  });
+}
+speedDropup.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !speedOptions.hidden) {
+    event.preventDefault();
+    event.stopPropagation();
+    setSpeedOptionsOpen(false);
+    speedButton.focus();
+  } else if (["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
+    event.preventDefault();
+    event.stopPropagation();
+    const wasClosed = speedOptions.hidden;
+    setSpeedOptionsOpen(true);
+    const current = speedButtons.indexOf(document.activeElement as HTMLButtonElement);
+    const selected = speedButtons.findIndex((button) => Number(button.dataset.speed) === simulationSpeed);
+    const index = event.key === "Home" ? 0
+      : event.key === "End" ? speedButtons.length - 1
+      : wasClosed || current < 0 ? selected
+      : (current + (event.key === "ArrowDown" ? 1 : -1) + speedButtons.length) % speedButtons.length;
+    expectDefined(speedButtons[index], "Speed option is missing").focus();
+  } else if (!speedOptions.hidden && event.key !== "Tab") {
+    event.stopPropagation();
+  }
+});
+speedDropup.addEventListener("focusout", (event) => {
+  if (!(event.relatedTarget instanceof Node) || !speedDropup.contains(event.relatedTarget)) {
+    setSpeedOptionsOpen(false);
+  }
 });
 
 
@@ -1883,6 +1932,9 @@ downloadPuzzleButton.addEventListener("click", () => {
 });
 
 document.addEventListener("click", (event) => {
+  if (event.target instanceof Node && !speedDropup.contains(event.target)) {
+    setSpeedOptionsOpen(false);
+  }
   if (event.target instanceof Node && !exportDropup.contains(event.target)) {
     closeExportOptions();
   }
@@ -2032,7 +2084,7 @@ document.addEventListener("keydown", (event) => {
   }
   const transportSpace =
     event.code === "Space" &&
-    (event.target === speedSelect || event.target === animationToggle);
+    (event.target === speedButton || event.target === animationToggle);
   if (
     event.ctrlKey ||
     event.metaKey ||
@@ -2228,7 +2280,7 @@ function frame(currentTime: number): void {
 
   if (running) {
     accumulatedTime += elapsed;
-    const ticksPerSecond = Number(speedSelect.value);
+    const ticksPerSecond = simulationSpeed;
     const tickDuration = 1000 / ticksPerSecond;
     while (accumulatedTime >= tickDuration) {
       accumulatedTime -= tickDuration;
