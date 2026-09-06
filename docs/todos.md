@@ -149,7 +149,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 # Visuals
 
-* For the sensor rune and the rotator, we currently draw visualizations on mouseover. Modify it to also draw those visualizations when placing them. (Same as the welder and unwelder - they draw visualizations while placing, and on mouseover.) Ideally don't duplicate code, maybe abstract to some general per-TileKind visualization.
 * Add backgrounds for puzzles, maybe with parallax as the player pans.
 
 ## Specific block appearance changes

@@ -1499,6 +1499,21 @@ export class CanvasRenderer {
   }
 
 
+  private drawComponentOverlay(kind: TileKind, orientation: Direction): void {
+    switch (kind) {
+      case TileKind.Welder:
+      case TileKind.Splitter:
+        this.drawWeldOperationPreview(kind, orientation);
+        break;
+      case TileKind.Sensor:
+        this.drawSensorObservation(orientation);
+        break;
+      case TileKind.Rotator:
+        this.drawRotatorReach(orientation);
+        break;
+    }
+  }
+
   private drawWeldOperationPreview(kind: TileKind, orientation: Direction): void {
     const forwardX = directionX(orientation);
     const forwardY = directionY(orientation);
@@ -1696,17 +1711,7 @@ export class CanvasRenderer {
     const editable = this.editableRegion === null ||
       this.editableRegion.contains(this.hoverX, this.hoverY);
     const placedKind = this.world.kindAt(this.hoverX, this.hoverY);
-    if (placedKind === TileKind.Welder || placedKind === TileKind.Splitter) {
-      this.drawWeldOperationPreview(
-        placedKind,
-        this.world.orientationAt(this.hoverX, this.hoverY),
-      );
-    }
-    if (placedKind === TileKind.Sensor) {
-      this.drawSensorObservation(this.world.orientationAt(this.hoverX, this.hoverY));
-    } else if (placedKind === TileKind.Rotator) {
-      this.drawRotatorReach(this.world.orientationAt(this.hoverX, this.hoverY));
-    }
+    this.drawComponentOverlay(placedKind, this.world.orientationAt(this.hoverX, this.hoverY));
 
     if (
       editable &&
@@ -1725,9 +1730,7 @@ export class CanvasRenderer {
         animationTime,
       );
       this.context.restore();
-      if (this.hoverKind === TileKind.Welder || this.hoverKind === TileKind.Splitter) {
-        this.drawWeldOperationPreview(this.hoverKind, this.hoverOrientation);
-      }
+      this.drawComponentOverlay(this.hoverKind, this.hoverOrientation);
     }
 
     this.context.strokeStyle = editable ? "#78dcca" : "#e15a4f";
