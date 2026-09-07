@@ -1117,6 +1117,7 @@ function openComponentConfiguration(cell: GridCell): void {
             submission.width,
             submission.height,
             submission.values,
+            submission.ignoreZeros,
           );
       if (changed) {
         commitEditedWorld();

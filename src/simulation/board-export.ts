@@ -669,6 +669,7 @@ function importBoardContents(
       "board",
       "pending",
       "direction",
+      "ignoreZeros",
     ]);
     const type = requireString(entry.type, `${componentLabel} type`);
     const fields = type === "assembler"
@@ -682,7 +683,7 @@ function importBoardContents(
             : type === "rom"
               ? ["x", "y", "type", "width", "height", "cursor", "values"]
               : type === "checker"
-                ? ["x", "y", "type", "width", "height", "cursor", "failed", "values"]
+                ? ["x", "y", "type", "width", "height", "cursor", "failed", "ignoreZeros", "values"]
                 : type === "monitor" || type === "grapher"
                   ? ["x", "y", "type", "label"]
                   : type === "array"
@@ -809,6 +810,10 @@ function importBoardContents(
         if (typeof state.failed !== "boolean") {
           throw new Error(`${componentLabel} failed must be a boolean`);
         }
+        const ignoreZeros = state.ignoreZeros === undefined ? false : state.ignoreZeros;
+        if (typeof ignoreZeros !== "boolean") {
+          throw new Error(`${componentLabel} ignoreZeros must be a boolean`);
+        }
         snapshot = {
           type: "checker",
           width: componentWidth,
@@ -820,6 +825,7 @@ function importBoardContents(
             state.failed ? valueCount - 1 : valueCount,
           ),
           failed: state.failed,
+          ignoreZeros,
           values: requireChargeArray(state.values, valueCount, `${componentLabel} values`),
         };
       } else {

@@ -23,6 +23,7 @@ export type ComponentConfigurationSubmission =
       readonly width: number;
       readonly height: number;
       readonly values: readonly Charge[];
+      readonly ignoreZeros: boolean;
     }
   | {
       readonly type: "array";
@@ -44,6 +45,8 @@ export class ComponentConfigurationDialog {
   private readonly romWidth: HTMLInputElement;
   private readonly romHeight: HTMLInputElement;
   private readonly romGrid: HTMLElement;
+  private readonly checkerPanel: HTMLElement;
+  private readonly checkerIgnoreZeros: HTMLInputElement;
   private readonly textPanel: HTMLElement;
   private readonly textLabel: HTMLElement;
   private readonly textInput: HTMLInputElement;
@@ -85,6 +88,8 @@ export class ComponentConfigurationDialog {
     this.romWidth = requiredDescendant(dialog, "[data-component-rom-width]");
     this.romHeight = requiredDescendant(dialog, "[data-component-rom-height]");
     this.romGrid = requiredDescendant(dialog, "[data-component-rom-grid]");
+    this.checkerPanel = requiredDescendant(dialog, "[data-component-checker-panel]");
+    this.checkerIgnoreZeros = requiredDescendant(dialog, "[data-component-checker-ignore-zeros]");
     this.textPanel = requiredDescendant(dialog, "[data-component-text-panel]");
     this.textLabel = requiredDescendant(dialog, "[data-component-text-label]");
     this.textInput = requiredDescendant(dialog, "[data-component-text-input]");
@@ -214,6 +219,9 @@ export class ComponentConfigurationDialog {
     this.romPanel.hidden = configuration.type !== "grid";
     this.textPanel.hidden = configuration.type !== "text";
     this.arrayPanel.hidden = configuration.type !== "array";
+    this.checkerPanel.hidden = kind !== TileKind.Checker;
+    this.checkerIgnoreZeros.disabled = kind !== TileKind.Checker || submit === null;
+    this.checkerIgnoreZeros.checked = state.type === "checker" && state.ignoreZeros;
     this.numericInput.disabled = configuration.type !== "number";
     this.romWidth.disabled = configuration.type !== "grid";
     this.romHeight.disabled = configuration.type !== "grid";
@@ -326,8 +334,14 @@ export class ComponentConfigurationDialog {
     if (configuration === null) {
       throw new Error("Configuration dialog has no active component");
     }
+    const invalidSequence = this.currentKind === TileKind.Checker &&
+      this.checkerIgnoreZeros.checked && this.romValues.includes(0);
+    this.checkerIgnoreZeros.setCustomValidity(invalidSequence
+      ? "When ignoring zero inputs, every expected value must be +1 or -1."
+      : "");
     if (!this.form.reportValidity()) {
       this.openArrayAfterSave = false;
+      this.checkerIgnoreZeros.setCustomValidity("");
       return;
     }
     const submit = this.submit;
@@ -351,7 +365,10 @@ export class ComponentConfigurationDialog {
       if (this.romValues.length !== width * height) {
         throw new Error("Grid draft dimensions do not match its values");
       }
-      submit({ type: "grid", width, height, values: [...this.romValues] });
+      submit({
+        type: "grid", width, height, values: [...this.romValues],
+        ignoreZeros: this.currentKind === TileKind.Checker && this.checkerIgnoreZeros.checked,
+      });
     }
     this.close();
   }

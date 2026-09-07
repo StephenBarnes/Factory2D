@@ -155,6 +155,7 @@ export interface CheckerComponentState {
   height: number;
   cursor: number;
   failed: boolean;
+  ignoreZeros: boolean;
   values: Int8Array;
 }
 
@@ -240,6 +241,7 @@ export interface CheckerComponentSnapshot {
   readonly height: number;
   readonly cursor: number;
   readonly failed: boolean;
+  readonly ignoreZeros: boolean;
   readonly values: readonly Charge[];
 }
 
@@ -330,6 +332,7 @@ export function createDefaultComponentState(
         height: DEFAULT_ROM_HEIGHT,
         cursor: 0,
         failed: false,
+        ignoreZeros: false,
         values: new Int8Array(DEFAULT_ROM_WIDTH * DEFAULT_ROM_HEIGHT),
       };
     case TileKind.Monitor:
@@ -389,6 +392,7 @@ export function cloneComponentState(
         height: state.height,
         cursor: state.cursor,
         failed: state.failed,
+        ignoreZeros: state.ignoreZeros,
         values: state.values.slice(),
       };
     case "monitor":
@@ -448,6 +452,7 @@ export function snapshotComponentState(
         height: state.height,
         cursor: state.cursor,
         failed: state.failed,
+        ignoreZeros: state.ignoreZeros,
         values: Array.from(state.values) as Charge[],
       };
     case "monitor":
@@ -517,6 +522,12 @@ export function validateComponentSnapshot(
         snapshot.failed ? valueCount - 1 : valueCount,
       );
       requireCharges(snapshot.values, valueCount, "Checker values");
+      if (typeof snapshot.ignoreZeros !== "boolean") {
+        throw new RangeError("Checker ignoreZeros flag must be a boolean");
+      }
+      if (snapshot.ignoreZeros && snapshot.values.includes(0)) {
+        throw new RangeError("A checker that ignores zeros must expect only +1 and -1 values");
+      }
       break;
     }
     case "monitor":
@@ -589,6 +600,7 @@ export function stateFromSnapshot(
         height: snapshot.height,
         cursor: snapshot.cursor,
         failed: snapshot.failed,
+        ignoreZeros: snapshot.ignoreZeros,
         values: Int8Array.from(snapshot.values),
       };
     case "monitor":

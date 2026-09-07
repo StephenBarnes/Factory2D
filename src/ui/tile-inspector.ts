@@ -235,7 +235,8 @@ export class TileInspector {
               ? "PASSED"
               : `MATCHED ${componentState.cursor}`;
         this.configuration.textContent =
-          `${componentState.width} × ${componentState.height} · ${valueCount} VALUES · ${status}`;
+          `${componentState.width} × ${componentState.height} · ${valueCount} VALUES · ${status}` +
+          (componentState.ignoreZeros ? " · IGNORE ZEROS" : "");
       } else if (componentState.type === "array") {
         const inner = componentState.world;
         let occupied = 0;

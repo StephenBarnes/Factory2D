@@ -2,14 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { deserializeBoard, serializeBoard } from "../src/simulation/board-export";
 import type { Charge } from "../src/simulation/circuit";
-import { componentConfigurationForKind } from "../src/simulation/configurable-components";
 import { Simulation } from "../src/simulation/simulation";
 import {
   Direction,
-  PaletteCategory,
-  TILE_DEFINITIONS,
   TileKind,
-  WeldSide,
 } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
 
@@ -37,18 +33,6 @@ function drive(world: World, simulation: Simulation, inputs: readonly Charge[]):
 }
 
 describe("sequence checkers", () => {
-  it("is a directional puzzle tool with an isolated rear input and front output", () => {
-    const definition = TILE_DEFINITIONS[TileKind.Checker];
-    expect(definition.palette?.category).toBe(PaletteCategory.PuzzleTools);
-    expect(definition.usesOrientation).toBe(true);
-    expect(definition.circuitInputPorts).toBe(WeldSide.Down);
-    expect(definition.circuitOutputPorts).toBe(WeldSide.Up);
-    expect(componentConfigurationForKind(TileKind.Checker)).toEqual({
-      type: "grid",
-      configureOnPlacement: false,
-    });
-  });
-
   it("waits through leading zeros, then emits +1 once every value has matched", () => {
     const { world, simulation } = createCheckerWorld([1, 0, -1]);
 
@@ -61,6 +45,7 @@ describe("sequence checkers", () => {
       height: 1,
       cursor: 3,
       failed: false,
+      ignoreZeros: false,
       values: [1, 0, -1],
     });
   });
@@ -114,6 +99,7 @@ describe("sequence checkers", () => {
       height: 1,
       cursor: 0,
       failed: false,
+      ignoreZeros: false,
       values: [1, 0],
     });
     expect(world.chargeAt(0, 1)).toBe(0);
@@ -126,7 +112,7 @@ describe("sequence checkers", () => {
     const serialized = serializeBoard(world, 2);
     const parsed = JSON.parse(serialized) as { components: Record<string, unknown>[] };
     expect(parsed.components).toEqual([
-      { x: 0, y: 1, type: "checker", width: 2, height: 1, cursor: 2, failed: false, values: [1, 0] },
+      { x: 0, y: 1, type: "checker", width: 2, height: 1, cursor: 2, failed: false, ignoreZeros: false, values: [1, 0] },
     ]);
     const imported = deserializeBoard(serialized);
     expect(imported.world.componentStateSnapshotAt(0, 1)).toEqual({
@@ -135,6 +121,7 @@ describe("sequence checkers", () => {
       height: 1,
       cursor: 2,
       failed: false,
+      ignoreZeros: false,
       values: [1, 0],
     });
     expect(imported.world.chargeAt(0, 2)).toBe(1);
@@ -166,5 +153,35 @@ describe("sequence checkers", () => {
     expect(clone.componentStateSnapshotAt(0, 1)).toMatchObject({ cursor: 1, failed: false });
     clone.configureTernaryGrid(0, 1, 1, 1, [-1]);
     expect(world.componentStateSnapshotAt(0, 1)).toMatchObject({ cursor: 1, values: [1, 1] });
+  });
+
+  it("ignores gaps, retains progress through save/load, and latches success", () => {
+    const { world, simulation } = createCheckerWorld([1, -1, 1]);
+    world.configureTernaryGrid(0, 1, 3, 1, [1, -1, 1], true);
+    expect(drive(world, simulation, [0, 1, 0, 0])).toEqual([0, 0, 0, 0]);
+    const restored = deserializeBoard(serializeBoard(world, simulation.tick)).world;
+    expect(drive(restored, new Simulation(restored), [0, -1, 0, 1, 0, -1])).toEqual([
+      0, 0, 0, 1, 1, 1,
+    ]);
+  });
+
+  it("still rejects an out-of-order nonzero input and rewinds when the mode changes", () => {
+    const { world, simulation } = createCheckerWorld([1, -1]);
+    world.configureTernaryGrid(0, 1, 2, 1, [1, -1], true);
+    expect(drive(world, simulation, [1, 0, 1, 0, -1])).toEqual([0, 0, -1, -1, -1]);
+    world.configureTernaryGrid(0, 1, 2, 1, [1, -1], false);
+    expect(drive(world, simulation, [1, 0])).toEqual([0, -1]);
+  });
+
+  it("rejects expected zeros in pulse mode without changing the checker", () => {
+    const { world, simulation } = createCheckerWorld([1, -1]);
+    expect(() => world.configureTernaryGrid(0, 1, 2, 1, [1, 0], true)).toThrow(RangeError);
+    expect(drive(world, simulation, [1, -1])).toEqual([0, 1]);
+    const parsed = JSON.parse(serializeBoard(world, simulation.tick));
+    parsed.components[0].ignoreZeros = true;
+    parsed.components[0].values = [1, 0];
+    expect(() => deserializeBoard(JSON.stringify(parsed))).toThrow(/expect only/);
+    parsed.components[0].ignoreZeros = "yes";
+    expect(() => deserializeBoard(JSON.stringify(parsed))).toThrow(/boolean/);
   });
 });

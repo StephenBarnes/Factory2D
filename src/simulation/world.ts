@@ -426,6 +426,7 @@ export class World {
     width: number,
     height: number,
     values: readonly Charge[],
+    ignoreZeros = false,
   ): boolean {
     const index = this.indexOf(x, y);
     const state = this.requireComponentStateAtIndex(index);
@@ -452,7 +453,14 @@ export class World {
         throw new RangeError(`Grid contains invalid charge ${value as number}`);
       }
     }
-    let changed = state.width !== width || state.height !== height;
+    if (typeof ignoreZeros !== "boolean" || (ignoreZeros && state.type !== "checker")) {
+      throw new RangeError("Ignore zeros is a boolean option for sequence checkers only");
+    }
+    if (ignoreZeros && values.includes(0)) {
+      throw new RangeError("A checker that ignores zeros must expect only +1 and -1 values");
+    }
+    let changed = state.width !== width || state.height !== height ||
+      (state.type === "checker" && state.ignoreZeros !== ignoreZeros);
     if (!changed) {
       for (let valueIndex = 0; valueIndex < values.length; valueIndex += 1) {
         if (state.values[valueIndex] !== values[valueIndex]) {
@@ -470,6 +478,7 @@ export class World {
     state.values = Int8Array.from(values);
     if (state.type === "checker") {
       state.failed = false;
+      state.ignoreZeros = ignoreZeros;
     }
     this.charges[index] = 0;
     this.touchVisualRevision();
@@ -662,7 +671,7 @@ export class World {
     if (state.cursor >= valueCount) {
       return 1;
     }
-    if (state.cursor === 0 && input === 0) {
+    if (input === 0 && (state.cursor === 0 || state.ignoreZeros)) {
       return 0;
     }
     if (state.values[state.cursor] !== input) {

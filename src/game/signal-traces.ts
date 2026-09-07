@@ -120,6 +120,7 @@ export class SignalTraceRecorder {
     let values: readonly Charge[] = [];
     let firstRow = 0;
     let cursor = -1;
+    let label = state.label;
     if (x >= 0 && x < world.width && y >= 0 && y < world.height) {
       const targetIndex = y * world.width + x;
       const targetKind = world.kindAtIndex(targetIndex);
@@ -130,12 +131,15 @@ export class SignalTraceRecorder {
         }
         values = target.values;
         cursor = target.cursor;
-        if (target.type === "checker") {
+        if (target.type === "checker" && target.ignoreZeros) {
+          // Gaps have no fixed duration: show sequence positions, not predicted input ticks.
+          label = `${label || "Sequence"} (pulses)`;
+        } else if (target.type === "checker") {
           firstRow = this.checkerStartTicks.get(world.idAtIndex(targetIndex)) ?? this.tick;
         }
       }
     }
-    return { kind: "grapher", id, label: state.label, values, firstRow, cursor };
+    return { kind: "grapher", id, label, values, firstRow, cursor };
   }
 
   private reset(world: World, tick: number): void {
