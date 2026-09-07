@@ -72,6 +72,7 @@ export interface PuzzleTestControllerDependencies {
   readonly beforeStep: () => World;
   /** Observes the live case world after every committed test step, including fast-forwarding. */
   readonly afterStep: (world: World, tick: number) => void;
+  readonly onFailure: () => void;
   readonly setStepAnimation: (startedAt: number, duration: number) => void;
   readonly finishAnimation: () => void;
   readonly animationsEnabled: (ticksPerSecond: number) => boolean;
@@ -446,6 +447,7 @@ export class PuzzleTestController {
       this.view.showFailure(failed.outcome === "cycle-limit"
         ? `Failed: test case "${failed.name}" reached cycle limit ${failed.cycleLimit}`
         : `Failed: test case "${failed.name}" cycle ${failed.cycles}`);
+      this.dependencies.onFailure();
     }
     this.refreshPresentation();
   }

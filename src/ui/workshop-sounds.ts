@@ -2,10 +2,10 @@ type EditSound = "place" | "remove" | "weld" | "unweld";
 
 const STORAGE_KEY = "factory2d.sounds";
 const EDIT_TONES: Record<EditSound, readonly [number, number, OscillatorType]> = {
-  place: [220, 110, "triangle"],
-  remove: [150, 55, "triangle"],
-  weld: [880, 440, "sine"],
-  unweld: [440, 180, "sine"],
+  place: [150, 55, "triangle"],
+  remove: [180, 90, "triangle"],
+  weld: [440, 180, "sine"],
+  unweld: [550, 400, "sine"],
 };
 
 /** Browser-only feedback; never participates in simulation state or timing. */
@@ -67,6 +67,13 @@ export class WorkshopSounds {
     this.tone(392, 392, "sine", 0, 0.22);
     this.tone(494, 494, "sine", 0.12, 0.22);
     this.tone(587, 587, "sine", 0.24, 0.38);
+  }
+
+  loss(): void {
+    if (!this.canPlay()) return;
+    this.tone(587, 587, "sine", 0, 0.22);
+    this.tone(494, 494, "sine", 0.12, 0.22);
+    this.tone(392, 392, "sine", 0.24, 0.38);
   }
 
   private canPlay(): boolean {

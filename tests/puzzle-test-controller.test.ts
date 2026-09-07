@@ -147,6 +147,7 @@ function controllerHarness(solution: World): ControllerHarness {
     },
     beforeStep: () => solution,
     afterStep: () => undefined,
+    onFailure: () => undefined,
     setStepAnimation: () => undefined,
     finishAnimation: () => {
       counts.finishAnimation += 1;

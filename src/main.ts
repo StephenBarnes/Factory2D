@@ -435,8 +435,10 @@ function advanceSimulation(duration: number, startedAt = performance.now()): voi
   session.previousWorld.copyFrom(session.world);
   surface.simulation.step(duration > 0 ? session.previousWorld : undefined);
   signalTraces.sync(session.world, surface.simulation.tick);
-  if (session.previousWorld.puzzleResult !== PuzzleResult.Won && session.world.puzzleResult === PuzzleResult.Won) {
+  if (session.world.puzzleResult === PuzzleResult.Won) {
     sounds.victory();
+  } else if (session.world.puzzleResult === PuzzleResult.Lost) {
+    sounds.loss();
   }
 
   animationStartedAt = startedAt;
@@ -1318,6 +1320,7 @@ const puzzleTests = new PuzzleTestController(
       signalTraces.sync(world, tick);
       if (world.puzzleResult === PuzzleResult.Won) sounds.victory();
     },
+    onFailure: () => sounds.loss(),
     setStepAnimation: (startedAt, duration) => {
       animationStartedAt = startedAt;
       animationDuration = duration;

@@ -121,12 +121,9 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * DEFER Also style the 4 scores of each solution according to their grade in the histogram for that specific metric.
 * DEFER Add text and art in the puzzle briefing - write a story to explain why the player is solving this puzzle.
 
-## Settings menu
-
-* Add color-blindness options for people who can't distinguish red and blue circuit wires. Maybe just let them specify colors (from a short menu) for charges +1 and -1. Also apply these to the cost change popups.
-
 ## Workshop (puzzle/sandbox) screen
 
+* When the player drags to place multiple blocks, it welds between them when allowed. However, in a puzzle, if they drag from inside the player-modifiable region to outside it, or from outside to inside, we don't weld the joint on the perimeter of the player-modifiable region. Change it to also weld those edges.
 * If the player tries to place a block, or weld, and we don't allow it, indicate the reason. (1) If it's because they're testing a puzzle, flash the reset button. (2) If it's a weld or tile edit outside the allowed region, flash the region border red. (3) If they're trying to weld an edge that can't be welded because one of the neighboring blocks can't be welded on that side, e.g. sand blocks or empty blocks or the front/back of a duplicator , draw a brief low-opacity red square overlay on those tiles.
 * Add some way to copy-paste per-component configuration between configurable components. Maybe when the selection tool is used to select some components, add a "copy config from..." button which allows clicking on one component and then copies its config to all selected components of the same type.
 

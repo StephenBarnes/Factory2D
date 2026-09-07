@@ -747,7 +747,7 @@ test("persists successful solution scores on the puzzle briefing", async ({ page
   await expect(report.locator("[data-test-report-footprint]")).toHaveText("1");
   await expect(report.locator("[data-test-report-combined]")).toHaveText("11");
 
-  await report.getByRole("button", { name: "BACK TO PUZZLE" }).click();
+  await report.getByRole("button", { name: "BACK TO BRIEFING" }).click();
   const scoredSolution = page.locator("#solution-list").getByRole("listitem").filter({
     has: page.locator(".solution-identity strong", { hasText: "Solution 1" }),
   });
