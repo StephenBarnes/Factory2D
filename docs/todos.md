@@ -113,7 +113,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 # UI
 
 * Implement undo and redo when editing.
-* Show brief text like "+2⚙" above the current puzzle price as components are placed; make it fade to transparent after a brief delay. Animate negative numbers when removing blocks. Color them blue for positive, red for negative, same as circuit charges. When many components are added/removed in rapid succession, grow the current number instead of making many separate text boxes.
 * Add support for mobile and touch screens. Check if it's playable.
 * Review general UI scaling on 4k monitors beyond inspector prices (now enlarged to match component names).
 * Allow mirroring components with some hotkey. Because we allow mirroring selections, and we'll add components like flippers. But this probably currently breaks things like ROMs which do not have mirror symmetry. Also check all components for any that have rotational asymmetry that may cause a rotated machine to behave differently, e.g. ROM cursor's wrapping behavior may break rotational symmetry.

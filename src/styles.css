@@ -1802,6 +1802,23 @@ kbd {
   cursor: help;
 }
 
+.puzzle-price-feedback {
+  position: relative;
+}
+
+.puzzle-price-change {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: var(--panel-bg);
+  font-size: 0.9em;
+}
+
 .workshop-controls {
   min-width: 0;
   padding: 12px 14px;

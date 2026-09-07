@@ -1,4 +1,5 @@
 import "./styles.css";
+import { PuzzlePriceFeedback } from "./ui/puzzle-price-feedback";
 import type {
   DevelopmentDiagnosticSnapshot,
   DiagnosticDirection,
@@ -112,6 +113,9 @@ const workshopInfoButton = requiredElement<HTMLButtonElement>("workshop-info-but
 const workshopInfoDialog = requiredElement<HTMLDialogElement>("workshop-info-dialog");
 const puzzleMetrics = requiredElement<HTMLElement>("puzzle-metrics");
 const puzzlePrice = requiredElement<HTMLElement>("puzzle-price");
+const puzzlePriceFeedback = new PuzzlePriceFeedback(
+  requiredElement<HTMLElement>("puzzle-price-change"),
+);
 const puzzleFootprint = requiredElement<HTMLElement>("puzzle-footprint");
 const sidebarControls = requiredElement<HTMLElement>("sidebar-controls");
 const componentPalette = requiredElement<HTMLElement>("component-palette");
@@ -285,11 +289,12 @@ function updateTransportState(): void {
 function markSimulationStarted(): boolean {
   return sessions.beginSimulation();
 }
-function refreshPuzzleMetrics(): void {
+function refreshPuzzleMetrics(edited = false): void {
   const screen = navigation.screen;
   const puzzleWorkshop = screen.kind === "puzzle";
   puzzleMetrics.hidden = !puzzleWorkshop;
   if (!puzzleWorkshop) {
+    puzzlePriceFeedback.update(null, false);
     componentPalette.classList.remove("show-prices");
     return;
   }
@@ -299,6 +304,7 @@ function refreshPuzzleMetrics(): void {
     surface.session.baseline,
   );
   puzzlePrice.textContent = `${metrics.price}⚙`;
+  puzzlePriceFeedback.update(metrics.price, edited);
   puzzleFootprint.textContent = `${metrics.footprintWidth}×${metrics.footprintHeight}`;
 }
 
@@ -965,7 +971,7 @@ function commitEditedWorld(): void {
   finishAnimation();
   navigation.markActiveWorkshopDirty();
   navigation.persistActiveWorkshop();
-  refreshPuzzleMetrics();
+  refreshPuzzleMetrics(true);
 }
 
 function componentIsAvailable(kind: TileKind): boolean {
