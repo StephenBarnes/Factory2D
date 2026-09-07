@@ -16,6 +16,8 @@ Sensor glyphs share an angular eye with a charge-colored diamond or lightning-bo
 
 Platforms use forest green; ROMs and graphers use jade/teal. Delay, counter, monitor, and array fills use sapphire/indigo, while fixed-charge/spark sources and sequence checkers use gold/amber. Channels and crossings retain neutral slate so wiring stays quieter than active components. These colors come from the shared tile metadata and are identical in both UI themes.
 
+Raw-material artwork uses colored rivets for metals, grains for dirt and ores, faceted diamonds for gemstones, and curved grain with a knot for wood. All use the shared tile renderer, including palette and selection previews.
+
 ## Board, camera, and caches
 
 `src/render/canvas-renderer.ts` owns grid rendering, hit testing, pan/zoom, interpolation, previews, hover overlays, and editable-region/array framing.

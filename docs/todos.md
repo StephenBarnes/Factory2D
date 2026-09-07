@@ -36,7 +36,7 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 # New non-circuit components
 
-* Assembler follow-ups: the recipe table is a placeholder (sensor pair, piston, lodestone, conduits) and needs real game recipes once copper and other materials exist. Consider mirrored inputs (maybe just adding a mirrored recipe), a side circuit pulse on consumption or emission like the delivery box, a side disable input, and per-recipe output welds.
+* Assembler follow-ups: the recipe table is a placeholder (sensor pair, piston, lodestone, conduits) and needs real game recipes using the available copper and other materials. Consider mirrored inputs (maybe just adding a mirrored recipe), a side circuit pulse on consumption or emission like the delivery box, a side disable input, and per-recipe output welds.
 * Flipper: attaches to one block, then flips the entire connected/welded group of blocks around that line horizontally or vertically, if it would not collide/overlap other blocks. Similar to Kaizen game's rotation.
 * Laser splitter: splits everything in a single line, e.g. the left side of every block in its forward direction.
 * Add a press/stamper/crusher. Behaves similarly to the piston, but (1) if piston extension is blocked by another tile, and that tile can't be moved, it instead unwelds and destroys that tile; and (2) we have a list of recipes for transforming the tile that the extended arm touches, on extension.
@@ -51,7 +51,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Add a "box" component that has an internal grid of miniature components. Similar to the implemented rune array (reuse its nested `World` state, `WorldRuntime` tree, entering/leaving view, and nested board format), but instead of circuit signal ports, add holes where blocks can fall in/out or be pushed in/out. A miniature block that falls out through a hole becomes a full block on that side of the box; a full block that falls in becomes a miniature block. Similar to Factorio's warehouse mods, or Patrick's Parabox.
 * Add a slider component that cannot be moved in one axis, only the other axis. Allow rotation, which changes which axis is fixed. A welded body with sliders has all of their constraints - so with both horizontal and vertical sliders, it can't move at all.
 * Add a fastener block. It makes its welded body immune to gravity, but as soon as the body is pushed by any force besides gravity (currently pistons, conveyor belts), the fastener block is destroyed. If another block falls onto the fastened body, that doesn't break the fastener (because otherwise there'd be weird behaviors where unwelding one block in the fastened body makes the fastener break).
-* Add various raw material blocks - no new behaviors, but different visuals. Namely: dirt, gold, silver, ruby, sapphire, emerald, diamond, amethyst, mithril, copper (ore and block), wood.
 
 # New component behaviors
 

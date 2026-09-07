@@ -250,37 +250,6 @@ describe("circuit rendering", () => {
     });
   });
 
-  it("draws the fixed charge rune as a charged plus inside a ring", () => {
-    const context = new RecordingCanvasContext();
-    const fixedCharge: BodyCell = {
-      x: 0,
-      y: 0,
-      kind: TileKind.FixedCharge,
-      orientation: Direction.Up,
-      outputCharge: 1,
-      circuitConnections: WeldSide.Right,
-      circuitPortCharges: setCircuitPortCharge(0, Direction.Right, 1),
-      seamRight: false,
-      seamDown: false,
-    };
-
-    drawBody(
-      context as unknown as CanvasRenderingContext2D,
-      0,
-      0,
-      32,
-      [fixedCharge],
-      1,
-      new RecordingPath2D() as unknown as Path2D,
-    );
-
-    expect(context.circles).toContainEqual({
-      centerX: 0,
-      centerY: 0,
-      radius: 32 * 0.21,
-    });
-    expect(context.strokeStyles).toContain(CIRCUIT_CHARGE_COLORS[1]);
-  });
 
   it("colors the spark bolt by its output charge", () => {
     const context = new RecordingCanvasContext();

@@ -462,6 +462,42 @@ function drawDecoration(
   context.strokeStyle = definition.decorationColor;
 
   switch (definition.decorationStyle) {
+    case TileDecorationStyle.Gem:
+      context.lineWidth = Math.max(1, size * 0.035);
+      context.lineJoin = "round";
+      context.beginPath();
+      context.moveTo(left + size * 0.5, top + size * 0.16);
+      context.lineTo(left + size * 0.82, top + size * 0.5);
+      context.lineTo(left + size * 0.5, top + size * 0.84);
+      context.lineTo(left + size * 0.18, top + size * 0.5);
+      context.closePath();
+      context.stroke();
+      context.beginPath();
+      context.moveTo(left + size * 0.5, top + size * 0.16);
+      context.lineTo(left + size * 0.38, top + size * 0.5);
+      context.lineTo(left + size * 0.5, top + size * 0.84);
+      context.lineTo(left + size * 0.62, top + size * 0.5);
+      context.closePath();
+      context.moveTo(left + size * 0.18, top + size * 0.5);
+      context.lineTo(left + size * 0.82, top + size * 0.5);
+      context.stroke();
+      break;
+    case TileDecorationStyle.Wood:
+      context.lineWidth = Math.max(1, size * 0.035);
+      context.lineCap = "round";
+      context.beginPath();
+      context.moveTo(left + size * 0.18, top + size * 0.3);
+      context.bezierCurveTo(left + size * 0.4, top + size * 0.2,
+        left + size * 0.6, top + size * 0.4, left + size * 0.82, top + size * 0.3);
+      context.moveTo(left + size * 0.18, top + size * 0.7);
+      context.bezierCurveTo(left + size * 0.4, top + size * 0.6,
+        left + size * 0.6, top + size * 0.8, left + size * 0.82, top + size * 0.7);
+      context.stroke();
+      context.beginPath();
+      context.ellipse(left + size * 0.5, top + size * 0.5,
+        size * 0.14, size * 0.07, 0, 0, Math.PI * 2);
+      context.stroke();
+      break;
     case TileDecorationStyle.Glass:
       context.lineWidth = size * 0.09;
       context.strokeStyle = "rgba(157, 221, 230, 0.32)";

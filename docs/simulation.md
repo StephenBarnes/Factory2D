@@ -28,6 +28,8 @@ Each tick collects intents throughout the root/nested-board tree, resolves circu
 
 Dedicated `*-resolver.ts` files own machine intent collection and commits. General-purpose non-conveyor pushing remains future work; reuse existing dependency/conflict machinery rather than introducing order-dependent movement.
 
+Raw materials include dirt, gold, silver, ruby, sapphire, emerald, diamond, amethyst, mithril, copper ore, copper, and wood. These use ordinary weldable, gravity-affected solid-block physics without magnetic or circuit behavior. Copper ore has no furnace recipe yet; the existing sand/glass and iron recipes are unchanged.
+
 ## Circuits and configurable state
 
 `circuit-resolver.ts` resolves signed-ternary (-1, 0, +1) driver sums by sign. Cached welded-network union topology spans all nested boards and invalidates when geometry or the tree changes. Compact nodes cover circuit cells, with a lazy cell-to-node lookup.
