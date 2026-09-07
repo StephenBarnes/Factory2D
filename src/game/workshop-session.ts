@@ -1,7 +1,7 @@
 import type { PuzzleDefinition } from "./puzzles";
 import { applyEditableSolution } from "./editable-solution";
 import type { SavedPuzzleSolution } from "./puzzle-solutions";
-import type { GridRegion } from "./grid-region";
+import type { GridRectangle, GridRegion } from "./grid-region";
 import { EditableRegionAuthoringState } from "./editable-region-authoring";
 import type { PuzzleComponents } from "./puzzle-components";
 import {
@@ -151,6 +151,19 @@ export class WorkshopSessionController {
     }
     return dimensionsChanged;
   }
+
+  cropActiveSandbox(bounds: GridRectangle): void {
+    const authoring = this.activeSandboxAuthoring();
+    const regionAuthoring = this.currentSession.editableRegionAuthoring;
+    if (regionAuthoring === null) {
+      throw new Error("Sandbox editable-region authoring state is missing");
+    }
+    authoring.saveSelectedWorld(this.currentSession.world);
+    authoring.crop(bounds);
+    regionAuthoring.resizeForBoard(bounds.width, bounds.height, bounds.x, bounds.y);
+    this.replaceRuntime(authoring.selectedWorld(), 0);
+  }
+
   selectActiveSandboxTestCase(testCaseId: string): void {
     const authoring = this.activeSandboxAuthoring();
     authoring.saveSelectedWorld(this.currentSession.baseline);

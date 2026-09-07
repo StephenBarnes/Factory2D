@@ -163,6 +163,7 @@ const selectionSaveSnippetButton = requiredElement<HTMLButtonElement>(
   "selection-save-snippet-button",
 );
 const selectionDeleteButton = requiredElement<HTMLButtonElement>("selection-delete-button");
+const selectionCropButton = requiredElement<HTMLButtonElement>("selection-crop-button");
 const nestedViewBar = requiredElement<HTMLElement>("nested-view-bar");
 const nestedViewBackButton = requiredElement<HTMLButtonElement>("nested-view-back-button");
 const nestedViewTrail = requiredElement<HTMLElement>("nested-view-trail");
@@ -526,6 +527,8 @@ function syncTileSelectionOverlay(): void {
   selectionActions.hidden = overlay === null;
   selectionPasteButton.disabled = !surface.selection.hasClipboard;
   saveSnippetButton.disabled = !surface.selection.active;
+  selectionCropButton.hidden = navigation.screen.kind !== "sandbox" || surface.viewDepth !== 0;
+  selectionCropButton.disabled = overlay === null || !overlay.valid;
 }
 
 function positionSelectionActions(): void {
@@ -1717,6 +1720,27 @@ selectionRotateButton.addEventListener("click", () => {
 });
 selectionSaveSnippetButton.addEventListener("click", saveSelectionAsSnippet);
 selectionDeleteButton.addEventListener("click", deleteTileSelection);
+selectionCropButton.addEventListener("click", () => {
+  if (navigation.screen.kind !== "sandbox" || surface.viewDepth !== 0) return;
+  const overlay = surface.selection.overlay(canEditCell, componentIsAvailable);
+  if (overlay === null || !overlay.valid) return;
+  const bounds = expectDefined(overlay.region.rectangles[0], "Crop selection bounds are missing");
+  if (!window.confirm(
+    "Crop the board to this selection? Everything outside it will be removed from all test cases.",
+  )) return;
+  commitTileSelection();
+  stopWorkshopActivity();
+  surface.mountActiveSession({
+    fitBoard: true,
+    cancelInteraction: true,
+    updateSession: () => sessions.cropActiveSandbox(bounds),
+  });
+  navigation.markActiveWorkshopDirty();
+  navigation.persistActiveWorkshop();
+  configureComponentPalette();
+  updateTransportState();
+  refreshPointerHover();
+});
 saveSnippetButton.addEventListener("click", saveSelectionAsSnippet);
 componentsTab.addEventListener("click", () => {
   setPaletteTab("components");

@@ -100,16 +100,18 @@ export class EditableRegionAuthoringState {
     this.cancelRectangle();
   }
 
-  resizeForBoard(width: number, height: number): void {
+  resizeForBoard(width: number, height: number, originX = 0, originY = 0): void {
     this.requireDimensions(width, height);
     const rectangles: GridRectangle[] = [];
     for (const rectangle of this.committedRegion.rectangles) {
-      const clippedWidth = Math.min(rectangle.x + rectangle.width, width) - rectangle.x;
-      const clippedHeight = Math.min(rectangle.y + rectangle.height, height) - rectangle.y;
+      const x = Math.max(0, rectangle.x - originX);
+      const y = Math.max(0, rectangle.y - originY);
+      const clippedWidth = Math.min(rectangle.x + rectangle.width - originX, width) - x;
+      const clippedHeight = Math.min(rectangle.y + rectangle.height - originY, height) - y;
       if (clippedWidth > 0 && clippedHeight > 0) {
         rectangles.push({
-          x: rectangle.x,
-          y: rectangle.y,
+          x,
+          y,
           width: clippedWidth,
           height: clippedHeight,
         });

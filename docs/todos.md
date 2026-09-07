@@ -119,7 +119,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Review general UI scaling on 4k monitors beyond inspector prices (now enlarged to match component names).
 * Allow mirroring components with some hotkey. Because we allow mirroring selections, and we'll add components like flippers. But this probably currently breaks things like ROMs which do not have mirror symmetry. Also check all components for any that have rotational asymmetry that may cause a rotated machine to behave differently, e.g. ROM cursor's wrapping behavior may break rotational symmetry.
 * DEFER Maybe support selections that are a union of rectangles, created by shift-LMB-drag.
-* EASY? When a region is selected using the selection tool, in the sandbox, add a button that will crop the board to that selection. (Currently it requires using the puzzle properties modal to set the grid size to specific numbers; this selection path would be easier and more intuitive.)
 
 ## Puzzle briefing screen
 

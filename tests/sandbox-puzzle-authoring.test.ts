@@ -4,7 +4,7 @@ import { serializePuzzleTemplate } from "../src/game/puzzle-export";
 import { parsePuzzleFile } from "../src/game/puzzle-format";
 import {
   parseSandboxImport,
-  resizeWorldFromTopLeft,
+  resizeWorld,
 } from "../src/game/sandbox-puzzle-authoring";
 import { TILE_DEFINITIONS, TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
@@ -198,11 +198,11 @@ describe("sandbox puzzle authoring", () => {
       { id: "retained", x: 1.25, y: 0.5, width: 2, height: 2, text: "Retained", owner: "author" },
       { id: "cropped", x: 3, y: 2, width: 1, height: 1, text: "Cropped", owner: "author" },
     ]);
-    const resized = resizeWorldFromTopLeft(world, 2, 1);
+    const resized = resizeWorld(world, 2, 1);
     expect(resized.textBoxes).toEqual([
       { id: "retained", x: 1.25, y: 0.5, width: 0.75, height: 0.5, text: "Retained", owner: "author" },
     ]);
-    expect(resizeWorldFromTopLeft(resized, 4, 3).textBoxes).toEqual(resized.textBoxes);
+    expect(resizeWorld(resized, 4, 3).textBoxes).toEqual(resized.textBoxes);
   });
 
   it("resizes a scene from the top-left while preserving retained state and welds", () => {
@@ -213,7 +213,7 @@ describe("sandbox puzzle authoring", () => {
     world.setWeld(0, 0, 1, 0, true);
     world.place(2, 1, TileKind.Victory);
 
-    const enlarged = resizeWorldFromTopLeft(world, 5, 4);
+    const enlarged = resizeWorld(world, 5, 4);
     expect(enlarged.componentStateSnapshotAt(0, 0)).toMatchObject({
       type: "delay",
       length: 5,
@@ -222,13 +222,35 @@ describe("sandbox puzzle authoring", () => {
     expect(enlarged.kindAt(2, 1)).toBe(TileKind.Victory);
     expect(enlarged.kindAt(4, 3)).toBe(TileKind.Empty);
 
-    const cropped = resizeWorldFromTopLeft(world, 2, 1);
+    const cropped = resizeWorld(world, 2, 1);
     expect(cropped.componentStateSnapshotAt(0, 0)).toMatchObject({
       type: "delay",
       length: 5,
     });
     expect(cropped.isWelded(0, 0, 1, 0)).toBe(true);
     expect(cropped.kindAt(1, 0)).toBe(TileKind.Stone);
+  });
+
+  it("translates retained configuration and welds while clipping all sides of an offset crop", () => {
+    const world = new World(6, 6);
+    world.place(2, 2, TileKind.Delay);
+    world.configureNumericComponent(2, 2, 5);
+    world.place(3, 2, TileKind.Stone);
+    world.place(4, 2, TileKind.Stone);
+    world.setWeld(2, 2, 3, 2, true);
+    world.setWeld(3, 2, 4, 2, true);
+    world.setTextBoxes([
+      { id: "overlap", x: 1.5, y: 1.5, width: 4, height: 4, text: "Clipped", owner: "author" },
+      { id: "outside", x: 0, y: 0, width: 1, height: 1, text: "Removed", owner: "author" },
+    ]);
+
+    const cropped = resizeWorld(world, 2, 2, 2, 2);
+    expect(cropped.componentStateSnapshotAt(0, 0)).toMatchObject({ type: "delay", length: 5 });
+    expect(cropped.kindAt(1, 0)).toBe(TileKind.Stone);
+    expect(cropped.isWelded(0, 0, 1, 0)).toBe(true);
+    expect(cropped.textBoxes).toEqual([
+      { id: "overlap", x: 0, y: 0, width: 2, height: 2, text: "Clipped", owner: "author" },
+    ]);
   });
 
   it("continues importing scene files with fresh puzzle-authoring defaults", () => {

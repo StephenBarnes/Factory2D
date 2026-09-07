@@ -1,4 +1,4 @@
-import { GridRegion } from "./grid-region";
+import { GridRegion, type GridRectangle } from "./grid-region";
 import {
   MAX_PUZZLE_CYCLE_LIMIT,
   parsePuzzleAuthoringSnapshot,
@@ -30,6 +30,7 @@ import {
 } from "../simulation/tile";
 import type { World } from "../simulation/world";
 import type { TextBox } from "../simulation/text-box";
+import { expectDefined } from "../util/assert";
 
 export interface SandboxPuzzleComponentProperty {
   readonly kind: TileKind;
@@ -235,6 +236,19 @@ export class SandboxPuzzleAuthoringState {
     selected.world.resetPuzzleResult();
   }
 
+  crop(bounds: GridRectangle): void {
+    const region = new GridRegion([bounds]);
+    const worlds = this.authoredTestCases.map(({ world }) => {
+      if (!region.fitsWithin(world.width, world.height)) {
+        throw new RangeError("Crop selection must fit within the board");
+      }
+      return resizeWorld(world, bounds.width, bounds.height, bounds.x, bounds.y);
+    });
+    this.authoredTestCases.forEach((testCase, index) => {
+      testCase.world = expectDefined(worlds[index], "Cropped test case is missing");
+    });
+  }
+
   selectTestCase(testCaseId: string): World {
     const selected = this.testCase(testCaseId);
     this.selectedTestCaseIdValue = selected.id;
@@ -357,7 +371,7 @@ export class SandboxPuzzleAuthoringState {
     }
     if (standard.world.width !== properties.width || standard.world.height !== properties.height) {
       for (const testCase of this.authoredTestCases) {
-        testCase.world = resizeWorldFromTopLeft(
+        testCase.world = resizeWorld(
           testCase.world,
           properties.width,
           properties.height,
@@ -486,9 +500,15 @@ export function parseSandboxSnapshot(
   };
 }
 
-export function resizeWorldFromTopLeft(source: World, width: number, height: number): World {
+/** Retains the source rectangle at (originX, originY), padding enlarged bounds with empty cells. */
+export function resizeWorld(
+  source: World, width: number, height: number, originX = 0, originY = 0,
+): World {
   requireBoardDimensions(width, height);
-  if (source.width === width && source.height === height) {
+  if (!Number.isSafeInteger(originX) || !Number.isSafeInteger(originY) || originX < 0 || originY < 0) {
+    throw new RangeError("Board resize origin must be non-negative integers");
+  }
+  if (source.width === width && source.height === height && originX === 0 && originY === 0) {
     return source.clone();
   }
 
@@ -497,25 +517,31 @@ export function resizeWorldFromTopLeft(source: World, width: number, height: num
   board.height = height;
   board.tick = 0;
   board.result = "in-progress";
-  board.grid = resizeRows(board.grid, width, height, ".");
-  board.welds = resizedWorldWeldRows(source, width, height);
-  board.orientations = filterCoordinates(board.orientations ?? [], width, height);
-  board.charges = filterCoordinates(board.charges ?? [], width, height);
-  board.crossingCharges = filterCoordinates(board.crossingCharges ?? [], width, height);
-  board.isolatedOutputCharges = filterCoordinates(board.isolatedOutputCharges ?? [], width, height);
-  board.components = filterCoordinates(board.components ?? [], width, height);
+  board.grid = resizeRows(board.grid.slice(originY).map((row) => row.slice(originX)), width, height, ".");
+  board.welds = resizedWorldWeldRows(source, width, height, originX, originY);
+  const translate = <T extends CoordinateEntry>(entries: readonly T[]): T[] =>
+    entries.map((entry) => ({ ...entry, x: entry.x - originX, y: entry.y - originY }));
+  board.orientations = filterCoordinates(translate(board.orientations ?? []), width, height);
+  board.charges = filterCoordinates(translate(board.charges ?? []), width, height);
+  board.crossingCharges = filterCoordinates(translate(board.crossingCharges ?? []), width, height);
+  board.isolatedOutputCharges = filterCoordinates(translate(board.isolatedOutputCharges ?? []), width, height);
+  board.components = filterCoordinates(translate(board.components ?? []), width, height);
   board.textBoxes = (board.textBoxes ?? [])
-    .filter((box) => box.x < width && box.y < height)
-    .map((box) => ({
-      ...box,
-      width: Math.min(box.width, width - box.x),
-      height: Math.min(box.height, height - box.y),
-    }));
-  board.furnaces = (board.furnaces ?? []).filter((entry) => {
+    .map((box) => {
+      const x = Math.max(0, box.x - originX);
+      const y = Math.max(0, box.y - originY);
+      return {
+        ...box, x, y,
+        width: Math.min(width, box.x + box.width - originX) - x,
+        height: Math.min(height, box.y + box.height - originY) - y,
+      };
+    })
+    .filter((box) => box.width > 0 && box.height > 0);
+  board.furnaces = translate(board.furnaces ?? []).filter((entry) => {
     if (!coordinateFits(entry, width, height)) {
       return false;
     }
-    const orientation = source.orientationAt(entry.x, entry.y);
+    const orientation = source.orientationAt(entry.x + originX, entry.y + originY);
     const targetX = entry.x + directionX(orientation);
     const targetY = entry.y + directionY(orientation);
     return targetX >= 0 && targetX < width && targetY >= 0 && targetY < height;
@@ -538,16 +564,20 @@ function resizeRows(
   return resized;
 }
 
-function resizedWorldWeldRows(source: World, width: number, height: number): string[] {
+function resizedWorldWeldRows(
+  source: World, width: number, height: number, originX: number, originY: number,
+): string[] {
   const rows: string[] = [];
   for (let y = 0; y < height; y += 1) {
     let row = "";
     for (let x = 0; x < width; x += 1) {
-      const inSource = x < source.width && y < source.height;
-      const right = inSource && x + 1 < width && x + 1 < source.width &&
-        source.isWelded(x, y, x + 1, y);
-      const down = inSource && y + 1 < height && y + 1 < source.height &&
-        source.isWelded(x, y, x, y + 1);
+      const sx = x + originX;
+      const sy = y + originY;
+      const inSource = sx < source.width && sy < source.height;
+      const right = inSource && x + 1 < width && sx + 1 < source.width &&
+        source.isWelded(sx, sy, sx + 1, sy);
+      const down = inSource && y + 1 < height && sy + 1 < source.height &&
+        source.isWelded(sx, sy, sx, sy + 1);
       row += right ? (down ? "+" : "-") : (down ? "|" : ".");
     }
     rows.push(row);
