@@ -23,7 +23,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 # Authoring tools, player-created puzzles, histograms
 
-* Check behavior when the test includes some blocks inside a player modifiable region - we should charge the price for these, and allow the player to remove or overwrite them. We may want to do this e.g. as a suggestion, or to show what a "dispense input" signal does.
 * Add back-end server and database. Probably Cloudflare Workers + D1 + R2. Then make the game request histogram data and (later) shared puzzles, and allow submitting scores and shared puzzles. Use `crypto.randomUUID()` to assign each install an ID.
 * DEFER Allow voting community-created puzzles up and down. We can assume users aren't malicious, this is a zero-stakes indie game; expect under 10 players per day. We want to avoid setting up a whole auth system or requiring email addresses, etc. Using a simple unique ID allows exploits (e.g. clear browser data and double-vote) but we'll assume nobody does that. Version the database and roll back manually if needed. If the game becomes popular enough to need more than that, upgrade to a more robust system.
 	* Also, when using the "clear all player data" button, do not erase the UUID. Unclear what we should do when importing/exporting - maybe transfer the UUID.

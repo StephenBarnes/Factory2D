@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { GridRegion } from "../src/game/grid-region";
+import { PuzzleComponents } from "../src/game/puzzle-components";
+import { computePuzzleDesignMetrics } from "../src/game/puzzle-scores";
+import { createPuzzleTestCaseWorld } from "../src/game/puzzle-test-runner";
 import { SavedSandboxController } from "../src/game/saved-sandbox-controller";
 import { SavedSolutionController } from "../src/game/saved-solution-controller";
 import { loadPuzzleSolutions } from "../src/game/puzzle-solutions";
@@ -9,6 +12,7 @@ import { WorkshopSessionController } from "../src/game/workshop-session";
 import { SandboxPuzzleAuthoringState } from "../src/game/sandbox-puzzle-authoring";
 import { serializeBoard } from "../src/simulation/board-export";
 import { TileKind } from "../src/simulation/tile";
+import { World } from "../src/simulation/world";
 
 function createStorage(): Pick<Storage, "getItem" | "setItem"> {
   const values = new Map<string, string>();
@@ -19,6 +23,73 @@ function createStorage(): Pick<Storage, "getItem" | "setItem"> {
 }
 
 describe("workshop session controller", () => {
+  it("prices editable starter blocks and preserves their removal and replacement across cases, reset, and reload", () => {
+    const shipped = puzzleById("first-shift");
+    const dimensions = shipped.createInitialWorld();
+    const initial = new World(dimensions.width, dimensions.height);
+    initial.place(0, 1, TileKind.Platform);
+    initial.place(1, 1, TileKind.Stone);
+    initial.place(2, 1, TileKind.Stone);
+    initial.setWeld(0, 1, 1, 1, true);
+    initial.setWeld(1, 1, 2, 1, true);
+    const alternate = initial.clone();
+    alternate.place(0, 1, TileKind.Iron);
+    alternate.place(1, 1, TileKind.Iron);
+    const puzzle = {
+      ...shipped,
+      editableRegion: new GridRegion([{ x: 1, y: 1, width: 2, height: 1 }]),
+      availableComponents: new PuzzleComponents([
+        { kind: TileKind.Stone, price: 7 },
+        { kind: TileKind.Iron, price: 11 },
+      ]),
+      createInitialWorld: () => initial.clone(),
+      testCases: [
+        { id: "standard", name: "Standard", cycleLimit: 20, createInitialWorld: () => initial.clone() },
+        { id: "alternate", name: "Alternate", cycleLimit: 20, createInitialWorld: () => alternate.clone() },
+      ],
+    };
+    const storage = createStorage();
+    const saved = new SavedSolutionController(storage);
+    const solution = saved.create(puzzle);
+    const sessions = new WorkshopSessionController(createSandboxWorld());
+    sessions.activateSolution(solution, puzzle);
+    expect(computePuzzleDesignMetrics(puzzle, sessions.active.baseline)).toEqual({
+      price: 14, footprintWidth: 2, footprintHeight: 1,
+    });
+
+    sessions.active.world.place(1, 1, TileKind.Empty);
+    sessions.active.world.place(2, 1, TileKind.Iron);
+    sessions.saveEditedBaseline();
+    expect(computePuzzleDesignMetrics(puzzle, sessions.active.baseline)).toEqual({
+      price: 11, footprintWidth: 1, footprintHeight: 1,
+    });
+    for (const testCase of puzzle.testCases) {
+      const runtime = createPuzzleTestCaseWorld(testCase, puzzle.editableRegion, sessions.active.baseline);
+      expect(runtime.kindAt(1, 1)).toBe(TileKind.Empty);
+      expect(runtime.kindAt(2, 1)).toBe(TileKind.Iron);
+      expect(runtime.kindAt(0, 1)).toBe(testCase.id === "standard" ? TileKind.Platform : TileKind.Iron);
+      expect(runtime.isWelded(0, 1, 1, 1)).toBe(false);
+      expect(runtime.isWelded(1, 1, 2, 1)).toBe(false);
+      sessions.showActiveRuntime(runtime);
+      sessions.beginSimulation();
+      sessions.active.simulation.step();
+      sessions.resetSimulation();
+      expect(sessions.active.world.kindAt(1, 1)).toBe(TileKind.Empty);
+      expect(sessions.active.world.kindAt(2, 1)).toBe(TileKind.Iron);
+      expect(sessions.active.world.kindAt(0, 1)).toBe(TileKind.Platform);
+    }
+    saved.markDirty(solution.id);
+    saved.persistBoardIfDirty(solution.id, sessions.active.baseline);
+    const reloaded = new SavedSolutionController(storage);
+    const restored = new WorkshopSessionController(createSandboxWorld());
+    restored.activateSolution(reloaded.byId(solution.id), puzzle);
+    expect(restored.active.world.kindAt(1, 1)).toBe(TileKind.Empty);
+    expect(restored.active.world.kindAt(2, 1)).toBe(TileKind.Iron);
+    expect(computePuzzleDesignMetrics(puzzle, restored.active.baseline).price).toBe(11);
+    expect(initial.kindAt(1, 1)).toBe(TileKind.Stone);
+    expect(initial.kindAt(2, 1)).toBe(TileKind.Stone);
+  });
+
   it("retains independent sandbox and saved-solution sessions", () => {
     const puzzle = puzzleById("first-shift");
     const initialWorld = puzzle.createInitialWorld();
