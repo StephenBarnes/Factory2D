@@ -752,19 +752,13 @@ function drawDecoration(
       context.lineCap = "round";
       context.lineJoin = "round";
       context.beginPath();
-      context.moveTo(-size * 0.18, -size * 0.2);
-      context.lineTo(size * 0.18, -size * 0.2);
-      context.lineTo(size * 0.12, size * 0.02);
-      context.quadraticCurveTo(0, size * 0.17, -size * 0.12, size * 0.02);
-      context.closePath();
-      context.moveTo(-size * 0.18, -size * 0.14);
-      context.quadraticCurveTo(-size * 0.31, -size * 0.1, -size * 0.2, size * 0.01);
-      context.moveTo(size * 0.18, -size * 0.14);
-      context.quadraticCurveTo(size * 0.31, -size * 0.1, size * 0.2, size * 0.01);
-      context.moveTo(0, size * 0.13);
-      context.lineTo(0, size * 0.25);
-      context.moveTo(-size * 0.13, size * 0.25);
-      context.lineTo(size * 0.13, size * 0.25);
+      // Jera: two opposed, offset harvest strokes.
+      context.moveTo(size * 0.02, -size * 0.25);
+      context.lineTo(-size * 0.2, -size * 0.08);
+      context.lineTo(size * 0.02, size * 0.09);
+      context.moveTo(-size * 0.02, -size * 0.09);
+      context.lineTo(size * 0.2, size * 0.08);
+      context.lineTo(-size * 0.02, size * 0.25);
       context.stroke();
       context.restore();
       break;
@@ -804,18 +798,18 @@ function drawDecoration(
     case TileDecorationStyle.FixedCharge: {
       context.save();
       context.translate(left + size / 2, top + size / 2);
-      context.lineWidth = Math.max(1.5, size * 0.055);
+      context.lineWidth = Math.max(1, size * 0.04);
       context.lineCap = "round";
-      context.strokeStyle = definition.decorationColor;
-      context.beginPath();
-      drawDot(context, 0, 0, size * 0.21);
-      context.stroke();
+      context.lineJoin = "round";
       context.strokeStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
       context.beginPath();
-      context.moveTo(-size * 0.11, 0);
-      context.lineTo(size * 0.11, 0);
-      context.moveTo(0, -size * 0.11);
-      context.lineTo(0, size * 0.11);
+      for (let bolt = -1; bolt <= 1; bolt += 1) {
+        const x = bolt * size * 0.17;
+        context.moveTo(x + size * 0.04, -size * 0.2);
+        context.lineTo(x - size * 0.055, 0);
+        context.lineTo(x + size * 0.055, 0);
+        context.lineTo(x - size * 0.04, size * 0.2);
+      }
       context.stroke();
       context.restore();
       break;
@@ -850,26 +844,6 @@ function drawDecoration(
       break;
     }
     case TileDecorationStyle.Sensor:
-      context.save();
-      context.translate(left + size / 2, top + size / 2);
-      context.rotate(orientation * Math.PI / 2);
-      context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
-      context.beginPath();
-      context.moveTo(0, -size * 0.34);
-      context.lineTo(size * 0.14, -size * 0.12);
-      context.lineTo(-size * 0.14, -size * 0.12);
-      context.closePath();
-      context.fill();
-      context.fillStyle = definition.decorationColor;
-      context.beginPath();
-      context.moveTo(0, -size * 0.14);
-      context.lineTo(size * 0.17, 0);
-      context.lineTo(0, size * 0.17);
-      context.lineTo(-size * 0.17, 0);
-      context.closePath();
-      context.fill();
-      context.restore();
-      break;
     case TileDecorationStyle.ChargeSensor: {
       context.save();
       context.translate(left + size / 2, top + size / 2);
@@ -878,20 +852,33 @@ function drawDecoration(
       context.lineCap = "round";
       context.lineJoin = "round";
       context.beginPath();
-      context.moveTo(0, -size * 0.18);
-      context.lineTo(size * 0.18, 0);
-      context.lineTo(0, size * 0.18);
-      context.lineTo(-size * 0.18, 0);
+      context.moveTo(0, -size * 0.2);
+      context.lineTo(size * 0.25, 0);
+      context.lineTo(0, size * 0.2);
+      context.lineTo(-size * 0.25, 0);
       context.closePath();
       context.stroke();
       context.beginPath();
-      context.moveTo(-size * 0.1, -size * 0.27);
-      context.lineTo(0, -size * 0.18);
-      context.lineTo(size * 0.1, -size * 0.27);
+      context.moveTo(-size * 0.07, -size * 0.29);
+      context.lineTo(0, -size * 0.36);
+      context.lineTo(size * 0.07, -size * 0.29);
       context.stroke();
       context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
       context.beginPath();
-      drawDot(context, 0, 0, Math.max(1.5, size * 0.07));
+      if (definition.decorationStyle === TileDecorationStyle.Sensor) {
+        context.moveTo(0, -size * 0.09);
+        context.lineTo(size * 0.09, 0);
+        context.lineTo(0, size * 0.09);
+        context.lineTo(-size * 0.09, 0);
+      } else {
+        context.moveTo(size * 0.035, -size * 0.13);
+        context.lineTo(-size * 0.085, size * 0.025);
+        context.lineTo(-size * 0.005, size * 0.025);
+        context.lineTo(-size * 0.035, size * 0.13);
+        context.lineTo(size * 0.085, -size * 0.025);
+        context.lineTo(size * 0.005, -size * 0.025);
+      }
+      context.closePath();
       context.fill();
       context.restore();
       break;
@@ -904,10 +891,13 @@ function drawDecoration(
       context.lineCap = "round";
       context.lineJoin = "round";
       context.beginPath();
-      context.moveTo(-size * 0.2, size * 0.16);
-      context.lineTo(0, -size * 0.17);
-      context.lineTo(size * 0.2, size * 0.16);
-      context.closePath();
+      // Hagalaz: two staves joined by a descending diagonal.
+      context.moveTo(-size * 0.15, -size * 0.18);
+      context.lineTo(-size * 0.15, size * 0.2);
+      context.moveTo(size * 0.15, -size * 0.18);
+      context.lineTo(size * 0.15, size * 0.2);
+      context.moveTo(-size * 0.15, -size * 0.13);
+      context.lineTo(size * 0.15, size * 0.15);
       context.stroke();
       context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
       context.beginPath();
@@ -926,11 +916,12 @@ function drawDecoration(
       context.lineCap = "round";
       context.lineJoin = "round";
       context.beginPath();
-      context.moveTo(-size * 0.18, size * 0.12);
-      context.lineTo(0, -size * 0.11);
-      context.lineTo(size * 0.18, size * 0.12);
-      context.moveTo(-size * 0.18, -size * 0.18);
-      context.lineTo(size * 0.18, -size * 0.18);
+      // Thurisaz: a vertical stave with a triangular thorn.
+      context.moveTo(-size * 0.1, -size * 0.2);
+      context.lineTo(-size * 0.1, size * 0.2);
+      context.moveTo(-size * 0.1, -size * 0.15);
+      context.lineTo(size * 0.15, 0);
+      context.lineTo(-size * 0.1, size * 0.15);
       context.stroke();
       drawPortArrows(context, -size / 2, -size / 2, size, Direction.Up,
         WeldSide.None, WeldSide.Up, CIRCUIT_CHARGE_COLORS[outputCharge]);
@@ -983,6 +974,10 @@ function drawDecoration(
       context.beginPath();
       context.moveTo(-size * 0.12, 0);
       context.lineTo(size * 0.12, 0);
+      context.moveTo(-size * 0.055, size * 0.22);
+      context.lineTo(size * 0.055, size * 0.22);
+      context.moveTo(0, size * 0.165);
+      context.lineTo(0, size * 0.275);
       context.stroke();
       drawPortArrows(context, -size / 2, -size / 2, size, Direction.Up,
         WeldSide.None, WeldSide.Up, CIRCUIT_CHARGE_COLORS[outputCharge]);

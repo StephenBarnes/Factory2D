@@ -12,6 +12,8 @@ Welded bodies use traced inset rounded-slab outlines, shadows, per-cell fills, c
 
 Circuit traces follow actual welded circuit connections and each port's resolved charge; crossing axes and isolated outputs must not collapse into one shared color. Directional markers and short traces must not overlap. Stateful decorations display live buffers, cursors, verdicts, grips, and nested contents. Inspect existing drawing helpers before adding a new component.
 
+Sensor glyphs share an angular eye with a charge-colored diamond or lightning-bolt pupil; their fills are purple. Three-input arithmetic transforms use teal/blue fills. Fixed sources use three charge-colored bolts, inverters use Hagalaz, rectifiers use Thurisaz, and victory stones use Jera. Directional glyphs rotate with their ports; the subtractor's rear plus marks the positive input.
+
 ## Board, camera, and caches
 
 `src/render/canvas-renderer.ts` owns grid rendering, hit testing, pan/zoom, interpolation, previews, hover overlays, and editable-region/array framing.
