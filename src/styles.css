@@ -1008,6 +1008,47 @@ canvas {
   padding: 11px;
 }
 
+.tile-inspector.tile-inspector-reference {
+  width: min(340px, calc(100vw - var(--sidebar-width) - 2 * var(--inspector-gap)));
+}
+
+.inspector-palette [data-inspector-palette-description] > p {
+  margin: 8px 0 0;
+  color: var(--text-mid);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.inspector-truth-table {
+  width: 100%;
+  margin-top: 10px;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-align: center;
+}
+
+.inspector-truth-table caption {
+  margin-bottom: 5px;
+  color: var(--text-mid);
+}
+
+.inspector-truth-table th,
+.inspector-truth-table td {
+  padding: 3px;
+  border: 1px solid var(--panel-border);
+}
+
+.inspector-truth-table td[data-charge="1"] {
+  color: #78bfff;
+  background: #143d60;
+}
+
+.inspector-truth-table td[data-charge="-1"] {
+  color: #ff9a9a;
+  background: #601f28;
+}
+
 .signal-panel {
   grid-column: 3;
   grid-row: 1;

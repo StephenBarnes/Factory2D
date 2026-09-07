@@ -61,6 +61,35 @@ function descriptionFor(kind: TileKind): string {
   throw new Error(`${definition.name} is missing inspector description metadata`);
 }
 
+function combinerTable(): HTMLTableElement {
+  const table = document.createElement("table");
+  table.className = "inspector-truth-table";
+  const caption = table.createCaption();
+  caption.textContent = "Combiner: sign(left + right + rear)";
+  const header = table.createTHead().insertRow();
+  for (const label of ["L + R", "Rear −1", "Rear 0", "Rear +1"]) {
+    const cell = document.createElement("th");
+    cell.scope = "col";
+    cell.textContent = label;
+    header.append(cell);
+  }
+  const body = table.createTBody();
+  for (let sum = -2; sum <= 2; sum += 1) {
+    const row = body.insertRow();
+    const heading = document.createElement("th");
+    heading.scope = "row";
+    heading.textContent = sum > 0 ? `+${sum}` : String(sum);
+    row.append(heading);
+    for (let rear = -1; rear <= 1; rear += 1) {
+      const output = Math.sign(sum + rear);
+      const cell = row.insertCell();
+      cell.textContent = output > 0 ? "+1" : String(output);
+      cell.dataset.charge = String(output);
+    }
+  }
+  return table;
+}
+
 
 export class TileInspector {
   private readonly root: HTMLElement;
@@ -90,6 +119,7 @@ export class TileInspector {
   private lastY = -2;
   private lastRevision = -1;
   private showingReference = false;
+  private referenceKind: TileKind | null = null;
 
   constructor(
     root: HTMLElement,
@@ -135,6 +165,7 @@ export class TileInspector {
 
     this.showingReference = true;
     this.root.classList.remove("tile-inspector-hidden");
+    this.root.classList.add("tile-inspector-reference");
     this.root.setAttribute("aria-hidden", "false");
     this.name.textContent = definition.name.toUpperCase();
     this.position.hidden = true;
@@ -143,12 +174,27 @@ export class TileInspector {
     this.properties.hidden = true;
     this.toolDetails.hidden = true;
     this.paletteDetails.hidden = false;
-    this.paletteDescription.textContent = palette.description;
+    if (this.referenceKind === kind) {
+      return;
+    }
+    this.referenceKind = kind;
+    this.paletteDescription.replaceChildren(...[
+      palette.description,
+      ...palette.extendedDescription,
+    ].map((text) => {
+      const paragraph = document.createElement("p");
+      paragraph.textContent = text;
+      return paragraph;
+    }));
+    if (kind === TileKind.Combiner) {
+      this.paletteDescription.append(combinerTable());
+    }
   }
 
   showTool(name: string, description: string, controls: string): void {
     this.showingReference = true;
     this.root.classList.remove("tile-inspector-hidden");
+    this.root.classList.remove("tile-inspector-reference");
     this.root.setAttribute("aria-hidden", "false");
     this.name.textContent = name.toUpperCase();
     this.position.hidden = false;
@@ -168,6 +214,7 @@ export class TileInspector {
   ): void {
     const wasShowingReference = this.showingReference;
     this.showingReference = false;
+    this.root.classList.remove("tile-inspector-reference");
     this.paletteDetails.hidden = true;
     this.toolDetails.hidden = true;
     this.position.hidden = false;

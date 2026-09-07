@@ -112,7 +112,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 # UI
 
-* For each tile, in addition to the description, add an extended, potentially multi-paragraph description. Include things like details of how ROM rune's cursor movement works, and a color-coded truth table for the combiner rune, etc. Display these in the inspector, when the mouse is over the palette. When the mouse is over the tile grid, instead only show the short description.
 * Implement undo and redo when editing.
 * Show brief text like "+2⚙" above the current puzzle price as components are placed; make it fade to transparent after a brief delay. Animate negative numbers when removing blocks. Color them blue for positive, red for negative, same as circuit charges. When many components are added/removed in rapid succession, grow the current number instead of making many separate text boxes.
 * Add support for mobile and touch screens. Check if it's playable.
