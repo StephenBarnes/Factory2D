@@ -81,10 +81,6 @@ export function populatePuzzleMap(container: HTMLElement, options: MainMenuOptio
       button.disabled = !puzzleUnlocked;
       button.dataset.state = completed ? "completed" : puzzleUnlocked ? "unlocked" : "locked";
 
-      const number = document.createElement("span");
-      number.className = "puzzle-number";
-      number.textContent = String(index + 1).padStart(2, "0");
-
       const name = document.createElement("strong");
       name.className = "puzzle-name";
       name.textContent = puzzle.name;
@@ -97,7 +93,7 @@ export function populatePuzzleMap(container: HTMLElement, options: MainMenuOptio
           ? "◆ AVAILABLE"
           : "🔒 LOCKED";
 
-      button.append(number, name, status);
+      button.append(name, status);
       if (puzzleUnlocked) {
         button.addEventListener("click", () => options.onSelectPuzzle(puzzle.id));
       }

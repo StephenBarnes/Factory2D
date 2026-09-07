@@ -333,9 +333,9 @@ body:has(dialog[open]) .tool-cursor {
   width: 100%;
   min-height: 86px;
   margin-bottom: 20px;
-  padding: 15px 17px;
+  padding: 15px 24px;
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 14px;
   border-color: var(--bronze);
@@ -365,7 +365,7 @@ body:has(dialog[open]) .tool-cursor {
 .test-report-dialog::after {
   content: "";
   position: absolute;
-  inset: 3px;
+  inset: 2px;
   background:
     linear-gradient(var(--gild), var(--gild)) left top / 16px 1px no-repeat,
     linear-gradient(var(--gild), var(--gild)) left top / 1px 16px no-repeat,
@@ -480,9 +480,9 @@ body:has(dialog[open]) .tool-cursor {
   border-color: var(--gold-bright);
   width: 100%;
   min-height: 52px;
-  padding: 9px 11px;
+  padding: 9px 24px;
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 9px;
   transition: border-color 120ms ease, background-color 120ms ease, transform 120ms ease;
@@ -495,14 +495,6 @@ body:has(dialog[open]) .tool-cursor {
 .puzzle-node:disabled {
   cursor: not-allowed;
   opacity: 0.72;
-}
-
-.puzzle-number {
-  color: var(--gold);
-  font-family: var(--font-mono);
-  font-size: 0.88rem;
-  font-weight: 700;
-  text-align: center;
 }
 
 .puzzle-details strong,
@@ -536,10 +528,6 @@ body:has(dialog[open]) .tool-cursor {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-align: right;
-}
-
-.puzzle-node[data-state="locked"] .puzzle-number {
-  color: var(--text-muted);
 }
 
 .puzzle-node[data-state="locked"] .puzzle-status {
