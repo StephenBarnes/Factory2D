@@ -1027,12 +1027,12 @@ function drawDecoration(
       context.lineCap = "round";
       context.lineJoin = "round";
       context.beginPath();
-      // Thurisaz: a vertical stave with a triangular thorn.
-      context.moveTo(-size * 0.1, -size * 0.2);
-      context.lineTo(-size * 0.1, size * 0.2);
-      context.moveTo(-size * 0.1, -size * 0.15);
-      context.lineTo(size * 0.15, 0);
-      context.lineTo(-size * 0.1, size * 0.15);
+      // Thurisaz turned counterclockwise: the thorn points toward the output.
+      context.moveTo(-size * 0.2, size * 0.1);
+      context.lineTo(size * 0.2, size * 0.1);
+      context.moveTo(-size * 0.15, size * 0.1);
+      context.lineTo(0, -size * 0.15);
+      context.lineTo(size * 0.15, size * 0.1);
       context.stroke();
       drawPortArrows(context, -size / 2, -size / 2, size, Direction.Up,
         WeldSide.None, WeldSide.Up, CIRCUIT_CHARGE_COLORS[outputCharge]);
@@ -1114,6 +1114,15 @@ function drawDecoration(
       context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
       context.beginPath();
       drawDot(context, 0, -size * 0.24, Math.max(1.5, size * 0.055));
+      context.fill();
+      // Rear control selects the left input on +1 and the right input on -1.
+      context.fillStyle = CIRCUIT_CHARGE_COLORS[1];
+      context.beginPath();
+      drawDot(context, -size * 0.3, size * 0.18, size * 0.055);
+      context.fill();
+      context.fillStyle = CIRCUIT_CHARGE_COLORS[-1];
+      context.beginPath();
+      drawDot(context, size * 0.3, size * 0.18, size * 0.055);
       context.fill();
       context.restore();
       break;

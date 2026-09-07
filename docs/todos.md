@@ -139,17 +139,12 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Add backgrounds for puzzles, maybe with parallax as the player pans.
 * Add a settings option to turn off all bevels, for performance. It should basically just turn off the last section of `drawBody` in src/render/tile-renderer.ts:152.
 * Modify rendering LOD. Currently past some max zoom we draw solid-colored squares instead of the full block, though this fails to show welded vs unwelded gaps properly; could still be used when very zoomed out. Other options at various zoom levels: (1) turn off all bevels regardless of the setting; (2) turn off the in-tile decorations.
+* Improve border decorations and buttons. HTML and CSS from an online example have been placed in `temp/artdeco.txt`.
 
 ## Specific block appearance changes
 
-* Modify the selector / discernment rune to show which side is chosen on +1 or -1 input, by putting two small red/blue dots or squares on the left and right sides, slightly towards the rear (so they don't overlap with conduit lines).
-* Rotate the rectifier rune's drawn symbol by 90 degrees counterclockwise, so it points in the same direction as the output port.
 * DEFER Rework magnet artwork alongside the planned electromagnet mechanics.
 * DEFER For the rotator component, we should modify rendering to make behavior more obvious. Maybe draw as a welded block with only around a third of the width, on welded side, and then draw the rotator arm separately. Also mark red/blue on the sides of the base to show which charge rotates in which direction. Also animate the rotator arm itself turning (different from animating the bodies it rotated).
-
-## Styling
-
-* Refine the dwarven UI theme: the palette now lives in CSS custom properties on `:root` in `src/styles.css` (stone browns, bronze, gold, ember, gem accents) with gilded corner ornaments on major panels; consider richer Art Deco corner motifs (diagonals, doubled lines) and reviewing tile fill/decoration colors in `src/simulation/tile.ts` for warmth.
 
 ## Animations
 
@@ -157,6 +152,7 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Add animation for the delivery box, assembler, duplicator, lock gate. When they consume a body, animate the body shrinking, moving towards the block, and lowering opacity until it vanishes. When they produce a body, animate the opposite.
 * Animate fragile blocks shattering - maybe split them in half across say a line at 30 degrees from vertical, then animate the halves moving apart and fading out from one tick to the next. Also use the same shatter animation for blocks broken by mining devices, fasteners that break, etc.
 * Animate bodies rotated by the rotator block. Currently it seems we sometimes show visible animation, but it doesn't show rotation - the body first rotates in place instantly, then translates to new position. In other cases the body immediately snaps from old position and orientation to new.
+* Animate the rotator block itself - currently the arrow snaps to the new position when it receives a charge commanding it to rotate. Rather move the arrow smoothly from old side to new side.
 * DEFER Interpolate movement inside a rune array while its contents are displayed and the array itself moved in the same tick: the nested previous world is matched by ID path, which works, but a resized array yields no interpolation source for that tick.
 
 # Larger projects, DEFER to later or never, and break up into tasks:

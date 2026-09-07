@@ -14,6 +14,8 @@ Circuit traces follow actual welded circuit connections and each port's resolved
 
 Sensor glyphs share an angular eye with a charge-colored diamond or lightning-bolt pupil; their fills are purple. Three-input arithmetic transforms use teal/blue fills. Fixed sources use three charge-colored bolts, inverters use Hagalaz, rectifiers use Thurisaz, and victory stones use Jera. Directional glyphs rotate with their ports; the subtractor's rear plus marks the positive input.
 
+The discernment rune marks its left input blue (+1 rear control) and right input red (-1 rear control), offset toward the rear to clear circuit traces. These markers rotate with the tile. The rectifier's Thurisaz thorn points toward its output port.
+
 Body comparers use a purple slab with front/rear outlined blocks and a charge-colored equals sign; the glyph rotates with the sideways circuit ports.
 
 Platforms use forest green; ROMs and graphers use jade/teal. Delay, counter, monitor, and array fills use sapphire/indigo, while fixed-charge/spark sources and sequence checkers use gold/amber. Channels and crossings retain neutral slate so wiring stays quieter than active components. These colors come from the shared tile metadata and are identical in both UI themes.

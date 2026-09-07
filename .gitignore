@@ -10,3 +10,4 @@ blob-report/
 *.tsbuildinfo
 __pycache__/
 *.py[cod]
+temp/
