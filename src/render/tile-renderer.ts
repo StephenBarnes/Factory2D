@@ -68,6 +68,10 @@ const INSET_RATIO = 0.05;
 /** Thickness of the top-left highlight and bottom-right shade bands. */
 const BEVEL_RATIO = 0.05;
 
+/** Logical pixels: supersampling must not change which details are visible. */
+const DECORATION_CELL_SIZE = 12;
+const BEVEL_CELL_SIZE = 24;
+
 const HIGHLIGHT_STYLE = "rgba(255, 255, 255, 0.25)";
 const SHADE_STYLE = "rgba(0, 0, 0, 0.18)";
 
@@ -129,27 +133,29 @@ export function drawBody(
       cellSize,
     );
   }
-  for (let i = 0; i < cellCount; i += 1) {
-    const cell = expectDefined(cells[i], "body cell");
-    drawDecoration(
-      context,
-      originX + cell.x * cellSize,
-      originY + cell.y * cellSize,
-      cellSize,
-      TILE_DEFINITIONS[cell.kind],
-      cell.orientation,
-      cell.outputCharge,
-      cell.circuitConnections,
-      cell.circuitPortCharges,
-      cell.componentState ?? null,
-      cell.nestedWorld ?? null,
-      animationTime,
-      cell.pistonTransition ?? 0,
-      cell.pistonTransitionProgress ?? 1,
-    );
+  if (cellSize >= DECORATION_CELL_SIZE) {
+    for (let i = 0; i < cellCount; i += 1) {
+      const cell = expectDefined(cells[i], "body cell");
+      drawDecoration(
+        context,
+        originX + cell.x * cellSize,
+        originY + cell.y * cellSize,
+        cellSize,
+        TILE_DEFINITIONS[cell.kind],
+        cell.orientation,
+        cell.outputCharge,
+        cell.circuitConnections,
+        cell.circuitPortCharges,
+        cell.componentState ?? null,
+        cell.nestedWorld ?? null,
+        animationTime,
+        cell.pistonTransition ?? 0,
+        cell.pistonTransitionProgress ?? 1,
+      );
+    }
   }
 
-  if (tileAppearance.bevels) {
+  if (tileAppearance.bevels && cellSize >= BEVEL_CELL_SIZE) {
     const bevel = Math.max(1.5, cellSize * BEVEL_RATIO);
     context.lineWidth = bevel * 2;
     context.translate(bevel - 0.2, bevel - 0.2); // Ad-hoc manually tuned -0.2 to reduce corner artifacts
