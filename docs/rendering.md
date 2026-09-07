@@ -28,7 +28,7 @@ Do not rebuild body topology or allocate fresh paths every animation frame. Pres
 
 ## Animation and overlays
 
-Interpolation uses stable tile IDs between adjacent previous/current committed worlds and never changes physics. Piston arm IDs follow the head and support extension/retraction decoration animation. Automatic steps can batch between frames; rates at or above 60 ticks/second force discrete rendering without changing the player's animation preference. Rotator commits are implemented, but pivot-based quarter-circle animation is still a roadmap item.
+Interpolation uses stable tile IDs between adjacent previous/current committed worlds and never changes physics. Piston arm IDs follow the head and support extension/retraction decoration animation; the extending shaft's rear endpoint stays at the base anchor until its full length fits ahead of the base. Automatic steps can batch between frames; rates at or above 60 ticks/second force discrete rendering without changing the player's animation preference. Rotator commits are implemented, but pivot-based quarter-circle animation is still a roadmap item.
 
 Placed-component overlays use the hovered world's actual kind/orientation, including fixed or simulation-locked tiles; placement overlays use ghost orientation. The shared dispatcher handles welder/splitter target edges, occupancy-sensor observation cells, and rotator grip/sweep hints. Clear overlays with hover and clip to board bounds. Selection previews retain transformed welds and configurable appearance; invalid destinations show invalid feedback rather than modifying fixed cells.
 

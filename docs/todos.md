@@ -157,7 +157,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 ## Animations
 
 * Animate when joints are welded or split, including by the welder/splitter components and by the player. Maybe a simple particle system where a horizontal weld causes two white particles to flash and move to the left/right sides respectively, and similar for vertical throwing two particles up/down, animated rapidly even when the simulation is not running.
-* Improve piston extension/retraction animation. Currently when we animate the piston head moving away from the base, we draw its full arm line - resulting in the arm visually extending past/over the base. Rather lengthen it as the head moves away.
 * Add animation for the delivery box - animate tiles moving into it, and shrinking, as they're absorbed.
 * Animate fragile blocks shattering - maybe split them in half across say a line at 30 degrees from vertical, then animate the halves moving apart and fading out from one tick to the next. Also use the same shatter animation for blocks broken by mining devices, fasteners that break, etc.
 * Interpolate movement inside a rune array while its contents are displayed and the array itself moved in the same tick: the nested previous world is matched by ID path, which works, but a resized array yields no interpolation source for that tick.

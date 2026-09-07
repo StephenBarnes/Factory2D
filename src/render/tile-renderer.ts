@@ -1358,7 +1358,9 @@ function drawDecoration(
         context.moveTo(0, size * 0.03);
         context.lineTo(0, -size * 0.2 + headOffset);
       } else {
-        context.moveTo(0, size * 0.43 + headOffset);
+        // The arm cell is one tile ahead of the base. Keep the shaft's rear
+        // endpoint at the base anchor until the moving head has cleared it.
+        context.moveTo(0, Math.min(size * 0.43 + headOffset, size * 1.03));
         context.lineTo(0, -size * 0.25 + headOffset);
       }
       context.stroke();
