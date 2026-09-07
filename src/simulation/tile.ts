@@ -114,6 +114,7 @@ export const enum TileDecorationStyle {
   Glass = 39,
   Gem = 40,
   Wood = 41,
+  SquareGrains = 42,
 }
 
 export const enum PaletteCategory {
@@ -211,7 +212,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "#",
     defaultPrice: 2,
     palette: {
-      order: 1,
+      order: 41,
       category: PaletteCategory.RawMaterials,
       description: "Solid block affected by gravity",
     },
@@ -234,7 +235,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: ":",
     defaultPrice: 1,
     palette: {
-      order: 0,
+      order: 44,
       category: PaletteCategory.RawMaterials,
       description: "Falls downward and can fall diagonally around obstacles",
     },
@@ -257,7 +258,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "=",
     defaultPrice: 2,
     palette: {
-      order: 2,
+      order: 43,
       category: PaletteCategory.RawMaterials,
       description: "Fixed structural block not affected by gravity",
     },
@@ -271,9 +272,9 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     circuitOutputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
-    fill: "#367451",
-    decorationStyle: TileDecorationStyle.Crack,
-    decorationColor: "#214b35",
+    fill: "#595f7d",
+    decorationStyle: TileDecorationStyle.Iron,
+    decorationColor: "#2f2b43",
   },
   [TileKind.Magnet]: {
     name: "Lodestone",
@@ -303,7 +304,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "i",
     defaultPrice: 4,
     palette: {
-      order: 4,
+      order: 47,
       category: PaletteCategory.RawMaterials,
       description: "Magnetic structural block affected by gravity and smelted from iron ore",
     },
@@ -671,7 +672,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "G",
     defaultPrice: 3,
     palette: {
-      order: 5,
+      order: 45,
       category: PaletteCategory.RawMaterials,
       description: "Solid block baked from sand; invisible to sensor runes",
     },
@@ -695,7 +696,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "O",
     defaultPrice: 2,
     palette: {
-      order: 6,
+      order: 46,
       category: PaletteCategory.RawMaterials,
       description: "Solid ore that a furnace smelts into iron",
     },
@@ -710,8 +711,8 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     magnetic: false,
     attractionRange: 0,
     fill: "#785a49",
-    decorationStyle: TileDecorationStyle.Grains,
-    decorationColor: "#b98766",
+    decorationStyle: TileDecorationStyle.SquareGrains,
+    decorationColor: "#b7bdc5",
   },
   [TileKind.Dirt]: {
     name: "Dirt",
@@ -741,7 +742,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "h",
     defaultPrice: 6,
     palette: {
-      order: 41,
+      order: 51,
       category: PaletteCategory.RawMaterials,
       description: "Solid gold block affected by gravity; can be welded",
     },
@@ -764,7 +765,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "s",
     defaultPrice: 5,
     palette: {
-      order: 42,
+      order: 50,
       category: PaletteCategory.RawMaterials,
       description: "Solid silver block affected by gravity; can be welded",
     },
@@ -787,7 +788,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "u",
     defaultPrice: 6,
     palette: {
-      order: 43,
+      order: 53,
       category: PaletteCategory.RawMaterials,
       description: "Solid ruby block affected by gravity; can be welded",
     },
@@ -801,7 +802,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     circuitOutputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
-    fill: "#a52e50",
+    fill: "#a11b41",
     decorationStyle: TileDecorationStyle.Gem,
     decorationColor: "#ffb1bc",
   },
@@ -810,7 +811,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "v",
     defaultPrice: 6,
     palette: {
-      order: 44,
+      order: 54,
       category: PaletteCategory.RawMaterials,
       description: "Solid sapphire block affected by gravity; can be welded",
     },
@@ -824,7 +825,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     circuitOutputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
-    fill: "#3151ab",
+    fill: "#1c3a8d",
     decorationStyle: TileDecorationStyle.Gem,
     decorationColor: "#a8ceff",
   },
@@ -833,7 +834,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "j",
     defaultPrice: 6,
     palette: {
-      order: 45,
+      order: 55,
       category: PaletteCategory.RawMaterials,
       description: "Solid emerald block affected by gravity; can be welded",
     },
@@ -847,7 +848,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     circuitOutputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
-    fill: "#23835a",
+    fill: "#0f6a35",
     decorationStyle: TileDecorationStyle.Gem,
     decorationColor: "#a0f2c0",
   },
@@ -856,7 +857,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "q",
     defaultPrice: 8,
     palette: {
-      order: 46,
+      order: 57,
       category: PaletteCategory.RawMaterials,
       description: "Solid diamond block affected by gravity; can be welded",
     },
@@ -879,7 +880,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "t",
     defaultPrice: 6,
     palette: {
-      order: 47,
+      order: 56,
       category: PaletteCategory.RawMaterials,
       description: "Solid amethyst block affected by gravity; can be welded",
     },
@@ -893,7 +894,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     circuitOutputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
-    fill: "#8750a8",
+    fill: "#791daf",
     decorationStyle: TileDecorationStyle.Gem,
     decorationColor: "#eac0ff",
   },
@@ -902,7 +903,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "l",
     defaultPrice: 10,
     palette: {
-      order: 48,
+      order: 52,
       category: PaletteCategory.RawMaterials,
       description: "Solid mithril block affected by gravity; can be welded",
     },
@@ -916,16 +917,16 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     circuitOutputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
-    fill: "#4fa4b0",
+    fill: "#0c44a5",
     decorationStyle: TileDecorationStyle.Iron,
-    decorationColor: "#ccfff3",
+    decorationColor: "#ffffff",
   },
   [TileKind.CopperOre]: {
     name: "Copper Ore",
     boardCode: "o",
     defaultPrice: 2,
     palette: {
-      order: 49,
+      order: 48,
       category: PaletteCategory.RawMaterials,
       description: "Solid copper ore block affected by gravity; can be welded",
     },
@@ -940,7 +941,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     magnetic: false,
     attractionRange: 0,
     fill: "#535c50",
-    decorationStyle: TileDecorationStyle.Grains,
+    decorationStyle: TileDecorationStyle.SquareGrains,
     decorationColor: "#df9360",
   },
   [TileKind.Copper]: {
@@ -948,7 +949,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "c",
     defaultPrice: 4,
     palette: {
-      order: 50,
+      order: 49,
       category: PaletteCategory.RawMaterials,
       description: "Solid copper block affected by gravity; can be welded",
     },
@@ -971,7 +972,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "w",
     defaultPrice: 2,
     palette: {
-      order: 51,
+      order: 42,
       category: PaletteCategory.RawMaterials,
       description: "Solid wood block affected by gravity; can be welded",
     },
@@ -985,9 +986,9 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     circuitOutputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
-    fill: "#9a703f",
+    fill: "#55391f",
     decorationStyle: TileDecorationStyle.Wood,
-    decorationColor: "#55391f",
+    decorationColor: "#9a703f",
   },
   [TileKind.Furnace]: {
     name: "Furnace",

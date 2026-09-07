@@ -463,6 +463,35 @@ function drawDecoration(
 
   switch (definition.decorationStyle) {
     case TileDecorationStyle.Gem:
+      // Unequal facet lighting keeps the cut legible without a per-tile gradient.
+      context.fillStyle = "rgba(255, 255, 255, 0.38)";
+      context.beginPath();
+      context.moveTo(left + size * 0.5, top + size * 0.16);
+      context.lineTo(left + size * 0.38, top + size * 0.5);
+      context.lineTo(left + size * 0.18, top + size * 0.5);
+      context.closePath();
+      context.fill();
+      context.fillStyle = "rgba(255, 255, 255, 0.16)";
+      context.beginPath();
+      context.moveTo(left + size * 0.5, top + size * 0.16);
+      context.lineTo(left + size * 0.82, top + size * 0.5);
+      context.lineTo(left + size * 0.62, top + size * 0.5);
+      context.closePath();
+      context.fill();
+      context.fillStyle = "rgba(12, 16, 35, 0.38)";
+      context.beginPath();
+      context.moveTo(left + size * 0.82, top + size * 0.5);
+      context.lineTo(left + size * 0.5, top + size * 0.84);
+      context.lineTo(left + size * 0.62, top + size * 0.5);
+      context.closePath();
+      context.fill();
+      context.fillStyle = "rgba(255, 255, 255, 0.24)";
+      context.beginPath();
+      context.moveTo(left + size * 0.38, top + size * 0.5);
+      context.lineTo(left + size * 0.62, top + size * 0.5);
+      context.lineTo(left + size * 0.5, top + size * 0.84);
+      context.closePath();
+      context.fill();
       context.lineWidth = Math.max(1, size * 0.035);
       context.lineJoin = "round";
       context.beginPath();
@@ -480,6 +509,25 @@ function drawDecoration(
       context.closePath();
       context.moveTo(left + size * 0.18, top + size * 0.5);
       context.lineTo(left + size * 0.82, top + size * 0.5);
+      context.stroke();
+      // Specular X
+      context.strokeStyle = "#ffffff";
+      context.lineWidth = Math.max(1, size * 0.035);
+      context.lineCap = "round";
+      context.beginPath();
+      context.moveTo(left + size * 0.68, top + size * 0.28);
+      context.lineTo(left + size * 0.68, top + size * 0.42);
+      context.moveTo(left + size * 0.62, top + size * 0.35);
+      context.lineTo(left + size * 0.74, top + size * 0.35);
+      context.stroke();
+      // Small specular highlight
+      context.lineWidth = Math.max(1, size * 0.085);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.strokeStyle = definition.decorationColor;
+      context.beginPath();
+      context.moveTo(left + size * 0.18, top + size * 0.20);
+      context.lineTo(left + size * 0.18, top + size * 0.20);
       context.stroke();
       break;
     case TileDecorationStyle.Wood:
@@ -525,6 +573,14 @@ function drawDecoration(
       context.lineTo(left + size * 0.55, top + size * 0.74);
       context.stroke();
       break;
+    case TileDecorationStyle.SquareGrains: {
+      const grainSize = Math.max(1, size * 0.12);
+      context.fillRect(left + size * 0.26, top + size * 0.32, grainSize, grainSize);
+      context.fillRect(left + size * 0.57, top + size * 0.24, grainSize, grainSize);
+      context.fillRect(left + size * 0.42, top + size * 0.52, grainSize, grainSize);
+      context.fillRect(left + size * 0.62, top + size * 0.66, grainSize, grainSize);
+      break;
+    }
     case TileDecorationStyle.Grains: {
       const grainRadius = Math.max(1, size * 0.05);
       context.beginPath();
