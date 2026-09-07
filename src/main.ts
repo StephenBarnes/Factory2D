@@ -63,6 +63,7 @@ import { TextBoxTool } from "./ui/text-box-tool";
 import { populateComponentPalette } from "./ui/component-palette";
 import { initializeTheme } from "./ui/theme";
 import { initializeBevelSetting } from "./ui/bevel-setting";
+import { WorkshopSounds } from "./ui/workshop-sounds";
 import { initializePaletteResize } from "./ui/palette-resize";
 
 const MAX_AUTOMATIC_ANIMATION_MS = 250;
@@ -101,6 +102,7 @@ const theme = initializeTheme(
   requiredElement<HTMLButtonElement>("workshop-theme-button"),
 );
 initializeBevelSetting(requiredElement<HTMLButtonElement>("bevels-button"), renderPalettePreviews);
+const sounds = new WorkshopSounds(requiredElement<HTMLButtonElement>("sounds-button"));
 const exportPlayerDataButton = requiredElement<HTMLButtonElement>("export-player-data-button");
 const importPlayerDataButton = requiredElement<HTMLButtonElement>("import-player-data-button");
 const importPlayerDataFile = requiredElement<HTMLInputElement>("import-player-data-file");
@@ -323,6 +325,7 @@ function commitTileSelection(): void {
   syncTileSelectionOverlay();
   if (result.changed) {
     commitEditedWorld();
+    sounds.edit("place");
   }
 }
 
@@ -432,6 +435,9 @@ function advanceSimulation(duration: number, startedAt = performance.now()): voi
   session.previousWorld.copyFrom(session.world);
   surface.simulation.step(duration > 0 ? session.previousWorld : undefined);
   signalTraces.sync(session.world, surface.simulation.tick);
+  if (session.previousWorld.puzzleResult !== PuzzleResult.Won && session.world.puzzleResult === PuzzleResult.Won) {
+    sounds.victory();
+  }
 
   animationStartedAt = startedAt;
   animationDuration = duration;
@@ -1029,6 +1035,7 @@ function editCellLine(
   let error = deltaX - deltaY;
   let changed = false;
   let previousX = x;
+  let tilesChanged = false;
   let previousY = y;
   let previousEditable = false;
   const orientation = orientationForKind(selectedKind, selectedOrientation);
@@ -1044,6 +1051,7 @@ function editCellLine(
       ) {
         surface.world.place(x, y, kind, orientation);
         changed = true;
+        tilesChanged = true;
       }
       if (weldPlacedTiles && kind !== TileKind.Empty) {
         changed = weldEligibleEditableNeighbors(x, y) || changed;
@@ -1085,6 +1093,7 @@ function editCellLine(
     }
   }
 
+  if (changed) sounds.edit(erase ? "remove" : tilesChanged ? "place" : "weld");
   return changed;
 }
 function openComponentConfiguration(cell: GridCell): void {
@@ -1178,11 +1187,13 @@ function adjustHoveredNumericComponent(delta: number): boolean {
 
 function editWeld(edge: GridEdge, erase: boolean): boolean {
   if (surface.session.editingState.editable && surface.selection.active) commitTileSelection();
-  return (
+  const changed = (
     surface.session.editingState.editable &&
     canEditEdge(edge.x1, edge.y1, edge.x2, edge.y2) &&
     surface.world.setWeld(edge.x1, edge.y1, edge.x2, edge.y2, !erase)
   );
+  if (changed) sounds.edit(erase ? "unweld" : "weld");
+  return changed;
 }
 
 function editWeldSegment(
@@ -1214,6 +1225,7 @@ function editWeldSegment(
       !erase,
     ) || changed;
   }
+  if (changed) sounds.edit(erase ? "unweld" : "weld");
   return changed;
 }
 const componentConfigurationView = new ComponentConfigurationDialog(
@@ -1302,7 +1314,10 @@ const puzzleTests = new PuzzleTestController(
       session.previousWorld.copyFrom(session.world);
       return session.previousWorld;
     },
-    afterStep: (world, tick) => signalTraces.sync(world, tick),
+    afterStep: (world, tick) => {
+      signalTraces.sync(world, tick);
+      if (world.puzzleResult === PuzzleResult.Won) sounds.victory();
+    },
     setStepAnimation: (startedAt, duration) => {
       animationStartedAt = startedAt;
       animationDuration = duration;
@@ -1697,6 +1712,7 @@ function deleteTileSelection(): void {
   refreshPointerHover();
   if (changed) {
     commitEditedWorld();
+    sounds.edit("remove");
   }
 }
 

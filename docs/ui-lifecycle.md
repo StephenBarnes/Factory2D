@@ -83,6 +83,8 @@ Settings includes a persisted Light Mode toggle, defaulting to dark. A sun/moon 
 
 Settings also includes Tile Bevels, enabled by default and persisted as `factory2d.bevels`. `src/ui/bevel-setting.ts` updates the shared rendering preference and refreshes previews after a successful save. This preference participates in the existing player-data export/import/clear behavior.
 
+Settings includes Sound Effects, enabled by default and persisted as `factory2d.sounds`, including in player-data export/import/clear. `src/ui/workshop-sounds.ts` lazily unlocks Web Audio on pointer/keyboard interaction and synthesizes short placement/removal and weld/unweld tones for accepted board-tool edits, plus selection placement/deletion feedback. Rapid edit feedback is rate-limited; rejected/no-op edits are silent. A three-note chime accompanies a newly triggered victory in sandbox/manual stepping and visible or fast puzzle testing. Muting silences even scheduled tones. Audio is browser-only, skips hidden pages, and never changes simulation state.
+
 `src/dev/diagnostic-snapshot.ts` exposes a development-only read-only snapshot of routes, tool/hover state, simulation, revisions, serialized boards, and nested view depth/dimensions. Use it with browser automation; Vite removes it from production.
 
 Focused model/controller tests live in `tests/` alongside subsystem names. Playwright cases in `e2e/` exercise persisted production-format fixtures, routing, edit/cancel behavior, nested arrays, successful/failed verification, downloads, and responsive layout. For lifecycle changes, check navigation away/back and reload as well as the immediate on-screen result.

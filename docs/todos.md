@@ -105,7 +105,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 # Game feel
 
 * Try out alternate easing for movements. Maybe define per-block easing.
-* Add sounds. On block placement/removal, welding/unwelding. On victory block triggering.
 * Add various animations for clicking buttons, placing blocks, starting a puzzle, etc.
 
 # UI
