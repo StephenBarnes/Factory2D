@@ -149,7 +149,9 @@ export function drawBody(
   }
 
   const bevel = Math.max(1.5, cellSize * BEVEL_RATIO);
-  context.lineWidth = bevel * 2;
+  // Cover the full diagonal offset, including curved corners. An axis-sized
+  // stroke radius leaves crescents of unlit tile fill along the outline.
+  context.lineWidth = bevel * 2 * Math.SQRT2;
   context.translate(bevel, bevel);
   context.strokeStyle = HIGHLIGHT_STYLE;
   context.stroke(bodyPath);

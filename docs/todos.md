@@ -142,7 +142,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 ## Specific block appearance changes
 
-* Currently all unwelded blocks have a brighter region in the bottom-left corner. I think this is because the curved bevel path has a slightly smaller radius, or extends slightly less far, to the bottom-right corner, allowing the main color to leak through in that corner. Same bug occurs in the bottom-right of a block if it has welded bottom and right neighbors / at bottom-right fillet corners. Same bug occurs in top-left corner as well, though with the highlight instead of shadow bevel. Bug doesn't occur in bottom-left or top-right corners. This is a subtle bug, only barely visible when zoomed in on 4k monitor.
 * DEFER Rework magnet artwork alongside the planned electromagnet mechanics.
 * DEFER For the rotator component, we should modify rendering to make behavior more obvious. Maybe draw as a welded block with only around a third of the width, on welded side, and then draw the rotator arm separately. Also mark red/blue on the sides of the base to show which charge rotates in which direction. Also animate the rotator arm itself turning (different from animating the bodies it rotated).
 
