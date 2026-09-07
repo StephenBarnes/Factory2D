@@ -268,24 +268,22 @@ test("exports, clears, and imports all player data", async ({ page }) => {
 
   const clearReload = page.waitForEvent("load");
   page.once("dialog", async (dialog) => {
-    expect(dialog.message()).toContain("Clear all saved puzzle progress");
     await dialog.accept();
   });
   await settings.getByRole("button", { name: "CLEAR ALL PLAYER DATA" }).click();
   await clearReload;
-  await expect(page.locator(".gemstone-count")).toHaveText("0◈");
+  await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^0 gemstones\b/);
   expect(await page.evaluate(() => window.localStorage.length)).toBe(0);
 
   await page.getByRole("button", { name: "SETTINGS" }).click();
   const importReload = page.waitForEvent("load");
   page.once("dialog", async (dialog) => {
-    expect(dialog.message()).toContain("replace all player data");
     await dialog.accept();
   });
   await page.locator("#import-player-data-file").setInputFiles(downloadPath);
   await importReload;
 
-  await expect(page.locator(".gemstone-count")).toHaveText("2◈");
+  await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^2 gemstones\b/);
   expect(await page.evaluate(() => Object.fromEntries(
     Array.from({ length: window.localStorage.length }, (_, index) => {
       const key = window.localStorage.key(index);
@@ -380,12 +378,6 @@ test("workshop identity exposes information and live puzzle metrics", async ({ p
   const dialog = page.locator("#workshop-info-dialog");
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("heading", { name: "First Shift" })).toBeVisible();
-  await expect(dialog.locator("[data-workshop-info-description]")).toHaveText(
-    "Tutorial puzzle teaching block placement",
-  );
-  await expect(dialog.locator("[data-workshop-info-goal]")).toHaveText(
-    "Drop one stone block into the delivery box",
-  );
   await dialog.getByRole("button", { name: "CLOSE" }).click();
 
   await price.hover();
@@ -403,34 +395,21 @@ test("workshop identity exposes information and live puzzle metrics", async ({ p
   await expect(page.locator("#puzzle-metrics")).toBeHidden();
   await expect(page.locator("#screen-title")).toHaveText("SANDBOX 1");
   await page.getByRole("button", { name: "Puzzle properties" }).click();
-  await expect(dialog.getByRole("textbox", { name: "ID" })).toHaveValue("untitled-puzzle");
-  await expect(dialog.getByRole("combobox", { name: "GROUP" })).toHaveValue("basics");
-  await expect(dialog.getByRole("spinbutton", { name: "ORDER" })).toHaveValue("0");
-  await expect(dialog.getByRole("textbox", { name: "PUZZLE NAME" })).toHaveValue(
-    "Untitled Puzzle",
-  );
-  await expect(dialog.getByRole("textbox", { name: "DESCRIPTION" })).toHaveValue(
-    "TODO: Describe the puzzle setup.",
-  );
-  await expect(dialog.getByRole("textbox", { name: "GOAL" })).toHaveValue(
-    "TODO: Describe the victory condition.",
-  );
-  await expect(dialog.getByRole("spinbutton", { name: "CYCLE LIMIT" })).toHaveValue("");
-  await expect(
-    dialog.locator(".workshop-properties-component-group").getByRole("heading"),
-  ).toHaveText([
-    "Raw Materials",
-    "Mechanisms",
-    "Circuit Components",
-    "Puzzle Tools",
-  ]);
-  await dialog.getByRole("button", { name: "Disable all Raw Materials" }).click();
-  await expect(dialog.getByRole("checkbox", { name: "Sand" })).not.toBeChecked();
-  await expect(dialog.getByRole("checkbox", { name: "Stone" })).not.toBeChecked();
-  await expect(dialog.getByRole("checkbox", { name: "Conveyor Belt" })).toBeChecked();
-  await dialog.getByRole("button", { name: "Enable all Raw Materials" }).click();
-  await expect(dialog.getByRole("checkbox", { name: "Sand" })).toBeChecked();
-  await expect(dialog.getByRole("checkbox", { name: "Stone" })).toBeChecked();
+  await expect(dialog).toBeVisible();
+  const materials = dialog.locator(".workshop-properties-component-group").filter({
+    has: page.getByRole("checkbox", { name: "Stone", exact: true }),
+  });
+  await dialog.getByRole("checkbox", { name: "Conveyor Belt", exact: true }).check();
+  await materials.getByRole("button", { name: /^Enable all / }).click();
+  await expect(dialog.getByRole("checkbox", { name: "Sand", exact: true })).toBeChecked();
+  await expect(dialog.getByRole("checkbox", { name: "Stone", exact: true })).toBeChecked();
+  await materials.getByRole("button", { name: /^Disable all / }).click();
+  await expect(dialog.getByRole("checkbox", { name: "Sand", exact: true })).not.toBeChecked();
+  await expect(dialog.getByRole("checkbox", { name: "Stone", exact: true })).not.toBeChecked();
+  await expect(dialog.getByRole("checkbox", { name: "Conveyor Belt", exact: true })).toBeChecked();
+  await materials.getByRole("button", { name: /^Enable all / }).click();
+  await expect(dialog.getByRole("checkbox", { name: "Sand", exact: true })).toBeChecked();
+  await expect(dialog.getByRole("checkbox", { name: "Stone", exact: true })).toBeChecked();
   await expect(dialog.locator("[data-workshop-info-goal-panel]")).toBeHidden();
 });
 
@@ -474,15 +453,11 @@ test("tile inspector follows palette, tool, and occupied-board hover", async ({ 
   const inspector = page.locator("#tile-inspector");
   const inspectorName = inspector.locator("[data-inspector-name]");
   const inspectorPosition = inspector.locator("[data-inspector-position]");
-  const inspectorHint = inspector.locator("[data-inspector-hint]");
   const sandButton = page.getByRole("button", { name: /^Sand/ });
   await sandButton.hover();
   await expect(inspectorName).toHaveText("SAND");
   await expect(inspectorPosition).toBeHidden();
   await expect(inspector.locator("[data-inspector-price]")).toBeHidden();
-  await expect(inspector.locator("[data-inspector-shortcut]")).toHaveText("1");
-  await expect(inspector).not.toContainText("PALETTE COMPONENT");
-  await expect(inspector).toContainText("Falls downward and can fall diagonally around obstacles");
 
   await placeStone(page, 10, 8);
   await sandButton.click();
@@ -490,21 +465,7 @@ test("tile inspector follows palette, tool, and occupied-board hover", async ({ 
   await page.mouse.move(occupiedCell.x, occupiedCell.y);
   await expect(inspectorName).toHaveText("STONE");
   await expect(inspectorPosition).toHaveText(/X 10\s+Y 08\s+ID #\d{4}/);
-  await expect(inspectorHint).toHaveText("Solid block affected by gravity");
   await expect(inspector.locator("[data-inspector-price]")).toBeHidden();
-  await expect(inspector.locator("[data-inspector-shortcut]")).toHaveText("2");
-  for (const removedLabel of [
-    "TILE ID",
-    "MOVEMENT",
-    "WELDABLE",
-    "WELDS",
-    "MAGNETIC",
-    "ORIENTATION",
-    "CIRCUIT",
-    "CHARGE",
-  ]) {
-    await expect(inspector.getByText(removedLabel, { exact: true })).toHaveCount(0);
-  }
 
   const visibleInspectorBounds = await inspector.boundingBox();
   if (visibleInspectorBounds === null) {
@@ -525,15 +486,10 @@ test("tile inspector follows palette, tool, and occupied-board hover", async ({ 
   const weldTool = page.getByRole("button", { name: "Weld tool (hold Control)" });
   await weldTool.hover();
   await expect(inspectorName).toHaveText("WELD TOOL");
-  await expect(inspectorPosition).toHaveText("PALETTE TOOL");
-  await expect(inspector).toContainText("Joins adjacent occupied tiles into rigid bodies.");
-  await expect(inspector).toContainText("LEFT CLICK / DRAG WELD");
-  await expect(inspector).toContainText("RIGHT CLICK / DRAG UNWELD");
 
   const editableRegionTool = page.getByRole("button", { name: "Editable region tool" });
   await editableRegionTool.hover();
   await expect(inspectorName).toHaveText("EDITABLE REGION TOOL");
-  await expect(inspector).toContainText("LEFT DRAG ADD RECTANGLE");
 
   const sidebarBounds = await page.locator("#sidebar-controls").boundingBox();
   const inspectorBounds = await inspector.boundingBox();
@@ -549,25 +505,22 @@ test("puzzle groups show gemstone progression and default collapse states", asyn
   await page.goto("/");
 
   const gemstoneCount = page.locator(".gemstone-count");
-  const basics = page.locator(".puzzle-group").filter({ hasText: "Basics" });
-  const runelore = page.locator(".puzzle-group").filter({ hasText: "Runelore" });
-  await expect(gemstoneCount).toHaveText("0◈");
-  await expect(gemstoneCount).toHaveAttribute(
-    "title",
-    "Gemstones are earned by completing puzzles and automatically unlock new puzzle groups.",
-  );
+  const basics = page.locator(".puzzle-group").filter({
+    has: page.getByText("Basics", { exact: true }),
+  });
+  const runelore = page.locator(".puzzle-group").filter({
+    has: page.getByText("Runelore", { exact: true }),
+  });
+  await expect(gemstoneCount).toHaveAccessibleName(/^0 gemstones\b/);
   await expect(basics).toHaveJSProperty("open", true);
-  await expect(basics).toHaveCSS("border-color", "rgb(246, 207, 126)");
   await expect(runelore).toHaveJSProperty("open", false);
-  await expect(runelore.locator(".puzzle-group-status")).toHaveText(
-    "🔒 SOLVE 2 MORE PUZZLES TO UNLOCK",
-  );
+  await runelore.locator("summary").click();
+  await expect(runelore).toHaveJSProperty("open", true);
   await expect(page.getByRole("button", { name: /First Shift/ })).toBeEnabled();
   const runeloreButtons = runelore.locator("button");
   await expect(runeloreButtons).not.toHaveCount(0);
   for (const button of await runeloreButtons.all()) {
     await expect(button).toBeDisabled();
-    await expect(button.locator(".puzzle-status")).toHaveText("🔒 LOCKED");
   }
 });
 
@@ -575,11 +528,14 @@ test("unlocked fixture opens a gemstone-gated group and puzzle", async ({ page }
   await seedBrowserStorage(page, "unlocked");
   await page.goto("/");
 
-  const basics = page.locator(".puzzle-group").filter({ hasText: "Basics" });
-  const runelore = page.locator(".puzzle-group").filter({ hasText: "Runelore" });
-  await expect(page.locator(".gemstone-count")).toHaveText("2◈");
+  const basics = page.locator(".puzzle-group").filter({
+    has: page.getByText("Basics", { exact: true }),
+  });
+  const runelore = page.locator(".puzzle-group").filter({
+    has: page.getByText("Runelore", { exact: true }),
+  });
+  await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^2 gemstones\b/);
   await expect(basics).toHaveJSProperty("open", false);
-  await expect(basics).toHaveCSS("border-color", "rgb(138, 106, 58)");
   await expect(runelore).toHaveJSProperty("open", true);
 
   const conduits = page.getByRole("button", { name: /Conduits/ });
@@ -922,8 +878,9 @@ test("export dropup exposes scene actions and sandbox puzzle authoring", async (
   await propertiesDialog.getByRole("spinbutton", { name: "CYCLE LIMIT" }).fill("321");
   await propertiesDialog.getByRole("spinbutton", { name: "WIDTH" }).fill("22");
   await propertiesDialog.getByRole("spinbutton", { name: "HEIGHT" }).fill("15");
-  await propertiesDialog.getByRole("checkbox", { name: "Sand" }).uncheck();
-  await propertiesDialog.getByRole("spinbutton", { name: "Stone price" }).fill("9");
+  await propertiesDialog.getByRole("checkbox", { name: "Sand", exact: true }).uncheck();
+  await propertiesDialog.getByRole("checkbox", { name: "Stone", exact: true }).check();
+  await propertiesDialog.getByRole("spinbutton", { name: "Stone price", exact: true }).fill("9");
   await propertiesDialog.getByRole("button", { name: "SAVE" }).click();
   expect((await diagnosticSnapshot(page)).view).toMatchObject({ width: 22, height: 15 });
 

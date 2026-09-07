@@ -18,6 +18,7 @@ export function populatePuzzleMap(container: HTMLElement, options: MainMenuOptio
 
   const gemstoneCount = document.createElement("p");
   gemstoneCount.className = "gemstone-count";
+  gemstoneCount.setAttribute("role", "img");
   gemstoneCount.title =
     "Gemstones are earned by completing puzzles and automatically unlock new puzzle groups.";
   gemstoneCount.setAttribute(
@@ -26,7 +27,7 @@ export function populatePuzzleMap(container: HTMLElement, options: MainMenuOptio
   );
   const gemstoneIcon = document.createElement("span");
   gemstoneIcon.ariaHidden = "true";
-  gemstoneIcon.textContent = "◈";
+  gemstoneIcon.textContent = " ◈";
   gemstoneCount.append(String(completedPuzzleCount), gemstoneIcon);
   fragment.append(gemstoneCount);
 
@@ -91,9 +92,9 @@ export function populatePuzzleMap(container: HTMLElement, options: MainMenuOptio
       const status = document.createElement("span");
       status.className = "puzzle-status";
       status.textContent = completed
-        ? "◆ COMPLETE"
+        ? "✓ COMPLETE"
         : puzzleUnlocked
-          ? "AVAILABLE"
+          ? "◆ AVAILABLE"
           : "🔒 LOCKED";
 
       button.append(number, name, status);

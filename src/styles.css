@@ -330,7 +330,7 @@ body:has(dialog[open]) .tool-cursor {
 
 .sandbox-node {
   position: relative;
-  width: min(680px, 100%);
+  width: 100%;
   min-height: 86px;
   margin-bottom: 20px;
   padding: 15px 17px;
@@ -342,6 +342,10 @@ body:has(dialog[open]) .tool-cursor {
   background: linear-gradient(90deg, var(--unlocked-wash), var(--panel-bg) 42%);
 }
 
+.sandbox-node .puzzle-details strong {
+  font-size: 1rem;
+}
+
 .sandbox-node:hover,
 .puzzle-node:hover:not(:disabled) {
   border-color: var(--gold);
@@ -351,6 +355,7 @@ body:has(dialog[open]) .tool-cursor {
 
 /* Gilded corner engravings on major panels. */
 .sandbox-node::after,
+.puzzle-group[data-state="unlocked"]::after,
 .puzzle-node[data-state="unlocked"]::after,
 .puzzle-brief::after,
 .solutions-panel::after,
@@ -404,6 +409,7 @@ body:has(dialog[open]) .tool-cursor {
 }
 
 .puzzle-group {
+  position: relative;
   width: 100%;
   border: 1px solid var(--gold-bright);
   background: var(--puzzle-group-bg);
@@ -428,7 +434,7 @@ body:has(dialog[open]) .tool-cursor {
   content: "▶";
   width: 12px;
   color: var(--gold);
-  font-size: 0.62rem;
+  font-size: 1rem;
   transition: transform 120ms ease;
 }
 
@@ -438,8 +444,8 @@ body:has(dialog[open]) .tool-cursor {
 }
 
 .puzzle-group-heading strong {
+  font-family: var(--font-mono);
   color: var(--text-bright);
-  font-size: 0.82rem;
   letter-spacing: 0.09em;
   text-transform: uppercase;
 }
@@ -447,7 +453,7 @@ body:has(dialog[open]) .tool-cursor {
 .puzzle-group-status {
   color: var(--gold);
   font-family: var(--font-mono);
-  font-size: 0.58rem;
+  font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.07em;
   text-align: right;
@@ -459,7 +465,7 @@ body:has(dialog[open]) .tool-cursor {
 }
 
 .puzzle-group[data-state="completed"] {
-  border-color: var(--bronze);
+  border-color: var(--border-strong);
 }
 
 .puzzle-group-list {
@@ -507,9 +513,13 @@ body:has(dialog[open]) .tool-cursor {
 .puzzle-details strong,
 .puzzle-name {
   color: var(--text-bright);
-  font-size: 0.76rem;
+  font-size: 0.85rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+}
+
+.puzzle-name {
+  overflow-wrap: anywhere;
 }
 
 .puzzle-details small {
@@ -522,7 +532,7 @@ body:has(dialog[open]) .tool-cursor {
 .puzzle-status {
   color: var(--gold);
   font-family: var(--font-mono);
-  font-size: 0.54rem;
+  font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-align: right;
@@ -540,14 +550,6 @@ body:has(dialog[open]) .tool-cursor {
   border-color: var(--bronze);
 }
 
-.main-menu-note {
-  margin: 26px 0 0;
-  color: var(--text-faint);
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.04em;
-}
-
 .main-menu-actions {
   margin-bottom: 32px;
   padding-right: 100px;
@@ -563,7 +565,7 @@ body:has(dialog[open]) .tool-cursor {
   color: var(--text-mid);
   background: var(--raised);
   font-family: var(--font-mono);
-  font-size: 0.61rem;
+  font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.06em;
 }
@@ -593,14 +595,15 @@ body:has(dialog[open]) .tool-cursor {
 }
 
 .info-back-button {
-  padding: 8px 0;
-  border: 0;
-  color: var(--text-muted);
-  background: transparent;
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
+  color: var(--text-bright);
+  font-family: var(--font-display);
+  font-size: 1.33rem;
   font-weight: 700;
   letter-spacing: 0.08em;
+  min-height: 36px;
+  padding: 0 13px;
+  border: 1px solid var(--border-strong);
+  background: var(--raised);
 }
 
 .info-back-button:hover {
@@ -2026,7 +2029,7 @@ kbd {
   color: var(--gold);
   background: var(--inset);
   font-family: var(--font-mono);
-  font-size: 0.62rem;
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0.16em;
 }

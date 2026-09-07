@@ -172,7 +172,7 @@ export class SignalPanel {
       y >= PANEL_PADDING && y < columnsBottom
       ? this.lines[lineIndex]
       : undefined;
-    this.elements.canvas.title = line?.label ?? "";
+    this.elements.canvas.title = line === undefined ? "" : line.label || displayLabel(line, lineIndex);
     this.setHoveredTileId(line?.id ?? null, line?.world ?? null);
   }
 
@@ -291,7 +291,17 @@ export class SignalPanel {
       context.textAlign = "left";
       context.textBaseline = "middle";
       context.fillStyle = line.kind === "monitor" ? MONITOR_LABEL_COLOR : GRAPHER_LABEL_COLOR;
-      context.fillText(displayLabel(line, lineIndex), 0, 0, HEADER_HEIGHT - 10);
+      const label = displayLabel(line, lineIndex);
+      const maxLabelWidth = HEADER_HEIGHT - 10;
+      let fittedLabel = label;
+      if (context.measureText(label).width > maxLabelWidth) {
+        let end = label.length;
+        while (end > 0 && context.measureText(`${label.slice(0, end)}…`).width > maxLabelWidth) {
+          end -= 1;
+        }
+        fittedLabel = `${label.slice(0, end)}…`;
+      }
+      context.fillText(fittedLabel, 0, 0);
       context.restore();
     }
 
@@ -351,5 +361,5 @@ function displayLabel(line: SignalLine, lineIndex: number): string {
   if (line.label !== "") {
     return line.label.toUpperCase();
   }
-  return `${line.kind === "monitor" ? "MON" : "ROM"} ${lineIndex + 1}`;
+  return `${line.kind === "monitor" ? "MONITOR" : "LORE"} ${lineIndex + 1}`;
 }

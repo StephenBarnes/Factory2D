@@ -11,24 +11,23 @@
       <section class="main-menu-screen" id="main-menu-screen" aria-labelledby="main-menu-title" hidden>
         <div class="main-menu-content">
           <nav class="main-menu-actions" aria-label="Game information">
-            <button id="settings-button" type="button">SETTINGS</button>
-            <button id="about-button" type="button">ABOUT</button>
+            <button id="settings-button" type="button"><span aria-hidden="true">⚙</span> SETTINGS</button>
+            <button id="about-button" type="button"><span aria-hidden="true">🛈</span> ABOUT</button>
           </nav>
           <header class="main-menu-header">
             <p class="eyebrow">DWARVEN ENGINEERING WORKS</p>
             <h1 id="main-menu-title">Factory 2D</h1>
             <p>Solve workshops to earn gemstones and unlock new puzzle groups.</p>
           </header>
+          <nav class="puzzle-map" id="puzzle-map" aria-label="Puzzle groups"></nav>
           <button class="sandbox-node" id="sandbox-button" type="button">
-            <span class="puzzle-number">∞</span>
+            <span class="puzzle-number" aria-hidden="true">⋈</span>
             <span class="puzzle-details">
               <strong>Sandbox</strong>
               <small>Build freely with every available component.</small>
             </span>
-            <span class="puzzle-status">ALWAYS AVAILABLE</span>
+            <span class="puzzle-status">AVAILABLE</span>
           </button>
-          <nav class="puzzle-map" id="puzzle-map" aria-label="Puzzle groups"></nav>
-          <p class="main-menu-note">Select an available puzzle to review its briefing and saved solutions.</p>
         </div>
       </section>
 
@@ -394,9 +393,8 @@
       </section>
       <dialog class="main-menu-dialog" id="settings-dialog" aria-labelledby="settings-title">
         <form method="dialog">
-          <div class="main-menu-dialog-status">SETTINGS</div>
+          <div class="main-menu-dialog-status" id="settings-title">SETTINGS</div>
           <div class="main-menu-dialog-content settings-dialog-content">
-            <h2 id="settings-title">SETTINGS</h2>
             <section class="settings-section" aria-labelledby="appearance-title">
               <h3 id="appearance-title">APPEARANCE</h3>
               <div class="settings-action-row">
@@ -453,7 +451,7 @@
                 If you enjoy building machines here, we recommend both games.</p>
             </section>
             <section aria-labelledby="about-technology-title">
-              <h3 id="about-technology-title">Under the hood</h3>
+              <h3 id="about-technology-title">Technical details</h3>
               <p>Built in TypeScript with plain HTML and CSS, without a UI framework. Canvas 2D draws the board and its procedural tiles; Vite builds the browser application.</p>
               <p>The simulation advances in deterministic, discrete ticks: components observe the board, competing actions are resolved, and changes commit together. Welded tiles move as rigid bodies, while signed-ternary circuits carry negative, neutral, or positive charge. Animation draws between committed states.</p>
               <p>Browser storage keeps your designs and progress locally.</p>

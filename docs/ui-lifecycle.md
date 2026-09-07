@@ -53,6 +53,8 @@ The session world, simulation, baseline, and previous world stay root-level even
 
 `src/game/signal-traces.ts` records every monitor in the root and recursively nested arrays once per committed tick, keyed by its containing array-ID path plus stable tile ID. Histories follow moved arrays without colliding with equal IDs in other boards. Every step path, including fast-forward via `afterStep`, must notify it; missing ticks throw. History restarts on world replacement, backward ticks, or tick-zero edits, including inner-board-only edits. `signal-panel.ts` displays monitor history and complete ROM/checker contents in depth-first row-major order; nested labels identify the array-ID path, with full labels available on hover. Hover highlights a component only when its owning board is displayed. Ordinary checker alignment uses the first active input tick, not latency assumed from tick zero. Ignore-zero checkers instead show sequence positions starting at row zero, with a “(pulses)” label: unknown gaps cannot be mapped to future ticks. Trace history and checker start ticks are display-only.
 
+Automatic trace labels distinguish monitors (`MONITOR`) from lore graphers (`LORE`); nested labels prefix the containing array-ID path with `#`. Panel headers ellipsize overlong labels instead of compressing the glyphs, and hover titles retain the full configured or automatic label.
+
 ## Puzzles, authoring, and completion
 
 * `puzzles.ts` loads shipped JSON from `src/game/puzzles/` through `puzzle-format.ts`. Registry order follows `puzzle-groups.ts`, then numeric puzzle order and ID. Groups unlock by gemstones; completions reveal further puzzles within a group.

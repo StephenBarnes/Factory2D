@@ -158,13 +158,13 @@ export class SignalTraceRecorder {
     }
     return {
       kind: "grapher", id, world,
-      label: this.lineLabel(path, label, `Grapher ${id}`),
+      label: this.lineLabel(path, label, `Lore ${id}`),
       values, firstRow, cursor,
     };
   }
 
   private lineLabel(path: string, label: string, fallback: string): string {
-    return path === "" ? label : `Array ${path.slice(0, -1)} · ${label || fallback}`;
+    return path === "" ? label : `#${path.slice(0, -1)} · ${label || fallback}`;
   }
 
   private nestedBoardsChanged(): boolean {
