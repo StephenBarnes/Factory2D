@@ -58,9 +58,11 @@ async function viewCellCenter(
 }
 
 async function hoverViewCell(page: Page, x: number, y: number): Promise<void> {
-  const center = await viewCellCenter(page, x, y);
-  await page.mouse.move(center.x, center.y);
-  await expect.poll(async () => (await diagnosticSnapshot(page)).hoveredCell).toEqual({ x, y });
+  await expect.poll(async () => {
+    const center = await viewCellCenter(page, x, y);
+    await page.mouse.move(center.x, center.y);
+    return (await diagnosticSnapshot(page)).hoveredCell;
+  }).toEqual({ x, y });
 }
 
 async function rootBoard(page: Page): Promise<NestedBoardJson> {

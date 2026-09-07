@@ -367,11 +367,12 @@ test("workshop identity exposes information and live puzzle metrics", async ({ p
   const controls = page.locator("#bottom-controls");
   const identity = controls.locator(".workshop-identity");
   const header = page.locator(".workshop-header");
-  const metrics = identity.locator("#puzzle-metrics");
+  const footprint = identity.locator("#puzzle-footprint");
   const price = identity.locator("#puzzle-price");
   const palette = page.locator("#component-palette");
   await expect(header.locator("#screen-title")).toHaveText("FIRST SHIFT");
-  await expect(metrics).toHaveText("0⚙ | 0×0");
+  await expect(price).toHaveText("0⚙");
+  await expect(footprint).toHaveText("0×0");
   await expect(page.locator("#screen-description")).toHaveCount(0);
 
   await header.getByRole("button", { name: "Workshop information" }).click();
@@ -388,7 +389,8 @@ test("workshop identity exposes information and live puzzle metrics", async ({ p
   ).toContain("1⚙");
 
   await placeStone(page, 8, 3);
-  await expect(metrics).toHaveText("1⚙ | 1×1");
+  await expect(price).toHaveText("1⚙");
+  await expect(footprint).toHaveText("1×1");
   await expect(palette).not.toHaveClass(/show-prices/);
 
   await openNewSandbox(page);
