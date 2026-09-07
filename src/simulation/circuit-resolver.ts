@@ -267,6 +267,17 @@ export class CircuitResolver {
           deliveryAbsorptionTargets[index],
           "delivery absorption target",
         ) >= 0 ? 1 : 0;
+      } else if (kind === TileKind.Comparer) {
+        const orientation = world.orientationAtIndex(index);
+        const front = neighborIndex(world, index, orientation);
+        const rear = neighborIndex(world, index, oppositeDirection(orientation));
+        const bodies = runtime.weldedBodies;
+        outputCharge = front >= 0 && rear >= 0 &&
+          world.kindAtIndex(front) !== TileKind.Empty &&
+          world.kindAtIndex(rear) !== TileKind.Empty &&
+          bodies.rootAt(front) !== bodies.rootAt(index) &&
+          bodies.rootAt(rear) !== bodies.rootAt(index) &&
+          bodies.matchesUnderTranslation(rear, front) ? 1 : 0;
       } else {
         continue;
       }

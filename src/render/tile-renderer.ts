@@ -806,6 +806,25 @@ function drawDecoration(
       context.restore();
       break;
     }
+    case TileDecorationStyle.Comparer: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.strokeStyle = definition.decorationColor;
+      context.lineWidth = Math.max(1.5, size * 0.045);
+      context.strokeRect(-size * 0.1, -size * 0.34, size * 0.2, size * 0.16);
+      context.strokeRect(-size * 0.1, size * 0.18, size * 0.2, size * 0.16);
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
+      context.lineCap = "round";
+      context.beginPath();
+      context.moveTo(-size * 0.15, -size * 0.06);
+      context.lineTo(size * 0.15, -size * 0.06);
+      context.moveTo(-size * 0.15, size * 0.06);
+      context.lineTo(size * 0.15, size * 0.06);
+      context.stroke();
+      context.restore();
+      break;
+    }
     case TileDecorationStyle.Delivery: {
       context.save();
       context.translate(left + size / 2, top + size / 2);

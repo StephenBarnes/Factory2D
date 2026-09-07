@@ -45,6 +45,7 @@ for (const kind of TILE_KINDS) {
     kind === TileKind.Spark ||
     kind === TileKind.Sensor ||
     kind === TileKind.Delivery ||
+    kind === TileKind.Comparer ||
     kind === TileKind.Welder ||
     kind === TileKind.Splitter ||
     kind === TileKind.Furnace
@@ -59,6 +60,9 @@ for (const kind of TILE_KINDS) {
   }
   if (kind === TileKind.Delivery) {
     mask |= 1 << WorldFeature.Delivery | 1 << WorldFeature.WeldedBodyObserver;
+  }
+  if (kind === TileKind.Comparer) {
+    mask |= 1 << WorldFeature.WeldedBodyObserver;
   }
   if (kind === TileKind.Duplicator) {
     mask |= 1 << WorldFeature.Duplicator | 1 << WorldFeature.WeldedBodyObserver;

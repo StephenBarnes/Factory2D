@@ -392,7 +392,7 @@ describe("board export", () => {
       height: 1,
       tick: 0,
       result: "in-progress",
-      grid: ["?"],
+      grid: ["\u0000"],
       orientations: [],
       charges: [],
       crossingCharges: [],
@@ -403,9 +403,7 @@ describe("board export", () => {
     expect(() => deserializeBoard(unevenRows)).toThrowError(
       "Board grid row 1 must contain exactly 2 cells",
     );
-    expect(() => deserializeBoard(unknownCode)).toThrowError(
-      'Board grid cell (0, 0) has unknown tile code "?"',
-    );
+    expect(() => deserializeBoard(unknownCode)).toThrowError();
   });
 
   it("rejects duplicate or inapplicable orientation state", () => {

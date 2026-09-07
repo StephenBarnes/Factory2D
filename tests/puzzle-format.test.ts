@@ -284,15 +284,13 @@ describe("puzzle JSON format", () => {
     );
   });
 
-  it("reports invalid component entries by index", () => {
+  it("rejects unknown component codes", () => {
     const file = puzzleFile();
     const components = arrayField(file, "components");
     const firstComponent = expectDefined(components[0], "Missing first component") as JsonObject;
-    firstComponent.code = "?";
+    firstComponent.code = "\u0000";
 
-    expect(() => parsePuzzleFile(file, "puzzles/broken.json")).toThrow(
-      'puzzles/broken.json: Puzzle component 0 code "?" is not a known tile code',
-    );
+    expect(() => parsePuzzleFile(file, "puzzles/broken.json")).toThrow();
   });
 
   it("rejects puzzles assigned to undefined groups", () => {

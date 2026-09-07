@@ -53,6 +53,7 @@ export const enum TileKind {
   CopperOre = 51,
   Copper = 52,
   Wood = 53,
+  Comparer = 54,
 }
 
 export const enum Direction {
@@ -115,6 +116,7 @@ export const enum TileDecorationStyle {
   Gem = 40,
   Wood = 41,
   SquareGrains = 42,
+  Comparer = 43,
 }
 
 export const enum PaletteCategory {
@@ -1062,6 +1064,29 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     attractionRange: 0,
     fill: "#66513d",
     decorationStyle: TileDecorationStyle.Delivery,
+    decorationColor: "#e8c987",
+  },
+  [TileKind.Comparer]: {
+    name: "Body Comparer",
+    boardCode: "?",
+    defaultPrice: 20,
+    palette: {
+      order: 35,
+      category: PaletteCategory.PuzzleTools,
+      description: "Outputs +1 sideways while the complete front and rear bodies match in kinds, orientations, and welds; ignores configuration and consumes nothing",
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Right | WeldSide.Left,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#635078",
+    decorationStyle: TileDecorationStyle.Comparer,
     decorationColor: "#e8c987",
   },
   [TileKind.Victory]: {
