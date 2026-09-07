@@ -222,7 +222,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 41,
       category: PaletteCategory.RawMaterials,
-      description: "Solid block affected by gravity",
+      description: "Solid block affected by gravity.",
       extendedDescription: ["Falls one cell per tick when unsupported. Weld it to neighboring blocks to build a rigid body; support any part of that body to hold it up."],
     },
     affectedByGravity: true,
@@ -246,7 +246,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 44,
       category: PaletteCategory.RawMaterials,
-      description: "Falls downward and can fall diagonally around obstacles",
+      description: "Falls downward and can fall diagonally around obstacles.",
       extendedDescription: ["Cannot be welded. Falls straight down first, then tries a downward diagonal around an obstacle. A furnace turns sand into glass after four active ticks."],
     },
     affectedByGravity: true,
@@ -270,7 +270,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 43,
       category: PaletteCategory.PuzzleTools,
-      description: "Fixed structural block not affected by gravity",
+      description: "Fixed structural block not affected by gravity.",
       extendedDescription: ["Anchors its entire welded body: it cannot fall or be pushed. Use it as a foundation or to brace a moving machine."],
     },
     affectedByGravity: false,
@@ -294,7 +294,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 3,
       category: PaletteCategory.Motion,
-      description: "Holds magnetic blocks on its pointed side",
+      description: "Holds magnetic blocks on its pointed side.",
       extendedDescription: ["Acts on the immediately adjacent magnetic block on its pointed side, holding the attached bodies against gravity. The pointed side cannot be welded. It needs no circuit charge."],
     },
     affectedByGravity: true,
@@ -318,7 +318,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 47,
       category: PaletteCategory.Metals,
-      description: "Magnetic structural block affected by gravity and smelted from iron ore",
+      description: "Magnetic structural block affected by gravity and smelted from iron ore.",
       extendedDescription: ["Lodestones can hold iron; ordinary nonmagnetic materials do not attach this way. Weld iron to a larger body to carry that body with it."],
     },
     affectedByGravity: true,
@@ -342,7 +342,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 9,
       category: PaletteCategory.CircuitBasic,
-      description: "Shares charge across welded circuit blocks",
+      description: "Shares charge across welded circuit blocks.",
       extendedDescription: ["Weld circuit ports together to form a network. Every connected channel shares the sign of the total driver charge: positive and negative drivers cancel, and an undriven network is neutral."],
     },
     affectedByGravity: true,
@@ -366,7 +366,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 10,
       category: PaletteCategory.CircuitBasic,
-      description: "Emits +1 when its pointed neighbor is occupied, except by glass",
+      description: "Emits +1 when its pointed neighbor is occupied, except by glass.",
       extendedDescription: ["Checks only the cell immediately ahead and outputs 0 when it is empty or glass. Glass is invisible, not transparent: the sensor does not look through it. The other three sides share the output."],
     },
     affectedByGravity: true,
@@ -390,7 +390,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 11,
       category: PaletteCategory.CircuitBasic,
-      description: "Emits +1 constantly into its welded circuit network",
+      description: "Emits +1 constantly into its welded circuit network.",
       extendedDescription: ["Connect it with welds to power a circuit. Multiple drivers combine by the sign of their sum, so an equal negative driver cancels this source."],
     },
     affectedByGravity: true,
@@ -414,7 +414,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 12,
       category: PaletteCategory.CircuitBasic,
-      description: "Emits +1 for the first simulation tick, then goes dark",
+      description: "Emits +1 for the first simulation tick, then goes dark.",
       extendedDescription: ["Use it to initialize a circuit or start a pulse sequence. Resetting the simulation lets it fire again; afterward it contributes 0 rather than holding +1."],
     },
     affectedByGravity: true,
@@ -438,7 +438,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 13,
       category: PaletteCategory.CircuitGates,
-      description: "Negates the sum of up to three isolated inputs",
+      description: "Negates the sum of up to three isolated inputs.",
       extendedDescription: ["Reads the three non-pointed sides independently, adds their previous-tick charges, and negates the sign of the sum. Equal positive and negative inputs produce 0. The pointed side is the output."],
     },
     affectedByGravity: true,
@@ -462,7 +462,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 14,
       category: PaletteCategory.CircuitGates,
-      description: "Sums up to three isolated inputs toward its output",
+      description: "Sums up to three isolated inputs toward its output.",
       extendedDescription: ["Reads the three non-pointed sides independently and outputs the sign of their sum one tick later. Positive and negative inputs cancel; disconnected inputs contribute 0."],
     },
     affectedByGravity: true,
@@ -486,7 +486,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 15,
       category: PaletteCategory.CircuitGates,
-      description: "Passes positive sums from up to three isolated inputs",
+      description: "Passes positive sums from up to three isolated inputs.",
       extendedDescription: ["Adds the previous-tick inputs on its three non-pointed sides. The pointed output is +1 only when the sum is positive; zero and negative sums output 0."],
     },
     affectedByGravity: true,
@@ -510,7 +510,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 16,
       category: PaletteCategory.CircuitGates,
-      description: "Multiplies up to three connected isolated inputs",
+      description: "Multiplies up to three connected isolated inputs.",
       extendedDescription: ["Multiplies connected previous-tick inputs and outputs toward the point. A connected 0 makes the product 0; disconnected sides are ignored. With no connected inputs it outputs +1."],
     },
     affectedByGravity: true,
@@ -534,7 +534,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 17,
       category: PaletteCategory.CircuitGates,
-      description: "Subtracts left and right inputs from the rear input",
+      description: "Subtracts left and right inputs from the rear input.",
       extendedDescription: ["The pointed output is the sign of rear minus left minus right, using previous-tick inputs. Missing inputs count as 0."],
     },
     affectedByGravity: true,
@@ -558,7 +558,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 18,
       category: PaletteCategory.CircuitBasic,
-      description: "Copies the front tile's charge to three isolated outputs; front welds are non-conductive",
+      description: "Copies the front tile's charge to three isolated outputs; front welds are non-conductive.",
       extendedDescription: ["Reads the immediate front neighbor without needing a front circuit weld. Its other three sides output that previous-tick charge without joining the sensed network. Empty space reads 0."],
     },
     affectedByGravity: true,
@@ -582,7 +582,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 19,
       category: PaletteCategory.CircuitGates,
-      description: "Selects the left or right input from the rear charge",
+      description: "Selects the left or right input from the rear charge.",
       extendedDescription: ["A previous-tick rear input of +1 selects the left input; -1 selects the right. Rear 0 outputs 0. The pointed side outputs the selected previous-tick value."],
     },
     affectedByGravity: true,
@@ -606,7 +606,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 20,
       category: PaletteCategory.CircuitGates,
-      description: "Outputs +1 when all connected isolated inputs are equal",
+      description: "Outputs +1 when all connected isolated inputs are equal.",
       extendedDescription: ["Compares only connected previous-tick inputs. All equal gives +1, otherwise 0; a connected neutral input participates. Zero or one connected input always gives +1."],
     },
     affectedByGravity: true,
@@ -630,7 +630,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 21,
       category: PaletteCategory.CircuitGates,
-      description: "Outputs the minimum charge among its connected isolated inputs",
+      description: "Outputs the minimum charge among its connected isolated inputs.",
       extendedDescription: ["The pointed output is the smallest connected previous-tick input: -1 before 0 before +1. Disconnected inputs are ignored; with none connected it outputs +1."],
     },
     affectedByGravity: true,
@@ -654,7 +654,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 22,
       category: PaletteCategory.CircuitGates,
-      description: "Outputs the maximum charge among its connected isolated inputs",
+      description: "Outputs the maximum charge among its connected isolated inputs.",
       extendedDescription: ["The pointed output is the largest connected previous-tick input: +1 before 0 before -1. Disconnected inputs are ignored; with none connected it outputs -1."],
     },
     affectedByGravity: true,
@@ -678,7 +678,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 23,
       category: PaletteCategory.CircuitBasic,
-      description: "Keeps horizontal and vertical conduits separate",
+      description: "Keeps horizontal and vertical conduits separate.",
       extendedDescription: ["Opposite sides share charge, but perpendicular sides never connect electrically. Mechanical welds still join the crossing to its neighbors as a rigid body."],
     },
     affectedByGravity: true,
@@ -702,7 +702,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 45,
       category: PaletteCategory.RawMaterials,
-      description: "Solid block baked from sand; invisible to sensor runes",
+      description: "Solid block baked from sand; invisible to sensor runes.",
       extendedDescription: ["Still collides, falls, and welds like a solid block. A sensor facing glass reports 0 and does not see a block beyond it. Glass does not currently shatter when dropped."],
     },
     affectedByGravity: true,
@@ -727,7 +727,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 46,
       category: PaletteCategory.Metals,
-      description: "Solid ore that a furnace smelts into iron",
+      description: "Solid ore that a furnace smelts into iron.",
       extendedDescription: ["A furnace facing the ore transforms it into iron after six active ticks. Iron is magnetic; unprocessed iron ore is not."],
     },
     affectedByGravity: true,
@@ -751,7 +751,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 40,
       category: PaletteCategory.RawMaterials,
-      description: "Solid dirt block affected by gravity; can be welded",
+      description: "Solid dirt block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
     affectedByGravity: true,
@@ -775,7 +775,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 51,
       category: PaletteCategory.Metals,
-      description: "Solid gold block affected by gravity; can be welded",
+      description: "Solid gold block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
     affectedByGravity: true,
@@ -799,7 +799,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 50,
       category: PaletteCategory.Metals,
-      description: "Solid silver block affected by gravity; can be welded",
+      description: "Solid silver block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
     affectedByGravity: true,
@@ -823,7 +823,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 53,
       category: PaletteCategory.Gemstones,
-      description: "Solid ruby block affected by gravity; can be welded",
+      description: "Solid ruby block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
     affectedByGravity: true,
@@ -847,7 +847,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 54,
       category: PaletteCategory.Gemstones,
-      description: "Solid sapphire block affected by gravity; can be welded",
+      description: "Solid sapphire block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
     affectedByGravity: true,
@@ -871,7 +871,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 55,
       category: PaletteCategory.Gemstones,
-      description: "Solid emerald block affected by gravity; can be welded",
+      description: "Solid emerald block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
     affectedByGravity: true,
@@ -895,7 +895,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 57,
       category: PaletteCategory.Gemstones,
-      description: "Solid diamond block affected by gravity; can be welded",
+      description: "Solid diamond block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
     affectedByGravity: true,
@@ -919,7 +919,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 56,
       category: PaletteCategory.Gemstones,
-      description: "Solid amethyst block affected by gravity; can be welded",
+      description: "Solid amethyst block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
     affectedByGravity: true,
@@ -943,7 +943,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 52,
       category: PaletteCategory.Metals,
-      description: "Solid mithril block affected by gravity; can be welded",
+      description: "Solid mithril block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
     affectedByGravity: true,
@@ -967,7 +967,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 48,
       category: PaletteCategory.Metals,
-      description: "Solid copper ore block affected by gravity; can be welded",
+      description: "Solid copper ore block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge.", "Copper ore has no furnace recipe yet."],
     },
     affectedByGravity: true,
@@ -991,7 +991,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 49,
       category: PaletteCategory.Metals,
-      description: "Solid copper block affected by gravity; can be welded",
+      description: "Solid copper block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
     affectedByGravity: true,
@@ -1015,7 +1015,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 42,
       category: PaletteCategory.RawMaterials,
-      description: "Solid wood block affected by gravity; can be welded",
+      description: "Solid wood block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
     affectedByGravity: true,
@@ -1039,7 +1039,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 7,
       category: PaletteCategory.Transformation,
-      description: "Bakes the block on its pointed side; linked side -1 pauses it; rear outputs +1 while baking",
+      description: "Bakes the block on its pointed side; linked side -1 pauses it; rear outputs +1 while baking.",
       extendedDescription: ["Sand becomes glass in four active ticks; iron ore becomes iron in six. A -1 on the shared side circuit pauses progress; 0 or +1 allows cooking.", "The isolated rear output is +1 on every active baking tick, including completion. Moving a different target in front resets progress."],
     },
     affectedByGravity: true,
@@ -1063,7 +1063,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 8,
       category: PaletteCategory.Motion,
-      description: "Charged roller: +1 clockwise, -1 counterclockwise, 0 stopped",
+      description: "Charged roller: +1 clockwise, -1 counterclockwise, 0 stopped.",
       extendedDescription: ["Moves unwelded neighbors tangentially and applies the opposite reaction to its own body. Gravity takes priority: brace the belt and support its load. Blocked motion can push other movable bodies, but not fixed terrain."],
     },
     affectedByGravity: true,
@@ -1087,7 +1087,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 24,
       category: PaletteCategory.PuzzleTools,
-      description: "Absorbs a front welded body exactly matching the body behind it and pulses +1 sideways",
+      description: "Absorbs a front welded body exactly matching the body behind it and pulses +1 sideways.",
       extendedDescription: ["Matches complete bodies by tile kinds, directional orientations, and weld layout, allowing translation but not rotation or reflection. Configuration does not affect the match.", "The rear body remains as the template. Bodies welded to the box do not match; competing consumption claims jam rather than consuming only part of a body."],
     },
     affectedByGravity: true,
@@ -1111,7 +1111,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 35,
       category: PaletteCategory.PuzzleTools,
-      description: "Outputs +1 sideways while the complete front and rear bodies match in kinds, orientations, and welds; ignores configuration and consumes nothing",
+      description: "Outputs +1 sideways while the complete front and rear bodies match in kinds, orientations, and welds; ignores configuration and consumes nothing.",
       extendedDescription: ["Uses the same translation-only body comparison as a delivery box. Both neighbors must exist and neither body may be welded to the comparer. A mismatch outputs 0; matching does not consume either body."],
     },
     affectedByGravity: true,
@@ -1135,7 +1135,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 25,
       category: PaletteCategory.PuzzleTools,
-      description: "Wins on +1 input or loses on -1 input; opposing inputs jam",
+      description: "Wins on +1 input or loses on -1 input; opposing inputs jam.",
       extendedDescription: ["The result latches once triggered. In a puzzle, manual steps do not record completion: the full test must succeed on every case. A victory block inside a rune array affects the whole puzzle."],
     },
     affectedByGravity: true,
@@ -1159,7 +1159,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 27,
       category: PaletteCategory.CircuitComplex,
-      description: "Delays the isolated rear input by a configurable number of ticks. Press E to configure",
+      description: "Delays the isolated rear input by a configurable number of ticks. Press E to configure.",
       extendedDescription: ["Each tick outputs the oldest queued value, then stores the rear input, including 0. The queue starts neutral. Configure its length with E to change the delay."],
     },
     affectedByGravity: true,
@@ -1183,7 +1183,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 28,
       category: PaletteCategory.CircuitComplex,
-      description: "Adds signed rear inputs and pulses with the wrap direction. Press E to configure",
+      description: "Adds signed rear inputs and pulses with the wrap direction. Press E to configure.",
       extendedDescription: ["Adds the rear charge to its stored count each tick. Crossing the configured threshold wraps the count and emits +1; wrapping backward emits -1. Other ticks output 0."],
     },
     affectedByGravity: true,
@@ -1207,7 +1207,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 29,
       category: PaletteCategory.CircuitComplex,
-      description: "Read-only memory. Positive left/rear inputs move the 2D cursor away from their side; negative inputs reverse it. Outputs the selected value. Press E to configure",
+      description: "Read-only memory. Positive left/rear inputs move the 2D cursor away from their side; negative inputs reverse it. Outputs the selected value. Press E to configure.",
       extendedDescription: ["With the rune pointing up, +1 on the left moves right and +1 at the rear moves up; -1 reverses each movement. Both inputs can move the cursor in one tick, horizontally first.", "Horizontal movement wraps into the next or previous row; vertical movement wraps into the next or previous column. Passing the final cell wraps around the whole memory. Front and right output the value after movement. E edits the grid."],
     },
     affectedByGravity: true,
@@ -1231,7 +1231,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 30,
       category: PaletteCategory.Transformation,
-      description: "Welds both transverse edges of the block ahead; -1 side charge disables it",
+      description: "Welds both transverse edges of the block ahead; -1 side charge disables it.",
       extendedDescription: ["For an upward-facing welder, joins the left and right edges of the cell ahead when both adjacent tiles permit welds. Shared side -1 disables it; the isolated rear output pulses +1 only when a weld changes."],
     },
     affectedByGravity: true,
@@ -1255,7 +1255,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 31,
       category: PaletteCategory.Transformation,
-      description: "Splits both transverse edges of the block ahead; -1 side charge disables it",
+      description: "Splits both transverse edges of the block ahead; -1 side charge disables it.",
       extendedDescription: ["For an upward-facing splitter, removes the left and right welds of the cell ahead. Shared side -1 disables it; the isolated rear output pulses +1 only when a weld changes. Opposing weld and split commands on one edge jam."],
     },
     affectedByGravity: true,
@@ -1279,7 +1279,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 32,
       category: PaletteCategory.Transformation,
-      description: "Mirrors the welded body behind it across itself on +1 side charge",
+      description: "Mirrors the welded body behind it across itself on +1 side charge.",
       extendedDescription: ["Uses the previous-tick shared side charge. Every mirrored destination must be empty and inside the board; blocked or overlapping copies jam. Copies retain configuration and mirrored welds but get new tile IDs."],
     },
     affectedByGravity: true,
@@ -1303,7 +1303,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 36,
       category: PaletteCategory.CircuitComplex,
-      description: "Joins its welded circuit like a conduit and records that charge every tick on the signal panel. Press E to name its line",
+      description: "Joins its welded circuit like a conduit and records that charge every tick on the signal panel. Press E to name its line.",
       extendedDescription: ["Records committed tick values, not animation frames. E sets a label and category to group related traces. Moving a monitor preserves its trace; reset starts a new history."],
     },
     affectedByGravity: true,
@@ -1327,7 +1327,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 37,
       category: PaletteCategory.CircuitComplex,
-      description: "Shows every value of the ROM or sequence checker it points at on the signal panel, marking the cursor. Press E to name its line",
+      description: "Shows every value of the ROM or sequence checker it points at on the signal panel, marking the cursor. Press E to name its line.",
       extendedDescription: ["Displays the complete stored grid rather than a time history. Point it directly at a ROM or sequence checker. E sets a label and category; nested-array traces also appear in the main signal panel."],
     },
     affectedByGravity: true,
@@ -1351,7 +1351,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 38,
       category: PaletteCategory.PuzzleTools,
-      description: "Waits for the first nonzero rear input, then compares each input with its stored sequence: +1 after a complete match, -1 at the first mismatch. Press E to configure",
+      description: "Waits for the first nonzero rear input, then compares each input with its stored sequence: +1 after a complete match, -1 at the first mismatch. Press E to configure.",
       extendedDescription: ["Expected values are read left to right, row by row. After starting, neutral inputs also count unless Ignore zero inputs is enabled; that mode requires an entirely nonzero expected sequence.", "Success and failure latch until reset. E edits the sequence and zero-handling option."],
     },
     affectedByGravity: true,
@@ -1375,7 +1375,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 39,
       category: PaletteCategory.CircuitComplex,
-      description: "Holds a miniature board whose four edge-center cells connect to its sides with no delay. Press E to configure, Enter to open",
+      description: "Holds a miniature board whose four edge-center cells connect to its sides with no delay. Press E to configure, Enter to open.",
       extendedDescription: ["The inner board runs ordinary physics and circuits, including gravity. Its four edge-center cells connect to independent outer sides without an extra circuit tick.", "E configures an odd-sized board up to 15 by 15; Enter opens it. Arrays can contain arrays. Puzzle price includes inner components, while footprint counts the outer tile."],
     },
     affectedByGravity: true,
@@ -1399,7 +1399,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 33,
       category: PaletteCategory.Transformation,
-      description: "Consumes a welded body ahead that matches a recipe in any rotation, then emits the recipe's outputs one per tick behind it",
+      description: "Consumes a welded body ahead that matches a recipe in any rotation, then emits the recipe's outputs one per tick behind it.",
       extendedDescription: ["Consumes only a complete matching body. While outputs are queued it accepts no new recipe; a blocked rear cell pauses emission without discarding the queue. Products emerge unwelded."],
     },
     affectedByGravity: true,
@@ -1423,7 +1423,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 34,
       category: PaletteCategory.Motion,
-      description: "Turns its gripped body 90° with +1 clockwise or -1 counterclockwise rear input",
+      description: "Turns its gripped body 90° with +1 clockwise or -1 counterclockwise rear input.",
       extendedDescription: ["Grips ahead or to either side, never behind. A turn carries swept bodies and enclosed loose contents; fixed terrain, board boundaries, or competing turns jam the entire move. Orientations and welds turn with the body."],
     },
     affectedByGravity: true,
@@ -1447,7 +1447,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 26,
       category: PaletteCategory.Motion,
-      description: "Extends on +1 and retracts on -1; its pointed side is the arm head",
+      description: "Extends on +1 and retracts on -1; its pointed side is the arm head.",
       extendedDescription: ["Positive charge pushes forward; if the head is blocked, the base can recoil backward instead. Neutral holds the current extension. Negative charge retracts and pulls only a body welded to the head."],
     },
     affectedByGravity: true,

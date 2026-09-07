@@ -1429,7 +1429,7 @@ kbd {
   color: var(--gold-bright);
   background: var(--shortcut-bg);
   font-family: var(--font-mono);
-  font-size: 0.54rem;
+  font-size: 1.6rem;
   font-weight: 700;
   line-height: 1.2;
   pointer-events: none;
@@ -1792,7 +1792,7 @@ kbd {
   gap: 6px;
   color: var(--text-body);
   font-family: var(--font-mono);
-  font-size: clamp(1rem, 1.5vw, 1.25rem);
+  font-size: 1.6rem;
   font-weight: 700;
   white-space: nowrap;
 }
