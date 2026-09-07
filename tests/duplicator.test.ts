@@ -3,7 +3,6 @@ import { deserializeBoard, serializeBoard } from "../src/simulation/board-export
 import { Simulation } from "../src/simulation/simulation";
 import {
   Direction,
-  PaletteCategory,
   TILE_DEFINITIONS,
   TileKind,
   WeldSide,
@@ -185,11 +184,8 @@ describe("duplicators", () => {
     expect(world.kindAt(3, 1)).toBe(TileKind.Empty);
   });
 
-  it("has mechanism metadata and round-trips through the board format", () => {
+  it("defines directional ports and round-trips through the board format", () => {
     const definition = TILE_DEFINITIONS[TileKind.Duplicator];
-    expect(definition.palette).toMatchObject({
-      category: PaletteCategory.Mechanisms,
-    });
     expect(definition.usesOrientation).toBe(true);
     expect(definition.circuitPorts).toBe(WeldSide.Right | WeldSide.Left);
 

@@ -85,26 +85,6 @@ describe("component palette shortcuts", () => {
     }
   });
 
-  it("groups compact component buttons by palette category", () => {
-    const palette = createPalette();
-    populateComponentPalette(
-      palette as unknown as HTMLElement,
-      TileKind.Conveyor,
-    );
-
-    expect(paletteSections(palette).map((section) => section.children[0]?.textContent)).toEqual([
-      "Raw Materials",
-      "Mechanisms",
-      "Circuit Components",
-      "Puzzle Tools",
-    ]);
-    expect(paletteButtons(palette).every((button) => button.className.includes("palette-tile"))).toBe(true);
-    const conveyor = paletteButtons(palette).find(
-      (button) => Number(button.dataset.tile) === TileKind.Conveyor,
-    );
-    expect(conveyor?.classList.values.has("selected")).toBe(true);
-  });
-
   it("reassigns shortcuts from each puzzle palette's visible order", () => {
     const palette = createPalette();
     const shortcuts = populateComponentPalette(

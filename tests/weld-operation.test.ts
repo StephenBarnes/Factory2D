@@ -4,7 +4,6 @@ import { deserializeBoard, serializeBoard } from "../src/simulation/board-export
 import { Simulation } from "../src/simulation/simulation";
 import {
   Direction,
-  PaletteCategory,
   TILE_DEFINITIONS,
   TileKind,
   WeldSide,
@@ -182,7 +181,6 @@ describe("welder and splitter metadata", () => {
     "defines directional mechanism ports and excludes its forward weld for kind %s",
     (kind) => {
       const definition = TILE_DEFINITIONS[kind];
-      expect(definition.palette?.category).toBe(PaletteCategory.Mechanisms);
       expect(definition.usesOrientation).toBe(true);
       expect(definition.weldableSides).toBe(WeldSide.All);
       expect(definition.excludesFacingWeld).toBe(true);

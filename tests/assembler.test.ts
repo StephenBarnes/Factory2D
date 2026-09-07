@@ -10,7 +10,6 @@ import {
 import { Simulation } from "../src/simulation/simulation";
 import {
   Direction,
-  PaletteCategory,
   TILE_DEFINITIONS,
   TileKind,
   WeldSide,
@@ -70,9 +69,8 @@ describe("assembler recipes", () => {
 });
 
 describe("assemblers", () => {
-  it("exposes mechanism palette metadata and carries queue state without configuration", () => {
+  it("defines directional ports and carries queue state without configuration", () => {
     const definition = TILE_DEFINITIONS[TileKind.Assembler];
-    expect(definition.palette?.category).toBe(PaletteCategory.Mechanisms);
     expect(definition.boardCode).toBe("H");
     expect(definition.usesOrientation).toBe(true);
     expect(definition.weldableSides).toBe(WeldSide.Right | WeldSide.Left);

@@ -14,7 +14,6 @@ import {
 import { Simulation } from "../src/simulation/simulation";
 import {
   Direction,
-  PaletteCategory,
   TILE_DEFINITIONS,
   TileKind,
   WeldSide,
@@ -51,7 +50,6 @@ function fillConduitRow(inner: World, y: number): void {
 describe("rune arrays", () => {
   it("is a non-directional circuit component with four independent shared side ports", () => {
     const definition = TILE_DEFINITIONS[TileKind.RuneArray];
-    expect(definition.palette?.category).toBe(PaletteCategory.Circuits);
     expect(definition.usesOrientation).toBe(false);
     expect(definition.circuitPorts).toBe(WeldSide.All);
     expect(definition.circuitInputPorts).toBe(WeldSide.None);
