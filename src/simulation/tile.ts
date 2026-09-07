@@ -463,7 +463,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 14,
       category: PaletteCategory.CircuitGates,
       description: "Sums up to three isolated inputs toward its output",
-      extendedDescription: ["Reads the three non-pointed sides independently and outputs the sign of their sum one tick later. Positive and negative inputs cancel; disconnected inputs contribute 0.", "The table groups left and right inputs by their sum; columns give the rear input. Entries are the pointed output."],
+      extendedDescription: ["Reads the three non-pointed sides independently and outputs the sign of their sum one tick later. Positive and negative inputs cancel; disconnected inputs contribute 0."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,

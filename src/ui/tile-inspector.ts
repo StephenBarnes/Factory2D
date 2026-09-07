@@ -2,6 +2,7 @@ import { componentConfigurationForKind } from "../simulation/configurable-compon
 import { furnaceRecipeFor } from "../simulation/furnace";
 import {
   Direction,
+  PaletteCategory,
   TILE_DEFINITIONS,
   TileKind,
 } from "../simulation/tile";
@@ -61,27 +62,46 @@ function descriptionFor(kind: TileKind): string {
   throw new Error(`${definition.name} is missing inspector description metadata`);
 }
 
-function combinerTable(): HTMLTableElement {
+function twoInputGateOutput(kind: TileKind, input1: number, input2: number): number {
+  switch (kind) {
+    case TileKind.Inverter: return Math.sign(-input1 - input2);
+    case TileKind.Combiner: return Math.sign(input1 + input2);
+    case TileKind.Rectifier: return input1 + input2 > 0 ? 1 : 0;
+    case TileKind.Multiplier: return input1 * input2;
+    case TileKind.Subtractor: return Math.sign(input1 - input2);
+    case TileKind.Selector: return input1 === 1 ? input2 : 0;
+    case TileKind.Equality: return input1 === input2 ? 1 : 0;
+    case TileKind.Minimum: return Math.min(input1, input2);
+    case TileKind.Maximum: return Math.max(input1, input2);
+    default: throw new Error(`${TILE_DEFINITIONS[kind].name} is missing a gate truth table`);
+  }
+}
+
+function gateTruthTable(kind: TileKind): HTMLTableElement {
   const table = document.createElement("table");
   table.className = "inspector-truth-table";
   const caption = table.createCaption();
-  caption.textContent = "Combiner: sign(left + right + rear)";
+  caption.textContent = kind === TileKind.Selector
+    ? "Input 1: rear control; input 2: left signal. Right disconnected (0)."
+    : kind === TileKind.Subtractor
+      ? "Input 1: rear; input 2: left. Right disconnected (0)."
+      : "Two connected inputs; third input disconnected.";
   const header = table.createTHead().insertRow();
-  for (const label of ["L + R", "Rear −1", "Rear 0", "Rear +1"]) {
+  for (const label of ["2 ↓ / 1 →", "−1", "0", "+1"]) {
     const cell = document.createElement("th");
     cell.scope = "col";
     cell.textContent = label;
     header.append(cell);
   }
   const body = table.createTBody();
-  for (let sum = -2; sum <= 2; sum += 1) {
+  for (let input2 = -1; input2 <= 1; input2 += 1) {
     const row = body.insertRow();
     const heading = document.createElement("th");
     heading.scope = "row";
-    heading.textContent = sum > 0 ? `+${sum}` : String(sum);
+    heading.textContent = input2 > 0 ? "+1" : String(input2);
     row.append(heading);
-    for (let rear = -1; rear <= 1; rear += 1) {
-      const output = Math.sign(sum + rear);
+    for (let input1 = -1; input1 <= 1; input1 += 1) {
+      const output = twoInputGateOutput(kind, input1, input2);
       const cell = row.insertCell();
       cell.textContent = output > 0 ? "+1" : String(output);
       cell.dataset.charge = String(output);
@@ -186,8 +206,8 @@ export class TileInspector {
       paragraph.textContent = text;
       return paragraph;
     }));
-    if (kind === TileKind.Combiner) {
-      this.paletteDescription.append(combinerTable());
+    if (palette.category === PaletteCategory.CircuitGates) {
+      this.paletteDescription.append(gateTruthTable(kind));
     }
   }
 
