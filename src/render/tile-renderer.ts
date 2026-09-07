@@ -14,6 +14,7 @@ import {
   TileKind,
 } from "../simulation/tile";
 import { expectDefined } from "../util/assert";
+import { tileAppearance } from "./appearance";
 
 /** One cell of a rendered body, in grid coordinates. */
 export interface BodyCell {
@@ -148,14 +149,16 @@ export function drawBody(
     );
   }
 
-  const bevel = Math.max(1.5, cellSize * BEVEL_RATIO);
-  context.lineWidth = bevel * 2;
-  context.translate(bevel - 0.2, bevel - 0.2); // Ad-hoc manually tuned -0.2 to reduce corner artifacts
-  context.strokeStyle = HIGHLIGHT_STYLE;
-  context.stroke(bodyPath);
-  context.translate(-2 * bevel + 0.5, -2 * bevel + 0.5); // Same with +0.5
-  context.strokeStyle = SHADE_STYLE;
-  context.stroke(bodyPath);
+  if (tileAppearance.bevels) {
+    const bevel = Math.max(1.5, cellSize * BEVEL_RATIO);
+    context.lineWidth = bevel * 2;
+    context.translate(bevel - 0.2, bevel - 0.2); // Ad-hoc manually tuned -0.2 to reduce corner artifacts
+    context.strokeStyle = HIGHLIGHT_STYLE;
+    context.stroke(bodyPath);
+    context.translate(-2 * bevel + 0.5, -2 * bevel + 0.5); // Same with +0.5
+    context.strokeStyle = SHADE_STYLE;
+    context.stroke(bodyPath);
+  }
 
   context.restore();
 

@@ -1,3 +1,4 @@
+import { tileAppearance } from "../render/appearance";
 import { drawTile } from "../render/tile-renderer";
 import { Direction, orientationForKind, TileKind } from "../simulation/tile";
 import type { BuildTool } from "./canvas-interaction-controller";
@@ -45,7 +46,7 @@ export class ToolCursor {
   update(tool: BuildTool, kind: TileKind, orientation: Direction): void {
     const pixelRatio = window.devicePixelRatio || 1;
     const resolvedOrientation = orientationForKind(kind, orientation);
-    const key = `${tool}:${kind}:${resolvedOrientation}:${pixelRatio}`;
+    const key = `${tool}:${kind}:${resolvedOrientation}:${pixelRatio}:${tileAppearance.bevels}`;
     if (key === this.drawnKey) return;
     this.drawnKey = key;
     this.element.dataset.tool = tool;

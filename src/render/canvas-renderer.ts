@@ -18,6 +18,7 @@ import { WorldFeature } from "../simulation/world-features";
 import { expectDefined } from "../util/assert";
 import type { GridCell, GridEdge, GridPoint } from "./grid-drag";
 import { createBodyCell, populateBodyCell } from "./body-cells";
+import { tileAppearance } from "./appearance";
 import {
   type BodyCell,
   createBodyPath,
@@ -115,6 +116,7 @@ export class CanvasRenderer {
   private cachedWorldRevision = -1;
   private cachedWorldGeometryRevision = -1;
   private cachedCellSize = 0;
+  private renderedBevels = tileAppearance.bevels;
   private readonly cachedBodies: Array<CachedBody | null> = [];
   private readonly freeCachedBodyIndices: number[] = [];
   private readonly cachedSelectionBodies: CachedBodyGeometry[] = [];
@@ -273,6 +275,10 @@ export class CanvasRenderer {
   }
 
   render(previousWorld: World | null = null, progress = 1, animationTime = 0, lightMode = false): void {
+    if (this.renderedBevels !== tileAppearance.bevels) {
+      this.renderedBevels = tileAppearance.bevels;
+      this.renderInvalidated = true;
+    }
     if (this.lightMode !== lightMode) {
       this.lightMode = lightMode;
       this.renderInvalidated = true;

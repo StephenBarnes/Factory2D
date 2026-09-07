@@ -80,6 +80,8 @@ Scene and puzzle JSON are deterministic/versioned and fully validated before rep
 
 Settings includes a persisted Light Mode toggle, defaulting to dark. A sun/moon button at the bottom-left of puzzle and sandbox workshops shares the same setting, with its icon and accessible label describing the next action. `src/ui/theme.ts` synchronizes both controls, applies `data-theme` on the document root, and stores `factory2d.theme`; the existing player-data export/import/clear includes this preference. `src/styles.css` owns both UI palettes and native-control color schemes. The active theme also controls the canvas surround, board background, grid lines, and outer board border; tile artwork and circuit signal colors remain unchanged.
 
+Settings also includes Tile Bevels, enabled by default and persisted as `factory2d.bevels`. `src/ui/bevel-setting.ts` updates the shared rendering preference and refreshes previews after a successful save. This preference participates in the existing player-data export/import/clear behavior.
+
 `src/dev/diagnostic-snapshot.ts` exposes a development-only read-only snapshot of routes, tool/hover state, simulation, revisions, serialized boards, and nested view depth/dimensions. Use it with browser automation; Vite removes it from production.
 
 Focused model/controller tests live in `tests/` alongside subsystem names. Playwright cases in `e2e/` exercise persisted production-format fixtures, routing, edit/cancel behavior, nested arrays, successful/failed verification, downloads, and responsive layout. For lifecycle changes, check navigation away/back and reload as well as the immediate on-screen result.

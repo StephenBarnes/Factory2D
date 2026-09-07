@@ -61,6 +61,7 @@ import { SignalTraceRecorder } from "./game/signal-traces";
 import { TextBoxTool } from "./ui/text-box-tool";
 import { populateComponentPalette } from "./ui/component-palette";
 import { initializeTheme } from "./ui/theme";
+import { initializeBevelSetting } from "./ui/bevel-setting";
 import { initializePaletteResize } from "./ui/palette-resize";
 
 const MAX_AUTOMATIC_ANIMATION_MS = 250;
@@ -98,6 +99,7 @@ const theme = initializeTheme(
   requiredElement<HTMLButtonElement>("light-theme-button"),
   requiredElement<HTMLButtonElement>("workshop-theme-button"),
 );
+initializeBevelSetting(requiredElement<HTMLButtonElement>("bevels-button"), renderPalettePreviews);
 const exportPlayerDataButton = requiredElement<HTMLButtonElement>("export-player-data-button");
 const importPlayerDataButton = requiredElement<HTMLButtonElement>("import-player-data-button");
 const importPlayerDataFile = requiredElement<HTMLInputElement>("import-player-data-file");

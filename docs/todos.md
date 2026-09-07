@@ -137,7 +137,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 # Visuals
 
 * Add backgrounds for puzzles, maybe with parallax as the player pans.
-* Add a settings option to turn off all bevels, for performance. It should basically just turn off the last section of `drawBody` in src/render/tile-renderer.ts:152.
 * Modify rendering LOD. Currently past some max zoom we draw solid-colored squares instead of the full block, though this fails to show welded vs unwelded gaps properly; could still be used when very zoomed out. Other options at various zoom levels: (1) turn off all bevels regardless of the setting; (2) turn off the in-tile decorations.
 * Improve border decorations and buttons. HTML and CSS from an online example have been placed in `temp/artdeco.txt`.
 
