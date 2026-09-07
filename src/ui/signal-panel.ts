@@ -54,11 +54,12 @@ export class SignalPanel {
   private pointerClientX: number | null = null;
   private pointerClientY = 0;
   private hoveredTileId: number | null = null;
+  private hoveredWorld: World | null = null;
 
   constructor(
     private readonly elements: SignalPanelElements,
     private readonly storage: Storage | null,
-    private readonly onHover: (tileId: number | null) => void = () => {},
+    private readonly onHover: (tileId: number | null, world: World | null) => void = () => {},
   ) {
     const context = elements.canvas.getContext("2d");
     if (context === null) {
@@ -167,22 +168,25 @@ export class SignalPanel {
       HEADER_HEIGHT + this.visibleRowCount() * ROW_HEIGHT,
     );
     const lineIndex = Math.floor((x - columnsLeft) / this.columnWidth(canvas.clientWidth));
-    const tileId = x >= columnsLeft && x < canvas.clientWidth - PANEL_PADDING &&
+    const line = x >= columnsLeft && x < canvas.clientWidth - PANEL_PADDING &&
       y >= PANEL_PADDING && y < columnsBottom
-      ? this.lines[lineIndex]?.id ?? null
-      : null;
-    this.setHoveredTileId(tileId);
+      ? this.lines[lineIndex]
+      : undefined;
+    this.elements.canvas.title = line?.label ?? "";
+    this.setHoveredTileId(line?.id ?? null, line?.world ?? null);
   }
 
   private clearHover(): void {
     this.pointerClientX = null;
-    this.setHoveredTileId(null);
+    this.elements.canvas.title = "";
+    this.setHoveredTileId(null, null);
   }
 
-  private setHoveredTileId(tileId: number | null): void {
-    if (tileId !== this.hoveredTileId) {
+  private setHoveredTileId(tileId: number | null, world: World | null): void {
+    if (tileId !== this.hoveredTileId || world !== this.hoveredWorld) {
       this.hoveredTileId = tileId;
-      this.onHover(tileId);
+      this.hoveredWorld = world;
+      this.onHover(tileId, world);
     }
   }
 

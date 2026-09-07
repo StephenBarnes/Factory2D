@@ -30,6 +30,7 @@ import { drawTile } from "./render/tile-renderer";
 import { componentConfigurationForKind } from "./simulation/configurable-components";
 import { serializeBoard } from "./simulation/board-export";
 import { PuzzleResult } from "./simulation/puzzle-result";
+import type { World } from "./simulation/world";
 import {
   directionX,
   directionY,
@@ -177,6 +178,7 @@ const exportSnippetsButton = requiredElement<HTMLButtonElement>("export-snippets
 const importSnippetsFile = requiredElement<HTMLInputElement>("import-snippets-file");
 const signalTraces = new SignalTraceRecorder();
 let hoveredSignalTileId: number | null = null;
+let hoveredSignalWorld: World | null = null;
 const signalPanel = new SignalPanel(
   {
     root: requiredElement<HTMLElement>("signal-panel"),
@@ -184,7 +186,10 @@ const signalPanel = new SignalPanel(
     toggleButton: requiredElement<HTMLButtonElement>("signal-panel-toggle"),
   },
   window.localStorage,
-  (tileId) => { hoveredSignalTileId = tileId; },
+  (tileId, world) => {
+    hoveredSignalTileId = tileId;
+    hoveredSignalWorld = world;
+  },
 );
 
 type InspectorTool = Exclude<BuildTool, "tile">;
@@ -2385,7 +2390,7 @@ function frame(currentTime: number): void {
   refreshTileInspector();
   signalTraces.sync(surface.session.world, surface.simulation.tick);
   signalPanel.update(signalTraces, surface.session.world, surface.simulation.tick);
-  surface.renderer.setHighlightedTileId(surface.viewDepth === 0 ? hoveredSignalTileId : null);
+  surface.renderer.setHighlightedTileId(surface.world === hoveredSignalWorld ? hoveredSignalTileId : null);
   const animationProgress = easedAnimationProgress(currentTime);
   surface.renderer.render(
     animationDuration === 0 ? null : surface.previousWorld,

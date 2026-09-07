@@ -92,7 +92,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 ## Circuit component modifications
 
-* Show signal monitors placed inside rune arrays on the signal panel. `SignalTraceRecorder` and the panel only walk the root board today; nested monitors would need composite keys (array ID path plus inner tile ID) and a label showing which array they sit in.
 * For signal traces drawn in the signals panel, allow click and drag to reorder them. Probably store ordering on the signal monitor and ROM-grapher components, but hide that number - don't add a box to edit the number directly in the config modal. Only allow reordering inside each category, once categories are added.
 * For the signal monitor and ROM grapher: in their configuration modals, add a text input for "category", defaulting to blank. Then on the signal panel, group each category together, instead of board row-major order. Show category names above the traces. Useful for grouping inputs vs outputs.
 * Sequence checker follow-ups: the expected sequence must begin with a nonzero value because the checker starts on the player's first nonzero output, so the "bursts" rectifier-puzzle case cannot verify silence during its leading negative burst. Consider an optional arm/start input port, or an explicit "expect silence for N ticks before the first value" configuration, if a puzzle needs it. Also consider a configurable maximum latency that fails a solution outright instead of relying on the cycle limit. DEFER until a puzzle actually needs this.

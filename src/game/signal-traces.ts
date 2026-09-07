@@ -1,12 +1,14 @@
 import type { Charge } from "../simulation/circuit";
 import { Direction, directionX, directionY, TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
+import { WorldFeature } from "../simulation/world-features";
 import { expectDefined } from "../util/assert";
 
 /** One recorded signal-monitor column: `charges[i]` is the charge observed at tick `firstTick + i`. */
 export interface MonitorSignalLine {
   readonly kind: "monitor";
   readonly id: number;
+  readonly world: World;
   readonly label: string;
   readonly firstTick: number;
   readonly charges: readonly Charge[];
@@ -21,6 +23,7 @@ export interface MonitorSignalLine {
 export interface GrapherSignalLine {
   readonly kind: "grapher";
   readonly id: number;
+  readonly world: World;
   readonly label: string;
   readonly values: readonly Charge[];
   readonly firstRow: number;
@@ -36,7 +39,7 @@ interface MonitorHistory {
 }
 
 /**
- * Records every signal monitor's charge once per committed tick, keyed by stable tile ID.
+ * Records every signal monitor once per committed tick, keyed by array-ID path and tile ID.
  *
  * Histories are display state only: they never feed back into simulation. `sync` must be
  * called after every simulation step and at least once per rendered frame; it resets itself
@@ -48,9 +51,10 @@ export class SignalTraceRecorder {
   private tick = -1;
   private revision = -1;
   private versionValue = 0;
-  private readonly histories = new Map<number, MonitorHistory>();
-  /** Tick whose input first started each checker, keyed by stable tile ID. */
-  private readonly checkerStartTicks = new Map<number, number>();
+  private readonly histories = new Map<string, MonitorHistory>();
+  /** Tick whose input first started each checker, keyed by array-ID path and tile ID. */
+  private readonly checkerStartTicks = new Map<string, number>();
+  private readonly boardRevisions = new Map<World, number>();
 
   /** Increments whenever recorded histories change, so panels can cache derived lines. */
   get version(): number {
@@ -66,8 +70,14 @@ export class SignalTraceRecorder {
       return;
     }
     if (tick === this.tick) {
-      if (tick === 0 && world.revision !== this.revision) {
-        this.reset(world, tick);
+      if (world.revision !== this.revision || this.nestedBoardsChanged()) {
+        if (tick === 0) {
+          this.reset(world, tick);
+        } else {
+          this.revision = world.revision;
+          this.captureBoardRevisions(world);
+          this.versionValue += 1;
+        }
       }
       return;
     }
@@ -79,17 +89,22 @@ export class SignalTraceRecorder {
     this.sample(world, tick);
   }
 
-  /** Builds the panel columns for every monitor and grapher on the board in row-major order. */
+  /** Builds row-major columns, descending into each array at its position on the board. */
   lines(world: World): SignalLine[] {
     if (world !== this.world) {
       throw new Error("Signal traces must be synchronized before reading lines");
     }
     const lines: SignalLine[] = [];
+    this.appendLines(world, "", lines);
+    return lines;
+  }
+
+  private appendLines(world: World, path: string, lines: SignalLine[]): void {
     for (let index = 0; index < world.cellCount; index += 1) {
       const kind = world.kindAtIndex(index);
       if (kind === TileKind.Monitor) {
         const id = world.idAtIndex(index);
-        const history = this.histories.get(id);
+        const history = this.histories.get(`${path}${id}`);
         const state = world.componentStateSnapshotAtIndex(index);
         if (state?.type !== "monitor") {
           throw new Error(`Signal monitor ${id} is missing its component state`);
@@ -97,18 +112,20 @@ export class SignalTraceRecorder {
         lines.push({
           kind: "monitor",
           id,
-          label: state.label,
+          world,
+          label: this.lineLabel(path, state.label, `Monitor ${id}`),
           firstTick: history?.firstTick ?? this.tick,
           charges: history?.charges ?? [],
         });
       } else if (kind === TileKind.Grapher) {
-        lines.push(this.grapherLine(world, index));
+        lines.push(this.grapherLine(world, index, path));
+      } else if (kind === TileKind.RuneArray) {
+        this.appendLines(world.runeArrayWorldAtIndex(index), `${path}${world.idAtIndex(index)}/`, lines);
       }
     }
-    return lines;
   }
 
-  private grapherLine(world: World, index: number): GrapherSignalLine {
+  private grapherLine(world: World, index: number, path: string): GrapherSignalLine {
     const id = world.idAtIndex(index);
     const state = world.componentStateSnapshotAtIndex(index);
     if (state?.type !== "grapher") {
@@ -135,11 +152,42 @@ export class SignalTraceRecorder {
           // Gaps have no fixed duration: show sequence positions, not predicted input ticks.
           label = `${label || "Sequence"} (pulses)`;
         } else if (target.type === "checker") {
-          firstRow = this.checkerStartTicks.get(world.idAtIndex(targetIndex)) ?? this.tick;
+          firstRow = this.checkerStartTicks.get(`${path}${world.idAtIndex(targetIndex)}`) ?? this.tick;
         }
       }
     }
-    return { kind: "grapher", id, label, values, firstRow, cursor };
+    return {
+      kind: "grapher", id, world,
+      label: this.lineLabel(path, label, `Grapher ${id}`),
+      values, firstRow, cursor,
+    };
+  }
+
+  private lineLabel(path: string, label: string, fallback: string): string {
+    return path === "" ? label : `Array ${path.slice(0, -1)} · ${label || fallback}`;
+  }
+
+  private nestedBoardsChanged(): boolean {
+    for (const [board, revision] of this.boardRevisions) {
+      if (board.revision !== revision) return true;
+    }
+    return false;
+  }
+
+  private captureBoardRevisions(world: World): void {
+    this.boardRevisions.clear();
+    this.visitBoardRevisions(world);
+  }
+
+  private visitBoardRevisions(world: World): void {
+    this.boardRevisions.set(world, world.revision);
+    for (
+      let index = world.firstFeatureIndex(WorldFeature.RuneArray);
+      index >= 0;
+      index = world.nextFeatureIndex(WorldFeature.RuneArray, index)
+    ) {
+      this.visitBoardRevisions(world.runeArrayWorldAtIndex(index));
+    }
   }
 
   private reset(world: World, tick: number): void {
@@ -152,16 +200,27 @@ export class SignalTraceRecorder {
   }
 
   private sample(world: World, tick: number): void {
+    this.boardRevisions.clear();
+    this.sampleBoard(world, tick, "");
+    this.versionValue += 1;
+  }
+
+  private sampleBoard(world: World, tick: number, path: string): void {
+    this.boardRevisions.set(world, world.revision);
     for (let index = 0; index < world.cellCount; index += 1) {
       const kind = world.kindAtIndex(index);
+      if (kind === TileKind.RuneArray) {
+        this.sampleBoard(world.runeArrayWorldAtIndex(index), tick, `${path}${world.idAtIndex(index)}/`);
+        continue;
+      }
       if (kind === TileKind.Checker) {
-        this.sampleChecker(world, index, tick);
+        this.sampleChecker(world, index, tick, path);
         continue;
       }
       if (kind !== TileKind.Monitor) {
         continue;
       }
-      const id = world.idAtIndex(index);
+      const id = `${path}${world.idAtIndex(index)}`;
       const charge = world.chargeAtPortIndex(index, Direction.Up);
       let history = this.histories.get(id);
       if (history === undefined) {
@@ -175,15 +234,14 @@ export class SignalTraceRecorder {
       }
       history.charges.push(charge);
     }
-    this.versionValue += 1;
   }
 
   /**
    * Remembers the row of the input that started a checker: the state committed at `tick`
    * consumed the charge recorded at `tick - 1`, so the expected sequence aligns with that row.
    */
-  private sampleChecker(world: World, index: number, tick: number): void {
-    const id = world.idAtIndex(index);
+  private sampleChecker(world: World, index: number, tick: number, path: string): void {
+    const id = `${path}${world.idAtIndex(index)}`;
     if (this.checkerStartTicks.has(id)) {
       return;
     }

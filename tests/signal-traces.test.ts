@@ -20,6 +20,62 @@ function createSparkMonitorWorld(): World {
 }
 
 describe("signal monitors", () => {
+  it("keeps recursive histories separate across overlapping IDs and moving arrays", () => {
+    const world = new World(3, 2);
+    world.place(0, 0, TileKind.RuneArray);
+    world.place(1, 0, TileKind.RuneArray);
+    const left = world.runeArrayWorldAt(0, 0);
+    const right = world.runeArrayWorldAt(1, 0);
+    left.place(3, 4, TileKind.RuneArray);
+    const deep = left.runeArrayWorldAt(3, 4);
+    for (const [board, source] of [
+      [left, TileKind.Spark], [right, TileKind.FixedCharge], [deep, TileKind.FixedCharge],
+    ] as const) {
+      board.place(0, 4, TileKind.Monitor);
+      board.place(1, 4, source);
+      board.setWeld(0, 4, 1, 4, true);
+      board.configureSignalLabel(0, 4, "OUT");
+    }
+    expect(right.idAt(0, 4)).toBe(deep.idAt(0, 4));
+    const recorder = new SignalTraceRecorder();
+    const simulation = new Simulation(world);
+    recorder.sync(world, 0);
+    for (let tick = 1; tick <= 2; tick += 1) {
+      simulation.step();
+      recorder.sync(world, tick);
+    }
+    expect(world.kindAt(0, 1)).toBe(TileKind.RuneArray);
+    const lines = recorder.lines(world);
+    expect(lines.map((line) => line.kind === "monitor" ? line.charges : [])).toEqual([
+      [0, 1, 0], [0, 1, 1], [0, 1, 1],
+    ]);
+    expect(new Set(lines.map((line) => line.label)).size).toBe(3);
+    expect(lines.map((line) => line.world)).toEqual([left, deep, right]);
+  });
+
+  it("refreshes nested-only edits and includes graphers from the inner board", () => {
+    const world = new World(1, 1);
+    world.place(0, 0, TileKind.RuneArray);
+    const inner = world.runeArrayWorldAt(0, 0);
+    const recorder = new SignalTraceRecorder();
+    recorder.sync(world, 0);
+    const version = recorder.version;
+    inner.place(0, 4, TileKind.Monitor);
+    inner.setCharge(0, 4, -1);
+    inner.place(1, 4, TileKind.Grapher, Direction.Right);
+    inner.place(2, 4, TileKind.Rom);
+    inner.configureTernaryGrid(2, 4, 2, 1, [1, -1]);
+    recorder.sync(world, 0);
+    expect(recorder.version).toBeGreaterThan(version);
+    expect(recorder.lines(world)).toMatchObject([
+      { kind: "monitor", charges: [-1] },
+      { kind: "grapher", values: [1, -1], cursor: 0 },
+    ]);
+    inner.configureSignalLabel(0, 4, "RENAMED");
+    recorder.sync(world, 0);
+    expect(recorder.lines(world)[0]?.label).toContain("RENAMED");
+  });
+
   it("shares a welded circuit network like a conduit", () => {
     const world = new World(3, 1);
     world.place(0, 0, TileKind.FixedCharge);
@@ -51,6 +107,7 @@ describe("signal monitors", () => {
       {
         kind: "monitor",
         id: world.idAt(1, 0),
+        world,
         label: "",
         firstTick: 0,
         charges: [0, 1, 0],
@@ -104,7 +161,7 @@ describe("signal monitors", () => {
     const other = createSparkMonitorWorld();
     recorder.sync(other, 5);
     expect(recorder.lines(other)).toEqual([
-      { kind: "monitor", id: other.idAt(1, 0), label: "", firstTick: 5, charges: [0] },
+      { kind: "monitor", id: other.idAt(1, 0), world: other, label: "", firstTick: 5, charges: [0] },
     ]);
     expect(() => recorder.lines(world)).toThrowError(
       "Signal traces must be synchronized before reading lines",
@@ -173,12 +230,13 @@ describe("ROM graphers", () => {
       {
         kind: "grapher",
         id: world.idAt(2, 0),
+        world,
         label: "expected",
         values: [1, -1, 0, 1],
         firstRow: 0,
         cursor: 0,
       },
-      { kind: "grapher", id: world.idAt(3, 0), label: "", values: [], firstRow: 0, cursor: -1 },
+      { kind: "grapher", id: world.idAt(3, 0), world, label: "", values: [], firstRow: 0, cursor: -1 },
     ]);
 
     simulation.step();
