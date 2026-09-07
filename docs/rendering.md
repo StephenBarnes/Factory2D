@@ -21,7 +21,7 @@ Sensor glyphs share an angular eye with a charge-colored diamond or lightning-bo
 * The canvas occupies the region left after the palette and bottom controls. Fit the whole grid centered in the actual canvas, including subpixel tile sizes for maximum-size boards. Workshop entry and scene import reset the fit.
 * Wheel zoom anchors under the pointer. Pan bounds keep the canvas center over the grid. Account for CSS size, backing-store density, pan, and zoom consistently in hit tests and drawing.
 * Body membership and `Path2D` outlines are cached by geometry revision and scale, with localized rebuilding after edits. Visual-only updates reuse paths. Detailed rendering culls offscreen cells; low-detail rendering batches work. Unchanged frames can be skipped, except ongoing animation such as active belts.
-* Palette and thumbnail backing stores are density-aware and supersampled. Palette previews redraw when display density/browser zoom changes.
+* Palette and thumbnail backing stores are density-aware and supersampled. Palette previews redraw when display density/browser zoom changes or the resizable sidebar changes size; component icons scale with sidebar width.
 * The UI passes its light-mode setting to each render, including the PNG export render. Theme changes invalidate the frame without rebuilding body geometry; the canvas surround, board fill, grid lines, and root border switch palettes. Tile artwork and signal colors stay unchanged, including in nested views.
 
 Do not rebuild body topology or allocate fresh paths every animation frame. Preserve the separation of geometry and visual revisions when adding visual state or invalidation.

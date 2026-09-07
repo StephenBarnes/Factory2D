@@ -967,11 +967,31 @@ canvas {
   grid-column: 1;
   grid-row: 1;
   --sidebar-padding: 17px;
+  container-type: inline-size;
+  min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   border-width: 0 1px 0 0;
+}
+
+.palette-resize-handle {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.palette-resize-handle:hover,
+.palette-resize-handle:focus-visible {
+  background: var(--gold);
+  outline: none;
 }
 
 .sidebar,
@@ -1221,18 +1241,18 @@ canvas {
 .palette-grid,
 .tool-palette {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(clamp(36px, 18cqw, 46px), 1fr));
   gap: 6px;
 }
 
 .tool-palette {
-  grid-template-columns: repeat(auto-fill, 48px);
+  grid-template-columns: repeat(auto-fill, clamp(38px, 18cqw, 48px));
 }
 
 .palette-item {
   position: relative;
   min-width: 0;
-  min-height: 46px;
+  min-height: clamp(36px, 18cqw, 46px);
   aspect-ratio: 1;
   padding: 4px;
   display: grid;
@@ -1265,7 +1285,7 @@ canvas {
 }
 
 .tile-preview {
-  width: 40px;
+  width: clamp(28px, 15cqw, 40px);
   max-width: 100%;
   height: auto;
   aspect-ratio: 1;
@@ -1718,6 +1738,19 @@ kbd {
 
 #workshop-info-button {
   grid-column: 3;
+}
+
+@container (max-width: 240px) {
+  .workshop-header #screen-title {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  #workshop-info-button {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
 }
 
 .puzzle-metrics {

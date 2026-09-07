@@ -60,6 +60,7 @@ import { SignalTraceRecorder } from "./game/signal-traces";
 import { TextBoxTool } from "./ui/text-box-tool";
 import { populateComponentPalette } from "./ui/component-palette";
 import { initializeTheme } from "./ui/theme";
+import { initializePaletteResize } from "./ui/palette-resize";
 
 const MAX_AUTOMATIC_ANIMATION_MS = 250;
 const MANUAL_STEP_ANIMATION_MS = 200;
@@ -2373,4 +2374,10 @@ function frame(currentTime: number): void {
 
 updateTransportState();
 navigation.navigatePath(window.location.pathname);
+initializePaletteResize(
+  gameScreen,
+  sidebarControls,
+  requiredElement<HTMLElement>("palette-resize-handle"),
+  renderPalettePreviews,
+);
 requestAnimationFrame(frame);
