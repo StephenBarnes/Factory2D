@@ -54,6 +54,7 @@ export const enum TileKind {
   Copper = 52,
   Wood = 53,
   Comparer = 54,
+  LaserSplitter = 55,
 }
 
 export const enum Direction {
@@ -117,6 +118,7 @@ export const enum TileDecorationStyle {
   Wood = 41,
   SquareGrains = 42,
   Comparer = 43,
+  LaserSplitter = 44,
 }
 
 export const enum PaletteCategory {
@@ -1271,6 +1273,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#625669",
     decorationStyle: TileDecorationStyle.Splitter,
     decorationColor: "#e0b7ee",
+  },
+  [TileKind.LaserSplitter]: {
+    name: "Laser Splitter",
+    boardCode: "x",
+    defaultPrice: 20,
+    palette: {
+      order: 58,
+      category: PaletteCategory.Transformation,
+      description: "Cuts the left edge of every cell ahead, through blocks and gaps; -1 side charge disables it.",
+      extendedDescription: ["Cuts one straight line of welds to the board boundary. For an upward-facing laser splitter, cuts the left edge of every cell above it, starting with the cell immediately ahead; rotate to change the cutting side.", "The beam passes through blocks and empty cells without destroying tiles. Shared side -1 disables it; the isolated rear output pulses +1 only when at least one weld changes. Opposing welder commands jam only the contested edges."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: true,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Right | WeldSide.Down | WeldSide.Left,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.Down,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#58436c",
+    decorationStyle: TileDecorationStyle.LaserSplitter,
+    decorationColor: "#f3a1e5",
   },
   [TileKind.Duplicator]: {
     name: "Duplicator",

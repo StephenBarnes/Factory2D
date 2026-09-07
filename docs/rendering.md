@@ -18,6 +18,8 @@ The discernment rune marks its left input blue (+1 rear control) and right input
 
 Body comparers use a purple slab with front/rear outlined blocks and a charge-colored equals sign; the glyph rotates with the sideways circuit ports.
 
+Laser splitters use a violet slab and an offset forward arrow marking the local-left cutting side. Hover/placement previews draw the complete cutting line to the board boundary; the glyph and preview rotate together.
+
 Platforms use forest green; ROMs and graphers use jade/teal. Delay, counter, monitor, and array fills use sapphire/indigo, while fixed-charge/spark sources and sequence checkers use gold/amber. Channels and crossings retain neutral slate so wiring stays quieter than active components. These colors come from the shared tile metadata and are identical in both UI themes.
 
 Raw-material artwork uses colored rivets for metals and platforms, round grains for dirt and copper ore, grey square grains for iron ore, and curved grain with a knot for wood. Gemstones have cut-diamond outlines with bright/shaded facets and a white specular glint. All use the shared tile renderer, including palette and selection previews.

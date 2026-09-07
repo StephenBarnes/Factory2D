@@ -242,7 +242,7 @@ export class CircuitResolver {
         );
         continue;
       }
-      if (kind === TileKind.Welder || kind === TileKind.Splitter) {
+      if (kind === TileKind.Welder || kind === TileKind.Splitter || kind === TileKind.LaserSplitter) {
         const outputCharge = successfulWeldOperations[index] === 1 ? 1 : 0;
         runtime.nextIsolatedOutputCharges[index] = outputCharge;
         const orientation = world.orientationAtIndex(index);

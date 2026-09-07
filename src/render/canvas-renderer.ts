@@ -1550,6 +1550,7 @@ export class CanvasRenderer {
     switch (kind) {
       case TileKind.Welder:
       case TileKind.Splitter:
+      case TileKind.LaserSplitter:
         this.drawWeldOperationPreview(kind, orientation);
         break;
       case TileKind.Sensor:
@@ -1585,6 +1586,26 @@ export class CanvasRenderer {
     context.lineCap = "round";
     context.globalAlpha = 0.8;
     context.beginPath();
+    if (kind === TileKind.LaserSplitter) {
+      // Local left edge, from the front neighbor through the board boundary.
+      const leftSide = ((orientation + Direction.Left) & 3) as Direction;
+      const sideX = directionX(leftSide);
+      const sideY = directionY(leftSide);
+      if (
+        targetX + sideX >= 0 && targetX + sideX < this.world.width &&
+        targetY + sideY >= 0 && targetY + sideY < this.world.height
+      ) {
+        const startX = targetX + 0.5 + sideX / 2 - forwardX / 2;
+        const startY = targetY + 0.5 + sideY / 2 - forwardY / 2;
+        const endX = forwardX === 0 ? startX : forwardX > 0 ? this.world.width : 0;
+        const endY = forwardY === 0 ? startY : forwardY > 0 ? this.world.height : 0;
+        context.moveTo(this.originX + startX * cellSize, this.originY + startY * cellSize);
+        context.lineTo(this.originX + endX * cellSize, this.originY + endY * cellSize);
+      }
+      context.stroke();
+      context.restore();
+      return;
+    }
     // The operator changes the two transverse edges of its forward neighbor.
     for (let side = -1; side <= 1; side += 2) {
       const neighborX = targetX - forwardY * side;

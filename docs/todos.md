@@ -38,7 +38,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 * Assembler follow-ups: the recipe table is a placeholder (sensor pair, piston, lodestone, conduits) and needs real game recipes using the available copper and other materials. Consider mirrored inputs (maybe just adding a mirrored recipe), a side circuit pulse on consumption or emission like the delivery box, a side disable input, and per-recipe output welds.
 * Flipper: attaches to one block, then flips the entire connected/welded group of blocks around that line horizontally or vertically, if it would not collide/overlap other blocks. Similar to Kaizen game's rotation.
-* Laser splitter: splits everything in a single line, e.g. the left side of every block in its forward direction.
 * Add a press/stamper/crusher. Behaves similarly to the piston, but (1) if piston extension is blocked by another tile, and that tile can't be moved, it instead unwelds and destroys that tile; and (2) we have a list of recipes for transforming the tile that the extended arm touches, on extension.
 * Grinder blocks that process a block in front into a product block - exactly like the furnace, but with a distinct table of recipes and different appearance (and later animation and sound).
 * A drill/destroyer block that destroys the block in front of it.
@@ -61,8 +60,7 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Add a fragility flag to tile kinds, and set it to true for glass blocks. A fragile block with no welds that drops and then stops falling should be deleted (later animated with a shatter effect), unless it fell only one tile before stopping; would require storing additional data per fragile block. Most blocks won't be fragile so this is fine. Could create interesting puzzles like lowering blocks one tile at a time with pistons, or welding before dropping and then unwelding.
 * Add an indestructible flag. Blocks like crushers and drills should not be able to destroy these. Needed to prevent some exploits when solving puzzles, e.g. by drilling into the ground and activating the victory block.
 * Furnaces could have special behavior if said neighbor is surrounded by certain other neighbors. Add this to furnace recipes.
-* Furnaces could trigger a block to weld to neighbors after cooking it. Add to furnace recipes.
-* Furnaces could have stages, e.g. cookie dough -> cookie -> burnt cookie, creating timing challenges.
+* Furnaces could trigger a block to weld to neighbors with specific tile kinds after cooking it. Add to furnace recipes.
 * Modify the assembler to add reaction force: When it has a pending output, but no space to output, shift the assembler in its forwards direction, emitting the product out the back (at assembler's pre-movement position). Allow this motion to push other blocks that are in front of the assembler.
 * Modify the duplicator in the same way as assembler above - make it also attempt to push itself away from the output side, if it's trying to duplicate a single-tile body but there's something blocking the output. When duplicating multi-tile bodies, don't do this - require already empty space for the whole body.
 

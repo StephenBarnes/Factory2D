@@ -3,10 +3,11 @@ import { describe, expect, it } from "vitest";
 import { deserializeBoard, serializeBoard } from "../src/simulation/board-export";
 import { Simulation } from "../src/simulation/simulation";
 import {
+  directionX,
+  directionY,
+  oppositeDirection,
   Direction,
-  TILE_DEFINITIONS,
   TileKind,
-  WeldSide,
 } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
 
@@ -176,19 +177,98 @@ describe("welder and splitter operations", () => {
   });
 });
 
-describe("welder and splitter metadata", () => {
-  it.each([TileKind.Welder, TileKind.Splitter])(
-    "defines directional mechanism ports and excludes its forward weld for kind %s",
-    (kind) => {
-      const definition = TILE_DEFINITIONS[kind];
-      expect(definition.usesOrientation).toBe(true);
-      expect(definition.weldableSides).toBe(WeldSide.All);
-      expect(definition.excludesFacingWeld).toBe(true);
-      expect(definition.circuitPorts).toBe(
-        WeldSide.Right | WeldSide.Down | WeldSide.Left,
-      );
-      expect(definition.circuitOutputPorts).toBe(WeldSide.Down);
+describe("laser splitter operations", () => {
+  it.each([Direction.Up, Direction.Right, Direction.Down, Direction.Left])(
+    "cuts only local-left welds through gaps to the boundary facing %s",
+    (orientation) => {
+      const world = new World(9, 9);
+      const dx = directionX(orientation);
+      const dy = directionY(orientation);
+      const left = ((orientation + Direction.Left) & 3) as Direction;
+      const lx = directionX(left);
+      const ly = directionY(left);
+      world.place(4, 4, TileKind.LaserSplitter, orientation);
+      world.place(4 - dx, 4 - dy, TileKind.Platform);
+      world.setWeld(4, 4, 4 - dx, 4 - dy, true);
+      for (const distance of [1, 3, 4]) {
+        const x = 4 + dx * distance;
+        const y = 4 + dy * distance;
+        world.place(x, y, TileKind.Platform);
+        world.place(x + lx, y + ly, TileKind.Platform);
+        world.place(x - lx, y - ly, TileKind.Platform);
+        world.setWeld(x, y, x + lx, y + ly, true);
+        world.setWeld(x, y, x - lx, y - ly, true);
+      }
+      const simulation = new Simulation(world);
+      simulation.step();
+      for (const distance of [1, 3, 4]) {
+        const x = 4 + dx * distance;
+        const y = 4 + dy * distance;
+        expect(world.isWelded(x, y, x + lx, y + ly)).toBe(false);
+        expect(world.isWelded(x, y, x - lx, y - ly)).toBe(true);
+        expect(world.kindAt(x, y)).toBe(TileKind.Platform);
+      }
+      expect(world.isWelded(4, 4, 4 - dx, 4 - dy)).toBe(true);
+      expect(world.chargeAtPort(4, 4, oppositeDirection(orientation))).toBe(1);
+      simulation.step();
+      expect(world.chargeAtPort(4, 4, oppositeDirection(orientation))).toBe(0);
+    },
+  );
 
+  it("jams contested edges without blocking the rest of overlapping beams", () => {
+    const world = new World(5, 8);
+    for (const y of [0, 1]) {
+      world.place(2, y, TileKind.Platform);
+      world.place(3, y, TileKind.Platform);
+      world.setWeld(2, y, 3, y, true);
+    }
+    world.place(3, 2, TileKind.Welder, Direction.Up);
+    for (const y of [4, 6]) {
+      world.place(3, y, TileKind.LaserSplitter, Direction.Up);
+    }
+    for (const y of [2, 4, 6]) {
+      world.place(3, y + 1, TileKind.Platform);
+      world.setWeld(3, y, 3, y + 1, true);
+    }
+
+    const simulation = new Simulation(world);
+    simulation.step();
+    expect(world.isWelded(2, 0, 3, 0)).toBe(false);
+    expect(world.isWelded(2, 1, 3, 1)).toBe(true);
+    expect(world.chargeAtPort(3, 2, Direction.Down)).toBe(0);
+    expect(world.chargeAtPort(3, 4, Direction.Down)).toBe(1);
+    expect(world.chargeAtPort(3, 6, Direction.Down)).toBe(1);
+    simulation.step();
+    expect(world.chargeAtPort(3, 4, Direction.Down)).toBe(0);
+    expect(world.chargeAtPort(3, 6, Direction.Down)).toBe(0);
+  });
+
+  it("preserves independent disable and output charges on import, then resumes cutting", () => {
+    const world = new World(4, 4);
+    world.place(1, 0, TileKind.Platform);
+    world.place(2, 0, TileKind.Platform);
+    world.setWeld(1, 0, 2, 0, true);
+    world.place(2, 3, TileKind.LaserSplitter, Direction.Up);
+    world.setCharge(2, 3, -1);
+    world.setIsolatedOutputCharge(2, 3, 1);
+    const imported = deserializeBoard(serializeBoard(world, 0)).world;
+    expect(imported.chargeAtPort(2, 3, Direction.Left)).toBe(-1);
+    expect(imported.chargeAtPort(2, 3, Direction.Down)).toBe(1);
+
+    const simulation = new Simulation(imported);
+    simulation.step();
+    expect(imported.isWelded(1, 0, 2, 0)).toBe(true);
+    expect(imported.chargeAtPort(2, 3, Direction.Down)).toBe(0);
+    simulation.step();
+    expect(imported.isWelded(1, 0, 2, 0)).toBe(false);
+    expect(imported.chargeAtPort(2, 3, Direction.Down)).toBe(1);
+  });
+});
+
+describe("weld operator attachment", () => {
+  it.each([TileKind.Welder, TileKind.Splitter, TileKind.LaserSplitter])(
+    "allows rear attachment but not front attachment for kind %s",
+    (kind) => {
       const world = new World(3, 3);
       world.place(1, 1, kind, Direction.Right);
       world.place(2, 1, TileKind.Platform);

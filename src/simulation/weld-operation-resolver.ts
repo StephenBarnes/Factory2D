@@ -26,14 +26,12 @@ export class WeldOperationResolver {
   private readonly world: World;
   private readonly edgeIntents: Int8Array;
   private readonly changedEdges: Uint8Array;
-  private readonly operatorRequests: Int32Array;
   private readonly touchedEdgeWords: Uint32Array;
 
   constructor(world: World) {
     this.world = world;
     this.edgeIntents = new Int8Array(world.cellCount * 2);
     this.changedEdges = new Uint8Array(world.cellCount * 2);
-    this.operatorRequests = new Int32Array(world.cellCount * 2);
     this.touchedEdgeWords = new Uint32Array(Math.ceil(this.edgeIntents.length / 32));
     this.successfulOperationIndices = new Uint8Array(world.cellCount);
   }
@@ -53,27 +51,8 @@ export class WeldOperationResolver {
       index >= 0;
       index = this.world.nextFeatureIndex(WorldFeature.WeldOperator, index)
     ) {
-      this.operatorRequests[index * 2] = -1;
-      this.operatorRequests[index * 2 + 1] = -1;
       this.successfulOperationIndices[index] = 0;
-      const kind = this.world.kindAtIndex(index);
-
-      const orientation = this.world.orientationAtIndex(index);
-      const leftSide = ((orientation + Direction.Left) & 3) as Direction;
-      if (this.world.chargeAtPortIndex(index, leftSide) === -1) {
-        continue;
-      }
-
-      const target = this.neighborIndex(index, orientation);
-      if (target < 0 || this.world.kindAtIndex(target) === TileKind.Empty) {
-        continue;
-      }
-
-      const intent = kind === TileKind.Welder ? EdgeIntent.Weld : EdgeIntent.Split;
-      const firstSide = ((orientation + Direction.Right) & 3) as Direction;
-      const secondSide = ((orientation + Direction.Left) & 3) as Direction;
-      this.requestEdge(index, 0, target, firstSide, intent);
-      this.requestEdge(index, 1, target, secondSide, intent);
+      this.processOperatorEdges(index, true);
     }
 
     for (
@@ -102,20 +81,7 @@ export class WeldOperationResolver {
       index >= 0;
       index = this.world.nextFeatureIndex(WorldFeature.WeldOperator, index)
     ) {
-      const firstRequest = expectDefined(
-        this.operatorRequests[index * 2],
-        "first weld operation request",
-      );
-      const secondRequest = expectDefined(
-        this.operatorRequests[index * 2 + 1],
-        "second weld operation request",
-      );
-      if (
-        (firstRequest >= 0 && this.changedEdges[firstRequest] === 1) ||
-        (secondRequest >= 0 && this.changedEdges[secondRequest] === 1)
-      ) {
-        this.successfulOperationIndices[index] = 1;
-      }
+      this.processOperatorEdges(index, false);
     }
   }
 
@@ -145,19 +111,42 @@ export class WeldOperationResolver {
     }
   }
 
-  private requestEdge(
-    operatorIndex: number,
-    requestOffset: 0 | 1,
-    targetIndex: number,
-    direction: Direction,
-    intent: EdgeIntent.Weld | EdgeIntent.Split,
-  ): void {
-    const neighbor = this.neighborIndex(targetIndex, direction);
-    if (neighbor < 0) {
+  /** Visit the same start-of-tick edges for intent collection and pulse attribution. */
+  private processOperatorEdges(index: number, collecting: boolean): void {
+    const kind = this.world.kindAtIndex(index);
+    const orientation = this.world.orientationAtIndex(index);
+    const leftSide = ((orientation + Direction.Left) & 3) as Direction;
+    if (this.world.chargeAtPortIndex(index, leftSide) === -1) {
       return;
     }
-    const edge = this.edgeIndex(targetIndex, neighbor);
-    this.operatorRequests[operatorIndex * 2 + requestOffset] = edge;
+    const laser = kind === TileKind.LaserSplitter;
+    const intent = kind === TileKind.Welder ? EdgeIntent.Weld : EdgeIntent.Split;
+    let target = this.neighborIndex(index, orientation);
+    while (target >= 0) {
+      if (laser || this.world.kindAtIndex(target) !== TileKind.Empty) {
+        for (let side = 0; side < (laser ? 1 : 2); side += 1) {
+          const direction = ((leftSide + side * 2) & 3) as Direction;
+          const neighbor = this.neighborIndex(target, direction);
+          if (neighbor < 0) {
+            continue;
+          }
+          const edge = this.edgeIndex(target, neighbor);
+          if (collecting) {
+            this.requestEdge(edge, intent);
+          } else if (this.changedEdges[edge] === 1) {
+            this.successfulOperationIndices[index] = 1;
+            return;
+          }
+        }
+      }
+      if (!laser) {
+        return;
+      }
+      target = this.neighborIndex(target, orientation);
+    }
+  }
+
+  private requestEdge(edge: number, intent: EdgeIntent.Weld | EdgeIntent.Split): void {
     const existing = expectDefined(this.edgeIntents[edge], "existing weld operation intent");
     if (existing === EdgeIntent.None) {
       const word = edge >>> 5;
