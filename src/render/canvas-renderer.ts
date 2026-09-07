@@ -1513,6 +1513,11 @@ export class CanvasRenderer {
         this.drawWeldOperationPreview(kind, orientation);
         break;
       case TileKind.Sensor:
+      case TileKind.ChargeSensor:
+      case TileKind.Magnet:
+      case TileKind.Piston:
+      case TileKind.PistonBase:
+      case TileKind.Furnace:
         this.drawSensorObservation(orientation);
         break;
       case TileKind.Rotator:

@@ -449,7 +449,9 @@ function drawDecoration(
         orientation,
       ) |
         (definition.decorationStyle === TileDecorationStyle.WireCrossing ||
-            definition.decorationStyle === TileDecorationStyle.RuneArray
+            definition.decorationStyle === TileDecorationStyle.RuneArray ||
+            definition.decorationStyle === TileDecorationStyle.FixedCharge ||
+            definition.decorationStyle === TileDecorationStyle.Spark
           ? WeldSide.All
           : WeldSide.None)) as WeldSide,
       hasComponentDisplay ? 0.39 : 0.26,
@@ -798,19 +800,17 @@ function drawDecoration(
     case TileDecorationStyle.FixedCharge: {
       context.save();
       context.translate(left + size / 2, top + size / 2);
-      context.lineWidth = Math.max(1, size * 0.04);
-      context.lineCap = "round";
-      context.lineJoin = "round";
-      context.strokeStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
+      context.lineWidth = Math.max(1.5, size * 0.045);
+      context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
       context.beginPath();
-      for (let bolt = -1; bolt <= 1; bolt += 1) {
-        const x = bolt * size * 0.17;
-        context.moveTo(x + size * 0.04, -size * 0.2);
-        context.lineTo(x - size * 0.055, 0);
-        context.lineTo(x + size * 0.055, 0);
-        context.lineTo(x - size * 0.04, size * 0.2);
-      }
-      context.stroke();
+      context.moveTo(size * 0.04, -size * 0.24);
+      context.lineTo(-size * 0.15, size * 0.03);
+      context.lineTo(-size * 0.02, size * 0.03);
+      context.lineTo(-size * 0.06, size * 0.24);
+      context.lineTo(size * 0.16, -size * 0.06);
+      context.lineTo(size * 0.03, -size * 0.06);
+      context.closePath();
+      context.fill();
       context.restore();
       break;
     }
@@ -1495,7 +1495,7 @@ function drawCircuitConnections(
       if ((isolatedPorts & (1 << direction)) !== 0) {
         // Stop the rounded trace cap in the outward caret's tip, not behind its wings.
         const innerOffset = (outputArrowPorts & (1 << direction)) !== 0
-          ? Math.min(size / 2, size * 0.37 + context.lineWidth / 2) // 0.37 is manually tuned
+          ? Math.min(size / 2, size * 0.37 + context.lineWidth / 2)
           : size * innerOffsetRatio;
         context.moveTo(
           centerX + offsetX * size / 2,
