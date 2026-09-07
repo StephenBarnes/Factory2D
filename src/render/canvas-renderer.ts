@@ -143,6 +143,7 @@ export class CanvasRenderer {
   private renderedWorldRevision = -1;
   private renderedPreviousWorld: World | null = null;
   private renderedPreviousWorldRevision = -1;
+  private readonly previousRotatorDirections = new Map<number, Direction>();
   private renderedProgress = -1;
   private renderedNestedPortCharges = -1;
   private hasTimeDependentVisuals = false;
@@ -1062,6 +1063,24 @@ export class CanvasRenderer {
 
 
   private drawTiles(previousWorld: World | null, progress: number, animationTime: number): void {
+    if (
+      previousWorld !== this.renderedPreviousWorld ||
+      (previousWorld?.revision ?? -1) !== this.renderedPreviousWorldRevision
+    ) {
+      this.previousRotatorDirections.clear();
+      if (previousWorld !== null) {
+        for (
+          let index = previousWorld.firstFeatureIndex(WorldFeature.Rotator);
+          index >= 0;
+          index = previousWorld.nextFeatureIndex(WorldFeature.Rotator, index)
+        ) {
+          this.previousRotatorDirections.set(
+            previousWorld.idAtIndex(index),
+            previousWorld.rotatorDirectionAtIndex(index),
+          );
+        }
+      }
+    }
     if (this.cellSize < LOW_DETAIL_CELL_SIZE) {
       this.drawLowDetailTiles(previousWorld, progress);
       return;
@@ -1095,8 +1114,23 @@ export class CanvasRenderer {
         }
         cell.pistonTransition = 0;
         cell.pistonTransitionProgress = 1;
+        cell.rotatorTurnOffset = 0;
         if (previousWorld === null || remainingProgress <= 0) {
           continue;
+        }
+        if (cell.componentState?.type === "rotator") {
+          const previousDirection = this.previousRotatorDirections.get(
+            this.world.idAt(cell.x, cell.y),
+          );
+          if (previousDirection !== undefined) {
+            const direction = cell.componentState.direction;
+            let turn = ((direction - previousDirection + 6) % 4) - 2;
+            // Batched opposite-side grips pass through the front, never the rear input.
+            if (turn === -2 && previousDirection === ((cell.orientation + 3) & 3)) {
+              turn = 2;
+            }
+            cell.rotatorTurnOffset = -turn * remainingProgress;
+          }
         }
         const stepX = directionX(cell.orientation);
         const stepY = directionY(cell.orientation);

@@ -37,6 +37,8 @@ export interface BodyCell {
   /** Active piston transition: +1 extension, -1 retraction. */
   pistonTransition?: -1 | 0 | 1;
   pistonTransitionProgress?: number;
+  /** Render-only offset from the committed rotator grip, in quarter-turns. */
+  rotatorTurnOffset?: number;
 }
 
 export function setCircuitPortCharge(
@@ -151,6 +153,7 @@ export function drawBody(
         animationTime,
         cell.pistonTransition ?? 0,
         cell.pistonTransitionProgress ?? 1,
+        cell.rotatorTurnOffset ?? 0,
       );
     }
   }
@@ -423,6 +426,7 @@ function drawDecoration(
   animationTime: number,
   pistonTransition: -1 | 0 | 1,
   pistonTransitionProgress: number,
+  rotatorTurnOffset: number,
 ): void {
   if (circuitConnections !== WeldSide.None) {
     const hasComponentDisplay =
@@ -744,7 +748,7 @@ function drawDecoration(
         : orientation;
       context.save();
       context.translate(left + size / 2, top + size / 2);
-      context.rotate(gripDirection * Math.PI / 2);
+      context.rotate((gripDirection + rotatorTurnOffset) * Math.PI / 2);
       context.lineWidth = Math.max(1.5, size * 0.055);
       context.lineCap = "round";
       context.lineJoin = "round";

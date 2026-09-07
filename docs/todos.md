@@ -141,7 +141,7 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 ## Specific block appearance changes
 
 * DEFER Rework magnet artwork alongside the planned electromagnet mechanics.
-* DEFER For the rotator component, we should modify rendering to make behavior more obvious. Maybe draw as a welded block with only around a third of the width, on welded side, and then draw the rotator arm separately. Also mark red/blue on the sides of the base to show which charge rotates in which direction. Also animate the rotator arm itself turning (different from animating the bodies it rotated).
+* DEFER For the rotator component, we should modify rendering to make behavior more obvious. Maybe draw as a welded block with only around a third of the width, on welded side, and then draw the rotator arm separately. Also mark red/blue on the sides of the base to show which charge rotates in which direction.
 
 ## Animations
 
@@ -149,7 +149,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Add animation for the delivery box, assembler, duplicator, lock gate. When they consume a body, animate the body shrinking, moving towards the block, and lowering opacity until it vanishes. When they produce a body, animate the opposite.
 * Animate fragile blocks shattering - maybe split them in half across say a line at 30 degrees from vertical, then animate the halves moving apart and fading out from one tick to the next. Also use the same shatter animation for blocks broken by mining devices, fasteners that break, etc.
 * Animate bodies rotated by the rotator block. Currently it seems we sometimes show visible animation, but it doesn't show rotation - the body first rotates in place instantly, then translates to new position. In other cases the body immediately snaps from old position and orientation to new.
-* Animate the rotator block itself - currently the arrow snaps to the new position when it receives a charge commanding it to rotate. Rather move the arrow smoothly from old side to new side.
 * DEFER Interpolate movement inside a rune array while its contents are displayed and the array itself moved in the same tick: the nested previous world is matched by ID path, which works, but a resized array yields no interpolation source for that tick.
 
 # Larger projects, DEFER to later or never, and break up into tasks:
