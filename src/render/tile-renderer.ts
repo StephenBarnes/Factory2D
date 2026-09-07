@@ -70,6 +70,31 @@ const BEVEL_RATIO = 0.05;
 const HIGHLIGHT_STYLE = "rgba(255, 255, 255, 0.25)";
 const SHADE_STYLE = "rgba(0, 0, 0, 0.28)";
 
+const bevelPaths = new WeakMap<Path2D, {
+  offset: number;
+  highlight: Path2D;
+  shade: Path2D;
+}>();
+
+function getBevelPaths(bodyPath: Path2D, offset: number): {
+  highlight: Path2D;
+  shade: Path2D;
+} {
+  const cached = bevelPaths.get(bodyPath);
+  if (cached !== undefined && cached.offset === offset) {
+    return cached;
+  }
+  // Even-odd filling subtracts the shifted body within the original body clip.
+  // Unlike translated strokes, these bands cannot reach the opposite edges.
+  const highlight = new Path2D(bodyPath);
+  highlight.addPath(bodyPath, { e: offset, f: offset });
+  const shade = new Path2D(bodyPath);
+  shade.addPath(bodyPath, { e: -offset, f: -offset });
+  const paths = { offset, highlight, shade };
+  bevelPaths.set(bodyPath, paths);
+  return paths;
+}
+
 /** Cells and vertices are keyed on a fixed grid stride; supports coordinates up to 4095. */
 const KEY_STRIDE = 4096;
 
@@ -148,16 +173,11 @@ export function drawBody(
     );
   }
 
-  const bevel = Math.max(1.5, cellSize * BEVEL_RATIO);
-  // Cover the full diagonal offset, including curved corners. An axis-sized
-  // stroke radius leaves crescents of unlit tile fill along the outline.
-  context.lineWidth = bevel * 2 * Math.SQRT2;
-  context.translate(bevel, bevel);
-  context.strokeStyle = HIGHLIGHT_STYLE;
-  context.stroke(bodyPath);
-  context.translate(-2 * bevel, -2 * bevel);
-  context.strokeStyle = SHADE_STYLE;
-  context.stroke(bodyPath);
+  const bevel = getBevelPaths(bodyPath, Math.max(1.5, cellSize * BEVEL_RATIO) * 2);
+  context.fillStyle = HIGHLIGHT_STYLE;
+  context.fill(bevel.highlight, "evenodd");
+  context.fillStyle = SHADE_STYLE;
+  context.fill(bevel.shade, "evenodd");
 
   context.restore();
 

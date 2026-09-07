@@ -68,7 +68,7 @@ export function populatePuzzleMap(container: HTMLElement, options: MainMenuOptio
 
     const puzzleList = document.createElement("div");
     puzzleList.className = "puzzle-group-list";
-    for (const [index, puzzle] of groupPuzzles.entries()) {
+    for (const puzzle of groupPuzzles.values()) {
       const puzzleUnlocked = isPuzzleUnlocked(
         puzzle,
         options.completedPuzzleIds,

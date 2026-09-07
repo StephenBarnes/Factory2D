@@ -26,6 +26,8 @@ type PathCommand =
 class RecordingPath2D {
   readonly commands: PathCommand[] = [];
 
+  addPath(_path: Path2D, _transform?: DOMMatrix2DInit): void {}
+
   moveTo(x: number, y: number): void {
     this.commands.push({ type: "moveTo", x, y });
   }

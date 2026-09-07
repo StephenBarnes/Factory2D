@@ -38,11 +38,14 @@ let pathConstructionCount = 0;
 
 class RecordingPath2D {
   readonly rectangles: PathRectangle[] = [];
-  constructor() {
-    pathConstructionCount += 1;
+  constructor(path?: Path2D) {
+    if (path === undefined) {
+      pathConstructionCount += 1;
+    }
   }
 
 
+  addPath(_path: Path2D, _transform?: DOMMatrix2DInit): void {}
   moveTo(_x: number, _y: number): void {}
   arcTo(_x1: number, _y1: number, _x2: number, _y2: number, _radius: number): void {}
   closePath(): void {}
