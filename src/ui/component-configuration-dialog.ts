@@ -3,6 +3,7 @@ import { drawBody, type BodyCell } from "../render/tile-renderer";
 import {
   componentConfigurationForKind,
   MAX_ROM_DIMENSION,
+  MAX_SIGNAL_LABEL_LENGTH,
   MIN_ROM_DIMENSION,
   type ConfigurableComponentSnapshot,
 } from "../simulation/configurable-components";
@@ -17,7 +18,7 @@ import { expectDefined } from "../util/assert";
 
 export type ComponentConfigurationSubmission =
   | { readonly type: "number"; readonly value: number }
-  | { readonly type: "text"; readonly value: string }
+  | { readonly type: "text"; readonly value: string; readonly category: string }
   | {
       readonly type: "grid";
       readonly width: number;
@@ -50,6 +51,7 @@ export class ComponentConfigurationDialog {
   private readonly textPanel: HTMLElement;
   private readonly textLabel: HTMLElement;
   private readonly textInput: HTMLInputElement;
+  private readonly categoryInput: HTMLInputElement;
   private readonly arrayPanel: HTMLElement;
   private readonly arrayWidth: HTMLInputElement;
   private readonly arrayHeight: HTMLInputElement;
@@ -93,6 +95,8 @@ export class ComponentConfigurationDialog {
     this.textPanel = requiredDescendant(dialog, "[data-component-text-panel]");
     this.textLabel = requiredDescendant(dialog, "[data-component-text-label]");
     this.textInput = requiredDescendant(dialog, "[data-component-text-input]");
+    this.categoryInput = requiredDescendant(dialog, "[data-component-category-input]");
+    this.categoryInput.maxLength = MAX_SIGNAL_LABEL_LENGTH;
     this.arrayPanel = requiredDescendant(dialog, "[data-component-array-panel]");
     this.arrayWidth = requiredDescendant(dialog, "[data-component-array-width]");
     this.arrayHeight = requiredDescendant(dialog, "[data-component-array-height]");
@@ -226,6 +230,7 @@ export class ComponentConfigurationDialog {
     this.romWidth.disabled = configuration.type !== "grid";
     this.romHeight.disabled = configuration.type !== "grid";
     this.textInput.disabled = configuration.type !== "text";
+    this.categoryInput.disabled = configuration.type !== "text";
     this.arrayWidth.disabled = configuration.type !== "array";
     this.arrayHeight.disabled = configuration.type !== "array";
     this.arrayDescription.disabled = configuration.type !== "array";
@@ -259,9 +264,12 @@ export class ComponentConfigurationDialog {
       this.textLabel.textContent = configuration.label.toUpperCase();
       this.textInput.maxLength = configuration.maximumLength;
       this.textInput.value = state.label;
+      this.categoryInput.value = state.category;
       this.description.textContent =
         `Name the signal panel line, using at most ${configuration.maximumLength} characters. ` +
-        "Leave it empty to show the line number.";
+        "Leave it empty to show the line number. " +
+        `Category groups signal lines together; use at most ${MAX_SIGNAL_LABEL_LENGTH} characters, ` +
+        "or leave it empty for no category.";
     } else if (configuration.type === "array") {
       if (state.type !== "array") {
         throw new Error(`${TILE_DEFINITIONS[kind].name} is missing array state`);
@@ -348,7 +356,11 @@ export class ComponentConfigurationDialog {
     if (configuration.type === "number") {
       submit({ type: "number", value: this.numericInput.valueAsNumber });
     } else if (configuration.type === "text") {
-      submit({ type: "text", value: this.textInput.value.trim() });
+      submit({
+        type: "text",
+        value: this.textInput.value.trim(),
+        category: this.categoryInput.value.trim(),
+      });
     } else if (configuration.type === "array") {
       const open = this.openArrayAfterSave;
       this.openArrayAfterSave = false;

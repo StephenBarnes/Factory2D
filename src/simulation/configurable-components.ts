@@ -162,11 +162,13 @@ export interface CheckerComponentState {
 export interface MonitorComponentState {
   readonly type: "monitor";
   label: string;
+  category: string;
 }
 
 export interface GrapherComponentState {
   readonly type: "grapher";
   label: string;
+  category: string;
 }
 
 /**
@@ -248,11 +250,13 @@ export interface CheckerComponentSnapshot {
 export interface MonitorComponentSnapshot {
   readonly type: "monitor";
   readonly label: string;
+  readonly category: string;
 }
 
 export interface GrapherComponentSnapshot {
   readonly type: "grapher";
   readonly label: string;
+  readonly category: string;
 }
 
 /** Snapshot of a rune array; `world` is an independent copy of the inner board. */
@@ -336,9 +340,9 @@ export function createDefaultComponentState(
         values: new Int8Array(DEFAULT_ROM_WIDTH * DEFAULT_ROM_HEIGHT),
       };
     case TileKind.Monitor:
-      return { type: "monitor", label: "" };
+      return { type: "monitor", label: "", category: "" };
     case TileKind.Grapher:
-      return { type: "grapher", label: "" };
+      return { type: "grapher", label: "", category: "" };
     case TileKind.RuneArray:
       return {
         type: "array",
@@ -397,7 +401,7 @@ export function cloneComponentState(
       };
     case "monitor":
     case "grapher":
-      return { type: state.type, label: state.label };
+      return { type: state.type, label: state.label, category: state.category };
     case "array":
       return {
         type: "array",
@@ -457,7 +461,7 @@ export function snapshotComponentState(
       };
     case "monitor":
     case "grapher":
-      return { type: state.type, label: state.label };
+      return { type: state.type, label: state.label, category: state.category };
     case "array":
       return {
         type: "array",
@@ -533,6 +537,7 @@ export function validateComponentSnapshot(
     case "monitor":
     case "grapher":
       validateSignalLabel(snapshot.label);
+      validateSignalLabel(snapshot.category);
       break;
     case "array":
       validateRuneArrayDescription(snapshot.description);
@@ -605,7 +610,7 @@ export function stateFromSnapshot(
       };
     case "monitor":
     case "grapher":
-      return { type: snapshot.type, label: snapshot.label };
+      return { type: snapshot.type, label: snapshot.label, category: snapshot.category };
     case "array":
       return {
         type: "array",

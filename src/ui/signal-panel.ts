@@ -11,6 +11,7 @@ import type { World } from "../simulation/world";
 const PANEL_PADDING = 8;
 const TICK_GUTTER_WIDTH = 28;
 const HEADER_HEIGHT = 74;
+const CATEGORY_HEIGHT = 24;
 const ROW_HEIGHT = 11;
 const ROW_GAP = 2;
 const MIN_COLUMN_WIDTH = 16;
@@ -48,6 +49,7 @@ export class SignalPanel {
   private linesVersion = -1;
   private linesRevision = -1;
   private firstRow = 0;
+  private categoryHeight = 0;
   private following = true;
   private collapsedValue: boolean;
   private drawnKey = "";
@@ -116,6 +118,7 @@ export class SignalPanel {
       this.linesRevision !== world.revision
     ) {
       this.lines = recorder.lines(world);
+      this.categoryHeight = this.lines.some((line) => line.category !== "") ? CATEGORY_HEIGHT : 0;
       this.linesWorld = world;
       this.linesVersion = recorder.version;
       this.linesRevision = world.revision;
@@ -165,14 +168,20 @@ export class SignalPanel {
     const columnsLeft = PANEL_PADDING + TICK_GUTTER_WIDTH;
     const columnsBottom = Math.min(
       canvas.clientHeight - PANEL_PADDING,
-      HEADER_HEIGHT + this.visibleRowCount() * ROW_HEIGHT,
+      HEADER_HEIGHT + this.categoryHeight + this.visibleRowCount() * ROW_HEIGHT,
     );
     const lineIndex = Math.floor((x - columnsLeft) / this.columnWidth(canvas.clientWidth));
     const line = x >= columnsLeft && x < canvas.clientWidth - PANEL_PADDING &&
       y >= PANEL_PADDING && y < columnsBottom
       ? this.lines[lineIndex]
       : undefined;
-    this.elements.canvas.title = line === undefined ? "" : line.label || displayLabel(line, lineIndex);
+    if (line !== undefined && y < this.categoryHeight) {
+      canvas.title = line.category;
+      this.setHoveredTileId(null, null);
+      return;
+    }
+    canvas.title = line === undefined ? "" :
+      [line.category, line.label || displayLabel(line, lineIndex)].filter(Boolean).join(" · ");
     this.setHoveredTileId(line?.id ?? null, line?.world ?? null);
   }
 
@@ -226,7 +235,7 @@ export class SignalPanel {
     const columnsWidth = width - columnsLeft - PANEL_PADDING;
     const columnWidth = this.columnWidth(width);
     const trackWidth = Math.min(MAX_TRACK_WIDTH, columnWidth * 0.55);
-    const rowsTop = HEADER_HEIGHT;
+    const rowsTop = HEADER_HEIGHT + this.categoryHeight;
     const lastRow = this.firstRow + visibleRows;
     const lastDrawnRow = Math.min(lastRow, totalRows);
     const rowsBottom = rowsTop + (lastDrawnRow - this.firstRow) * ROW_HEIGHT;
@@ -248,6 +257,32 @@ export class SignalPanel {
       if (row % LABEL_ROW_INTERVAL === 0) {
         context.fillStyle = TICK_LABEL_COLOR;
         context.fillText(String(row), columnsLeft - 5, y + ROW_HEIGHT / 2);
+      }
+    }
+
+    if (this.categoryHeight > 0) {
+      context.font = LABEL_FONT;
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      for (let start = 0; start < this.lines.length;) {
+        const category = this.lines[start]?.category;
+        if (category === undefined) throw new Error(`Signal panel line ${start} is missing`);
+        let end = start + 1;
+        while (end < this.lines.length && this.lines[end]?.category === category) end += 1;
+        const left = columnsLeft + start * columnWidth;
+        const right = Math.min(columnsLeft + end * columnWidth, width - PANEL_PADDING);
+        if (right > left) {
+          context.fillStyle = MONITOR_LABEL_COLOR;
+          context.fillText(
+            fitLabel(context, category, right - left - 4),
+            (left + right) / 2,
+            CATEGORY_HEIGHT / 2,
+          );
+          context.fillStyle = RULE_COLOR;
+          context.fillRect(left + 2, CATEGORY_HEIGHT - 2, right - left - 4, 1);
+          if (start > 0) context.fillRect(left, CATEGORY_HEIGHT, 1, rowsBottom - CATEGORY_HEIGHT);
+        }
+        start = end;
       }
     }
 
@@ -293,15 +328,7 @@ export class SignalPanel {
       context.fillStyle = line.kind === "monitor" ? MONITOR_LABEL_COLOR : GRAPHER_LABEL_COLOR;
       const label = displayLabel(line, lineIndex);
       const maxLabelWidth = HEADER_HEIGHT - 10;
-      let fittedLabel = label;
-      if (context.measureText(label).width > maxLabelWidth) {
-        let end = label.length;
-        while (end > 0 && context.measureText(`${label.slice(0, end)}…`).width > maxLabelWidth) {
-          end -= 1;
-        }
-        fittedLabel = `${label.slice(0, end)}…`;
-      }
-      context.fillText(fittedLabel, 0, 0);
+      context.fillText(fitLabel(context, label, maxLabelWidth), 0, 0);
       context.restore();
     }
 
@@ -322,7 +349,9 @@ export class SignalPanel {
   private visibleRowCount(): number {
     return Math.max(
       1,
-      Math.floor((this.elements.canvas.clientHeight - HEADER_HEIGHT - PANEL_PADDING) / ROW_HEIGHT),
+      Math.floor(
+        (this.elements.canvas.clientHeight - HEADER_HEIGHT - this.categoryHeight - PANEL_PADDING) / ROW_HEIGHT,
+      ),
     );
   }
 
@@ -362,4 +391,11 @@ function displayLabel(line: SignalLine, lineIndex: number): string {
     return line.label.toUpperCase();
   }
   return `${line.kind === "monitor" ? "MONITOR" : "LORE"} ${lineIndex + 1}`;
+}
+
+function fitLabel(context: CanvasRenderingContext2D, label: string, width: number): string {
+  if (context.measureText(label).width <= width) return label;
+  let end = label.length;
+  while (end > 0 && context.measureText(`${label.slice(0, end)}…`).width > width) end -= 1;
+  return `${label.slice(0, end)}…`;
 }

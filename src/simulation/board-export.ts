@@ -134,6 +134,7 @@ interface ExportedSignalLabel {
   readonly y: number;
   readonly type: "monitor" | "grapher";
   readonly label: string;
+  readonly category?: string;
 }
 
 interface ExportedAssemblerOutput {
@@ -342,6 +343,14 @@ function exportBoardContents(world: World): ExportedBoardContents {
               code: TILE_DEFINITIONS[output.kind].boardCode,
               direction: DIRECTION_NAMES[output.orientation],
             })),
+          });
+        } else if (componentState.type === "monitor" || componentState.type === "grapher") {
+          components.push({
+            x,
+            y,
+            type: componentState.type,
+            label: componentState.label,
+            ...(componentState.category === "" ? {} : { category: componentState.category }),
           });
         } else {
           components.push({ x, y, ...componentState });
@@ -664,6 +673,7 @@ function importBoardContents(
       "values",
       "failed",
       "label",
+      "category",
       "description",
       "ports",
       "board",
@@ -685,7 +695,7 @@ function importBoardContents(
               : type === "checker"
                 ? ["x", "y", "type", "width", "height", "cursor", "failed", "ignoreZeros", "values"]
                 : type === "monitor" || type === "grapher"
-                  ? ["x", "y", "type", "label"]
+                  ? ["x", "y", "type", "label", "category"]
                   : type === "array"
                     ? ["x", "y", "type", "description", "ports", "board"]
                     : null;
@@ -791,7 +801,15 @@ function importBoardContents(
       } catch (error) {
         throw new Error(`${componentLabel} label is invalid: ${error instanceof Error ? error.message : String(error)}`);
       }
-      snapshot = { type, label: signalLabel };
+      const category = state.category === undefined
+        ? ""
+        : requireString(state.category, `${componentLabel} category`);
+      try {
+        validateSignalLabel(category);
+      } catch (error) {
+        throw new Error(`${componentLabel} category is invalid: ${error instanceof Error ? error.message : String(error)}`);
+      }
+      snapshot = { type, label: signalLabel, category };
     } else {
       const componentWidth = requireInteger(
         state.width,

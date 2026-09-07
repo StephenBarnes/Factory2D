@@ -34,7 +34,7 @@ describe("signal monitors", () => {
       board.place(0, 4, TileKind.Monitor);
       board.place(1, 4, source);
       board.setWeld(0, 4, 1, 4, true);
-      board.configureSignalLabel(0, 4, "OUT");
+      board.configureSignalLabel(0, 4, "OUT", "");
     }
     expect(right.idAt(0, 4)).toBe(deep.idAt(0, 4));
     const recorder = new SignalTraceRecorder();
@@ -71,7 +71,7 @@ describe("signal monitors", () => {
       { kind: "monitor", charges: [-1] },
       { kind: "grapher", values: [1, -1], cursor: 0 },
     ]);
-    inner.configureSignalLabel(0, 4, "RENAMED");
+    inner.configureSignalLabel(0, 4, "RENAMED", "");
     recorder.sync(world, 0);
     expect(recorder.lines(world)[0]?.label).toContain("RENAMED");
   });
@@ -103,7 +103,7 @@ describe("signal monitors", () => {
     recorder.sync(world, simulation.tick);
 
     const lines = recorder.lines(world);
-    expect(lines).toEqual([
+    expect(lines).toMatchObject([
       {
         kind: "monitor",
         id: world.idAt(1, 0),
@@ -160,7 +160,7 @@ describe("signal monitors", () => {
 
     const other = createSparkMonitorWorld();
     recorder.sync(other, 5);
-    expect(recorder.lines(other)).toEqual([
+    expect(recorder.lines(other)).toMatchObject([
       { kind: "monitor", id: other.idAt(1, 0), world: other, label: "", firstTick: 5, charges: [0] },
     ]);
     expect(() => recorder.lines(world)).toThrowError(
@@ -189,20 +189,55 @@ describe("signal monitors", () => {
 
   it("names lines from their configured signal labels", () => {
     const world = createSparkMonitorWorld();
-    expect(world.configureSignalLabel(1, 0, "OUT")).toBe(true);
-    expect(world.configureSignalLabel(1, 0, "OUT")).toBe(false);
-    expect(() => world.configureSignalLabel(1, 0, "far too long label")).toThrowError(
+    expect(world.configureSignalLabel(1, 0, "OUT", "")).toBe(true);
+    expect(world.configureSignalLabel(1, 0, "OUT", "")).toBe(false);
+    expect(() => world.configureSignalLabel(1, 0, "far too long label", "")).toThrowError(
       "Signal name must be a string of at most 12 characters",
     );
-    expect(() => world.configureSignalLabel(1, 0, "bad\nname")).toThrowError(
+    expect(() => world.configureSignalLabel(1, 0, "bad\nname", "")).toThrowError(
       "Signal name must not contain control characters",
     );
-    expect(() => world.configureSignalLabel(0, 0, "spark")).toThrowError(
+    expect(() => world.configureSignalLabel(0, 0, "spark", "")).toThrowError(
       "Configurable component at index 0 has no state",
     );
     const recorder = new SignalTraceRecorder();
     recorder.sync(world, 0);
     expect(recorder.lines(world)[0]?.label).toBe("OUT");
+    expect(world.configureSignalLabel(1, 0, "OUT", "Outputs")).toBe(true);
+    expect(world.configureSignalLabel(1, 0, "OUT", "Outputs")).toBe(false);
+    expect(() => world.configureSignalLabel(1, 0, "CHANGED", "bad\ncategory")).toThrow();
+    recorder.sync(world, 0);
+    expect(recorder.lines(world)[0]).toMatchObject({ label: "OUT", category: "Outputs" });
+  });
+
+  it("groups root and nested traces together and refreshes category-only edits", () => {
+    const world = new World(4, 1);
+    world.place(0, 0, TileKind.Monitor);
+    world.place(1, 0, TileKind.RuneArray);
+    world.place(2, 0, TileKind.Grapher);
+    world.place(3, 0, TileKind.Monitor);
+    const inner = world.runeArrayWorldAt(1, 0);
+    inner.place(0, 0, TileKind.Monitor);
+    world.configureSignalLabel(0, 0, "A", "Outputs");
+    inner.configureSignalLabel(0, 0, "B", "Inputs");
+    world.configureSignalLabel(2, 0, "C", "Outputs");
+    world.configureSignalLabel(3, 0, "D", "");
+    const recorder = new SignalTraceRecorder();
+    recorder.sync(world, 0);
+    expect(recorder.lines(world).map((line) => line.category)).toEqual([
+      "Outputs", "Outputs", "Inputs", "",
+    ]);
+    expect(recorder.lines(world).map((line) => line.label)).toEqual([
+      "A", "C", `#${world.idAt(1, 0)} · B`, "D",
+    ]);
+    inner.configureSignalLabel(0, 0, "B", "Outputs");
+    recorder.sync(world, 0);
+    expect(recorder.lines(world).map((line) => line.label)).toEqual([
+      "A", `#${world.idAt(1, 0)} · B`, "C", "D",
+    ]);
+    expect(recorder.lines(world).map((line) => line.category)).toEqual([
+      "Outputs", "Outputs", "Outputs", "",
+    ]);
   });
 });
 
@@ -221,12 +256,12 @@ describe("ROM graphers", () => {
       cursor: 0,
       values: [1, -1, 0, 1],
     });
-    world.configureSignalLabel(2, 0, "expected");
+    world.configureSignalLabel(2, 0, "expected", "");
     const simulation = new Simulation(world);
     const recorder = new SignalTraceRecorder();
 
     recorder.sync(world, 0);
-    expect(recorder.lines(world)).toEqual([
+    expect(recorder.lines(world)).toMatchObject([
       {
         kind: "grapher",
         id: world.idAt(2, 0),
@@ -302,8 +337,8 @@ describe("signal component board format", () => {
     const world = new World(2, 1);
     world.place(0, 0, TileKind.Monitor);
     world.place(1, 0, TileKind.Grapher, Direction.Left);
-    world.configureSignalLabel(0, 0, "IN");
-    world.configureSignalLabel(1, 0, "Expected");
+    world.configureSignalLabel(0, 0, "IN", "");
+    world.configureSignalLabel(1, 0, "Expected", "");
 
     const serialized = serializeBoard(world, 0);
     const parsed = JSON.parse(serialized) as { components: unknown[] };
@@ -313,8 +348,8 @@ describe("signal component board format", () => {
     ]);
 
     const imported = deserializeBoard(serialized);
-    expect(imported.world.componentStateSnapshotAt(0, 0)).toEqual({ type: "monitor", label: "IN" });
-    expect(imported.world.componentStateSnapshotAt(1, 0)).toEqual({
+    expect(imported.world.componentStateSnapshotAt(0, 0)).toMatchObject({ type: "monitor", label: "IN" });
+    expect(imported.world.componentStateSnapshotAt(1, 0)).toMatchObject({
       type: "grapher",
       label: "Expected",
     });
@@ -339,10 +374,10 @@ describe("signal component board format", () => {
   it("copies signal labels with cloned worlds", () => {
     const world = new World(1, 1);
     world.place(0, 0, TileKind.Monitor);
-    world.configureSignalLabel(0, 0, "OUT");
+    world.configureSignalLabel(0, 0, "OUT", "");
     const clone = world.clone();
-    expect(clone.componentStateSnapshotAt(0, 0)).toEqual({ type: "monitor", label: "OUT" });
-    clone.configureSignalLabel(0, 0, "OTHER");
-    expect(world.componentStateSnapshotAt(0, 0)).toEqual({ type: "monitor", label: "OUT" });
+    expect(clone.componentStateSnapshotAt(0, 0)).toMatchObject({ type: "monitor", label: "OUT" });
+    clone.configureSignalLabel(0, 0, "OTHER", "");
+    expect(world.componentStateSnapshotAt(0, 0)).toMatchObject({ type: "monitor", label: "OUT" });
   });
 });

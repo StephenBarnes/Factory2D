@@ -344,6 +344,56 @@ describe("board export", () => {
     );
   });
 
+  it("retains nested signal categories through cloning, transforms, reset, and scene round-trip", () => {
+    const world = new World(2, 1);
+    world.place(0, 0, TileKind.Monitor);
+    world.place(1, 0, TileKind.RuneArray);
+    const inner = world.runeArrayWorldAt(1, 0);
+    inner.place(0, 0, TileKind.Grapher);
+    world.configureSignalLabel(0, 0, "OUT", "Production");
+    inner.configureSignalLabel(0, 0, "Expected", "abcdefghijkl");
+
+    const baseline = world.clone();
+    world.configureSignalLabel(0, 0, "Changed", "");
+    inner.configureSignalLabel(0, 0, "Changed", "");
+    const transformed = baseline.transformed(1, true, false);
+    const live = transformed.clone();
+    const liveInner = live.runeArrayWorldAt(0, 0);
+    const grapherX = liveInner.width - 1;
+    const grapherY = liveInner.height - 1;
+    live.configureSignalLabel(0, 1, "Changed", "Temporary");
+    liveInner.configureSignalLabel(grapherX, grapherY, "Changed", "Temporary");
+    new Simulation(live).resetTo(transformed);
+
+    const serialized = serializeBoard(live, 0);
+    const imported = deserializeBoard(serialized).world;
+    expect(imported.componentStateSnapshotAt(0, 1)).toEqual({
+      type: "monitor",
+      label: "OUT",
+      category: "Production",
+    });
+    expect(imported.runeArrayWorldAt(0, 0).componentStateSnapshotAt(grapherX, grapherY)).toEqual({
+      type: "grapher",
+      label: "Expected",
+      category: "abcdefghijkl",
+    });
+    expect(serializeBoard(imported, 0)).toBe(serialized);
+  });
+
+  it.each([null, "abcdefghijklm", "bad\ncategory"])(
+    "rejects a malformed signal category %j instead of discarding it",
+    (category) => {
+      const world = new World(1, 1);
+      world.place(0, 0, TileKind.Monitor);
+      const parsed = JSON.parse(serializeBoard(world, 0)) as {
+        components: unknown[];
+      };
+      parsed.components = [{ x: 0, y: 0, type: "monitor", label: "", category }];
+
+      expect(() => deserializeBoard(JSON.stringify(parsed))).toThrowError();
+    },
+  );
+
   it("rejects furnace progress without a valid in-progress recipe", () => {
     const base = {
       format: "factory2d-board",

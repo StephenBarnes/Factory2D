@@ -530,17 +530,19 @@ export class World {
     return changed;
   }
 
-  configureSignalLabel(x: number, y: number, label: string): boolean {
+  configureSignalLabel(x: number, y: number, label: string, category: string): boolean {
     const index = this.indexOf(x, y);
     const state = this.requireComponentStateAtIndex(index);
     if (state.type !== "monitor" && state.type !== "grapher") {
       throw new Error(`Tile at (${x}, ${y}) does not have a signal name`);
     }
     validateSignalLabel(label);
-    if (state.label === label) {
+    validateSignalLabel(category);
+    if (state.label === label && state.category === category) {
       return false;
     }
     state.label = label;
+    state.category = category;
     this.touchVisualRevision();
     return true;
   }

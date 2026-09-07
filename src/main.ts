@@ -1107,7 +1107,7 @@ function openComponentConfiguration(cell: GridCell): void {
       const changed = submission.type === "number"
         ? surface.world.configureNumericComponent(cell.x, cell.y, submission.value)
         : submission.type === "text"
-        ? surface.world.configureSignalLabel(cell.x, cell.y, submission.value)
+        ? surface.world.configureSignalLabel(cell.x, cell.y, submission.value, submission.category)
         : submission.type === "array"
         ? surface.world.configureRuneArray(
             cell.x,

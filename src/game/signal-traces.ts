@@ -10,6 +10,7 @@ export interface MonitorSignalLine {
   readonly id: number;
   readonly world: World;
   readonly label: string;
+  readonly category: string;
   readonly firstTick: number;
   readonly charges: readonly Charge[];
 }
@@ -25,6 +26,7 @@ export interface GrapherSignalLine {
   readonly id: number;
   readonly world: World;
   readonly label: string;
+  readonly category: string;
   readonly values: readonly Charge[];
   readonly firstRow: number;
   /** Index of the pointed component's cursor, or -1 when the grapher points at nothing. */
@@ -89,13 +91,26 @@ export class SignalTraceRecorder {
     this.sample(world, tick);
   }
 
-  /** Builds row-major columns, descending into each array at its position on the board. */
+  /** Groups categories by first appearance, retaining depth-first row-major order within each. */
   lines(world: World): SignalLine[] {
     if (world !== this.world) {
       throw new Error("Signal traces must be synchronized before reading lines");
     }
     const lines: SignalLine[] = [];
     this.appendLines(world, "", lines);
+    const categories = new Map<string, SignalLine[]>();
+    for (const line of lines) {
+      const group = categories.get(line.category);
+      if (group === undefined) {
+        categories.set(line.category, [line]);
+      } else {
+        group.push(line);
+      }
+    }
+    lines.length = 0;
+    for (const group of categories.values()) {
+      for (const line of group) lines.push(line);
+    }
     return lines;
   }
 
@@ -114,6 +129,7 @@ export class SignalTraceRecorder {
           id,
           world,
           label: this.lineLabel(path, state.label, `Monitor ${id}`),
+          category: state.category,
           firstTick: history?.firstTick ?? this.tick,
           charges: history?.charges ?? [],
         });
@@ -159,6 +175,7 @@ export class SignalTraceRecorder {
     return {
       kind: "grapher", id, world,
       label: this.lineLabel(path, label, `Lore ${id}`),
+      category: state.category,
       values, firstRow, cursor,
     };
   }

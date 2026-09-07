@@ -576,10 +576,12 @@
             <span data-component-numeric-label></span>
             <input data-component-numeric-input type="number" step="1" required />
           </label>
-          <label class="component-numeric-panel component-text-panel" data-component-text-panel hidden>
-            <span data-component-text-label></span>
-            <input data-component-text-input type="text" autocomplete="off" spellcheck="false" />
-          </label>
+          <div class="component-numeric-panel component-text-panel" data-component-text-panel hidden>
+            <label for="component-text-input" data-component-text-label></label>
+            <input id="component-text-input" data-component-text-input type="text" autocomplete="off" spellcheck="false" />
+            <label for="component-category-input">CATEGORY</label>
+            <input id="component-category-input" data-component-category-input type="text" autocomplete="off" spellcheck="false" />
+          </div>
           <div class="component-rom-panel" data-component-rom-panel hidden>
             <div class="component-rom-dimensions">
               <label>
