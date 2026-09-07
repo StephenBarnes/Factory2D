@@ -297,6 +297,45 @@ describe("circuit networks", () => {
     expect(inner.chargeAt(1, 0)).toBe(1);
   });
 
+  it("senses an unwelded outside neighbor through nested array ports using its old charge", () => {
+    const world = new World(2, 1);
+    world.place(0, 0, TileKind.Conduit);
+    world.setCharge(0, 0, -1);
+    world.place(1, 0, TileKind.RuneArray);
+    world.configureRuneArray(1, 0, 3, 1, "");
+    const inner = world.runeArrayWorldAt(1, 0);
+    inner.place(0, 0, TileKind.RuneArray);
+    inner.configureRuneArray(0, 0, 3, 1, "");
+    const deepest = inner.runeArrayWorldAt(0, 0);
+    deepest.place(0, 0, TileKind.ChargeSensor, Direction.Left);
+    deepest.place(1, 0, TileKind.Conduit);
+    deepest.setWeld(0, 0, 1, 0, true);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+
+    expect(world.chargeAt(0, 0)).toBe(0);
+    expect(deepest.chargeAt(1, 0)).toBe(-1);
+    simulation.step();
+    expect(deepest.chargeAt(1, 0)).toBe(0);
+  });
+
+  it("does not sense outside an array through a non-port wall cell", () => {
+    const world = new World(2, 1);
+    world.place(0, 0, TileKind.Conduit);
+    world.setCharge(0, 0, 1);
+    world.place(1, 0, TileKind.RuneArray);
+    world.configureRuneArray(1, 0, 3, 3, "");
+    const inner = world.runeArrayWorldAt(1, 0);
+    inner.place(0, 2, TileKind.ChargeSensor, Direction.Left);
+    inner.place(1, 2, TileKind.Conduit);
+    inner.setWeld(0, 2, 1, 2, true);
+
+    new Simulation(world).step();
+
+    expect(inner.chargeAt(1, 2)).toBe(0);
+  });
+
   it("connects an inverter through its rotated isolated inputs and pointed output", () => {
     const world = new World(3, 3);
     world.place(1, 1, TileKind.Inverter, Direction.Right);

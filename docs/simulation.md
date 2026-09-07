@@ -47,6 +47,8 @@ Dedicated `*-resolver.ts` files own machine intent collection and commits. Gener
 
 The four inner edge-center cells connect as if a conduit sat just beyond each edge. Four independent outer side networks join the forest-wide circuit solve without extra delay. Inner victory latches the root result; nested boards have no separate result.
 
+Charge sensors facing outward at an inner edge-center port read the actual outside neighbor's start-of-tick facing-port charge without requiring an external weld. Sensing traverses enclosing arrays when their cells also lie at matching edge-center ports; other wall cells and the root boundary read neutral. This does not electrically join the sensor's front to the array port or change ordinary gates' virtual-port inputs.
+
 Rotation/reflection transforms the inner board physically, keeping its gravity downward. Copies/resets reuse an existing inner world with matching tile ID and dimensions, preserving mounted views and resolver caches. In puzzles inner components cost their full catalog prices; the containing array occupies one footprint cell.
 
 ## Adding or changing components

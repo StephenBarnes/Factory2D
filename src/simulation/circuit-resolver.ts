@@ -296,7 +296,7 @@ export class CircuitResolver {
 
       const orientation = world.orientationAtIndex(index);
       if (kind === TileKind.ChargeSensor) {
-        const outputCharge = this.neighborPortCharge(runtime, index, orientation);
+        const outputCharge = this.sensorNeighborCharge(runtime, index, orientation);
         this.driveOutputs(
           runtime,
           index,
@@ -525,6 +525,26 @@ export class CircuitResolver {
       return world.hasCircuitConnectionAtIndex(index, direction);
     }
     return runtime.parent !== null && isVirtualPort(world, index, direction);
+  }
+
+  /** Sensors look through edge-center ports at the actual unwelded outside neighbor. */
+  private sensorNeighborCharge(
+    runtime: WorldRuntime,
+    index: number,
+    direction: Direction,
+  ): Charge {
+    while (neighborIndex(runtime.world, index, direction) < 0) {
+      const world = runtime.world;
+      if (
+        runtime.parent === null ||
+        index !== runeArrayPortCellIndex(world.width, world.height, direction)
+      ) {
+        return 0;
+      }
+      index = runtime.parentIndex;
+      runtime = runtime.parent;
+    }
+    return this.neighborPortCharge(runtime, index, direction);
   }
 
   /**
