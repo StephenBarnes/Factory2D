@@ -20,9 +20,14 @@ const PALETTE_SHORTCUTS = [
 ] as const;
 
 export const PALETTE_CATEGORIES = [
-  { category: PaletteCategory.RawMaterials, label: "Raw Materials" },
-  { category: PaletteCategory.Mechanisms, label: "Mechanisms" },
-  { category: PaletteCategory.Circuits, label: "Circuit Components" },
+  { category: PaletteCategory.RawMaterials, label: "Materials" },
+  { category: PaletteCategory.Metals, label: "Metals" },
+  { category: PaletteCategory.Gemstones, label: "Gemstones" },
+  { category: PaletteCategory.Motion, label: "Motion" },
+  { category: PaletteCategory.Transformation, label: "Transformation" },
+  { category: PaletteCategory.CircuitBasic, label: "Rune Components" },
+  { category: PaletteCategory.CircuitGates, label: "Combiner Runes" },
+  { category: PaletteCategory.CircuitComplex, label: "Advanced Runes" },
   { category: PaletteCategory.PuzzleTools, label: "Puzzle Tools" },
 ] as const;
 

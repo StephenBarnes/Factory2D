@@ -119,9 +119,14 @@ export const enum TileDecorationStyle {
 
 export const enum PaletteCategory {
   RawMaterials = 0,
-  Mechanisms = 1,
-  Circuits = 2,
-  PuzzleTools = 3,
+  Metals = 1,
+  Gemstones = 2,
+  Motion = 3,
+  Transformation = 4,
+  CircuitBasic = 5,
+  CircuitGates = 6,
+  CircuitComplex = 7,
+  PuzzleTools = 8,
 }
 
 export interface TileDefinition {
@@ -259,7 +264,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 2,
     palette: {
       order: 43,
-      category: PaletteCategory.RawMaterials,
+      category: PaletteCategory.PuzzleTools,
       description: "Fixed structural block not affected by gravity",
     },
     affectedByGravity: false,
@@ -282,7 +287,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 3,
-      category: PaletteCategory.Mechanisms,
+      category: PaletteCategory.Motion,
       description: "Holds magnetic blocks on its pointed side",
     },
     affectedByGravity: true,
@@ -305,7 +310,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 4,
     palette: {
       order: 47,
-      category: PaletteCategory.RawMaterials,
+      category: PaletteCategory.Metals,
       description: "Magnetic structural block affected by gravity and smelted from iron ore",
     },
     affectedByGravity: true,
@@ -328,7 +333,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 2,
     palette: {
       order: 9,
-      category: PaletteCategory.Circuits,
+      category: PaletteCategory.CircuitBasic,
       description: "Shares charge across welded circuit blocks",
     },
     affectedByGravity: true,
@@ -351,7 +356,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 10,
-      category: PaletteCategory.Circuits,
+      category: PaletteCategory.CircuitBasic,
       description: "Emits +1 when its pointed neighbor is occupied, except by glass",
     },
     affectedByGravity: true,
@@ -374,7 +379,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 11,
-      category: PaletteCategory.Circuits,
+      category: PaletteCategory.CircuitBasic,
       description: "Emits +1 constantly into its welded circuit network",
     },
     affectedByGravity: true,
@@ -397,7 +402,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 12,
-      category: PaletteCategory.Circuits,
+      category: PaletteCategory.CircuitBasic,
       description: "Emits +1 for the first simulation tick, then goes dark",
     },
     affectedByGravity: true,
@@ -420,7 +425,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 13,
-      category: PaletteCategory.Circuits,
+      category: PaletteCategory.CircuitGates,
       description: "Negates the sum of up to three isolated inputs",
     },
     affectedByGravity: true,
@@ -443,7 +448,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 14,
-      category: PaletteCategory.Circuits,
+      category: PaletteCategory.CircuitGates,
       description: "Sums up to three isolated inputs toward its output",
     },
     affectedByGravity: true,
@@ -466,7 +471,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 15,
-      category: PaletteCategory.Circuits,
+      category: PaletteCategory.CircuitGates,
       description: "Passes positive sums from up to three isolated inputs",
     },
     affectedByGravity: true,
@@ -489,7 +494,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 16,
-      category: PaletteCategory.Circuits,
+      category: PaletteCategory.CircuitGates,
       description: "Multiplies up to three connected isolated inputs",
     },
     affectedByGravity: true,
@@ -512,7 +517,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 17,
-      category: PaletteCategory.Circuits,
+      category: PaletteCategory.CircuitGates,
       description: "Subtracts left and right inputs from the rear input",
     },
     affectedByGravity: true,
@@ -535,7 +540,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 18,
-      category: PaletteCategory.Circuits,
+      category: PaletteCategory.CircuitBasic,
       description: "Copies the front tile's charge to three isolated outputs; front welds are non-conductive",
     },
     affectedByGravity: true,
@@ -558,7 +563,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 19,
-      category: PaletteCategory.Circuits,
+      category: PaletteCategory.CircuitGates,
       description: "Selects the left or right input from the rear charge",
     },
     affectedByGravity: true,
@@ -581,7 +586,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 20,
-      category: PaletteCategory.Circuits,
+      category: PaletteCategory.CircuitGates,
       description: "Outputs +1 when all connected isolated inputs are equal",
     },
     affectedByGravity: true,
@@ -604,7 +609,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 21,
-      category: PaletteCategory.Circuits,
+      category: PaletteCategory.CircuitGates,
       description: "Outputs the minimum charge among its connected isolated inputs",
     },
     affectedByGravity: true,
@@ -627,7 +632,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 22,
-      category: PaletteCategory.Circuits,
+      category: PaletteCategory.CircuitGates,
       description: "Outputs the maximum charge among its connected isolated inputs",
     },
     affectedByGravity: true,
@@ -650,7 +655,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 4,
     palette: {
       order: 23,
-      category: PaletteCategory.Circuits,
+      category: PaletteCategory.CircuitBasic,
       description: "Keeps horizontal and vertical conduits separate",
     },
     affectedByGravity: true,
@@ -697,7 +702,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 2,
     palette: {
       order: 46,
-      category: PaletteCategory.RawMaterials,
+      category: PaletteCategory.Metals,
       description: "Solid ore that a furnace smelts into iron",
     },
     affectedByGravity: true,
@@ -743,7 +748,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 6,
     palette: {
       order: 51,
-      category: PaletteCategory.RawMaterials,
+      category: PaletteCategory.Metals,
       description: "Solid gold block affected by gravity; can be welded",
     },
     affectedByGravity: true,
@@ -766,7 +771,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 5,
     palette: {
       order: 50,
-      category: PaletteCategory.RawMaterials,
+      category: PaletteCategory.Metals,
       description: "Solid silver block affected by gravity; can be welded",
     },
     affectedByGravity: true,
@@ -789,7 +794,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 6,
     palette: {
       order: 53,
-      category: PaletteCategory.RawMaterials,
+      category: PaletteCategory.Gemstones,
       description: "Solid ruby block affected by gravity; can be welded",
     },
     affectedByGravity: true,
@@ -812,7 +817,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 6,
     palette: {
       order: 54,
-      category: PaletteCategory.RawMaterials,
+      category: PaletteCategory.Gemstones,
       description: "Solid sapphire block affected by gravity; can be welded",
     },
     affectedByGravity: true,
@@ -835,7 +840,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 6,
     palette: {
       order: 55,
-      category: PaletteCategory.RawMaterials,
+      category: PaletteCategory.Gemstones,
       description: "Solid emerald block affected by gravity; can be welded",
     },
     affectedByGravity: true,
@@ -858,7 +863,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 8,
     palette: {
       order: 57,
-      category: PaletteCategory.RawMaterials,
+      category: PaletteCategory.Gemstones,
       description: "Solid diamond block affected by gravity; can be welded",
     },
     affectedByGravity: true,
@@ -881,7 +886,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 6,
     palette: {
       order: 56,
-      category: PaletteCategory.RawMaterials,
+      category: PaletteCategory.Gemstones,
       description: "Solid amethyst block affected by gravity; can be welded",
     },
     affectedByGravity: true,
@@ -904,7 +909,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 52,
-      category: PaletteCategory.RawMaterials,
+      category: PaletteCategory.Metals,
       description: "Solid mithril block affected by gravity; can be welded",
     },
     affectedByGravity: true,
@@ -927,7 +932,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 2,
     palette: {
       order: 48,
-      category: PaletteCategory.RawMaterials,
+      category: PaletteCategory.Metals,
       description: "Solid copper ore block affected by gravity; can be welded",
     },
     affectedByGravity: true,
@@ -950,7 +955,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 4,
     palette: {
       order: 49,
-      category: PaletteCategory.RawMaterials,
+      category: PaletteCategory.Metals,
       description: "Solid copper block affected by gravity; can be welded",
     },
     affectedByGravity: true,
@@ -996,7 +1001,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 20,
     palette: {
       order: 7,
-      category: PaletteCategory.Mechanisms,
+      category: PaletteCategory.Transformation,
       description: "Bakes the block on its pointed side; linked side -1 pauses it; rear outputs +1 while baking",
     },
     affectedByGravity: true,
@@ -1019,7 +1024,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 8,
-      category: PaletteCategory.Mechanisms,
+      category: PaletteCategory.Motion,
       description: "Charged roller: +1 clockwise, -1 counterclockwise, 0 stopped",
     },
     affectedByGravity: true,
@@ -1062,7 +1067,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Victory]: {
     name: "Judgment Stone",
     boardCode: "V",
-    defaultPrice: 0,
+    defaultPrice: 10000,
     palette: {
       order: 25,
       category: PaletteCategory.PuzzleTools,
@@ -1088,7 +1093,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 27,
-      category: PaletteCategory.Circuits,
+      category: PaletteCategory.CircuitComplex,
       description: "Delays the isolated rear input by a configurable number of ticks. Press E to configure",
     },
     affectedByGravity: true,
@@ -1111,7 +1116,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 28,
-      category: PaletteCategory.Circuits,
+      category: PaletteCategory.CircuitComplex,
       description: "Adds signed rear inputs and pulses with the wrap direction. Press E to configure",
     },
     affectedByGravity: true,
@@ -1134,7 +1139,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 20,
     palette: {
       order: 29,
-      category: PaletteCategory.Circuits,
+      category: PaletteCategory.CircuitComplex,
       description: "Read-only memory. Positive left/rear inputs move the 2D cursor away from their side; negative inputs reverse it. Outputs the selected value. Press E to configure",
     },
     affectedByGravity: true,
@@ -1157,7 +1162,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 30,
-      category: PaletteCategory.Mechanisms,
+      category: PaletteCategory.Transformation,
       description: "Welds both transverse edges of the block ahead; -1 side charge disables it",
     },
     affectedByGravity: true,
@@ -1180,7 +1185,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 31,
-      category: PaletteCategory.Mechanisms,
+      category: PaletteCategory.Transformation,
       description: "Splits both transverse edges of the block ahead; -1 side charge disables it",
     },
     affectedByGravity: true,
@@ -1203,7 +1208,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 20,
     palette: {
       order: 32,
-      category: PaletteCategory.Mechanisms,
+      category: PaletteCategory.Transformation,
       description: "Mirrors the welded body behind it across itself on +1 side charge",
     },
     affectedByGravity: true,
@@ -1226,7 +1231,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 0,
     palette: {
       order: 36,
-      category: PaletteCategory.Circuits,
+      category: PaletteCategory.CircuitComplex,
       description: "Joins its welded circuit like a conduit and records that charge every tick on the signal panel. Press E to name its line",
     },
     affectedByGravity: true,
@@ -1249,7 +1254,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 0,
     palette: {
       order: 37,
-      category: PaletteCategory.Circuits,
+      category: PaletteCategory.CircuitComplex,
       description: "Shows every value of the ROM or sequence checker it points at on the signal panel, marking the cursor. Press E to name its line",
     },
     affectedByGravity: true,
@@ -1269,7 +1274,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Checker]: {
     name: "Sequence Checker",
     boardCode: "E",
-    defaultPrice: 0,
+    defaultPrice: 30,
     palette: {
       order: 38,
       category: PaletteCategory.PuzzleTools,
@@ -1295,7 +1300,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 39,
-      category: PaletteCategory.Circuits,
+      category: PaletteCategory.CircuitComplex,
       description: "Holds a miniature board whose four edge-center cells connect to its sides with no delay. Press E to configure, Enter to open",
     },
     affectedByGravity: true,
@@ -1318,7 +1323,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 20,
     palette: {
       order: 33,
-      category: PaletteCategory.Mechanisms,
+      category: PaletteCategory.Transformation,
       description: "Consumes a welded body ahead that matches a recipe in any rotation, then emits the recipe's outputs one per tick behind it",
     },
     affectedByGravity: true,
@@ -1341,7 +1346,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 20,
     palette: {
       order: 34,
-      category: PaletteCategory.Mechanisms,
+      category: PaletteCategory.Motion,
       description: "Turns its gripped body 90° with +1 clockwise or -1 counterclockwise rear input",
     },
     affectedByGravity: true,
@@ -1364,7 +1369,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 20,
     palette: {
       order: 26,
-      category: PaletteCategory.Mechanisms,
+      category: PaletteCategory.Motion,
       description: "Extends on +1 and retracts on -1; its pointed side is the arm head",
     },
     affectedByGravity: true,
