@@ -148,6 +148,30 @@ test("placement drags weld only their path, including fast diagonals", async ({ 
   expect(board.welds[1].slice(1, 5)).toBe("-+-|");
 });
 
+for (const entering of [false, true]) {
+  test(`placement drag welds ${entering ? "into" : "out of"} the puzzle region without replacing fixed tiles`, async ({ page }) => {
+    await seedBrowserStorage(page, "unlocked");
+    await page.goto("/puzzles/sand-fall");
+    await page.getByRole("button", { name: "+ NEW SOLUTION" }).click();
+    await page.getByRole("button", { name: /^Stone/ }).click();
+    const before = JSON.parse((await diagnosticSnapshot(page)).serializedBoard);
+    const inside = await boardCellCenter(page, 4, 5);
+    const outside = await boardCellCenter(page, 4, 6);
+    const [start, end] = entering ? [outside, inside] : [inside, outside];
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(end.x, end.y);
+    await page.mouse.up();
+    const board = JSON.parse((await diagnosticSnapshot(page)).serializedBoard);
+    expect(board.grid[5][4]).toBe("#");
+    expect(board.welds[5][4]).toBe("|");
+    expect(board.grid[6]).toBe(before.grid[6]);
+    expect(board.welds[6]).toBe(before.welds[6]);
+    await page.reload();
+    expect(JSON.parse((await diagnosticSnapshot(page)).serializedBoard)).toEqual(board);
+  });
+}
+
 test("creates, persists, duplicates, and deletes saved sandboxes", async ({ page }) => {
   await seedBrowserStorage(page, "empty");
   await page.goto("/");

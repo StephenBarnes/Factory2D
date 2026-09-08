@@ -1039,7 +1039,6 @@ function editCellLine(
   let previousX = x;
   let tilesChanged = false;
   let previousY = y;
-  let previousEditable = false;
   const orientation = orientationForKind(selectedKind, selectedOrientation);
 
   while (true) {
@@ -1058,21 +1057,19 @@ function editCellLine(
       if (weldPlacedTiles && kind !== TileKind.Empty) {
         changed = weldEligibleEditableNeighbors(x, y) || changed;
       }
-      if (
-        !erase &&
-        previousEditable &&
-        (x !== previousX || y !== previousY) &&
-        canEditEdge(previousX, previousY, x, y)
-      ) {
-        changed = surface.world.setWeld(previousX, previousY, x, y, true) || changed;
-      }
+    }
+    if (
+      !erase &&
+      (x !== previousX || y !== previousY) &&
+      canEditEdge(previousX, previousY, x, y)
+    ) {
+      changed = surface.world.setWeld(previousX, previousY, x, y, true) || changed;
     }
     if (x === to.x && y === to.y) {
       break;
     }
     previousX = x;
     previousY = y;
-    previousEditable = canEditCell(x, y);
     if (!erase) {
       // Visit one edge at a time, including a deterministic staircase at corners.
       const crossedX = Math.abs(x - from.x);
