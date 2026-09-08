@@ -73,6 +73,7 @@ Monitor and lore grapher configuration includes a category (blank by default, at
 * Newly recorded progress immediately updates gemstones, unlocks, and route access without replacing the workshop. Success reports offer the immediate next puzzle only if now unlocked; navigation uses the ordinary persistence boundary.
 * Success reports compare each score against the minimum of that metric across previously confirmed saved solutions for the same puzzle, including the active solution's prior result. Capture these values before recording replaces that result; first completions show no deltas. Negative deltas indicate improvement because all four metrics are minimized.
 * Puzzle-workshop download/open-in-sandbox actions use the original complete shipped puzzle, not the running state or player's design. Opening creates an independently saved sandbox. Sandbox export uses authored metadata/cases.
+* Scene/puzzle file import is sandbox-only. Puzzle workshops hide the Import control rather than reserving space for a disabled button; entering a sandbox restores it. Puzzle scene importing is unsupported.
 
 `puzzle-scores.ts`, `puzzle-progress.ts`, and `puzzle-components.ts` centralize scoring, progression storage, and catalog validation. `src/ui/main-menu.ts`, `puzzle-info.ts`, `sandbox-info.ts`, `workshop-info-dialog.ts`, and `puzzle-test-report.ts` present these models. Keep validation and lifecycle policy out of presentation code.
 

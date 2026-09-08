@@ -1455,6 +1455,7 @@ const navigation = new NavigationController(
         configureSandboxTestCaseMenu();
       }
       updateTransportState();
+      importButton.hidden = screen.kind !== "sandbox";
       importButton.disabled = surface.session.editableRegion !== null;
       updateExportOptionsForSession();
     },
