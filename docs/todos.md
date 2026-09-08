@@ -121,7 +121,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 # Visuals
 
 * Add backgrounds for puzzles, maybe with parallax as the player pans.
-* Improve border decorations and buttons. HTML and CSS from an online example have been placed in `temp/artdeco.txt`.
 
 ## Specific block appearance changes
 

@@ -6,6 +6,7 @@ For tile appearance, Canvas geometry, animation, and rendering performance. DOM 
 
 * `src/render/tile-renderer.ts` draws procedural tiles and welded bodies for the board, palette, placement/selection previews, snippets, and configuration thumbnails. Reuse it instead of building a second visual implementation.
 * `src/simulation/tile.ts` supplies tile metadata and colors. `src/styles.css` owns the dwarven stone/bronze/gold/ember/gem palette in CSS custom properties and the serif display stack. Use existing styles and controls rather than creating a separate theme.
+* Major panels use stepped gilded corner inlays inspired by `temp/artdeco.txt`. Menu, solution, and dialog action buttons use inset rules and diamond terminals; compact workshop controls stay undecorated. CSS pseudo-elements are pointer-transparent and contained within the borders, with colors inherited from the active theme and no external font or image dependencies.
 * `src/render/body-cells.ts` populates render cells from a world and collects bodies for small thumbnails. Render configurable/runtime state through the same shared path so previews match placed components.
 
 Welded bodies use traced inset rounded-slab outlines, shadows, per-cell fills, clipped decorations, and directional bevel lighting. Neighbor cells merge only across locally welded edges: unwelded cuts must remain visible and stable even when another cut splits a body. Closed seam ends are rounded; diagonal contacts form rounded pinches. Mixed-kind fills remain locally stable when bodies merge or split.
