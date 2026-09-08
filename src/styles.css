@@ -354,7 +354,6 @@ body:has(dialog[open]) .tool-cursor {
 }
 
 /* Stepped corner inlays, adapted from temp/artdeco.txt without extra markup. */
-.sandbox-node::after,
 .puzzle-group[data-state="unlocked"]::after,
 .puzzle-node[data-state="unlocked"]::after,
 .puzzle-brief::after,
@@ -367,12 +366,12 @@ body:has(dialog[open]) .tool-cursor {
 .test-report-dialog::after {
   content: "";
   position: absolute;
-  inset: 3px;
+  inset: 2px;
   background:
-    linear-gradient(var(--gild), var(--gild)) left top / 5px 5px no-repeat,
-    linear-gradient(var(--gild), var(--gild)) right top / 5px 5px no-repeat,
-    linear-gradient(var(--gild), var(--gild)) left bottom / 5px 5px no-repeat,
-    linear-gradient(var(--gild), var(--gild)) right bottom / 5px 5px no-repeat,
+    linear-gradient(var(--gild), var(--gild)) left top / 4px 4px no-repeat,
+    linear-gradient(var(--gild), var(--gild)) right top / 4px 4px no-repeat,
+    linear-gradient(var(--gild), var(--gild)) left bottom / 4px 4px no-repeat,
+    linear-gradient(var(--gild), var(--gild)) right bottom / 4px 4px no-repeat,
     linear-gradient(var(--gild), var(--gild)) left 7px top / 20px 1px no-repeat,
     linear-gradient(var(--gild), var(--gild)) left top 7px / 1px 20px no-repeat,
     linear-gradient(var(--gild), var(--gild)) right 7px top / 20px 1px no-repeat,
@@ -381,15 +380,15 @@ body:has(dialog[open]) .tool-cursor {
     linear-gradient(var(--gild), var(--gild)) left bottom 7px / 1px 20px no-repeat,
     linear-gradient(var(--gild), var(--gild)) right 7px bottom / 20px 1px no-repeat,
     linear-gradient(var(--gild), var(--gild)) right bottom 7px / 1px 20px no-repeat;
-  outline: 1px solid var(--border-faint);
-  outline-offset: -7px;
+  outline: 1px solid var(--gild);
+  outline-offset: -3px;
   clip-path: polygon(0 0, 27px 0, 27px 8px, calc(100% - 27px) 8px,
     calc(100% - 27px) 0, 100% 0, 100% 27px, calc(100% - 8px) 27px,
     calc(100% - 8px) calc(100% - 27px), 100% calc(100% - 27px),
     100% 100%, calc(100% - 27px) 100%, calc(100% - 27px) calc(100% - 8px),
     27px calc(100% - 8px), 27px 100%, 0 100%, 0 calc(100% - 27px),
     8px calc(100% - 27px), 8px 27px, 0 27px);
-  opacity: 0.7;
+  opacity: 1.0;
   pointer-events: none;
 }
 
@@ -3022,8 +3021,6 @@ kbd {
   background: #e7ad4f;
 }
 
-/* Inset diamond terminals keep ornamentation inside the existing hit boxes.
-   Compact workshop tools and palette buttons deliberately remain unadorned. */
 :is(.main-menu-actions, .solution-row-actions, .main-menu-dialog-actions,
   .workshop-info-actions, .component-configuration-actions, .test-report-actions) button,
 .solution-primary-action {
@@ -3032,35 +3029,6 @@ kbd {
   border-radius: 0;
   box-shadow: inset 0 3px 0 var(--raised), inset 0 4px 0 var(--border-faint),
     inset 0 -3px 0 var(--raised), inset 0 -4px 0 var(--border-faint);
-}
-
-:is(.main-menu-actions, .solution-row-actions, .main-menu-dialog-actions,
-  .workshop-info-actions, .component-configuration-actions, .test-report-actions) button::before,
-:is(.main-menu-actions, .solution-row-actions, .main-menu-dialog-actions,
-  .workshop-info-actions, .component-configuration-actions, .test-report-actions) button::after,
-.solution-primary-action::before,
-.solution-primary-action::after {
-  content: "";
-  position: absolute;
-  top: calc(50% - 3px);
-  width: 6px;
-  height: 6px;
-  border: 1px solid currentColor;
-  transform: rotate(45deg);
-  opacity: 0.65;
-  pointer-events: none;
-}
-
-:is(.main-menu-actions, .solution-row-actions, .main-menu-dialog-actions,
-  .workshop-info-actions, .component-configuration-actions, .test-report-actions) button::before,
-.solution-primary-action::before {
-  left: 6px;
-}
-
-:is(.main-menu-actions, .solution-row-actions, .main-menu-dialog-actions,
-  .workshop-info-actions, .component-configuration-actions, .test-report-actions) button::after,
-.solution-primary-action::after {
-  right: 6px;
 }
 
 @media (max-width: 980px) {
