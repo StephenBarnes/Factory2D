@@ -146,6 +146,23 @@ describe("sandbox puzzle authoring", () => {
     expect(reparsed.testCases).toHaveLength(2);
   });
 
+  it("exports only changed case fields and preserves explicit clears on import", () => {
+    const imported = parseSandboxImport(authoredPuzzleSource(), "imported-puzzle.json");
+    const unchanged = JSON.parse(imported.authoring.serialize(imported.editableRegion));
+    expect(unchanged.testCases[0].overrides).toEqual({});
+
+    const alternate = imported.authoring.selectTestCase("alternate");
+    alternate.setWeld(1, 1, 2, 1, false);
+    imported.authoring.saveSelectedWorld(alternate);
+    const exported = JSON.parse(imported.authoring.serialize(imported.editableRegion));
+    expect(exported.testCases[0].overrides).toEqual({
+      initialBoard: { welds: ["....", "....", "...."] },
+    });
+    const restored = parseSandboxImport(JSON.stringify(exported), "round-trip.json");
+    expect(restored.authoring.selectTestCase("standard").isWelded(1, 1, 2, 1)).toBe(true);
+    expect(restored.authoring.selectTestCase("alternate").isWelded(1, 1, 2, 1)).toBe(false);
+  });
+
   it("duplicates, switches, edits, and deletes authored test cases", () => {
     const imported = parseSandboxImport(authoredPuzzleSource(), "imported-puzzle.json");
     expect(imported.authoring.testCases).toEqual([

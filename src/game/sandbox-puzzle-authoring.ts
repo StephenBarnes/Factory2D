@@ -398,6 +398,10 @@ export class SandboxPuzzleAuthoringState {
     if (standard === undefined) {
       throw new Error("Sandbox puzzle standard test case is missing");
     }
+    const standardBoard = serializeAuthoredBoard(standard.world);
+    const standardFields = Object.fromEntries(
+      Object.entries(standardBoard).map(([key, value]) => [key, JSON.stringify(value)]),
+    );
     const metadata: PuzzleExportMetadata = {
       id: this.metadata.id,
       groupId: this.metadata.groupId,
@@ -408,7 +412,7 @@ export class SandboxPuzzleAuthoringState {
       cycleLimit: this.metadata.cycleLimit,
       components: this.availableComponentsValue.entries,
       testCases: this.authoredTestCases.slice(1).map((testCase) =>
-        serializeAuthoredTestCase(testCase)
+        serializeAuthoredTestCase(testCase, standardFields)
       ),
     };
     return serializePuzzleTemplate(standard.world, editableRegion, metadata);
@@ -422,27 +426,36 @@ export class SandboxPuzzleAuthoringState {
     return testCase;
   }
 }
-function serializeAuthoredTestCase(testCase: AuthoredPuzzleTestCase): unknown {
-  const world = testCase.world.clone();
-  world.resetPuzzleResult();
+function serializeAuthoredBoard(world: World): Record<string, unknown> {
   const board = JSON.parse(serializeBoard(world, 0)) as MutableSerializedBoard;
+  return {
+    grid: board.grid,
+    welds: board.welds,
+    orientations: board.orientations ?? [],
+    charges: board.charges ?? [],
+    crossingCharges: board.crossingCharges ?? [],
+    isolatedOutputCharges: board.isolatedOutputCharges ?? [],
+    furnaces: board.furnaces ?? [],
+    components: board.components ?? [],
+    textBoxes: board.textBoxes ?? [],
+  };
+}
+
+function serializeAuthoredTestCase(
+  testCase: AuthoredPuzzleTestCase,
+  standardFields: Readonly<Record<string, string>>,
+): unknown {
+  // Overrides replace whole fields. In particular, [] must clear inherited state.
+  const initialBoard = Object.fromEntries(
+    Object.entries(serializeAuthoredBoard(testCase.world)).filter(
+      ([key, value]) => JSON.stringify(value) !== standardFields[key],
+    ),
+  );
   return {
     id: testCase.id,
     name: testCase.name,
     ...(testCase.cycleLimit === null ? {} : { cycleLimit: testCase.cycleLimit }),
-    overrides: {
-      initialBoard: {
-        grid: board.grid,
-        welds: board.welds,
-        orientations: board.orientations ?? [],
-        charges: board.charges ?? [],
-        crossingCharges: board.crossingCharges ?? [],
-        isolatedOutputCharges: board.isolatedOutputCharges ?? [],
-        furnaces: board.furnaces ?? [],
-        components: board.components ?? [],
-        textBoxes: board.textBoxes ?? [],
-      },
-    },
+    overrides: Object.keys(initialBoard).length === 0 ? {} : { initialBoard },
   };
 }
 
