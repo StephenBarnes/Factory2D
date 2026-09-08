@@ -9,7 +9,8 @@ describe("drills", () => {
     const world = new World(4, 3);
     world.place(0, 0, TileKind.Drill, Direction.Right);
     world.place(0, 1, TileKind.Platform);
-    world.place(1, 0, TileKind.Platform);
+    world.place(1, 0, TileKind.Stone);
+    world.place(1, 1, TileKind.Platform);
     world.place(2, 0, TileKind.Stone);
     world.setWeld(1, 0, 2, 0, true);
     const stoneId = world.idAt(2, 0);
@@ -90,12 +91,38 @@ describe("drills", () => {
     world.configureRuneArray(0, 0, 1, 3, "");
     const inner = world.runeArrayWorldAt(0, 0);
     inner.place(0, 0, TileKind.Drill, Direction.Down);
-    inner.place(0, 1, TileKind.Platform);
+    inner.place(0, 1, TileKind.Stone);
     inner.place(0, 2, TileKind.Platform);
 
     new Simulation(world).step();
 
     expect(inner.kindAt(0, 1)).toBe(TileKind.Drill);
     expect(inner.kindAt(0, 2)).toBe(TileKind.Platform);
+  });
+
+  it("preserves indestructible terrain and its welded body under repeated drilling", () => {
+    const original = new World(3, 3);
+    original.place(0, 0, TileKind.Drill, Direction.Right);
+    original.place(0, 1, TileKind.Platform);
+    original.place(1, 0, TileKind.Platform);
+    original.place(2, 0, TileKind.Stone);
+    original.setWeld(1, 0, 2, 0, true);
+    const { world } = deserializeBoard(serializeBoard(original, 0));
+    const platformId = world.idAt(1, 0);
+    const stoneId = world.idAt(2, 0);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+    simulation.step();
+
+    expect(world.idAt(1, 0)).toBe(platformId);
+    expect(world.kindAt(1, 0)).toBe(TileKind.Platform);
+    expect(world.isWelded(1, 0, 2, 0)).toBe(true);
+    expect(world.idAt(2, 0)).toBe(stoneId);
+
+    world.place(1, 0, TileKind.Stone);
+    simulation.step();
+    expect(world.kindAt(1, 0)).toBe(TileKind.Empty);
+    expect(world.idAt(2, 1)).toBe(stoneId);
   });
 });

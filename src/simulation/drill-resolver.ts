@@ -1,5 +1,5 @@
 import { expectDefined } from "../util/assert";
-import { Direction, directionX, directionY, TileKind } from "./tile";
+import { Direction, directionX, directionY, TILE_DEFINITIONS, TileKind } from "./tile";
 import type { World } from "./world";
 import { WorldFeature } from "./world-features";
 
@@ -35,7 +35,7 @@ export class DrillResolver {
       if (x < 0 || x >= world.width || y < 0 || y >= world.height) continue;
       const target = y * world.width + x;
       const id = world.idAtIndex(target);
-      if (id === 0) continue;
+      if (id === 0 || TILE_DEFINITIONS[world.kindAtIndex(target)].indestructible) continue;
       if (this.claims[target] !== 0) {
         this.claims[target] = 2;
         continue;
@@ -55,6 +55,7 @@ export class DrillResolver {
       if (this.claims[target] !== 1 || this.world.idAtIndex(target) !== this.targetIds[target]) {
         continue;
       }
+      if (TILE_DEFINITIONS[this.world.kindAtIndex(target)].indestructible) continue;
       this.world.place(target % this.world.width, Math.floor(target / this.world.width), TileKind.Empty);
     }
   }

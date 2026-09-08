@@ -151,6 +151,8 @@ export interface TileDefinition {
   readonly affectedByGravity: boolean;
   /** Opts a solid tile out of occupancy sensing; omitted means detectable. */
   readonly invisibleToSensor?: boolean;
+  /** Immune to destructive tools such as drills; omitted means destructible. */
+  readonly indestructible?: boolean;
   readonly weldableSides: WeldSide;
   readonly excludesFacingWeld: boolean;
   readonly usesOrientation: boolean;
@@ -275,9 +277,10 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 43,
       category: PaletteCategory.PuzzleTools,
       description: "Fixed structural block not affected by gravity.",
-      extendedDescription: ["Anchors its entire welded body: it cannot fall or be pushed. Use it as a foundation or to brace a moving machine."],
+      extendedDescription: ["Anchors its entire welded body: it cannot fall or be pushed. Indestructible: drills cannot remove it. Use it as a foundation or to brace a moving machine."],
     },
     affectedByGravity: false,
+    indestructible: true,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
@@ -1044,7 +1047,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 59,
       category: PaletteCategory.Transformation,
       description: "Destroys the block immediately ahead each tick; -1 side charge disables it.",
-      extendedDescription: ["Reads the previous-tick shared side charge: -1 disables drilling; 0 or +1 enables it. Removes one tile and its welds, not the rest of its welded body. The pointed side cannot be welded.", "Targets start-of-tick blocks, before movement. Multiple drills targeting the same block jam. Can destroy machinery and fixed terrain; produces no material."],
+      extendedDescription: ["Reads the previous-tick shared side charge: -1 disables drilling; 0 or +1 enables it. Removes one tile and its welds, not the rest of its welded body. The pointed side cannot be welded.", "Targets start-of-tick blocks, before movement. Multiple drills targeting the same block jam. Cannot destroy indestructible blocks such as platforms; produces no material."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,
