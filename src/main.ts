@@ -453,7 +453,11 @@ function easedAnimationProgress(currentTime: number): number {
   if (progress === 1) {
     animationDuration = 0;
   }
+  // Smoothstep
   return progress * progress * (3 - 2 * progress);
+  // Cubic ease-out
+  //const remaining = 1 - progress;
+  //return 1 - remaining * remaining * remaining;
 }
 
 function inspectorReferenceFromButton(
