@@ -30,7 +30,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 # Hardening
 
-* For built-in puzzles, store a canonical solution in a separate file, produced by scene export from the browser. Add tests that run each of these solutions and check that they actually succeed. Helps avoid regressions that make puzzles unsolvable.
 * DEFER Try to do some fuzzing to find crashes or undesirable behaviors. There may be edge cases involving things like pistons welded to other pistons and magnets, etc. Could also check for cases of machines that can fly/levitate, or produce blocks endlessly, though those should not be "fixed" until we've looked at them manually to decide whether they should be considered bugs or features.
 
 # New non-circuit components
