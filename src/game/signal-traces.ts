@@ -57,6 +57,8 @@ export class SignalTraceRecorder {
   /** Tick whose input first started each checker, keyed by array-ID path and tile ID. */
   private readonly checkerStartTicks = new Map<string, number>();
   private readonly boardRevisions = new Map<World, number>();
+  private readonly boardParents = new Map<World, World>();
+  private readonly boardArrayIds = new Map<World, number>();
 
   /** Increments whenever recorded histories change, so panels can cache derived lines. */
   get version(): number {
@@ -112,6 +114,18 @@ export class SignalTraceRecorder {
       for (const line of group) lines.push(line);
     }
     return lines;
+  }
+
+  /** Maps a signal source to its tile or nearest containing array on the displayed board. */
+  visibleTileId(view: World, source: World | null, tileId: number | null): number | null {
+    if (source === null || tileId === null || !this.boardRevisions.has(source)) return null;
+    while (source !== view) {
+      const parent = this.boardParents.get(source);
+      if (parent === undefined) return null;
+      tileId = expectDefined(this.boardArrayIds.get(source), "Signal board is missing its containing array ID");
+      source = parent;
+    }
+    return tileId;
   }
 
   private appendLines(world: World, path: string, lines: SignalLine[]): void {
@@ -193,6 +207,8 @@ export class SignalTraceRecorder {
 
   private captureBoardRevisions(world: World): void {
     this.boardRevisions.clear();
+    this.boardParents.clear();
+    this.boardArrayIds.clear();
     this.visitBoardRevisions(world);
   }
 
@@ -203,7 +219,10 @@ export class SignalTraceRecorder {
       index >= 0;
       index = world.nextFeatureIndex(WorldFeature.RuneArray, index)
     ) {
-      this.visitBoardRevisions(world.runeArrayWorldAtIndex(index));
+      const inner = world.runeArrayWorldAtIndex(index);
+      this.boardParents.set(inner, world);
+      this.boardArrayIds.set(inner, world.idAtIndex(index));
+      this.visitBoardRevisions(inner);
     }
   }
 
@@ -218,6 +237,8 @@ export class SignalTraceRecorder {
 
   private sample(world: World, tick: number): void {
     this.boardRevisions.clear();
+    this.boardParents.clear();
+    this.boardArrayIds.clear();
     this.sampleBoard(world, tick, "");
     this.versionValue += 1;
   }
@@ -227,7 +248,11 @@ export class SignalTraceRecorder {
     for (let index = 0; index < world.cellCount; index += 1) {
       const kind = world.kindAtIndex(index);
       if (kind === TileKind.RuneArray) {
-        this.sampleBoard(world.runeArrayWorldAtIndex(index), tick, `${path}${world.idAtIndex(index)}/`);
+        const inner = world.runeArrayWorldAtIndex(index);
+        const id = world.idAtIndex(index);
+        this.boardParents.set(inner, world);
+        this.boardArrayIds.set(inner, id);
+        this.sampleBoard(inner, tick, `${path}${id}/`);
         continue;
       }
       if (kind === TileKind.Checker) {

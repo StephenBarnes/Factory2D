@@ -2418,7 +2418,9 @@ function frame(currentTime: number): void {
   refreshTileInspector();
   signalTraces.sync(surface.session.world, surface.simulation.tick);
   signalPanel.update(signalTraces, surface.session.world, surface.simulation.tick);
-  surface.renderer.setHighlightedTileId(surface.world === hoveredSignalWorld ? hoveredSignalTileId : null);
+  surface.renderer.setHighlightedTileId(
+    signalTraces.visibleTileId(surface.world, hoveredSignalWorld, hoveredSignalTileId),
+  );
   const animationProgress = easedAnimationProgress(currentTime);
   surface.renderer.render(
     animationDuration === 0 ? null : surface.previousWorld,

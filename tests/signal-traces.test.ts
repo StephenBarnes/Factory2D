@@ -20,6 +20,45 @@ function createSparkMonitorWorld(): World {
 }
 
 describe("signal monitors", () => {
+  it("highlights only visible signal sources or their containing arrays as boards change", () => {
+    const root = new World(3, 2);
+    root.place(0, 0, TileKind.RuneArray);
+    root.place(1, 0, TileKind.RuneArray);
+    const outerId = root.idAt(0, 0);
+    const inner = root.runeArrayWorldAt(0, 0);
+    const sibling = root.runeArrayWorldAt(1, 0);
+    inner.place(0, 4, TileKind.RuneArray);
+    const innerId = inner.idAt(0, 4);
+    const deep = inner.runeArrayWorldAt(0, 4);
+    deep.place(0, 4, TileKind.Monitor);
+    sibling.place(0, 4, TileKind.Grapher);
+    const monitorId = deep.idAt(0, 4);
+    const grapherId = sibling.idAt(0, 4);
+    expect(monitorId).toBe(grapherId);
+    const recorder = new SignalTraceRecorder();
+    recorder.sync(root, 0);
+
+    expect(recorder.visibleTileId(root, deep, monitorId)).toBe(outerId);
+    expect(recorder.visibleTileId(inner, deep, monitorId)).toBe(innerId);
+    expect(recorder.visibleTileId(deep, deep, monitorId)).toBe(monitorId);
+    expect(recorder.visibleTileId(sibling, deep, monitorId)).toBeNull();
+    expect(recorder.visibleTileId(deep, sibling, grapherId)).toBeNull();
+    expect(recorder.visibleTileId(inner, root, outerId)).toBeNull();
+    expect(recorder.visibleTileId(root, sibling, grapherId)).toBe(root.idAt(1, 0));
+    expect(recorder.visibleTileId(root, null, null)).toBeNull();
+
+    const simulation = new Simulation(root);
+    simulation.step();
+    recorder.sync(root, simulation.tick);
+    expect(root.idAt(0, 1)).toBe(outerId);
+    expect(recorder.visibleTileId(root, deep, monitorId)).toBe(outerId);
+
+    root.place(0, 1, TileKind.Empty);
+    recorder.sync(root, simulation.tick);
+    expect(recorder.visibleTileId(root, deep, monitorId)).toBeNull();
+    expect(recorder.visibleTileId(deep, deep, monitorId)).toBeNull();
+  });
+
   it("keeps recursive histories separate across overlapping IDs and moving arrays", () => {
     const world = new World(3, 2);
     world.place(0, 0, TileKind.RuneArray);

@@ -52,7 +52,7 @@ Placed-component overlays use the hovered world's actual kind/orientation, inclu
 
 `src/ui/tool-cursor.ts` uses the shared tile renderer and complete palette tool swatches for a small pointer-adjacent icon. It tracks temporary Control welding and hides outside the board, for touch, on blur/cancellation, in modals, and outside workshops.
 
-Entered rune arrays draw their four outer charges as virtual conduits beyond the inner board, with edge-center port markers. The displayed world may be nested while the simulation remains rooted. Signal-panel hover only maps root signal IDs to root-board highlights.
+Entered rune arrays draw their four outer charges as virtual conduits beyond the inner board, with edge-center port markers. The displayed world may be nested while the simulation remains rooted. Signal-panel hover highlights the source on its own board or the containing rune array visible on an ancestor board; sources outside the displayed subtree have no highlight.
 
 PNG export crops the current rendered pixels to the visible grid, excluding the surround and virtual array ports. Respect pan, zoom, and fractional device-pixel ratios without resampling. It exports neither offscreen board areas nor a separately rerendered whole board.
 
