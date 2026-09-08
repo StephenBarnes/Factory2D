@@ -1,6 +1,7 @@
 import { AssemblerResolver } from "./assembler-resolver";
 import { DeliveryResolver } from "./delivery-resolver";
 import { DuplicatorResolver } from "./duplicator-resolver";
+import { DrillResolver } from "./drill-resolver";
 import { FurnaceResolver } from "./furnace-resolver";
 import { MotionWorkspace } from "./motion-workspace";
 import { RotatorResolver } from "./rotator-resolver";
@@ -21,6 +22,7 @@ export class WorldRuntime {
   readonly deliveryResolver: DeliveryResolver;
   readonly duplicatorResolver: DuplicatorResolver;
   readonly furnaceResolver: FurnaceResolver;
+  readonly drillResolver: DrillResolver;
   readonly motionWorkspace: MotionWorkspace;
   readonly rotatorResolver: RotatorResolver;
   readonly weldOperationResolver: WeldOperationResolver;
@@ -47,6 +49,7 @@ export class WorldRuntime {
   private collectedWeldOperators = false;
   private collectedDeliveries = false;
   private collectedAssemblers = false;
+  private collectedDrills = false;
   constructor(world: World) {
     this.world = world;
     this.weldedBodies = new WeldedBodyIndex(world);
@@ -54,6 +57,7 @@ export class WorldRuntime {
     this.deliveryResolver = new DeliveryResolver(world, this.weldedBodies);
     this.duplicatorResolver = new DuplicatorResolver(world, this.weldedBodies);
     this.furnaceResolver = new FurnaceResolver(world);
+    this.drillResolver = new DrillResolver(world);
     this.motionWorkspace = new MotionWorkspace(world);
     this.rotatorResolver = new RotatorResolver(world);
     this.weldOperationResolver = new WeldOperationResolver(world);
@@ -71,6 +75,7 @@ export class WorldRuntime {
     this.collectedWeldOperators = world.hasFeature(WorldFeature.WeldOperator);
     this.collectedDeliveries = world.hasFeature(WorldFeature.Delivery);
     this.collectedAssemblers = world.hasFeature(WorldFeature.Assembler);
+    this.collectedDrills = world.hasFeature(WorldFeature.Drill);
     if (world.hasFeature(WorldFeature.WeldedBodyObserver)) {
       this.weldedBodies.collect();
     }
@@ -85,6 +90,9 @@ export class WorldRuntime {
     }
     if (this.collectedWeldOperators) {
       this.weldOperationResolver.collect();
+    }
+    if (this.collectedDrills) {
+      this.drillResolver.collect();
     }
   }
 
@@ -104,6 +112,9 @@ export class WorldRuntime {
     }
     if (this.collectedAssemblers) {
       this.assemblerResolver.commit(interpolationSource);
+    }
+    if (this.collectedDrills) {
+      this.drillResolver.commit();
     }
     let movementCount = this.world.hasFeature(WorldFeature.Gravity)
       ? this.motionWorkspace.resolveOrdinaryMovements(tick)

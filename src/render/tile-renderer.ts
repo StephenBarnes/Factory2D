@@ -685,6 +685,36 @@ function drawDecoration(
       context.restore();
       break;
     }
+    case TileDecorationStyle.Drill: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.fillStyle = "#242a31";
+      context.strokeStyle = definition.decorationColor;
+      context.lineWidth = Math.max(1.5, size * 0.045);
+      context.lineJoin = "round";
+      context.beginPath();
+      context.rect(-size * 0.23, size * 0.08, size * 0.46, size * 0.2);
+      context.fill();
+      context.stroke();
+      context.beginPath();
+      context.moveTo(-size * 0.16, size * 0.08);
+      context.lineTo(0, -size * 0.35);
+      context.lineTo(size * 0.16, size * 0.08);
+      context.closePath();
+      context.fillStyle = definition.decorationColor;
+      context.fill();
+      context.strokeStyle = "#424a55";
+      context.lineWidth = Math.max(1, size * 0.035);
+      context.beginPath();
+      context.moveTo(-size * 0.05, -size * 0.21);
+      context.lineTo(size * 0.08, -size * 0.13);
+      context.moveTo(-size * 0.1, -size * 0.08);
+      context.lineTo(size * 0.13, size * 0.01);
+      context.stroke();
+      context.restore();
+      break;
+    }
     case TileDecorationStyle.Furnace: {
       context.save();
       context.translate(left + size / 2, top + size / 2);

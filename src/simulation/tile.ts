@@ -55,6 +55,7 @@ export const enum TileKind {
   Wood = 53,
   Comparer = 54,
   LaserSplitter = 55,
+  Drill = 56,
 }
 
 export const enum Direction {
@@ -119,6 +120,7 @@ export const enum TileDecorationStyle {
   SquareGrains = 42,
   Comparer = 43,
   LaserSplitter = 44,
+  Drill = 45,
 }
 
 export const enum PaletteCategory {
@@ -1033,6 +1035,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#55391f",
     decorationStyle: TileDecorationStyle.Wood,
     decorationColor: "#9a703f",
+  },
+  [TileKind.Drill]: {
+    name: "Drill",
+    boardCode: "f",
+    defaultPrice: 20,
+    palette: {
+      order: 59,
+      category: PaletteCategory.Transformation,
+      description: "Destroys the block immediately ahead each tick; -1 side charge disables it.",
+      extendedDescription: ["Reads the previous-tick shared side charge: -1 disables drilling; 0 or +1 enables it. Removes one tile and its welds, not the rest of its welded body. The pointed side cannot be welded.", "Targets start-of-tick blocks, before movement. Multiple drills targeting the same block jam. Can destroy machinery and fixed terrain; produces no material."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: true,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Right | WeldSide.Left,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#59616b",
+    decorationStyle: TileDecorationStyle.Drill,
+    decorationColor: "#efd0a1",
   },
   [TileKind.Furnace]: {
     name: "Furnace",

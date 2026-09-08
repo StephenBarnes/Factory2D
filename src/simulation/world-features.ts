@@ -24,7 +24,8 @@ export const enum WorldFeature {
   RuneArray = 13,
   Rotator = 14,
   WeldedBodyObserver = 15,
-  Count = 16,
+  Drill = 16,
+  Count = 17,
 }
 
 const FEATURE_MASKS = new Uint32Array(
@@ -76,6 +77,9 @@ for (const kind of TILE_KINDS) {
   }
   if (kind === TileKind.Furnace) {
     mask |= 1 << WorldFeature.Furnace;
+  }
+  if (kind === TileKind.Drill) {
+    mask |= 1 << WorldFeature.Drill;
   }
   if (definition.affectedByGravity) {
     mask |= 1 << WorldFeature.Gravity;

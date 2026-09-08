@@ -39,7 +39,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Flipper: attaches to one block, then flips the entire connected/welded group of blocks around that line horizontally or vertically, if it would not collide/overlap other blocks. Similar to Kaizen game's rotation.
 * Add a press/stamper/crusher. Behaves similarly to the piston, but (1) if piston extension is blocked by another tile, and that tile can't be moved, it instead unwelds and destroys that tile; and (2) we have a list of recipes for transforming the tile that the extended arm touches, on extension.
 * Grinder blocks that process a block in front into a product block - exactly like the furnace, but with a distinct table of recipes and different appearance (and later animation and sound).
-* A drill/destroyer block that destroys the block in front of it.
 * Replace the current magnet with an electromagnet. Positive and negative charges make it switch polarity; opposite sides have opposite polarity. Both nonzero polarities stick to iron. Like magnet sides repel, opposite magnet sides attract.
 * Maybe add static non-controllable magnets, which are also non-directional.
 * Component that makes its welded body immune to gravity, but can still be pushed down by an independent body on top that falls under gravity. (Platform block already does the first part, but cannot be pushed, and can't be moved by pistons.)
@@ -60,6 +59,7 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Add an indestructible flag. Blocks like crushers and drills should not be able to destroy these. Needed to prevent some exploits when solving puzzles, e.g. by drilling into the ground and activating the victory block.
 * Modify the assembler to add reaction force: When it has a pending output, but no space to output, shift the assembler in its forwards direction, emitting the product out the back (at assembler's pre-movement position). Allow this motion to push other blocks that are in front of the assembler.
 * Modify the duplicator in the same way as assembler above - make it also attempt to push itself away from the output side, if it's trying to duplicate a single-tile body but there's something blocking the output. When duplicating multi-tile bodies, don't do this - require already empty space for the whole body.
+* Make the drill block take multiple ticks to destroy a block. Make it connect to circuits on its back side, emitting +1 on ticks where it's working on destroying a block, similar to the furnace block. Keep this back network separate from the side network where a -1 charge deactivates it.
 
 # Performance
 
