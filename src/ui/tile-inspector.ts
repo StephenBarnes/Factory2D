@@ -1,5 +1,5 @@
 import { componentConfigurationForKind } from "../simulation/configurable-components";
-import { furnaceRecipeFor } from "../simulation/furnace";
+import { furnaceNeighborsPresent, furnaceRecipeFor } from "../simulation/furnace";
 import {
   Direction,
   PaletteCategory,
@@ -355,9 +355,13 @@ export class TileInspector {
         this.furnace.textContent = "IDLE · NO BAKEABLE TARGET";
       } else {
         const progress = this.world.furnaceProgressAt(position.x, position.y);
-        const status = progress === 0
-          ? "READY"
-          : this.world.chargeAt(position.x, position.y) === 1 ? "BAKING" : "PAUSED";
+        const status = recipe.requiredNeighbors !== undefined && !furnaceNeighborsPresent(
+          this.world, targetY * this.world.width + targetX, recipe,
+        )
+          ? `WAITING FOR ${recipe.requiredNeighbors.map((kind) => TILE_DEFINITIONS[kind].name.toUpperCase()).join(" + ")} BESIDE TARGET`
+          : progress === 0
+            ? "READY"
+            : this.world.chargeAt(position.x, position.y) === 1 ? "BAKING" : "PAUSED";
         this.furnace.textContent =
           `${status} · ${TILE_DEFINITIONS[recipe.input].name.toUpperCase()} → ` +
           `${TILE_DEFINITIONS[recipe.output].name.toUpperCase()} · ` +

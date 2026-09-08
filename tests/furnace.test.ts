@@ -31,6 +31,62 @@ describe("directional furnaces", () => {
     },
   );
 
+  it("pauses copper smelting and its output without wood, including across save/load", () => {
+    let world = new World(3, 1);
+    world.place(0, 0, TileKind.Furnace, Direction.Right);
+    const oreId = world.place(1, 0, TileKind.CopperOre);
+    let simulation = new Simulation(world);
+    simulation.step();
+    expect(world.furnaceProgressAt(0, 0)).toBe(0);
+    expect(world.chargeAtPort(0, 0, Direction.Left)).toBe(0);
+
+    const woodId = world.place(2, 0, TileKind.Wood);
+    simulation.step();
+    simulation.step();
+    expect(world.furnaceProgressAt(0, 0)).toBe(2);
+    expect(world.chargeAtPort(0, 0, Direction.Left)).toBe(1);
+    expect(world.idAt(1, 0)).toBe(oreId);
+    expect(world.idAt(2, 0)).toBe(woodId);
+
+    world.place(2, 0, TileKind.Empty);
+    simulation.step();
+    expect(world.furnaceProgressAt(0, 0)).toBe(2);
+    expect(world.chargeAtPort(0, 0, Direction.Left)).toBe(0);
+    world = deserializeBoard(serializeBoard(world, simulation.tick)).world;
+    simulation = new Simulation(world);
+    simulation.step();
+    expect(world.furnaceProgressAt(0, 0)).toBe(2);
+
+    world.place(2, 0, TileKind.Wood);
+    for (let tick = 0; tick < 3; tick += 1) simulation.step();
+    expect(world.kindAt(1, 0)).toBe(TileKind.CopperOre);
+    simulation.step();
+    expect(world.kindAt(1, 0)).toBe(TileKind.Copper);
+    expect(world.kindAt(2, 0)).toBe(TileKind.Wood);
+    expect(world.chargeAtPort(0, 0, Direction.Left)).toBe(1);
+    simulation.step();
+    expect(world.chargeAtPort(0, 0, Direction.Left)).toBe(0);
+  });
+
+  it("does not treat diagonal or row-wrapped wood as adjacent to copper ore", () => {
+    const world = new World(3, 2);
+    world.place(1, 1, TileKind.Furnace, Direction.Left);
+    world.place(0, 1, TileKind.CopperOre);
+    world.place(1, 0, TileKind.Wood);
+    world.place(2, 0, TileKind.Wood);
+    world.place(2, 1, TileKind.Platform);
+    world.setWeld(1, 0, 2, 0, true);
+    world.setWeld(2, 0, 2, 1, true);
+    const simulation = new Simulation(world);
+    for (let tick = 0; tick < 6; tick += 1) simulation.step();
+    expect(world.kindAt(0, 1)).toBe(TileKind.CopperOre);
+    expect(world.furnaceProgressAt(1, 1)).toBe(0);
+
+    world.place(0, 0, TileKind.Wood);
+    for (let tick = 0; tick < 6; tick += 1) simulation.step();
+    expect(world.kindAt(0, 1)).toBe(TileKind.Copper);
+  });
+
   it("welds cooked glass only to existing adjacent glass on completion", () => {
     const world = new World(3, 3);
     world.place(1, 0, TileKind.Furnace, Direction.Down);

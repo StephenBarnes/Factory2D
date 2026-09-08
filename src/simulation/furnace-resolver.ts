@@ -1,5 +1,5 @@
 import { expectDefined } from "../util/assert";
-import { furnaceRecipeFor } from "./furnace";
+import { furnaceNeighborsPresent, furnaceRecipeFor } from "./furnace";
 import { Direction, TileKind } from "./tile";
 import type { World } from "./world";
 import { WorldFeature } from "./world-features";
@@ -46,7 +46,7 @@ export class FurnaceResolver {
       const targetId = this.world.idAtIndex(targetIndex);
       const previousTargetId = this.world.furnaceTargetIdAtIndex(index);
       const previousProgress = this.world.furnaceProgressAtIndex(index);
-      if (disabledFurnaces[index] === 1) {
+      if (disabledFurnaces[index] === 1 || !furnaceNeighborsPresent(this.world, targetIndex, recipe)) {
         if (targetId === previousTargetId && previousProgress > 0) {
           this.nextProgress[index] = previousProgress;
           this.nextTargetIds[index] = targetId;

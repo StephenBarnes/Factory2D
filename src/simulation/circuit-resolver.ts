@@ -1,6 +1,6 @@
 import { expectDefined } from "../util/assert";
 import { chargeFromSum, type Charge } from "./circuit";
-import { furnaceRecipeFor } from "./furnace";
+import { furnaceNeighborsPresent, furnaceRecipeFor } from "./furnace";
 import { PuzzleResult } from "./puzzle-result";
 import { runeArrayPortCellIndex } from "./rune-array";
 import {
@@ -231,7 +231,9 @@ export class CircuitResolver {
         runtime.furnaceDisabled[index] = disabled ? 1 : 0;
         const targetIndex = neighborIndex(world, index, orientation);
         const targetKind = targetIndex < 0 ? TileKind.Empty : world.kindAtIndex(targetIndex);
-        const outputCharge = !disabled && furnaceRecipeFor(targetKind) !== undefined ? 1 : 0;
+        const recipe = furnaceRecipeFor(targetKind);
+        const outputCharge = !disabled && recipe !== undefined &&
+          furnaceNeighborsPresent(world, targetIndex, recipe) ? 1 : 0;
         runtime.nextIsolatedOutputCharges[index] = outputCharge;
         this.driveOutputs(
           runtime,
