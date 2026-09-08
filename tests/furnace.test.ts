@@ -31,6 +31,65 @@ describe("directional furnaces", () => {
     },
   );
 
+  it("welds cooked glass only to existing adjacent glass on completion", () => {
+    const world = new World(3, 3);
+    world.place(1, 0, TileKind.Furnace, Direction.Down);
+    world.place(1, 1, TileKind.Sand);
+    world.place(0, 1, TileKind.Glass);
+    world.place(2, 1, TileKind.Iron);
+    world.place(1, 2, TileKind.Glass);
+    world.place(0, 2, TileKind.Platform);
+    world.place(2, 2, TileKind.Platform);
+    const simulation = new Simulation(world);
+
+    for (let tick = 0; tick < 3; tick += 1) simulation.step();
+    expect(world.isWelded(1, 1, 0, 1)).toBe(false);
+    expect(world.isWelded(1, 1, 1, 2)).toBe(false);
+    world.setCharge(1, 0, -1);
+    simulation.step();
+    expect(world.kindAt(1, 1)).toBe(TileKind.Sand);
+    expect(world.isWelded(1, 1, 0, 1)).toBe(false);
+    world.setCharge(1, 0, 0);
+    simulation.step();
+
+    expect(world.kindAt(1, 1)).toBe(TileKind.Glass);
+    expect(world.isWelded(1, 1, 0, 1)).toBe(true);
+    expect(world.isWelded(1, 1, 1, 2)).toBe(true);
+    expect(world.isWelded(1, 1, 2, 1)).toBe(false);
+    expect(world.isWelded(1, 1, 1, 0)).toBe(false);
+    const restored = deserializeBoard(serializeBoard(world, simulation.tick)).world;
+    expect(restored.isWelded(1, 1, 0, 1)).toBe(true);
+    expect(restored.isWelded(1, 1, 1, 2)).toBe(true);
+  });
+
+  it("does not weld simultaneously cooked neighbors or add welds on later ticks", () => {
+    const world = new World(2, 2);
+    for (let x = 0; x < 2; x += 1) {
+      world.place(x, 0, TileKind.Furnace, Direction.Down);
+      world.place(x, 1, TileKind.Sand);
+    }
+    const simulation = new Simulation(world);
+    for (let tick = 0; tick < 5; tick += 1) simulation.step();
+
+    expect(world.kindAt(0, 1)).toBe(TileKind.Glass);
+    expect(world.kindAt(1, 1)).toBe(TileKind.Glass);
+    expect(world.isWelded(0, 1, 1, 1)).toBe(false);
+  });
+
+  it("leaves iron smelting unwelded next to iron and glass", () => {
+    const world = new World(3, 2);
+    world.place(0, 1, TileKind.Glass);
+    world.place(1, 0, TileKind.Furnace, Direction.Down);
+    world.place(1, 1, TileKind.IronOre);
+    world.place(2, 1, TileKind.Iron);
+    const simulation = new Simulation(world);
+    for (let tick = 0; tick < 6; tick += 1) simulation.step();
+
+    expect(world.kindAt(1, 1)).toBe(TileKind.Iron);
+    expect(world.isWelded(1, 1, 0, 1)).toBe(false);
+    expect(world.isWelded(1, 1, 2, 1)).toBe(false);
+  });
+
   it("restarts when the target identity changes", () => {
     const world = new World(2, 1);
     world.place(0, 0, TileKind.Furnace, Direction.Right);

@@ -1,3 +1,4 @@
+import { expectDefined } from "../util/assert";
 import { furnaceRecipeFor } from "./furnace";
 import { Direction, TileKind } from "./tile";
 import type { World } from "./world";
@@ -10,6 +11,7 @@ export class FurnaceResolver {
   private readonly nextTargetIds: Uint32Array;
   private readonly transformTargetIndices: Int32Array;
   private readonly transformKinds: Uint8Array;
+  private readonly weldMasks: Uint8Array;
 
   constructor(world: World) {
     this.world = world;
@@ -17,6 +19,7 @@ export class FurnaceResolver {
     this.nextTargetIds = new Uint32Array(world.cellCount);
     this.transformTargetIndices = new Int32Array(world.cellCount);
     this.transformKinds = new Uint8Array(world.cellCount);
+    this.weldMasks = new Uint8Array(world.cellCount);
   }
 
   resolve(disabledFurnaces: Uint8Array): void {
@@ -30,6 +33,7 @@ export class FurnaceResolver {
       this.nextTargetIds[index] = 0;
       this.transformTargetIndices[index] = -1;
       this.transformKinds[index] = TileKind.Empty;
+      this.weldMasks[index] = 0;
 
       const targetIndex = this.neighborIndex(index, this.world.orientationAtIndex(index));
       if (targetIndex < 0) {
@@ -58,6 +62,16 @@ export class FurnaceResolver {
       }
       this.transformTargetIndices[index] = targetIndex;
       this.transformKinds[index] = recipe.output;
+      if (recipe.weldTo !== undefined) {
+        let mask = 0;
+        for (let direction = Direction.Up; direction <= Direction.Left; direction += 1) {
+          const neighbor = this.neighborIndex(targetIndex, direction);
+          if (neighbor >= 0 && recipe.weldTo.includes(this.world.kindAtIndex(neighbor))) {
+            mask |= 1 << direction;
+          }
+        }
+        this.weldMasks[index] = mask;
+      }
     }
 
     this.world.applyFurnaceResults(
@@ -66,6 +80,29 @@ export class FurnaceResolver {
       this.transformTargetIndices,
       this.transformKinds,
     );
+
+    // Commit only after every transformation, so weld eligibility uses the product.
+    // The neighbor-kind decision above uses the same pre-cooking state for all furnaces.
+    for (
+      let index = this.world.firstFeatureIndex(WorldFeature.Furnace);
+      index >= 0;
+      index = this.world.nextFeatureIndex(WorldFeature.Furnace, index)
+    ) {
+      const mask = expectDefined(this.weldMasks[index], "furnace weld mask");
+      if (mask === 0) continue;
+      const target = expectDefined(this.transformTargetIndices[index], "furnace weld target");
+      for (let direction = Direction.Up; direction <= Direction.Left; direction += 1) {
+        if ((mask & (1 << direction)) === 0) continue;
+        const neighbor = this.neighborIndex(target, direction);
+        this.world.setWeld(
+          target % this.world.width,
+          Math.floor(target / this.world.width),
+          neighbor % this.world.width,
+          Math.floor(neighbor / this.world.width),
+          true,
+        );
+      }
+    }
   }
 
   private neighborIndex(index: number, direction: Direction): number {

@@ -1042,7 +1042,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 7,
       category: PaletteCategory.Transformation,
       description: "Bakes the block on its pointed side; linked side -1 pauses it; rear outputs +1 while baking.",
-      extendedDescription: ["Sand becomes glass in four active ticks; iron ore becomes iron in six. A -1 on the shared side circuit pauses progress; 0 or +1 allows cooking.", "The isolated rear output is +1 on every active baking tick, including completion. Moving a different target in front resets progress."],
+      extendedDescription: ["Sand becomes glass in four active ticks; iron ore becomes iron in six. A -1 on the shared side circuit pauses progress; 0 or +1 allows cooking.", "Freshly cooked glass welds to adjacent existing glass, but not to sand cooked in the same tick. Iron smelting adds no welds.", "The isolated rear output is +1 on every active baking tick, including completion. Moving a different target in front resets progress."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,

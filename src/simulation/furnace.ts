@@ -4,11 +4,18 @@ export interface FurnaceRecipe {
   readonly input: TileKind;
   readonly output: TileKind;
   readonly bakeTime: number;
+  /** Neighbor kinds observed before cooking that the finished product joins. */
+  readonly weldTo?: readonly TileKind[];
 }
 
 /** Furnace recipes and their required active ticks. */
 export const FURNACE_RECIPES: readonly FurnaceRecipe[] = Object.freeze([
-  Object.freeze({ input: TileKind.Sand, output: TileKind.Glass, bakeTime: 4 }),
+  Object.freeze({
+    input: TileKind.Sand,
+    output: TileKind.Glass,
+    bakeTime: 4,
+    weldTo: Object.freeze([TileKind.Glass]),
+  }),
   Object.freeze({ input: TileKind.IronOre, output: TileKind.Iron, bakeTime: 6 }),
 ]);
 
