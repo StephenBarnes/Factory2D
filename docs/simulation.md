@@ -4,7 +4,7 @@ For physics, circuit, component, and board-format changes. See [UI/lifecycle](ui
 
 ## Ownership and tick model
 
-* `src/simulation/world.ts` owns typed-array tile kinds, stable IDs, orientations, charges, furnace state, weld edges, and sparse per-ID component state. Empty cells have ID 0. Geometry and visual revisions are separate.
+* `src/simulation/world.ts` owns the board. `cell-storage.ts` bundles the dense per-cell typed arrays (tile kinds, stable IDs, orientations, charges, furnace state, weld edges) with whole-board and whole-cell clear/copy primitives, so a new per-cell field is added there once; `World` adds sparse per-ID component state and every invariant on top. Empty cells have ID 0. Geometry and visual revisions are separate.
 * `simulation.ts` coordinates observation, intent resolution, and commit. Components observe the start-of-tick state, not another component's newly committed action. Circuit propagation resolves an entire welded network in one phase; gates use previously observed inputs.
 * `world-runtime.ts` retains one `WorldRuntime` per board identity, bundling resolvers and scratch buffers. `world-features.ts` centrally maintains feature counts and row-major bitset indices through tile-kind mutations. Passes skip absent features.
 * `welded-body-index.ts` retains start-of-tick body membership, bounds, and exact structural matching. `motion-workspace.ts` privately owns ordinary-motion and piston scratch state. Keep hot tick paths allocation-free by reusing typed buffers.

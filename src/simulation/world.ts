@@ -17,13 +17,13 @@ import {
   type ConfigurableComponentState,
   type RuneArrayComponentState,
 } from "./configurable-components";
+import { CellStorage } from "./cell-storage";
 import { isCharge, type Charge } from "./circuit";
 import { furnaceRecipeFor } from "./furnace";
 import { PuzzleResult } from "./puzzle-result";
 import { validateTextBoxes, type TextBox } from "./text-box";
 import {
   requireRuneArrayDimension,
-  transformRuneArrayPorts,
   validateRuneArrayDescription,
 } from "./rune-array";
 import {
@@ -51,28 +51,11 @@ export class World {
   readonly height: number;
   readonly cellCount: number;
 
-  private readonly kinds: Uint8Array;
-  private readonly ids: Uint32Array;
-  private readonly orientations: Uint8Array;
-  private readonly charges: Int8Array;
-  private readonly crossingVerticalCharges: Int8Array;
-  private readonly isolatedOutputCharges: Int8Array;
-  private readonly furnaceProgress: Uint16Array;
-  private readonly furnaceTargetIds: Uint32Array;
+  private readonly cells: CellStorage;
+  /** Scratch copy for moving or rotating many cells atomically. */
+  private readonly movedCells: CellStorage;
   private readonly componentStates = new Map<number, ConfigurableComponentState>();
   private nextTileId = 1;
-  private readonly rightWelds: Uint8Array;
-  private readonly downWelds: Uint8Array;
-  private readonly movedKinds: Uint8Array;
-  private readonly movedIds: Uint32Array;
-  private readonly movedOrientations: Uint8Array;
-  private readonly movedCharges: Int8Array;
-  private readonly movedCrossingVerticalCharges: Int8Array;
-  private readonly movedIsolatedOutputCharges: Int8Array;
-  private readonly movedFurnaceProgress: Uint16Array;
-  private readonly movedFurnaceTargetIds: Uint32Array;
-  private readonly movedRightWelds: Uint8Array;
-  private readonly movedDownWelds: Uint8Array;
   private revisionValue = 0;
   private geometryRevisionValue = 0;
   private puzzleResultValue = PuzzleResult.InProgress;
@@ -87,26 +70,8 @@ export class World {
     this.width = width;
     this.height = height;
     this.cellCount = width * height;
-    this.kinds = new Uint8Array(this.cellCount);
-    this.ids = new Uint32Array(this.cellCount);
-    this.orientations = new Uint8Array(this.cellCount);
-    this.charges = new Int8Array(this.cellCount);
-    this.crossingVerticalCharges = new Int8Array(this.cellCount);
-    this.isolatedOutputCharges = new Int8Array(this.cellCount);
-    this.furnaceProgress = new Uint16Array(this.cellCount);
-    this.furnaceTargetIds = new Uint32Array(this.cellCount);
-    this.rightWelds = new Uint8Array(this.cellCount);
-    this.downWelds = new Uint8Array(this.cellCount);
-    this.movedKinds = new Uint8Array(this.cellCount);
-    this.movedIds = new Uint32Array(this.cellCount);
-    this.movedOrientations = new Uint8Array(this.cellCount);
-    this.movedCharges = new Int8Array(this.cellCount);
-    this.movedCrossingVerticalCharges = new Int8Array(this.cellCount);
-    this.movedIsolatedOutputCharges = new Int8Array(this.cellCount);
-    this.movedFurnaceProgress = new Uint16Array(this.cellCount);
-    this.movedFurnaceTargetIds = new Uint32Array(this.cellCount);
-    this.movedRightWelds = new Uint8Array(this.cellCount);
-    this.movedDownWelds = new Uint8Array(this.cellCount);
+    this.cells = new CellStorage(this.cellCount);
+    this.movedCells = new CellStorage(this.cellCount);
     this.featureIndex = new WorldFeatureIndex(this.cellCount);
   }
 
@@ -182,37 +147,37 @@ export class World {
   }
 
   kindAt(x: number, y: number): TileKind {
-    return this.kinds[this.indexOf(x, y)] as TileKind;
+    return this.cells.kinds[this.indexOf(x, y)] as TileKind;
   }
 
   idAtIndex(index: number): number {
     this.assertIndex(index);
-    return this.ids[index] ?? 0;
+    return this.cells.ids[index] ?? 0;
   }
 
   idAt(x: number, y: number): number {
-    return this.ids[this.indexOf(x, y)] ?? 0;
+    return this.cells.ids[this.indexOf(x, y)] ?? 0;
   }
   orientationAt(x: number, y: number): Direction {
-    return this.orientations[this.indexOf(x, y)] as Direction;
+    return this.cells.orientations[this.indexOf(x, y)] as Direction;
   }
 
   chargeAt(x: number, y: number): Charge {
     const index = this.indexOf(x, y);
-    if (this.kinds[index] === TileKind.WireCrossing) {
+    if (this.cells.kinds[index] === TileKind.WireCrossing) {
       throw new Error("Wire crossing charges must be read from a circuit port");
     }
-    if (this.kinds[index] === TileKind.RuneArray) {
+    if (this.cells.kinds[index] === TileKind.RuneArray) {
       throw new Error("Rune array charges must be read from a circuit port");
     }
-    return this.charges[index] as Charge;
+    return this.cells.charges[index] as Charge;
   }
 
   tileAt(x: number, y: number): Tile {
     const index = this.indexOf(x, y);
     return {
-      kind: this.kinds[index] as TileKind,
-      id: this.ids[index] ?? 0,
+      kind: this.cells.kinds[index] as TileKind,
+      id: this.cells.ids[index] ?? 0,
     };
   }
 
@@ -221,7 +186,7 @@ export class World {
     if (!isCharge(charge)) {
       throw new RangeError(`Invalid circuit charge ${charge as number}`);
     }
-    const kind = this.kinds[index] as TileKind;
+    const kind = this.cells.kinds[index] as TileKind;
     if (charge !== 0 && TILE_DEFINITIONS[kind].circuitPorts === 0) {
       throw new Error("Only circuit-connected tiles can hold a nonzero charge");
     }
@@ -232,43 +197,43 @@ export class World {
       throw new Error("Rune array charges must specify a side port");
     }
     if (
-      this.charges[index] !== charge ||
-      (kind === TileKind.WireCrossing && this.crossingVerticalCharges[index] !== 0)
+      this.cells.charges[index] !== charge ||
+      (kind === TileKind.WireCrossing && this.cells.crossingVerticalCharges[index] !== 0)
     ) {
-      this.charges[index] = charge;
-      this.crossingVerticalCharges[index] = 0;
+      this.cells.charges[index] = charge;
+      this.cells.crossingVerticalCharges[index] = 0;
       this.touchVisualRevision();
     }
   }
 
   setCrossingCharges(x: number, y: number, horizontal: Charge, vertical: Charge): void {
     const index = this.indexOf(x, y);
-    if (this.kinds[index] !== TileKind.WireCrossing) {
+    if (this.cells.kinds[index] !== TileKind.WireCrossing) {
       throw new Error(`Tile at (${x}, ${y}) is not a wire crossing`);
     }
     if (!isCharge(horizontal) || !isCharge(vertical)) {
       throw new RangeError("Invalid wire crossing charge");
     }
     if (
-      this.charges[index] !== horizontal ||
-      this.crossingVerticalCharges[index] !== vertical
+      this.cells.charges[index] !== horizontal ||
+      this.cells.crossingVerticalCharges[index] !== vertical
     ) {
-      this.charges[index] = horizontal;
-      this.crossingVerticalCharges[index] = vertical;
+      this.cells.charges[index] = horizontal;
+      this.cells.crossingVerticalCharges[index] = vertical;
       this.touchVisualRevision();
     }
   }
   setIsolatedOutputCharge(x: number, y: number, charge: Charge): void {
     const index = this.indexOf(x, y);
-    const kind = this.kinds[index] as TileKind;
+    const kind = this.cells.kinds[index] as TileKind;
     if (!hasSeparateIsolatedOutput(kind)) {
       throw new Error(`Tile at (${x}, ${y}) has no separate isolated output`);
     }
     if (!isCharge(charge)) {
       throw new RangeError(`Invalid isolated output charge ${charge as number}`);
     }
-    if (this.isolatedOutputCharges[index] !== charge) {
-      this.isolatedOutputCharges[index] = charge;
+    if (this.cells.isolatedOutputCharges[index] !== charge) {
+      this.cells.isolatedOutputCharges[index] = charge;
       this.touchVisualRevision();
     }
   }
@@ -300,7 +265,7 @@ export class World {
       index >= 0;
       index = this.nextFeatureIndex(WorldFeature.Circuit, index)
     ) {
-      const kind = this.kinds[index] as TileKind;
+      const kind = this.cells.kinds[index] as TileKind;
       if (kind === TileKind.RuneArray) {
         const state = this.requireRuneArrayStateAtIndex(index);
         for (let side = 0; side < 4; side += 1) {
@@ -350,13 +315,13 @@ export class World {
         );
       }
       if (
-        this.charges[index] !== charge ||
-        this.crossingVerticalCharges[index] !== verticalCharge ||
-        this.isolatedOutputCharges[index] !== isolatedOutputCharge
+        this.cells.charges[index] !== charge ||
+        this.cells.crossingVerticalCharges[index] !== verticalCharge ||
+        this.cells.isolatedOutputCharges[index] !== isolatedOutputCharge
       ) {
-        this.charges[index] = charge;
-        this.crossingVerticalCharges[index] = verticalCharge;
-        this.isolatedOutputCharges[index] = isolatedOutputCharge;
+        this.cells.charges[index] = charge;
+        this.cells.crossingVerticalCharges[index] = verticalCharge;
+        this.cells.isolatedOutputCharges[index] = isolatedOutputCharge;
         changed = true;
       }
     }
@@ -373,7 +338,7 @@ export class World {
 
   componentStateSnapshotAtIndex(index: number): ConfigurableComponentSnapshot | null {
     this.assertIndex(index);
-    const kind = this.kinds[index] as TileKind;
+    const kind = this.cells.kinds[index] as TileKind;
     if (!hasComponentState(kind)) {
       return null;
     }
@@ -383,7 +348,7 @@ export class World {
   configureNumericComponent(x: number, y: number, value: number): boolean {
     const index = this.indexOf(x, y);
     const state = this.requireComponentStateAtIndex(index);
-    const configuration = componentConfigurationForKind(this.kinds[index] as TileKind);
+    const configuration = componentConfigurationForKind(this.cells.kinds[index] as TileKind);
     if (configuration === null || configuration.type !== "number") {
       throw new Error(`Tile at (${x}, ${y}) does not have numeric configuration`);
     }
@@ -414,7 +379,7 @@ export class World {
     } else {
       throw new Error(`Tile at (${x}, ${y}) does not have numeric configuration`);
     }
-    this.charges[index] = 0;
+    this.cells.charges[index] = 0;
     this.touchVisualRevision();
     return true;
   }
@@ -480,7 +445,7 @@ export class World {
       state.failed = false;
       state.ignoreZeros = ignoreZeros;
     }
-    this.charges[index] = 0;
+    this.cells.charges[index] = 0;
     this.touchVisualRevision();
     return true;
   }
@@ -571,7 +536,7 @@ export class World {
     snapshot: ConfigurableComponentSnapshot,
   ): void {
     const index = this.indexOf(x, y);
-    const kind = this.kinds[index] as TileKind;
+    const kind = this.cells.kinds[index] as TileKind;
     validateComponentSnapshot(snapshot);
     if (!componentStateMatchesKind(snapshot, kind)) {
       throw new Error(`Component state at (${x}, ${y}) does not match ${TILE_DEFINITIONS[kind].name}`);
@@ -582,7 +547,7 @@ export class World {
     ) {
       throw new Error(`Rotator at (${x}, ${y}) cannot point toward its rear input`);
     }
-    const id = this.ids[index] ?? 0;
+    const id = this.cells.ids[index] ?? 0;
     if (id === 0) {
       throw new Error(`Configurable component at (${x}, ${y}) has no tile identity`);
     }
@@ -705,28 +670,28 @@ export class World {
   }
 
   furnaceProgressAt(x: number, y: number): number {
-    return this.furnaceProgress[this.indexOf(x, y)] ?? 0;
+    return this.cells.furnaceProgress[this.indexOf(x, y)] ?? 0;
   }
 
   furnaceProgressAtIndex(index: number): number {
     this.assertIndex(index);
-    return this.furnaceProgress[index] ?? 0;
+    return this.cells.furnaceProgress[index] ?? 0;
   }
 
   furnaceTargetIdAtIndex(index: number): number {
     this.assertIndex(index);
-    return this.furnaceTargetIds[index] ?? 0;
+    return this.cells.furnaceTargetIds[index] ?? 0;
   }
 
   restoreFurnaceProgress(x: number, y: number, progress: number): void {
     const index = this.indexOf(x, y);
-    if (this.kinds[index] !== TileKind.Furnace) {
+    if (this.cells.kinds[index] !== TileKind.Furnace) {
       throw new Error(`Tile at (${x}, ${y}) is not a furnace`);
     }
     const targetIndex = this.directionalNeighborIndex(index);
     const targetKind = targetIndex < 0
       ? TileKind.Empty
-      : this.kinds[targetIndex] as TileKind;
+      : this.cells.kinds[targetIndex] as TileKind;
     const recipe = furnaceRecipeFor(targetKind);
     if (recipe === undefined) {
       throw new Error(`Furnace at (${x}, ${y}) has no bakeable target`);
@@ -736,12 +701,12 @@ export class World {
         `Furnace progress must be between 1 and ${recipe.bakeTime - 1} ticks`,
       );
     }
-    const targetId = this.ids[targetIndex] ?? 0;
+    const targetId = this.cells.ids[targetIndex] ?? 0;
     if (targetId === 0) {
       throw new Error(`Furnace at (${x}, ${y}) has no target identity`);
     }
-    this.furnaceProgress[index] = progress;
-    this.furnaceTargetIds[index] = targetId;
+    this.cells.furnaceProgress[index] = progress;
+    this.cells.furnaceTargetIds[index] = targetId;
     this.touchVisualRevision();
   }
 
@@ -781,11 +746,11 @@ export class World {
       }
       const storedTargetId = progress === 0 ? 0 : targetId;
       if (
-        this.furnaceProgress[index] !== progress ||
-        this.furnaceTargetIds[index] !== storedTargetId
+        this.cells.furnaceProgress[index] !== progress ||
+        this.cells.furnaceTargetIds[index] !== storedTargetId
       ) {
-        this.furnaceProgress[index] = progress;
-        this.furnaceTargetIds[index] = storedTargetId;
+        this.cells.furnaceProgress[index] = progress;
+        this.cells.furnaceTargetIds[index] = storedTargetId;
         changed = true;
       }
     }
@@ -804,7 +769,7 @@ export class World {
       }
       this.assertIndex(targetIndex);
       const targetId = expectDefined(targetIds[index], "transform target ID");
-      if (targetId === 0 || this.ids[targetIndex] !== targetId) {
+      if (targetId === 0 || this.cells.ids[targetIndex] !== targetId) {
         throw new Error(`Furnace at index ${index} lost its transform target`);
       }
       const outputKind = expectDefined(
@@ -814,17 +779,13 @@ export class World {
       if (outputKind === TileKind.Empty || TILE_DEFINITIONS[outputKind] === undefined) {
         throw new Error(`Furnace at index ${index} has invalid output kind ${outputKind}`);
       }
-      const transformedId = this.ids[targetIndex] ?? 0;
+      const transformedId = this.cells.ids[targetIndex] ?? 0;
       if (transformedId !== 0) {
         this.componentStates.delete(transformedId);
       }
       this.replaceKindAtIndex(targetIndex, outputKind);
-      this.orientations[targetIndex] = Direction.Up;
-      this.charges[targetIndex] = 0;
-      this.crossingVerticalCharges[targetIndex] = 0;
-      this.isolatedOutputCharges[targetIndex] = 0;
-      this.furnaceProgress[targetIndex] = 0;
-      this.furnaceTargetIds[targetIndex] = 0;
+      this.cells.orientations[targetIndex] = Direction.Up;
+      this.cells.resetTransientState(targetIndex);
       this.clearDisallowedWeldsAtIndex(targetIndex);
       changed = true;
       geometryChanged = true;
@@ -881,7 +842,7 @@ export class World {
         continue;
       }
       this.assertIndex(target);
-      if (this.kinds[assembler] !== TileKind.Assembler) {
+      if (this.cells.kinds[assembler] !== TileKind.Assembler) {
         throw new Error(`Non-assembler tile at index ${assembler} cannot consume a body`);
       }
       const state = this.requireAssemblerStateAtIndex(assembler);
@@ -892,7 +853,7 @@ export class World {
       if (outputCount < 1 || outputCount > MAX_ASSEMBLER_OUTPUTS) {
         throw new RangeError(`Assembler at index ${assembler} queues ${outputCount} outputs`);
       }
-      if (this.kinds[target] === TileKind.Empty || bodyOwners[target] !== assembler) {
+      if (this.cells.kinds[target] === TileKind.Empty || bodyOwners[target] !== assembler) {
         throw new Error(`Assembler at index ${assembler} lost its input body`);
       }
       let removed = 0;
@@ -900,7 +861,7 @@ export class World {
         if (bodyOwners[index] !== assembler) {
           continue;
         }
-        if (this.kinds[index] === TileKind.Empty) {
+        if (this.cells.kinds[index] === TileKind.Empty) {
           throw new Error(`Assembler at index ${assembler} has an empty body member`);
         }
         this.clearIndex(index);
@@ -936,10 +897,10 @@ export class World {
         continue;
       }
       this.assertIndex(target);
-      if (this.kinds[assembler] !== TileKind.Assembler) {
+      if (this.cells.kinds[assembler] !== TileKind.Assembler) {
         throw new Error(`Non-assembler tile at index ${assembler} cannot emit an output`);
       }
-      if (this.kinds[target] !== TileKind.Empty) {
+      if (this.cells.kinds[target] !== TileKind.Empty) {
         throw new Error(`Assembler output cell at index ${target} is occupied`);
       }
       const state = this.requireAssemblerStateAtIndex(assembler);
@@ -981,11 +942,11 @@ export class World {
         continue;
       }
       this.assertIndex(target);
-      if (this.kinds[delivery] !== TileKind.Delivery) {
+      if (this.cells.kinds[delivery] !== TileKind.Delivery) {
         throw new Error(`Non-delivery tile at index ${delivery} cannot absorb a body`);
       }
       if (
-        this.kinds[target] === TileKind.Empty ||
+        this.cells.kinds[target] === TileKind.Empty ||
         bodyOwners[target] !== delivery
       ) {
         throw new Error(`Delivery box at index ${delivery} lost its absorption body`);
@@ -1001,7 +962,7 @@ export class World {
       this.assertIndex(delivery);
       if (
         expectDefined(targetIndices[delivery], "absorbing delivery target") < 0 ||
-        this.kinds[index] === TileKind.Empty
+        this.cells.kinds[index] === TileKind.Empty
       ) {
         throw new Error(`Delivery box at index ${delivery} has an invalid body member`);
       }
@@ -1048,14 +1009,14 @@ export class World {
       if (
         owner < 0 ||
         owner >= this.cellCount ||
-        this.kinds[owner] !== TileKind.Duplicator
+        this.cells.kinds[owner] !== TileKind.Duplicator
       ) {
         throw new Error(`Invalid duplicator owner ${owner} for destination ${destination}`);
       }
-      if (this.kinds[source] === TileKind.Empty) {
+      if (this.cells.kinds[source] === TileKind.Empty) {
         throw new Error(`Duplicator source at index ${source} is empty`);
       }
-      if (this.kinds[destination] !== TileKind.Empty) {
+      if (this.cells.kinds[destination] !== TileKind.Empty) {
         throw new Error(`Duplicator destination at index ${destination} is occupied`);
       }
       const sourceX = source % this.width;
@@ -1064,7 +1025,7 @@ export class World {
       const destinationY = (destination - destinationX) / this.width;
       const ownerX = owner % this.width;
       const ownerY = (owner - ownerX) / this.width;
-      const ownerOrientation = this.orientations[owner] as Direction;
+      const ownerOrientation = this.cells.orientations[owner] as Direction;
       const validReflection = ownerOrientation === Direction.Up ||
           ownerOrientation === Direction.Down
         ? sourceX === destinationX && sourceY + destinationY === ownerY * 2
@@ -1092,63 +1053,43 @@ export class World {
         destinationOwners[destination],
         "committed duplicator destination owner",
       );
-      const kind = this.kinds[source] as TileKind;
-      const sourceOrientation = this.orientations[source] as Direction;
-      const ownerOrientation = this.orientations[owner] as Direction;
+      const kind = this.cells.kinds[source] as TileKind;
+      const sourceOrientation = this.cells.orientations[source] as Direction;
+      const ownerOrientation = this.cells.orientations[owner] as Direction;
+      const mirrorVertically = ownerOrientation === Direction.Up ||
+        ownerOrientation === Direction.Down;
       const id = this.nextTileId;
       this.nextTileId += 1;
       this.replaceKindAtIndex(destination, kind);
-      this.ids[destination] = id;
-      this.orientations[destination] = orientationForKind(
+      this.cells.ids[destination] = id;
+      this.cells.orientations[destination] = orientationForKind(
         kind,
-        ownerOrientation === Direction.Up || ownerOrientation === Direction.Down
+        mirrorVertically
           ? flipDirectionVertically(sourceOrientation)
           : flipDirectionHorizontally(sourceOrientation),
       );
-      this.charges[destination] = expectDefined(
-        this.charges[source],
+      this.cells.charges[destination] = expectDefined(
+        this.cells.charges[source],
         "duplicated tile charge",
       );
-      this.crossingVerticalCharges[destination] = expectDefined(
-        this.crossingVerticalCharges[source],
+      this.cells.crossingVerticalCharges[destination] = expectDefined(
+        this.cells.crossingVerticalCharges[source],
         "duplicated crossing charge",
       );
-      this.isolatedOutputCharges[destination] = expectDefined(
-        this.isolatedOutputCharges[source],
+      this.cells.isolatedOutputCharges[destination] = expectDefined(
+        this.cells.isolatedOutputCharges[source],
         "duplicated isolated output charge",
       );
-      this.furnaceProgress[destination] = 0;
-      this.furnaceTargetIds[destination] = 0;
+      this.cells.furnaceProgress[destination] = 0;
+      this.cells.furnaceTargetIds[destination] = 0;
       if (hasComponentState(kind)) {
-        const copiedState = cloneComponentState(this.requireComponentStateAtIndex(source));
-        const mirrorVertically = ownerOrientation === Direction.Up ||
-          ownerOrientation === Direction.Down;
-        if (copiedState.type === "array") {
-          copiedState.world = copiedState.world.transformed(
-            0,
-            !mirrorVertically,
-            mirrorVertically,
-          );
-          copiedState.ports = Int8Array.from(
-            transformRuneArrayPorts(copiedState.ports, 0, !mirrorVertically, mirrorVertically),
-          );
-        } else if (copiedState.type === "rotator") {
-          copiedState.direction = mirrorVertically
-            ? flipDirectionVertically(copiedState.direction)
-            : flipDirectionHorizontally(copiedState.direction);
-        } else if (copiedState.type === "assembler") {
-          for (let slot = 0; slot < copiedState.pendingOrientations.length; slot += 1) {
-            const pendingKind = copiedState.pendingKinds[slot] as TileKind;
-            const pendingOrientation = copiedState.pendingOrientations[slot] as Direction;
-            copiedState.pendingOrientations[slot] = orientationForKind(
-              pendingKind,
-              mirrorVertically
-                ? flipDirectionVertically(pendingOrientation)
-                : flipDirectionHorizontally(pendingOrientation),
-            );
-          }
-        }
-        this.componentStates.set(id, copiedState);
+        const snapshot = snapshotComponentState(this.requireComponentStateAtIndex(source));
+        this.componentStates.set(
+          id,
+          stateFromSnapshot(
+            transformComponentSnapshot(snapshot, 0, !mirrorVertically, mirrorVertically),
+          ),
+        );
       }
     }
 
@@ -1157,11 +1098,11 @@ export class World {
         sourceForDestination[destination],
         "duplicated furnace source index",
       );
-      if (source < 0 || this.kinds[source] !== TileKind.Furnace) {
+      if (source < 0 || this.cells.kinds[source] !== TileKind.Furnace) {
         continue;
       }
       const progress = expectDefined(
-        this.furnaceProgress[source],
+        this.cells.furnaceProgress[source],
         "duplicated furnace progress",
       );
       if (progress === 0) {
@@ -1169,11 +1110,11 @@ export class World {
       }
       const sourceTarget = this.neighborIndex(
         source,
-        this.orientations[source] as Direction,
+        this.cells.orientations[source] as Direction,
       );
       const destinationTarget = this.neighborIndex(
         destination,
-        this.orientations[destination] as Direction,
+        this.cells.orientations[destination] as Direction,
       );
       if (sourceTarget < 0 || destinationTarget < 0) {
         continue;
@@ -1191,11 +1132,11 @@ export class World {
           destinationOwners[destinationTarget],
           "duplicated furnace target owner",
         ) === owner &&
-        this.furnaceTargetIds[source] === this.ids[sourceTarget]
+        this.cells.furnaceTargetIds[source] === this.cells.ids[sourceTarget]
       ) {
-        this.furnaceProgress[destination] = progress;
-        this.furnaceTargetIds[destination] = expectDefined(
-          this.ids[destinationTarget],
+        this.cells.furnaceProgress[destination] = progress;
+        this.cells.furnaceTargetIds[destination] = expectDefined(
+          this.cells.ids[destinationTarget],
           "duplicated furnace target ID",
         );
       }
@@ -1226,7 +1167,7 @@ export class World {
           ) === owner &&
           this.areWeldedAtIndices(source, rightSource)
         ) {
-          this.rightWelds[destination] = 1;
+          this.cells.rightWelds[destination] = 1;
         }
       }
       if (destination < this.cellCount - this.width) {
@@ -1242,7 +1183,7 @@ export class World {
           ) === owner &&
           this.areWeldedAtIndices(source, downSource)
         ) {
-          this.downWelds[destination] = 1;
+          this.cells.downWelds[destination] = 1;
         }
       }
     }
@@ -1286,34 +1227,34 @@ export class World {
 
     if (
       x > 0 &&
-      this.rightWelds[index - 1] === 0 &&
+      this.cells.rightWelds[index - 1] === 0 &&
       this.canWeldIndices(index - 1, index)
     ) {
-      this.rightWelds[index - 1] = 1;
+      this.cells.rightWelds[index - 1] = 1;
       changed = true;
     }
     if (
       x < this.width - 1 &&
-      this.rightWelds[index] === 0 &&
+      this.cells.rightWelds[index] === 0 &&
       this.canWeldIndices(index, index + 1)
     ) {
-      this.rightWelds[index] = 1;
+      this.cells.rightWelds[index] = 1;
       changed = true;
     }
     if (
       y > 0 &&
-      this.downWelds[index - this.width] === 0 &&
+      this.cells.downWelds[index - this.width] === 0 &&
       this.canWeldIndices(index - this.width, index)
     ) {
-      this.downWelds[index - this.width] = 1;
+      this.cells.downWelds[index - this.width] = 1;
       changed = true;
     }
     if (
       y < this.height - 1 &&
-      this.downWelds[index] === 0 &&
+      this.cells.downWelds[index] === 0 &&
       this.canWeldIndices(index, index + this.width)
     ) {
-      this.downWelds[index] = 1;
+      this.cells.downWelds[index] = 1;
       changed = true;
     }
 
@@ -1335,28 +1276,28 @@ export class World {
           return false;
         }
         neighbor = index - this.width;
-        welded = this.downWelds[neighbor] === 1;
+        welded = this.cells.downWelds[neighbor] === 1;
         break;
       case Direction.Right:
         if (x >= this.width - 1) {
           return false;
         }
         neighbor = index + 1;
-        welded = this.rightWelds[index] === 1;
+        welded = this.cells.rightWelds[index] === 1;
         break;
       case Direction.Down:
         if (index >= this.cellCount - this.width) {
           return false;
         }
         neighbor = index + this.width;
-        welded = this.downWelds[index] === 1;
+        welded = this.cells.downWelds[index] === 1;
         break;
       case Direction.Left:
         if (x === 0) {
           return false;
         }
         neighbor = index - 1;
-        welded = this.rightWelds[neighbor] === 1;
+        welded = this.cells.rightWelds[neighbor] === 1;
         break;
       default:
         throw new RangeError(`Invalid circuit direction ${direction as number}`);
@@ -1365,12 +1306,12 @@ export class World {
       return false;
     }
 
-    const ownDefinition = TILE_DEFINITIONS[this.kinds[index] as TileKind];
-    const neighborDefinition = TILE_DEFINITIONS[this.kinds[neighbor] as TileKind];
-    const ownPorts = orientedSides(ownDefinition.circuitPorts, this.orientations[index] as Direction);
+    const ownDefinition = TILE_DEFINITIONS[this.cells.kinds[index] as TileKind];
+    const neighborDefinition = TILE_DEFINITIONS[this.cells.kinds[neighbor] as TileKind];
+    const ownPorts = orientedSides(ownDefinition.circuitPorts, this.cells.orientations[index] as Direction);
     const neighborPorts = orientedSides(
       neighborDefinition.circuitPorts,
-      this.orientations[neighbor] as Direction,
+      this.cells.orientations[neighbor] as Direction,
     );
     return (
       (ownPorts & (1 << direction)) !== 0 &&
@@ -1390,7 +1331,7 @@ export class World {
       throw new RangeError(`Invalid tile orientation ${orientation}`);
     }
     if (kind === TileKind.Empty) {
-      if (this.kinds[index] === TileKind.Empty) {
+      if (this.cells.kinds[index] === TileKind.Empty) {
         return 0;
       }
       this.clearIndex(index);
@@ -1398,28 +1339,24 @@ export class World {
       return 0;
     }
 
-    if (this.kinds[index] === kind) {
-      if (this.orientations[index] !== orientation) {
-        if (this.kinds[index] === TileKind.Rotator) {
+    if (this.cells.kinds[index] === kind) {
+      if (this.cells.orientations[index] !== orientation) {
+        if (this.cells.kinds[index] === TileKind.Rotator) {
           const state = this.requireComponentStateAtIndex(index);
           if (state.type !== "rotator") {
             throw new Error(`Rotator at index ${index} has invalid component state`);
           }
-          const turns = (orientation - (this.orientations[index] as Direction) + 4) & 3;
+          const turns = (orientation - (this.cells.orientations[index] as Direction) + 4) & 3;
           state.direction = ((state.direction + turns) & 3) as Direction;
         }
-        this.orientations[index] = orientation;
-        this.charges[index] = 0;
-        this.crossingVerticalCharges[index] = 0;
-        this.isolatedOutputCharges[index] = 0;
-        this.furnaceProgress[index] = 0;
-        this.furnaceTargetIds[index] = 0;
+        this.cells.orientations[index] = orientation;
+        this.cells.resetTransientState(index);
         this.clearDisallowedWeldsAtIndex(index);
         this.touchGeometryRevision();
       }
-      return this.ids[index] ?? 0;
+      return this.cells.ids[index] ?? 0;
     }
-    const replacedId = this.ids[index] ?? 0;
+    const replacedId = this.cells.ids[index] ?? 0;
     if (replacedId !== 0) {
       this.componentStates.delete(replacedId);
     }
@@ -1428,13 +1365,9 @@ export class World {
     const id = this.nextTileId;
     this.nextTileId += 1;
     this.replaceKindAtIndex(index, kind);
-    this.ids[index] = id;
-    this.charges[index] = 0;
-    this.crossingVerticalCharges[index] = 0;
-    this.isolatedOutputCharges[index] = 0;
-    this.furnaceProgress[index] = 0;
-    this.furnaceTargetIds[index] = 0;
-    this.orientations[index] = orientation;
+    this.cells.ids[index] = id;
+    this.cells.orientations[index] = orientation;
+    this.cells.resetTransientState(index);
     const componentState = createDefaultComponentState(
       kind,
       orientation,
@@ -1448,19 +1381,10 @@ export class World {
   }
 
   clear(): void {
-    this.kinds.fill(TileKind.Empty);
+    this.cells.clear();
     this.featureIndex.clear();
-    this.ids.fill(0);
-    this.orientations.fill(Direction.Up);
-    this.charges.fill(0);
-    this.crossingVerticalCharges.fill(0);
-    this.isolatedOutputCharges.fill(0);
-    this.furnaceProgress.fill(0);
-    this.furnaceTargetIds.fill(0);
     this.componentStates.clear();
     this.textBoxesValue = Object.freeze([]);
-    this.rightWelds.fill(0);
-    this.downWelds.fill(0);
     this.puzzleResultValue = PuzzleResult.InProgress;
     this.touchGeometryRevision();
   }
@@ -1476,17 +1400,8 @@ export class World {
       throw new RangeError("Cannot copy worlds with different dimensions");
     }
 
-    this.kinds.set(source.kinds);
+    this.cells.copyFrom(source.cells);
     this.featureIndex.copyFrom(source.featureIndex);
-    this.ids.set(source.ids);
-    this.orientations.set(source.orientations);
-    this.charges.set(source.charges);
-    this.crossingVerticalCharges.set(source.crossingVerticalCharges);
-    this.isolatedOutputCharges.set(source.isolatedOutputCharges);
-    this.furnaceProgress.set(source.furnaceProgress);
-    this.furnaceTargetIds.set(source.furnaceTargetIds);
-    this.rightWelds.set(source.rightWelds);
-    this.downWelds.set(source.downWelds);
     const previousStates = new Map(this.componentStates);
     this.componentStates.clear();
     for (const [id, state] of source.componentStates) {
@@ -1515,11 +1430,11 @@ export class World {
 
   kindAtIndex(index: number): TileKind {
     this.assertIndex(index);
-    return this.kinds[index] as TileKind;
+    return this.cells.kinds[index] as TileKind;
   }
   orientationAtIndex(index: number): Direction {
     this.assertIndex(index);
-    return this.orientations[index] as Direction;
+    return this.cells.orientations[index] as Direction;
   }
 
   chargeAtPort(x: number, y: number, direction: Direction): Charge {
@@ -1535,36 +1450,36 @@ export class World {
     ) {
       throw new RangeError(`Invalid circuit direction ${direction as number}`);
     }
-    const kind = this.kinds[index] as TileKind;
+    const kind = this.cells.kinds[index] as TileKind;
     if (kind === TileKind.RuneArray) {
       return this.requireRuneArrayStateAtIndex(index).ports[direction] as Charge;
     }
     const definition = TILE_DEFINITIONS[kind];
     const outputSides = orientedSides(
       definition.circuitOutputPorts,
-      this.orientations[index] as Direction,
+      this.cells.orientations[index] as Direction,
     );
     if (
       hasSeparateIsolatedOutput(kind) &&
       (outputSides & (1 << direction)) !== 0
     ) {
-      return this.isolatedOutputCharges[index] as Charge;
+      return this.cells.isolatedOutputCharges[index] as Charge;
     }
     return kind === TileKind.WireCrossing &&
         (direction === Direction.Up || direction === Direction.Down)
-      ? this.crossingVerticalCharges[index] as Charge
-      : this.charges[index] as Charge;
+      ? this.cells.crossingVerticalCharges[index] as Charge
+      : this.cells.charges[index] as Charge;
   }
 
   sensorOutputAtIndex(index: number): Charge {
     this.assertIndex(index);
-    if (this.kinds[index] !== TileKind.Sensor) {
+    if (this.cells.kinds[index] !== TileKind.Sensor) {
       throw new Error(`Tile at index ${index} is not a sensor`);
     }
 
     const x = index % this.width;
     const y = (index - x) / this.width;
-    const orientation = this.orientations[index] as Direction;
+    const orientation = this.cells.orientations[index] as Direction;
     const sensedX = x + directionX(orientation);
     const sensedY = y + directionY(orientation);
     if (
@@ -1573,7 +1488,7 @@ export class World {
     ) {
       return 0;
     }
-    const sensedKind = this.kinds[sensedY * this.width + sensedX] as TileKind;
+    const sensedKind = this.cells.kinds[sensedY * this.width + sensedX] as TileKind;
     return sensedKind !== TileKind.Empty && !TILE_DEFINITIONS[sensedKind].invisibleToSensor
       ? 1
       : 0;
@@ -1581,25 +1496,25 @@ export class World {
 
   hasRightWeldAtIndex(index: number): boolean {
     this.assertIndex(index);
-    return index % this.width < this.width - 1 && this.rightWelds[index] === 1;
+    return index % this.width < this.width - 1 && this.cells.rightWelds[index] === 1;
   }
 
   hasDownWeldAtIndex(index: number): boolean {
     this.assertIndex(index);
-    return index < this.cellCount - this.width && this.downWelds[index] === 1;
+    return index < this.cellCount - this.width && this.cells.downWelds[index] === 1;
   }
   hasWeldAtIndex(index: number, direction: Direction): boolean {
     this.assertIndex(index);
     const x = index % this.width;
     switch (direction) {
       case Direction.Up:
-        return index >= this.width && this.downWelds[index - this.width] === 1;
+        return index >= this.width && this.cells.downWelds[index - this.width] === 1;
       case Direction.Right:
-        return x < this.width - 1 && this.rightWelds[index] === 1;
+        return x < this.width - 1 && this.cells.rightWelds[index] === 1;
       case Direction.Down:
-        return index < this.cellCount - this.width && this.downWelds[index] === 1;
+        return index < this.cellCount - this.width && this.cells.downWelds[index] === 1;
       case Direction.Left:
-        return x > 0 && this.rightWelds[index - 1] === 1;
+        return x > 0 && this.cells.rightWelds[index - 1] === 1;
       default:
         throw new RangeError(`Invalid weld direction ${direction as number}`);
     }
@@ -1628,7 +1543,7 @@ export class World {
       if (action === 0) {
         continue;
       }
-      const orientation = this.orientations[base] as Direction;
+      const orientation = this.cells.orientations[base] as Direction;
       const arm = this.neighborIndex(base, orientation);
       if (arm < 0) {
         throw new Error(`Piston transition at index ${base} leaves the world`);
@@ -1637,28 +1552,24 @@ export class World {
       const headWelded = expectDefined(headWelds[base], "piston head weld") === 1;
 
       if (action === 1) {
-        if (this.kinds[base] !== TileKind.Piston || this.kinds[arm] !== TileKind.Empty) {
+        if (this.cells.kinds[base] !== TileKind.Piston || this.cells.kinds[arm] !== TileKind.Empty) {
           throw new Error(`Invalid piston extension at index ${base}`);
         }
-        const movingArmId = expectDefined(this.ids[base], "retracted piston ID");
+        const movingArmId = expectDefined(this.cells.ids[base], "retracted piston ID");
         this.replaceKindAtIndex(base, TileKind.PistonBase);
-        this.ids[base] = this.nextTileId;
+        this.cells.ids[base] = this.nextTileId;
         this.nextTileId += 1;
         this.replaceKindAtIndex(arm, TileKind.PistonArm);
-        this.ids[arm] = movingArmId;
-        this.orientations[arm] = orientation;
-        this.charges[arm] = 0;
-        this.crossingVerticalCharges[arm] = 0;
-        this.isolatedOutputCharges[arm] = 0;
-        this.furnaceProgress[arm] = 0;
-        this.furnaceTargetIds[arm] = 0;
+        this.cells.ids[arm] = movingArmId;
+        this.cells.orientations[arm] = orientation;
+        this.cells.resetTransientState(arm);
         this.setWeldAtIndices(base, arm, 1);
         if (head >= 0) {
           this.setWeldAtIndices(arm, head, headWelded ? 1 : 0);
         }
         this.clearDisallowedWeldsAtIndex(arm);
       } else if (action === -1) {
-        if (this.kinds[base] !== TileKind.PistonBase) {
+        if (this.cells.kinds[base] !== TileKind.PistonBase) {
           throw new Error(`Invalid piston retraction at index ${base}`);
         }
         const movingArmId = expectDefined(armIds[base], "extended piston arm ID");
@@ -1666,9 +1577,9 @@ export class World {
           throw new Error(`Piston retraction at index ${base} has no arm ID`);
         }
         this.replaceKindAtIndex(base, TileKind.Piston);
-        this.ids[base] = movingArmId;
+        this.cells.ids[base] = movingArmId;
         if (headWelded) {
-          if (this.kinds[arm] === TileKind.Empty) {
+          if (this.cells.kinds[arm] === TileKind.Empty) {
             throw new Error(`Retracting piston at index ${base} lost its welded target`);
           }
           this.setWeldAtIndices(base, arm, 1);
@@ -1734,17 +1645,18 @@ export class World {
       return 0;
     }
 
-    this.movedKinds.set(this.kinds);
-    this.movedIds.set(this.ids);
-    this.movedOrientations.set(this.orientations);
-    this.movedCharges.set(this.charges);
-    this.movedCrossingVerticalCharges.set(this.crossingVerticalCharges);
-    this.movedIsolatedOutputCharges.set(this.isolatedOutputCharges);
-    this.movedFurnaceProgress.set(this.furnaceProgress);
-    this.movedFurnaceTargetIds.set(this.furnaceTargetIds);
-    this.movedRightWelds.set(this.rightWelds);
-    this.movedDownWelds.set(this.downWelds);
-
+    const moved = this.movedCells;
+    moved.copyFrom(this.cells);
+    for (
+      let source = this.firstFeatureIndex(WorldFeature.Occupied);
+      source >= 0;
+      source = this.nextFeatureIndex(WorldFeature.Occupied, source)
+    ) {
+      const root = expectDefined(bodyRoots[source], "moving body root");
+      if (horizontalMoves[root] !== 0 || verticalMoves[root] !== 0) {
+        moved.clearCell(source);
+      }
+    }
     for (
       let source = this.firstFeatureIndex(WorldFeature.Occupied);
       source >= 0;
@@ -1756,74 +1668,10 @@ export class World {
       if (moveX === 0 && moveY === 0) {
         continue;
       }
-      this.movedKinds[source] = TileKind.Empty;
-      this.movedIds[source] = 0;
-      this.movedOrientations[source] = Direction.Up;
-      this.movedCharges[source] = 0;
-      this.movedCrossingVerticalCharges[source] = 0;
-      this.movedIsolatedOutputCharges[source] = 0;
-      this.movedFurnaceProgress[source] = 0;
-      this.movedFurnaceTargetIds[source] = 0;
-      this.movedRightWelds[source] = 0;
-      this.movedDownWelds[source] = 0;
+      moved.copyCell(this.cells, source, source + moveX + moveY * this.width);
     }
-
-    for (
-      let source = this.firstFeatureIndex(WorldFeature.Occupied);
-      source >= 0;
-      source = this.nextFeatureIndex(WorldFeature.Occupied, source)
-    ) {
-      const root = expectDefined(bodyRoots[source], "moving body root");
-      const moveX = expectDefined(horizontalMoves[root], "horizontal body movement");
-      const moveY = expectDefined(verticalMoves[root], "vertical body movement");
-      if (moveX === 0 && moveY === 0) {
-        continue;
-      }
-      const destination = source + moveX + moveY * this.width;
-      this.movedKinds[destination] = expectDefined(this.kinds[source], "moving tile kind");
-      this.movedIds[destination] = expectDefined(this.ids[source], "moving tile ID");
-      this.movedOrientations[destination] = expectDefined(
-        this.orientations[source],
-        "moving tile orientation",
-      );
-      this.movedCharges[destination] = expectDefined(this.charges[source], "moving tile charge");
-      this.movedCrossingVerticalCharges[destination] = expectDefined(
-        this.crossingVerticalCharges[source],
-        "moving crossing vertical charge",
-      );
-      this.movedIsolatedOutputCharges[destination] = expectDefined(
-        this.isolatedOutputCharges[source],
-        "moving isolated output charge",
-      );
-      this.movedFurnaceProgress[destination] = expectDefined(
-        this.furnaceProgress[source],
-        "moving furnace progress",
-      );
-      this.movedFurnaceTargetIds[destination] = expectDefined(
-        this.furnaceTargetIds[source],
-        "moving furnace target ID",
-      );
-      this.movedRightWelds[destination] = expectDefined(
-        this.rightWelds[source],
-        "moving right weld",
-      );
-      this.movedDownWelds[destination] = expectDefined(
-        this.downWelds[source],
-        "moving down weld",
-      );
-    }
-
-    this.kinds.set(this.movedKinds);
-    this.featureIndex.rebuild(this.movedKinds);
-    this.ids.set(this.movedIds);
-    this.orientations.set(this.movedOrientations);
-    this.charges.set(this.movedCharges);
-    this.crossingVerticalCharges.set(this.movedCrossingVerticalCharges);
-    this.isolatedOutputCharges.set(this.movedIsolatedOutputCharges);
-    this.furnaceProgress.set(this.movedFurnaceProgress);
-    this.furnaceTargetIds.set(this.movedFurnaceTargetIds);
-    this.rightWelds.set(this.movedRightWelds);
-    this.downWelds.set(this.movedDownWelds);
+    this.cells.copyFrom(moved);
+    this.featureIndex.rebuild(this.cells.kinds);
     this.touchGeometryRevision();
     return movementCount;
   }
@@ -1863,35 +1711,35 @@ export class World {
       if (selected[source] === 0) {
         continue;
       }
-      if (selected[source] !== 1 || this.kinds[source] === TileKind.Empty) {
+      if (selected[source] !== 1 || this.cells.kinds[source] === TileKind.Empty) {
         throw new Error(`Rotation selection contains invalid cell ${source}`);
       }
       const destination = destinationFor(source);
       if (destination < 0) {
         throw new Error(`Rotation from index ${source} leaves the world`);
       }
-      if (this.kinds[destination] !== TileKind.Empty && selected[destination] === 0) {
+      if (this.cells.kinds[destination] !== TileKind.Empty && selected[destination] === 0) {
         throw new Error(`Rotation from index ${source} collides at index ${destination}`);
       }
       const x = source % this.width;
       if (
-        this.rightWelds[source] === 1 &&
+        this.cells.rightWelds[source] === 1 &&
         (x >= this.width - 1 || selected[source + 1] === 0)
       ) {
         throw new Error(`Rotation selection splits a right weld at index ${source}`);
       }
       if (
-        this.downWelds[source] === 1 &&
+        this.cells.downWelds[source] === 1 &&
         (source >= this.cellCount - this.width || selected[source + this.width] === 0)
       ) {
         throw new Error(`Rotation selection splits a down weld at index ${source}`);
       }
-      if (x > 0 && this.rightWelds[source - 1] === 1 && selected[source - 1] === 0) {
+      if (x > 0 && this.cells.rightWelds[source - 1] === 1 && selected[source - 1] === 0) {
         throw new Error(`Rotation selection splits a left weld at index ${source}`);
       }
       if (
         source >= this.width &&
-        this.downWelds[source - this.width] === 1 &&
+        this.cells.downWelds[source - this.width] === 1 &&
         selected[source - this.width] === 0
       ) {
         throw new Error(`Rotation selection splits an up weld at index ${source}`);
@@ -1902,34 +1750,12 @@ export class World {
       return 0;
     }
 
-    this.movedKinds.set(this.kinds);
-    this.movedIds.set(this.ids);
-    this.movedOrientations.set(this.orientations);
-    this.movedCharges.set(this.charges);
-    this.movedCrossingVerticalCharges.set(this.crossingVerticalCharges);
-    this.movedIsolatedOutputCharges.set(this.isolatedOutputCharges);
-    this.movedFurnaceProgress.set(this.furnaceProgress);
-    this.movedFurnaceTargetIds.set(this.furnaceTargetIds);
-    this.movedRightWelds.set(this.rightWelds);
-    this.movedDownWelds.set(this.downWelds);
-
+    const moved = this.movedCells;
+    moved.copyFrom(this.cells);
     for (let source = 0; source < this.cellCount; source += 1) {
-      if (selected[source] === 0) {
-        continue;
+      if (selected[source] !== 0) {
+        moved.clearCell(source);
       }
-      const destination = destinationFor(source);
-      this.movedKinds[source] = TileKind.Empty;
-      this.movedIds[source] = 0;
-      this.movedOrientations[source] = Direction.Up;
-      this.movedCharges[source] = 0;
-      this.movedCrossingVerticalCharges[source] = 0;
-      this.movedIsolatedOutputCharges[source] = 0;
-      this.movedFurnaceProgress[source] = 0;
-      this.movedFurnaceTargetIds[source] = 0;
-      this.movedRightWelds[source] = 0;
-      this.movedDownWelds[source] = 0;
-      this.movedRightWelds[destination] = 0;
-      this.movedDownWelds[destination] = 0;
     }
 
     const turns = quarterTurn === 1 ? 1 : 3;
@@ -1938,42 +1764,28 @@ export class World {
         continue;
       }
       const destination = destinationFor(source);
-      const kind = this.kinds[source] as TileKind;
-      const id = expectDefined(this.ids[source], "rotating tile ID");
-      this.movedKinds[destination] = kind;
-      this.movedIds[destination] = id;
-      this.movedOrientations[destination] = orientationForKind(
+      const kind = this.cells.kinds[source] as TileKind;
+      const id = expectDefined(this.cells.ids[source], "rotating tile ID");
+      moved.copyCell(this.cells, source, destination);
+      moved.orientations[destination] = orientationForKind(
         kind,
-        (((this.orientations[source] as Direction) + quarterTurn + 4) & 3) as Direction,
+        (((this.cells.orientations[source] as Direction) + quarterTurn + 4) & 3) as Direction,
       );
       if (kind === TileKind.WireCrossing) {
-        this.movedCharges[destination] = expectDefined(
-          this.crossingVerticalCharges[source],
+        moved.charges[destination] = expectDefined(
+          this.cells.crossingVerticalCharges[source],
           "rotating vertical crossing charge",
         );
-        this.movedCrossingVerticalCharges[destination] = expectDefined(
-          this.charges[source],
+        moved.crossingVerticalCharges[destination] = expectDefined(
+          this.cells.charges[source],
           "rotating horizontal crossing charge",
         );
       } else {
-        this.movedCharges[destination] = expectDefined(
-          this.charges[source],
-          "rotating tile charge",
-        );
-        this.movedCrossingVerticalCharges[destination] = 0;
+        moved.crossingVerticalCharges[destination] = 0;
       }
-      this.movedIsolatedOutputCharges[destination] = expectDefined(
-        this.isolatedOutputCharges[source],
-        "rotating isolated output charge",
-      );
-      this.movedFurnaceProgress[destination] = expectDefined(
-        this.furnaceProgress[source],
-        "rotating furnace progress",
-      );
-      this.movedFurnaceTargetIds[destination] = expectDefined(
-        this.furnaceTargetIds[source],
-        "rotating furnace target ID",
-      );
+      // Welds turn with the selection and are re-derived below.
+      moved.rightWelds[destination] = 0;
+      moved.downWelds[destination] = 0;
       if (hasComponentState(kind)) {
         const snapshot = snapshotComponentState(this.requireComponentStateAtIndex(source));
         this.componentStates.set(
@@ -1985,13 +1797,13 @@ export class World {
 
     const setRotatedWeld = (first: number, second: number): void => {
       if (second === first + 1) {
-        this.movedRightWelds[first] = 1;
+        moved.rightWelds[first] = 1;
       } else if (first === second + 1) {
-        this.movedRightWelds[second] = 1;
+        moved.rightWelds[second] = 1;
       } else if (second === first + this.width) {
-        this.movedDownWelds[first] = 1;
+        moved.downWelds[first] = 1;
       } else if (first === second + this.width) {
-        this.movedDownWelds[second] = 1;
+        moved.downWelds[second] = 1;
       } else {
         throw new Error(`Rotated weld endpoints ${first} and ${second} are not adjacent`);
       }
@@ -2001,25 +1813,16 @@ export class World {
         continue;
       }
       const destination = destinationFor(source);
-      if (this.rightWelds[source] === 1) {
+      if (this.cells.rightWelds[source] === 1) {
         setRotatedWeld(destination, destinationFor(source + 1));
       }
-      if (this.downWelds[source] === 1) {
+      if (this.cells.downWelds[source] === 1) {
         setRotatedWeld(destination, destinationFor(source + this.width));
       }
     }
 
-    this.kinds.set(this.movedKinds);
-    this.featureIndex.rebuild(this.movedKinds);
-    this.ids.set(this.movedIds);
-    this.orientations.set(this.movedOrientations);
-    this.charges.set(this.movedCharges);
-    this.crossingVerticalCharges.set(this.movedCrossingVerticalCharges);
-    this.isolatedOutputCharges.set(this.movedIsolatedOutputCharges);
-    this.furnaceProgress.set(this.movedFurnaceProgress);
-    this.furnaceTargetIds.set(this.movedFurnaceTargetIds);
-    this.rightWelds.set(this.movedRightWelds);
-    this.downWelds.set(this.movedDownWelds);
+    this.cells.copyFrom(moved);
+    this.featureIndex.rebuild(this.cells.kinds);
     this.touchGeometryRevision();
     return rotatedCellCount;
   }
@@ -2087,14 +1890,14 @@ export class World {
     for (let y = 0; y < this.height; y += 1) {
       for (let x = 0; x < this.width; x += 1) {
         const index = y * this.width + x;
-        const kind = this.kinds[index] as TileKind;
+        const kind = this.cells.kinds[index] as TileKind;
         if (kind === TileKind.Empty) {
           continue;
         }
         const destination = mapCell(x, y);
         const orientation = orientationForKind(
           kind,
-          mapDirection(this.orientations[index] as Direction),
+          mapDirection(this.cells.orientations[index] as Direction),
         );
         result.place(destination.x, destination.y, kind, orientation);
         const snapshot = this.componentStateSnapshotAtIndex(index);
@@ -2106,21 +1909,21 @@ export class World {
           );
         }
         if (kind === TileKind.WireCrossing) {
-          const horizontal = this.charges[index] as Charge;
-          const vertical = this.crossingVerticalCharges[index] as Charge;
+          const horizontal = this.cells.charges[index] as Charge;
+          const vertical = this.cells.crossingVerticalCharges[index] as Charge;
           if (swapAxes) {
             result.setCrossingCharges(destination.x, destination.y, vertical, horizontal);
           } else {
             result.setCrossingCharges(destination.x, destination.y, horizontal, vertical);
           }
-        } else if (kind !== TileKind.RuneArray && this.charges[index] !== 0) {
-          result.setCharge(destination.x, destination.y, this.charges[index] as Charge);
+        } else if (kind !== TileKind.RuneArray && this.cells.charges[index] !== 0) {
+          result.setCharge(destination.x, destination.y, this.cells.charges[index] as Charge);
         }
-        if (this.isolatedOutputCharges[index] !== 0) {
+        if (this.cells.isolatedOutputCharges[index] !== 0) {
           result.setIsolatedOutputCharge(
             destination.x,
             destination.y,
-            this.isolatedOutputCharges[index] as Charge,
+            this.cells.isolatedOutputCharges[index] as Charge,
           );
         }
       }
@@ -2129,11 +1932,11 @@ export class World {
       for (let x = 0; x < this.width; x += 1) {
         const index = y * this.width + x;
         const source = mapCell(x, y);
-        if (x < this.width - 1 && this.rightWelds[index] === 1) {
+        if (x < this.width - 1 && this.cells.rightWelds[index] === 1) {
           const neighbor = mapCell(x + 1, y);
           result.setWeld(source.x, source.y, neighbor.x, neighbor.y, true);
         }
-        if (y < this.height - 1 && this.downWelds[index] === 1) {
+        if (y < this.height - 1 && this.cells.downWelds[index] === 1) {
           const neighbor = mapCell(x, y + 1);
           result.setWeld(source.x, source.y, neighbor.x, neighbor.y, true);
         }
@@ -2177,11 +1980,11 @@ export class World {
           continue;
         }
         const index = y * source.width + x;
-        const kind = source.kinds[index] as TileKind;
+        const kind = source.cells.kinds[index] as TileKind;
         if (kind === TileKind.Empty) {
           continue;
         }
-        this.place(targetX, targetY, kind, source.orientations[index] as Direction);
+        this.place(targetX, targetY, kind, source.cells.orientations[index] as Direction);
         const snapshot = source.componentStateSnapshotAtIndex(index);
         if (snapshot !== null) {
           this.restoreComponentState(targetX, targetY, snapshot);
@@ -2190,17 +1993,17 @@ export class World {
           this.setCrossingCharges(
             targetX,
             targetY,
-            source.charges[index] as Charge,
-            source.crossingVerticalCharges[index] as Charge,
+            source.cells.charges[index] as Charge,
+            source.cells.crossingVerticalCharges[index] as Charge,
           );
-        } else if (kind !== TileKind.RuneArray && source.charges[index] !== 0) {
-          this.setCharge(targetX, targetY, source.charges[index] as Charge);
+        } else if (kind !== TileKind.RuneArray && source.cells.charges[index] !== 0) {
+          this.setCharge(targetX, targetY, source.cells.charges[index] as Charge);
         }
-        if (source.isolatedOutputCharges[index] !== 0) {
+        if (source.cells.isolatedOutputCharges[index] !== 0) {
           this.setIsolatedOutputCharge(
             targetX,
             targetY,
-            source.isolatedOutputCharges[index] as Charge,
+            source.cells.isolatedOutputCharges[index] as Charge,
           );
         }
       }
@@ -2212,7 +2015,7 @@ export class World {
         const targetY = y + offsetY;
         if (
           x < source.width - 1 &&
-          source.rightWelds[index] === 1 &&
+          source.cells.rightWelds[index] === 1 &&
           inside(targetX, targetY) &&
           inside(targetX + 1, targetY)
         ) {
@@ -2220,7 +2023,7 @@ export class World {
         }
         if (
           y < source.height - 1 &&
-          source.downWelds[index] === 1 &&
+          source.cells.downWelds[index] === 1 &&
           inside(targetX, targetY) &&
           inside(targetX, targetY + 1)
         ) {
@@ -2257,7 +2060,7 @@ export class World {
   }
 
   private directionalNeighborIndex(index: number): number {
-    const direction = this.orientations[index] as Direction;
+    const direction = this.cells.orientations[index] as Direction;
     const x = index % this.width;
     if (
       (direction === Direction.Up && index < this.width) ||
@@ -2273,16 +2076,16 @@ export class World {
   private areWeldedAtIndices(first: number, second: number): boolean {
     const difference = second - first;
     if (difference === 1 && first % this.width < this.width - 1) {
-      return this.rightWelds[first] === 1;
+      return this.cells.rightWelds[first] === 1;
     }
     if (difference === -1 && second % this.width < this.width - 1) {
-      return this.rightWelds[second] === 1;
+      return this.cells.rightWelds[second] === 1;
     }
     if (difference === this.width) {
-      return this.downWelds[first] === 1;
+      return this.cells.downWelds[first] === 1;
     }
     if (difference === -this.width) {
-      return this.downWelds[second] === 1;
+      return this.cells.downWelds[second] === 1;
     }
     throw new RangeError("A weld requires two orthogonally adjacent cells");
   }
@@ -2290,13 +2093,13 @@ export class World {
   private setWeldAtIndices(first: number, second: number, value: 0 | 1): void {
     const difference = second - first;
     if (difference === 1 && first % this.width < this.width - 1) {
-      this.rightWelds[first] = value;
+      this.cells.rightWelds[first] = value;
     } else if (difference === -1 && second % this.width < this.width - 1) {
-      this.rightWelds[second] = value;
+      this.cells.rightWelds[second] = value;
     } else if (difference === this.width) {
-      this.downWelds[first] = value;
+      this.cells.downWelds[first] = value;
     } else if (difference === -this.width) {
-      this.downWelds[second] = value;
+      this.cells.downWelds[second] = value;
     } else {
       throw new RangeError("A weld requires two orthogonally adjacent cells");
     }
@@ -2305,16 +2108,16 @@ export class World {
   private weldStorage(first: number, second: number): { readonly welds: Uint8Array; readonly index: number } {
     const difference = second - first;
     if (difference === 1 && first % this.width < this.width - 1) {
-      return { welds: this.rightWelds, index: first };
+      return { welds: this.cells.rightWelds, index: first };
     }
     if (difference === -1 && second % this.width < this.width - 1) {
-      return { welds: this.rightWelds, index: second };
+      return { welds: this.cells.rightWelds, index: second };
     }
     if (difference === this.width) {
-      return { welds: this.downWelds, index: first };
+      return { welds: this.cells.downWelds, index: first };
     }
     if (difference === -this.width) {
-      return { welds: this.downWelds, index: second };
+      return { welds: this.cells.downWelds, index: second };
     }
     throw new RangeError("A weld requires two orthogonally adjacent cells");
   }
@@ -2334,70 +2137,70 @@ export class World {
       throw new RangeError("A weld requires two orthogonally adjacent cells");
     }
 
-    const firstDefinition = TILE_DEFINITIONS[this.kinds[first] as TileKind];
-    const secondDefinition = TILE_DEFINITIONS[this.kinds[second] as TileKind];
+    const firstDefinition = TILE_DEFINITIONS[this.cells.kinds[first] as TileKind];
+    const secondDefinition = TILE_DEFINITIONS[this.cells.kinds[second] as TileKind];
     const secondSide = oppositeDirection(firstSide);
     const firstWeldableSides = orientedSides(
       firstDefinition.weldableSides,
-      this.orientations[first] as Direction,
+      this.cells.orientations[first] as Direction,
     );
     const secondWeldableSides = orientedSides(
       secondDefinition.weldableSides,
-      this.orientations[second] as Direction,
+      this.cells.orientations[second] as Direction,
     );
     return (
       (firstWeldableSides & (1 << firstSide)) !== 0 &&
       (secondWeldableSides & (1 << secondSide)) !== 0 &&
-      (!firstDefinition.excludesFacingWeld || this.orientations[first] !== firstSide) &&
-      (!secondDefinition.excludesFacingWeld || this.orientations[second] !== secondSide)
+      (!firstDefinition.excludesFacingWeld || this.cells.orientations[first] !== firstSide) &&
+      (!secondDefinition.excludesFacingWeld || this.cells.orientations[second] !== secondSide)
     );
   }
 
   private clearDisallowedWeldsAtIndex(index: number): void {
     if (
       index % this.width < this.width - 1 &&
-      this.rightWelds[index] === 1 &&
+      this.cells.rightWelds[index] === 1 &&
       !this.canWeldIndices(index, index + 1)
     ) {
-      this.rightWelds[index] = 0;
+      this.cells.rightWelds[index] = 0;
     }
     if (
       index % this.width > 0 &&
-      this.rightWelds[index - 1] === 1 &&
+      this.cells.rightWelds[index - 1] === 1 &&
       !this.canWeldIndices(index - 1, index)
     ) {
-      this.rightWelds[index - 1] = 0;
+      this.cells.rightWelds[index - 1] = 0;
     }
     if (
       index < this.cellCount - this.width &&
-      this.downWelds[index] === 1 &&
+      this.cells.downWelds[index] === 1 &&
       !this.canWeldIndices(index, index + this.width)
     ) {
-      this.downWelds[index] = 0;
+      this.cells.downWelds[index] = 0;
     }
     if (
       index >= this.width &&
-      this.downWelds[index - this.width] === 1 &&
+      this.cells.downWelds[index - this.width] === 1 &&
       !this.canWeldIndices(index - this.width, index)
     ) {
-      this.downWelds[index - this.width] = 0;
+      this.cells.downWelds[index - this.width] = 0;
     }
   }
 
   private clearWeldsAtIndex(index: number): void {
-    this.rightWelds[index] = 0;
-    this.downWelds[index] = 0;
+    this.cells.rightWelds[index] = 0;
+    this.cells.downWelds[index] = 0;
     if (index % this.width > 0) {
-      this.rightWelds[index - 1] = 0;
+      this.cells.rightWelds[index - 1] = 0;
     }
     if (index >= this.width) {
-      this.downWelds[index - this.width] = 0;
+      this.cells.downWelds[index - this.width] = 0;
     }
   }
 
   private requireComponentStateAtIndex(index: number): ConfigurableComponentState {
     this.assertIndex(index);
-    const id = this.ids[index] ?? 0;
+    const id = this.cells.ids[index] ?? 0;
     if (id === 0) {
       throw new Error(`Configurable component at index ${index} has no tile identity`);
     }
@@ -2405,7 +2208,7 @@ export class World {
     if (state === undefined) {
       throw new Error(`Configurable component at index ${index} has no state`);
     }
-    const kind = this.kinds[index] as TileKind;
+    const kind = this.cells.kinds[index] as TileKind;
     if (!componentStateMatchesKind(state, kind)) {
       throw new Error(`Component state at index ${index} does not match ${TILE_DEFINITIONS[kind].name}`);
     }
@@ -2413,7 +2216,7 @@ export class World {
   }
 
   private requireAssemblerStateAtIndex(index: number): AssemblerComponentState {
-    if (this.kinds[index] !== TileKind.Assembler) {
+    if (this.cells.kinds[index] !== TileKind.Assembler) {
       throw new Error(`Tile at index ${index} is not an assembler`);
     }
     const state = this.requireComponentStateAtIndex(index);
@@ -2424,7 +2227,7 @@ export class World {
   }
 
   private requireRuneArrayStateAtIndex(index: number): RuneArrayComponentState {
-    if (this.kinds[index] !== TileKind.RuneArray) {
+    if (this.cells.kinds[index] !== TileKind.RuneArray) {
       throw new Error(`Tile at index ${index} is not a rune array`);
     }
     const state = this.requireComponentStateAtIndex(index);
@@ -2435,28 +2238,22 @@ export class World {
   }
 
   private clearIndex(index: number): void {
-    const id = this.ids[index] ?? 0;
+    const id = this.cells.ids[index] ?? 0;
     if (id !== 0) {
       this.componentStates.delete(id);
     }
     this.replaceKindAtIndex(index, TileKind.Empty);
-    this.orientations[index] = Direction.Up;
-    this.charges[index] = 0;
-    this.crossingVerticalCharges[index] = 0;
-    this.isolatedOutputCharges[index] = 0;
-    this.furnaceProgress[index] = 0;
-    this.furnaceTargetIds[index] = 0;
-    this.ids[index] = 0;
+    this.cells.clearCell(index);
     this.clearWeldsAtIndex(index);
   }
 
   private replaceKindAtIndex(index: number, kind: TileKind): void {
-    const previousKind = this.kinds[index] as TileKind;
+    const previousKind = this.cells.kinds[index] as TileKind;
     if (previousKind === kind) {
       return;
     }
     this.featureIndex.replace(index, previousKind, kind);
-    this.kinds[index] = kind;
+    this.cells.kinds[index] = kind;
   }
 }
 
