@@ -354,7 +354,6 @@ body:has(dialog[open]) .tool-cursor {
 }
 
 /* Stepped corner inlays, adapted from temp/artdeco.txt without extra markup. */
-.puzzle-group[data-state="unlocked"]::after,
 .puzzle-node[data-state="unlocked"]::after,
 .puzzle-brief::after,
 .solutions-panel::after,
@@ -404,9 +403,9 @@ body:has(dialog[open]) .tool-cursor {
   right: 0;
   width: fit-content;
   margin: 0;
-  padding: 9px 13px;
+  padding: 12px 15px;
   border: 1px solid #9b75bd;
-  background: linear-gradient(135deg, rgb(61 39 78 / 92%), rgb(35 25 45 / 92%));
+  background: linear-gradient(135deg, rgb(61 39 78 / 100%), rgb(35 25 45 / 100%));
   box-shadow: 0 8px 24px rgb(0 0 0 / 24%);
   color: #ead1ff;
   font-family: var(--font-display);
@@ -472,12 +471,8 @@ body:has(dialog[open]) .tool-cursor {
   text-align: right;
 }
 
-.puzzle-group[data-state="locked"] .puzzle-group-status {
-  color: var(--gold-bright);
-  font-size: 0.66rem;
-}
-
-.puzzle-group[data-state="completed"] {
+.puzzle-group[data-state="completed"],
+.puzzle-group[data-state="locked"] {
   border-color: var(--border-strong);
 }
 
@@ -501,13 +496,13 @@ body:has(dialog[open]) .tool-cursor {
   transition: border-color 120ms ease, background-color 120ms ease, transform 120ms ease;
 }
 
+.puzzle-group[data-state="unlocked"],
 .puzzle-node[data-state="unlocked"] {
   background: linear-gradient(90deg, var(--unlocked-wash), var(--panel-bg) 42%);
 }
 
 .puzzle-node:disabled {
   cursor: not-allowed;
-  opacity: 0.72;
 }
 
 .puzzle-details strong,
@@ -543,11 +538,8 @@ body:has(dialog[open]) .tool-cursor {
   text-align: right;
 }
 
-.puzzle-node[data-state="locked"] .puzzle-status {
-  color: var(--gold-bright);
-}
-
-.puzzle-node[data-state="completed"] {
+.puzzle-node[data-state="completed"],
+.puzzle-node[data-state="locked"] {
   border-color: var(--bronze);
 }
 
