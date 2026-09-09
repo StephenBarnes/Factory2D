@@ -38,6 +38,17 @@ export interface SignalPanelElements {
   readonly toggleButton: HTMLButtonElement;
 }
 
+interface SignalDrag {
+  readonly pointerId: number;
+  readonly world: World;
+  readonly id: number;
+  readonly category: string;
+  /** Only identities are retained here; previews use the latest recorder lines. */
+  readonly members: readonly SignalLine[];
+  targetIndex: number;
+  validTarget: boolean;
+}
+
 /**
  * Collapsible right-edge panel drawing every monitor and grapher line as a vertical
  * charge-colored strip, with time (or ROM/checker index) flowing downward.
@@ -45,6 +56,9 @@ export interface SignalPanelElements {
 export class SignalPanel {
   private readonly context: CanvasRenderingContext2D;
   private lines: readonly SignalLine[] = [];
+  private recordedLines: readonly SignalLine[] = [];
+  private drag: SignalDrag | null = null;
+  private currentTick = 0;
   private linesWorld: World | null = null;
   private linesVersion = -1;
   private linesRevision = -1;
@@ -58,10 +72,12 @@ export class SignalPanel {
   private hoveredTileId: number | null = null;
   private hoveredWorld: World | null = null;
 
+  /** onReorder receives the complete category in its proposed order; false rejects the drop. */
   constructor(
     private readonly elements: SignalPanelElements,
     private readonly storage: Storage | null,
     private readonly onHover: (tileId: number | null, world: World | null) => void = () => {},
+    private readonly onReorder: (lines: readonly SignalLine[]) => boolean = () => false,
   ) {
     const context = elements.canvas.getContext("2d");
     if (context === null) {
@@ -77,13 +93,48 @@ export class SignalPanel {
       event.preventDefault();
       this.scrollBy(Math.sign(event.deltaY) * SCROLL_ROWS_PER_WHEEL_STEP);
     }, { passive: false });
+    elements.canvas.style.touchAction = "none";
+    elements.canvas.addEventListener("pointerdown", (event) => this.beginDrag(event));
     elements.canvas.addEventListener("pointermove", (event) => {
+      if (this.drag !== null) {
+        if (event.pointerId !== this.drag.pointerId) return;
+        if (!event.isPrimary || event.buttons !== 1) {
+          this.finishDrag(false);
+          this.clearHover();
+          return;
+        }
+        event.preventDefault();
+        this.updateDragTarget(event.clientX, event.clientY);
+      }
       this.pointerClientX = event.clientX;
       this.pointerClientY = event.clientY;
       this.refreshHover();
     });
-    elements.canvas.addEventListener("pointerleave", () => this.clearHover());
-    elements.canvas.addEventListener("pointercancel", () => this.clearHover());
+    elements.canvas.addEventListener("pointerup", (event) => {
+      if (event.pointerId !== this.drag?.pointerId) return;
+      this.updateDragTarget(event.clientX, event.clientY);
+      this.finishDrag(event.isPrimary && event.button === 0 && event.buttons === 0);
+    });
+    elements.canvas.addEventListener("pointerleave", () => {
+      if (this.drag === null) this.clearHover();
+    });
+    const cancelPointer = (event: PointerEvent): void => {
+      if (event.pointerId !== this.drag?.pointerId) return;
+      this.finishDrag(false);
+      this.clearHover();
+    };
+    elements.canvas.addEventListener("pointercancel", cancelPointer);
+    elements.canvas.addEventListener("lostpointercapture", cancelPointer);
+    window.addEventListener("blur", () => {
+      this.finishDrag(false);
+      this.clearHover();
+    });
+    window.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || this.drag === null) return;
+      event.preventDefault();
+      event.stopPropagation();
+      this.finishDrag(false);
+    }, { capture: true });
   }
 
   get visible(): boolean {
@@ -109,7 +160,9 @@ export class SignalPanel {
 
   /** Synchronizes visibility with the board and redraws when any displayed state changed. */
   update(recorder: SignalTraceRecorder, world: World, currentTick: number): void {
+    this.currentTick = currentTick;
     if (this.linesWorld !== world) {
+      this.finishDrag(false);
       this.clearHover();
     }
     if (
@@ -117,7 +170,24 @@ export class SignalPanel {
       this.linesVersion !== recorder.version ||
       this.linesRevision !== world.revision
     ) {
-      this.lines = recorder.lines(world);
+      this.recordedLines = recorder.lines(world);
+      this.lines = this.recordedLines;
+      const drag = this.drag;
+      if (drag !== null) {
+        const members = this.recordedLines.filter((line) => line.category === drag.category);
+        if (
+          members.length !== drag.members.length ||
+          members.some((line, index) => {
+            const previous = drag.members[index];
+            return previous === undefined || line.world !== previous.world ||
+              line.id !== previous.id || line.kind !== previous.kind;
+          })
+        ) {
+          this.finishDrag(false);
+        } else {
+          this.previewDrag();
+        }
+      }
       this.categoryHeight = this.lines.some((line) => line.category !== "") ? CATEGORY_HEIGHT : 0;
       this.linesWorld = world;
       this.linesVersion = recorder.version;
@@ -129,6 +199,7 @@ export class SignalPanel {
       this.elements.root.hidden = !shouldShow;
     }
     if (!shouldShow || this.collapsedValue) {
+      this.finishDrag(false);
       this.clearHover();
       return;
     }
@@ -153,6 +224,110 @@ export class SignalPanel {
     );
   }
 
+  private headerLineIndex(clientX: number, clientY: number): number {
+    const { canvas } = this.elements;
+    if (!this.visible || this.collapsedValue || canvas.hidden || this.lines.length === 0) return -1;
+    const bounds = canvas.getBoundingClientRect();
+    const x = clientX - bounds.left;
+    const y = clientY - bounds.top;
+    const columnsLeft = PANEL_PADDING + TICK_GUTTER_WIDTH;
+    if (
+      x < columnsLeft || x >= canvas.clientWidth - PANEL_PADDING ||
+      y < Math.max(PANEL_PADDING, this.categoryHeight) || y >= HEADER_HEIGHT + this.categoryHeight
+    ) return -1;
+    const index = Math.floor((x - columnsLeft) / this.columnWidth(canvas.clientWidth));
+    return index < this.lines.length ? index : -1;
+  }
+
+  private beginDrag(event: PointerEvent): void {
+    if (!event.isPrimary || event.button !== 0 || event.buttons !== 1 || this.drag !== null) return;
+    const index = this.headerLineIndex(event.clientX, event.clientY);
+    const line = this.lines[index];
+    if (line === undefined) return;
+    const members = this.recordedLines.filter((member) => member.category === line.category);
+    if (members.length < 2) return;
+    const sourceIndex = members.findIndex((member) => member.world === line.world && member.id === line.id);
+    if (sourceIndex < 0) return;
+    event.preventDefault();
+    this.elements.canvas.setPointerCapture(event.pointerId);
+    this.drag = {
+      pointerId: event.pointerId,
+      world: line.world,
+      id: line.id,
+      category: line.category,
+      members,
+      targetIndex: sourceIndex,
+      validTarget: true,
+    };
+    this.pointerClientX = event.clientX;
+    this.pointerClientY = event.clientY;
+    this.redrawDrag();
+  }
+
+  private updateDragTarget(clientX: number, clientY: number): void {
+    const drag = this.drag;
+    if (drag === null) return;
+    const index = this.headerLineIndex(clientX, clientY);
+    const target = this.lines[index];
+    const validTarget = target !== undefined && target.category === drag.category;
+    const start = this.recordedLines.findIndex((line) => line.category === drag.category);
+    const targetIndex = validTarget ? index - start : drag.targetIndex;
+    this.pointerClientX = clientX;
+    this.pointerClientY = clientY;
+    if (drag.validTarget === validTarget && drag.targetIndex === targetIndex) return;
+    drag.validTarget = validTarget;
+    drag.targetIndex = targetIndex;
+    this.previewDrag();
+    this.redrawDrag();
+  }
+
+  private previewDrag(): void {
+    this.lines = this.recordedLines;
+    const drag = this.drag;
+    if (drag === null || !drag.validTarget) return;
+    const sourceIndex = this.recordedLines.findIndex((line) => line.world === drag.world && line.id === drag.id);
+    const source = this.recordedLines[sourceIndex];
+    const start = this.recordedLines.findIndex((line) => line.category === drag.category);
+    if (source === undefined || source.category !== drag.category || start < 0) {
+      this.finishDrag(false);
+      return;
+    }
+    const targetIndex = start + drag.targetIndex;
+    if (sourceIndex === targetIndex) return;
+    const lines = this.recordedLines.slice();
+    lines.splice(sourceIndex, 1);
+    lines.splice(targetIndex, 0, source);
+    this.lines = lines;
+  }
+
+  private finishDrag(commit: boolean): void {
+    const drag = this.drag;
+    if (drag === null) return;
+    const preview = this.lines;
+    const recordedLines = this.recordedLines;
+    this.drag = null;
+    this.lines = this.recordedLines;
+    const { canvas } = this.elements;
+    if (canvas.hasPointerCapture(drag.pointerId)) canvas.releasePointerCapture(drag.pointerId);
+    try {
+      if (commit && drag.validTarget && preview !== this.recordedLines) {
+        const category = preview.filter((line) => line.category === drag.category);
+        if (this.onReorder(category) && this.recordedLines === recordedLines) {
+          this.recordedLines = preview;
+          this.lines = preview;
+        }
+      }
+    } finally {
+      this.redrawDrag();
+    }
+  }
+
+  private redrawDrag(): void {
+    this.drawnKey = "";
+    if (this.visible && !this.collapsedValue) this.draw(this.currentTick);
+    this.refreshHover();
+  }
+
   private refreshHover(): void {
     if (this.pointerClientX === null) {
       return;
@@ -175,19 +350,25 @@ export class SignalPanel {
       y >= PANEL_PADDING && y < columnsBottom
       ? this.lines[lineIndex]
       : undefined;
+    const header = line !== undefined && y >= this.categoryHeight && y < HEADER_HEIGHT + this.categoryHeight;
+    canvas.style.cursor = this.drag !== null
+      ? this.drag.validTarget ? "ew-resize" : "not-allowed"
+      : header ? "ew-resize" : "";
     if (line !== undefined && y < this.categoryHeight) {
       canvas.title = line.category;
       this.setHoveredTileId(null, null);
       return;
     }
-    canvas.title = line === undefined ? "" :
+    const label = line === undefined ? "" :
       [line.category, line.label || displayLabel(line, lineIndex)].filter(Boolean).join(" · ");
+    canvas.title = header ? `${label} · Drag to reorder within category` : label;
     this.setHoveredTileId(line?.id ?? null, line?.world ?? null);
   }
 
   private clearHover(): void {
     this.pointerClientX = null;
     this.elements.canvas.title = "";
+    this.elements.canvas.style.cursor = "";
     this.setHoveredTileId(null, null);
   }
 
@@ -292,6 +473,12 @@ export class SignalPanel {
         throw new Error(`Signal panel line ${lineIndex} is missing`);
       }
       const centerX = columnsLeft + columnWidth * (lineIndex + 0.5);
+      if (this.drag !== null && line.world === this.drag.world && line.id === this.drag.id) {
+        context.fillStyle = TRACK_COLOR;
+        context.fillRect(centerX - columnWidth / 2, this.categoryHeight, columnWidth, HEADER_HEIGHT);
+        context.fillStyle = CURSOR_COLOR;
+        context.fillRect(centerX - columnWidth / 2 + 1, rowsTop - 3, columnWidth - 2, 3);
+      }
       context.fillStyle = TRACK_COLOR;
       context.fillRect(centerX - 0.5, rowsTop, 1, rowsBottom - rowsTop);
 
@@ -365,6 +552,7 @@ export class SignalPanel {
 
   private applyCollapsed(): void {
     if (this.collapsedValue) {
+      this.finishDrag(false);
       this.clearHover();
     }
     this.elements.root.classList.toggle("collapsed", this.collapsedValue);

@@ -547,6 +547,24 @@ export class World {
     return true;
   }
 
+  /** Updates a signal's display order without changing simulation geometry. */
+  configureSignalOrder(x: number, y: number, order: number): boolean {
+    const index = this.indexOf(x, y);
+    const state = this.requireComponentStateAtIndex(index);
+    if (state.type !== "monitor" && state.type !== "grapher") {
+      throw new Error(`Tile at (${x}, ${y}) does not have a signal order`);
+    }
+    if (!Number.isSafeInteger(order)) {
+      throw new RangeError("Signal order must be a safe integer");
+    }
+    if (state.order === order) {
+      return false;
+    }
+    state.order = order;
+    this.touchVisualRevision();
+    return true;
+  }
+
   restoreComponentState(
     x: number,
     y: number,

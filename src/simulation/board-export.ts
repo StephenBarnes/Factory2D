@@ -135,6 +135,7 @@ interface ExportedSignalLabel {
   readonly type: "monitor" | "grapher";
   readonly label: string;
   readonly category?: string;
+  readonly order?: number;
 }
 
 interface ExportedAssemblerOutput {
@@ -351,6 +352,7 @@ function exportBoardContents(world: World): ExportedBoardContents {
             type: componentState.type,
             label: componentState.label,
             ...(componentState.category === "" ? {} : { category: componentState.category }),
+            ...(componentState.order === 0 ? {} : { order: componentState.order }),
           });
         } else {
           components.push({ x, y, ...componentState });
@@ -674,6 +676,7 @@ function importBoardContents(
       "failed",
       "label",
       "category",
+      "order",
       "description",
       "ports",
       "board",
@@ -695,7 +698,7 @@ function importBoardContents(
               : type === "checker"
                 ? ["x", "y", "type", "width", "height", "cursor", "failed", "ignoreZeros", "values"]
                 : type === "monitor" || type === "grapher"
-                  ? ["x", "y", "type", "label", "category"]
+                  ? ["x", "y", "type", "label", "category", "order"]
                   : type === "array"
                     ? ["x", "y", "type", "description", "ports", "board"]
                     : null;
@@ -809,7 +812,10 @@ function importBoardContents(
       } catch (error) {
         throw new Error(`${componentLabel} category is invalid: ${error instanceof Error ? error.message : String(error)}`);
       }
-      snapshot = { type, label: signalLabel, category };
+      const order = state.order === undefined
+        ? 0
+        : requireInteger(state.order, `${componentLabel} order`, Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
+      snapshot = { type, label: signalLabel, category, order };
     } else {
       const componentWidth = requireInteger(
         state.width,

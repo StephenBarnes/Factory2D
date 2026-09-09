@@ -198,6 +198,32 @@ const signalPanel = new SignalPanel(
     hoveredSignalTileId = tileId;
     hoveredSignalWorld = world;
   },
+  (lines) => {
+    if (!surface.session.editingState.editable) return false;
+    const root = surface.session.world;
+    const cells = lines.map((line) => {
+      if (signalTraces.visibleTileId(root, line.world, line.id) === null) return null;
+      for (let index = 0; index < line.world.cellCount; index += 1) {
+        if (line.world.idAtIndex(index) !== line.id) continue;
+        const state = line.world.componentStateSnapshotAtIndex(index);
+        if ((state?.type !== "monitor" && state?.type !== "grapher") ||
+          state.category !== line.category) return null;
+        return { world: line.world, x: index % line.world.width, y: Math.floor(index / line.world.width) };
+      }
+      return null;
+    });
+    if (cells.some((cell) => cell === null)) return false;
+    let changed = false;
+    cells.forEach((cell, order) => {
+      if (cell === null) throw new Error("Reordered signal source disappeared");
+      changed = cell.world.configureSignalOrder(cell.x, cell.y, order) || changed;
+    });
+    if (changed) {
+      root.touchRevision();
+      commitEditedWorld();
+    }
+    return true;
+  },
 );
 
 type InspectorTool = Exclude<BuildTool, "tile">;

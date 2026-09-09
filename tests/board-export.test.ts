@@ -344,18 +344,22 @@ describe("board export", () => {
     );
   });
 
-  it("retains nested signal categories through cloning, transforms, reset, and scene round-trip", () => {
+  it("retains nested signal categories and order through cloning, transforms, reset, and scene round-trip", () => {
     const world = new World(2, 1);
     world.place(0, 0, TileKind.Monitor);
     world.place(1, 0, TileKind.RuneArray);
     const inner = world.runeArrayWorldAt(1, 0);
     inner.place(0, 0, TileKind.Grapher);
+    world.configureSignalOrder(0, 0, 7);
+    inner.configureSignalOrder(0, 0, -3);
     world.configureSignalLabel(0, 0, "OUT", "Production");
     inner.configureSignalLabel(0, 0, "Expected", "abcdefghijkl");
 
     const baseline = world.clone();
     world.configureSignalLabel(0, 0, "Changed", "");
     inner.configureSignalLabel(0, 0, "Changed", "");
+    world.configureSignalOrder(0, 0, 2);
+    inner.configureSignalOrder(0, 0, 9);
     const transformed = baseline.transformed(1, true, false);
     const live = transformed.clone();
     const liveInner = live.runeArrayWorldAt(0, 0);
@@ -363,6 +367,8 @@ describe("board export", () => {
     const grapherY = liveInner.height - 1;
     live.configureSignalLabel(0, 1, "Changed", "Temporary");
     liveInner.configureSignalLabel(grapherX, grapherY, "Changed", "Temporary");
+    live.configureSignalOrder(0, 1, -5);
+    liveInner.configureSignalOrder(grapherX, grapherY, 4);
     new Simulation(live).resetTo(transformed);
 
     const serialized = serializeBoard(live, 0);
@@ -371,11 +377,13 @@ describe("board export", () => {
       type: "monitor",
       label: "OUT",
       category: "Production",
+      order: 7,
     });
     expect(imported.runeArrayWorldAt(0, 0).componentStateSnapshotAt(grapherX, grapherY)).toEqual({
       type: "grapher",
       label: "Expected",
       category: "abcdefghijkl",
+      order: -3,
     });
     expect(serializeBoard(imported, 0)).toBe(serialized);
   });

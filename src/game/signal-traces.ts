@@ -11,6 +11,7 @@ export interface MonitorSignalLine {
   readonly world: World;
   readonly label: string;
   readonly category: string;
+  readonly order: number;
   readonly firstTick: number;
   readonly charges: readonly Charge[];
 }
@@ -27,6 +28,7 @@ export interface GrapherSignalLine {
   readonly world: World;
   readonly label: string;
   readonly category: string;
+  readonly order: number;
   readonly values: readonly Charge[];
   readonly firstRow: number;
   /** Index of the pointed component's cursor, or -1 when the grapher points at nothing. */
@@ -93,7 +95,7 @@ export class SignalTraceRecorder {
     this.sample(world, tick);
   }
 
-  /** Groups categories by first appearance, retaining depth-first row-major order within each. */
+  /** Groups categories by first appearance, then sorts by order with depth-first row-major ties. */
   lines(world: World): SignalLine[] {
     if (world !== this.world) {
       throw new Error("Signal traces must be synchronized before reading lines");
@@ -111,6 +113,7 @@ export class SignalTraceRecorder {
     }
     lines.length = 0;
     for (const group of categories.values()) {
+      group.sort((left, right) => left.order - right.order);
       for (const line of group) lines.push(line);
     }
     return lines;
@@ -144,6 +147,7 @@ export class SignalTraceRecorder {
           world,
           label: this.lineLabel(path, state.label, `Monitor ${id}`),
           category: state.category,
+          order: state.order,
           firstTick: history?.firstTick ?? this.tick,
           charges: history?.charges ?? [],
         });
@@ -190,6 +194,7 @@ export class SignalTraceRecorder {
       kind: "grapher", id, world,
       label: this.lineLabel(path, label, `Lore ${id}`),
       category: state.category,
+      order: state.order,
       values, firstRow, cursor,
     };
   }

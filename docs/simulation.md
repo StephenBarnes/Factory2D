@@ -46,6 +46,8 @@ Raw materials include dirt, gold, silver, ruby, sapphire, emerald, diamond, amet
 
 `configurable-components.ts` owns configuration definitions, validation, defaults, snapshots, cloning, and rotation/flip transforms. Sparse runtime state is broader than player-editable configuration (e.g. assembler queues, rotator grips).
 
+Monitors and graphers retain a display-only signed safe-integer `order`, default zero. Snapshot/clone/transform paths preserve it; scene JSON omits zero and validates nonzero values on import. Signal-panel dragging is its only editing UI. Puzzle solution transfer may copy this presentation field onto matching fixed components, including nested arrays, without copying their simulation configuration.
+
 ## Nested rune arrays
 
 `rune-array.ts` defines odd inner dimensions from 1x1 to 15x15 (default 5x5), centered resizing, ports, and nesting rules. Each array owns a full inner `World`; arrays nest recursively, with every ordinary phase active inside.

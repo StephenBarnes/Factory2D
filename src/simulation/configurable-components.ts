@@ -163,12 +163,14 @@ export interface MonitorComponentState {
   readonly type: "monitor";
   label: string;
   category: string;
+  order: number;
 }
 
 export interface GrapherComponentState {
   readonly type: "grapher";
   label: string;
   category: string;
+  order: number;
 }
 
 /**
@@ -251,12 +253,14 @@ export interface MonitorComponentSnapshot {
   readonly type: "monitor";
   readonly label: string;
   readonly category: string;
+  readonly order: number;
 }
 
 export interface GrapherComponentSnapshot {
   readonly type: "grapher";
   readonly label: string;
   readonly category: string;
+  readonly order: number;
 }
 
 /** Snapshot of a rune array; `world` is an independent copy of the inner board. */
@@ -340,9 +344,9 @@ export function createDefaultComponentState(
         values: new Int8Array(DEFAULT_ROM_WIDTH * DEFAULT_ROM_HEIGHT),
       };
     case TileKind.Monitor:
-      return { type: "monitor", label: "", category: "" };
+      return { type: "monitor", label: "", category: "", order: 0 };
     case TileKind.Grapher:
-      return { type: "grapher", label: "", category: "" };
+      return { type: "grapher", label: "", category: "", order: 0 };
     case TileKind.RuneArray:
       return {
         type: "array",
@@ -401,7 +405,7 @@ export function cloneComponentState(
       };
     case "monitor":
     case "grapher":
-      return { type: state.type, label: state.label, category: state.category };
+      return { type: state.type, label: state.label, category: state.category, order: state.order };
     case "array":
       return {
         type: "array",
@@ -461,7 +465,7 @@ export function snapshotComponentState(
       };
     case "monitor":
     case "grapher":
-      return { type: state.type, label: state.label, category: state.category };
+      return { type: state.type, label: state.label, category: state.category, order: state.order };
     case "array":
       return {
         type: "array",
@@ -538,6 +542,7 @@ export function validateComponentSnapshot(
     case "grapher":
       validateSignalLabel(snapshot.label);
       validateSignalLabel(snapshot.category);
+      requireInteger(snapshot.order, "Signal order", Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
       break;
     case "array":
       validateRuneArrayDescription(snapshot.description);
@@ -610,7 +615,7 @@ export function stateFromSnapshot(
       };
     case "monitor":
     case "grapher":
-      return { type: snapshot.type, label: snapshot.label, category: snapshot.category };
+      return { type: snapshot.type, label: snapshot.label, category: snapshot.category, order: snapshot.order };
     case "array":
       return {
         type: "array",
