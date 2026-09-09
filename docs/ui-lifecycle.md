@@ -9,6 +9,7 @@ For tools, controls, dialogs, routing, saved designs, puzzle authoring, and veri
 * `saved-sandbox-controller.ts` and `saved-solution-controller.ts` own records and dirty sets; `saved-sandboxes.ts` and `puzzle-solutions.ts` own validated storage models.
 * `workshop-session.ts` owns per-saved-ID sessions and editing locks. `workshop-surface-controller.ts` atomically mounts all session-bound world/view references and the nested-array path, cancelling gestures before rebinding.
 * `puzzle-test-controller.ts` owns the tagged verification UI lifecycle; `puzzle-test-runner.ts` runs isolated cases. `src/ui/canvas-interaction-controller.ts` owns pointer capture and gesture state.
+* `simulation-clock.ts` paces free-running sandbox ticks against wall-clock time and tracks each committed step's animation window; the puzzle test controller drives it through callbacks. `src/ui/dropup-menu.ts` owns the open state of the speed, export, and test-case menus, which the sandbox and puzzle test flows share.
 
 Use these ownership boundaries rather than adding parallel session state to the entry point.
 

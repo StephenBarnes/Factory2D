@@ -8,6 +8,7 @@ import type { Simulation } from "../simulation/simulation";
 import type { World } from "../simulation/world";
 import { expectDefined } from "../util/assert";
 import { PuzzleTestReportView } from "../ui/puzzle-test-report";
+import type { DropupMenu } from "../ui/dropup-menu";
 
 const INITIAL_TEST_TICKS_PER_SECOND = 5;
 const MAX_TEST_TICKS_PER_SECOND = 60;
@@ -56,9 +57,7 @@ interface PuzzleTestCompletedState extends PuzzleTestContext {
 }
 
 export interface PuzzleTestControllerElements {
-  readonly caseDropup: HTMLElement;
-  readonly caseButton: HTMLButtonElement;
-  readonly caseOptions: HTMLElement;
+  readonly caseMenu: DropupMenu;
   readonly statusToast: HTMLElement;
   readonly reportDialog: HTMLDialogElement;
 }
@@ -95,8 +94,6 @@ interface PuzzleTestViewCallbacks {
 export interface PuzzleTestControllerView {
   configureCases(puzzle: PuzzleDefinition | null, selectedCaseId: string | null): void;
   selectCase(testCaseId: string): void;
-  setCaseOptionsOpen(open: boolean): void;
-  toggleCaseOptions(): void;
   hideStatus(): void;
   showFailure(message: string): void;
   showReport(
@@ -388,14 +385,6 @@ export class PuzzleTestController {
     this.refreshPresentation();
   }
 
-  toggleCaseOptions(): void {
-    this.view.toggleCaseOptions();
-  }
-
-  closeCaseOptions(): void {
-    this.view.setCaseOptionsOpen(false);
-  }
-
   private beginRun(
     state: PuzzleTestViewingState | PuzzleTestCompletedState,
     mode: PuzzleTestRunMode,
@@ -488,10 +477,10 @@ class DomPuzzleTestControllerView implements PuzzleTestControllerView {
   }
 
   configureCases(puzzle: PuzzleDefinition | null, selectedCaseId: string | null): void {
-    this.elements.caseOptions.replaceChildren();
-    this.setCaseOptionsOpen(false);
+    this.elements.caseMenu.options.replaceChildren();
+    this.elements.caseMenu.close();
     if (puzzle === null) {
-      this.elements.caseDropup.hidden = true;
+      this.elements.caseMenu.container.hidden = true;
       return;
     }
     for (const testCase of puzzle.testCases) {
@@ -500,12 +489,12 @@ class DomPuzzleTestControllerView implements PuzzleTestControllerView {
       option.textContent = testCase.name;
       option.dataset.testCaseId = testCase.id;
       option.addEventListener("click", () => {
-        this.setCaseOptionsOpen(false);
+        this.elements.caseMenu.close();
         this.callbacks.onSelectCase(testCase.id);
       });
-      this.elements.caseOptions.append(option);
+      this.elements.caseMenu.options.append(option);
     }
-    this.elements.caseDropup.hidden = false;
+    this.elements.caseMenu.container.hidden = false;
     if (selectedCaseId !== null) {
       this.selectCase(selectedCaseId);
     }
@@ -513,7 +502,7 @@ class DomPuzzleTestControllerView implements PuzzleTestControllerView {
 
   selectCase(testCaseId: string): void {
     let selectedName: string | null = null;
-    for (const option of this.elements.caseOptions.querySelectorAll<HTMLButtonElement>("button")) {
+    for (const option of this.elements.caseMenu.options.querySelectorAll<HTMLButtonElement>("button")) {
       const selected = option.dataset.testCaseId === testCaseId;
       option.setAttribute("aria-pressed", String(selected));
       if (selected) {
@@ -523,16 +512,7 @@ class DomPuzzleTestControllerView implements PuzzleTestControllerView {
     if (selectedName === null) {
       throw new Error(`Missing test case option "${testCaseId}"`);
     }
-    this.elements.caseButton.textContent = `CASE: ${selectedName}`;
-  }
-
-  setCaseOptionsOpen(open: boolean): void {
-    this.elements.caseOptions.hidden = !open;
-    this.elements.caseButton.setAttribute("aria-expanded", String(open));
-  }
-
-  toggleCaseOptions(): void {
-    this.setCaseOptionsOpen(this.elements.caseOptions.hidden !== false);
+    this.elements.caseMenu.button.textContent = `CASE: ${selectedName}`;
   }
 
   hideStatus(): void {

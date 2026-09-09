@@ -5,6 +5,7 @@ import type {
   DiagnosticDirection,
 } from "./dev/diagnostic-snapshot";
 import { NavigationController } from "./game/navigation-controller";
+import { SimulationClock } from "./game/simulation-clock";
 import {
   clearPlayerData,
   replacePlayerData,
@@ -53,6 +54,8 @@ import {
 import type { InspectorComponentReference } from "./ui/tile-inspector";
 import { SignalPanel } from "./ui/signal-panel";
 import { ToolCursor } from "./ui/tool-cursor";
+import { DropupMenu } from "./ui/dropup-menu";
+import { downloadBlob } from "./ui/download";
 import {
   SnippetPanel,
   type SnippetCardModel,
@@ -66,9 +69,6 @@ import { initializeBevelSetting } from "./ui/bevel-setting";
 import { WorkshopSounds } from "./ui/workshop-sounds";
 import { initializePaletteResize } from "./ui/palette-resize";
 
-const MAX_AUTOMATIC_ANIMATION_MS = 250;
-const MANUAL_STEP_ANIMATION_MS = 200;
-const HIGH_SPEED_TICKS_PER_SECOND = 60;
 const PALETTE_PREVIEW_SUPERSAMPLING = 2;
 const KEYBOARD_PAN_PIXELS = 64;
 const MAX_CLIPBOARD_EXPORT_CHARACTERS = 1_000_000;
@@ -128,9 +128,11 @@ const playButton = requiredElement<HTMLButtonElement>("play-button");
 const transportShortcutLabel = requiredElement<HTMLElement>("transport-shortcut-label");
 const testReportDialog = requiredElement<HTMLDialogElement>("test-report-dialog");
 const fastForwardButton = requiredElement<HTMLButtonElement>("fast-forward-button");
-const testCaseDropup = requiredElement<HTMLElement>("test-case-dropup");
-const testCaseButton = requiredElement<HTMLButtonElement>("test-case-button");
-const testCaseOptions = requiredElement<HTMLElement>("test-case-options");
+const testCaseMenu = new DropupMenu(
+  requiredElement<HTMLElement>("test-case-dropup"),
+  requiredElement<HTMLButtonElement>("test-case-button"),
+  requiredElement<HTMLElement>("test-case-options"),
+);
 const testStatusToast = requiredElement<HTMLElement>("test-status-toast");
 const componentConfigurationDialogElement = requiredElement<HTMLDialogElement>(
   "component-configuration-dialog",
@@ -138,9 +140,11 @@ const componentConfigurationDialogElement = requiredElement<HTMLDialogElement>(
 const stepButton = requiredElement<HTMLButtonElement>("step-button");
 const resetButton = requiredElement<HTMLButtonElement>("reset-button");
 const clearButton = requiredElement<HTMLButtonElement>("clear-button");
-const exportDropup = requiredElement<HTMLElement>("export-dropup");
-const exportButton = requiredElement<HTMLButtonElement>("export-button");
-const exportOptions = requiredElement<HTMLElement>("export-options");
+const exportMenu = new DropupMenu(
+  requiredElement<HTMLElement>("export-dropup"),
+  requiredElement<HTMLButtonElement>("export-button"),
+  requiredElement<HTMLElement>("export-options"),
+);
 const downloadSceneButton = requiredElement<HTMLButtonElement>("download-scene-button");
 const copySceneButton = requiredElement<HTMLButtonElement>("copy-scene-button");
 const downloadImageButton = requiredElement<HTMLButtonElement>("download-image-button");
@@ -150,10 +154,12 @@ const sharePuzzleButton = requiredElement<HTMLButtonElement>("share-puzzle-butto
 const importButton = requiredElement<HTMLButtonElement>("import-button");
 const importFile = requiredElement<HTMLInputElement>("import-file");
 const animationToggle = requiredElement<HTMLInputElement>("animation-toggle");
-const speedDropup = requiredElement<HTMLElement>("speed-dropup");
-const speedButton = requiredElement<HTMLButtonElement>("speed-button");
-const speedOptions = requiredElement<HTMLElement>("speed-options");
-let simulationSpeed = 5;
+const clock = new SimulationClock(5, () => animationToggle.checked);
+const speedMenu = new DropupMenu(
+  requiredElement<HTMLElement>("speed-dropup"),
+  requiredElement<HTMLButtonElement>("speed-button"),
+  requiredElement<HTMLElement>("speed-options"),
+);
 const stateLight = requiredElement<HTMLSpanElement>("state-light");
 const stateLabel = requiredElement<HTMLSpanElement>("state-label");
 const tickCounter = requiredElement<HTMLSpanElement>("tick-counter");
@@ -271,11 +277,7 @@ let selectedOrientation = Direction.Up;
 let selectedTool: BuildTool = "tile";
 let previousSelectionTool: BuildTool = "tile";
 let temporaryWeldTool: BuildTool | null = null;
-let running = false;
-let accumulatedTime = 0;
 let previousFrameTime = performance.now();
-let animationStartedAt = 0;
-let animationDuration = 0;
 let renderedTick = -1;
 let renderedPaletteDevicePixelRatio = 0;
 let tileKindsByShortcut: Readonly<Record<string, TileKind | undefined>> =
@@ -284,6 +286,7 @@ let componentInspectorReferences: readonly (InspectorComponentReference | undefi
 
 
 function updateTransportState(): void {
+  const running = clock.running;
   const editingEnabled = surface.session.editingState.editable;
   const puzzleWorkshop = navigation.screen.kind === "puzzle";
   const testingPuzzleSolution = puzzleTests.testing;
@@ -297,7 +300,7 @@ function updateTransportState(): void {
   playButton.classList.toggle("running", puzzleWorkshop ? testPlaying : running);
   fastForwardButton.hidden = !puzzleWorkshop;
   fastForwardButton.disabled = !puzzleWorkshop;
-  testCaseButton.disabled = testingPuzzleSolution;
+  testCaseMenu.button.disabled = testingPuzzleSolution;
   stateLight.classList.toggle("running", running || testPlaying);
   stateLight.classList.toggle("failed", testFailed);
   stateLabel.textContent = testingPuzzleSolution
@@ -363,8 +366,7 @@ function setRunning(nextRunning: boolean): void {
     commitTileSelection();
   }
   const editingChanged = nextRunning && markSimulationStarted();
-  running = nextRunning;
-  accumulatedTime = 0;
+  clock.setRunning(nextRunning);
   updateTransportState();
   if (editingChanged) {
     refreshPointerHover();
@@ -381,7 +383,7 @@ surface.setMountListener(() => {
   refreshSnippetPanel();
   refreshNestedViewBar();
   renderedTick = -1;
-  animationDuration = 0;
+  clock.finishAnimation();
   updateTransportState();
   refreshPointerHover();
 });
@@ -435,14 +437,11 @@ nestedViewBackButton.addEventListener("click", () => {
 
 function finishAnimation(): void {
   surface.session.previousWorld.copyFrom(surface.session.world);
-  animationDuration = 0;
-}
-function animationsEnabled(ticksPerSecond = simulationSpeed): boolean {
-  return animationToggle.checked && ticksPerSecond < HIGH_SPEED_TICKS_PER_SECOND;
+  clock.finishAnimation();
 }
 
 function finishAnimationIfDisabled(): void {
-  if (!animationsEnabled()) {
+  if (!clock.animationsEnabled()) {
     finishAnimation();
   }
 }
@@ -467,23 +466,7 @@ function advanceSimulation(duration: number, startedAt = performance.now()): voi
     sounds.loss();
   }
 
-  animationStartedAt = startedAt;
-  animationDuration = duration;
-}
-
-function easedAnimationProgress(currentTime: number): number {
-  if (animationDuration === 0) {
-    return 1;
-  }
-  const progress = Math.min(1, Math.max(0, (currentTime - animationStartedAt) / animationDuration));
-  if (progress === 1) {
-    animationDuration = 0;
-  }
-  // Smoothstep
-  return progress * progress * (3 - 2 * progress);
-  // Cubic ease-out
-  //const remaining = 1 - progress;
-  //return 1 - remaining * remaining * remaining;
+  clock.beginAnimation(startedAt, duration);
 }
 
 function inspectorReferenceFromButton(
@@ -1311,13 +1294,7 @@ function prepareForRuntimeChange(): void {
 }
 
 const puzzleTests = new PuzzleTestController(
-  {
-    caseDropup: testCaseDropup,
-    caseButton: testCaseButton,
-    caseOptions: testCaseOptions,
-    statusToast: testStatusToast,
-    reportDialog: testReportDialog,
-  },
+  { caseMenu: testCaseMenu, statusToast: testStatusToast, reportDialog: testReportDialog },
   {
     getBaseline: () => surface.session.baseline,
     prepareForRuntimeChange,
@@ -1348,12 +1325,9 @@ const puzzleTests = new PuzzleTestController(
       if (world.puzzleResult === PuzzleResult.Won) sounds.victory();
     },
     onFailure: () => sounds.loss(),
-    setStepAnimation: (startedAt, duration) => {
-      animationStartedAt = startedAt;
-      animationDuration = duration;
-    },
+    setStepAnimation: (startedAt, duration) => clock.beginAnimation(startedAt, duration),
     finishAnimation,
-    animationsEnabled,
+    animationsEnabled: (ticksPerSecond) => clock.animationsEnabled(ticksPerSecond),
     recordResult: (scores) => navigation.recordActivePuzzleTestResult(scores),
     refreshTransport: updateTransportState,
     refreshHover: refreshPointerHover,
@@ -1367,16 +1341,11 @@ function stopWorkshopActivity(): void {
   prepareForRuntimeChange();
   puzzleTests.stop();
   componentConfigurationView.close();
-  closeExportOptions();
-  setSpeedOptionsOpen(false);
+  exportMenu.close();
+  speedMenu.close();
   toolCursor.hide();
   setRunning(false);
 }
-function setSandboxTestCaseOptionsOpen(open: boolean): void {
-  testCaseOptions.hidden = !open;
-  testCaseButton.setAttribute("aria-expanded", String(open));
-}
-
 function configureSandboxTestCaseMenu(): void {
   if (navigation.screen.kind !== "sandbox") {
     return;
@@ -1386,7 +1355,7 @@ function configureSandboxTestCaseMenu(): void {
     throw new Error("Sandbox puzzle authoring state is missing");
   }
 
-  testCaseOptions.replaceChildren();
+  testCaseMenu.options.replaceChildren();
   for (const testCase of authoring.testCases) {
     const option = document.createElement("button");
     option.type = "button";
@@ -1395,13 +1364,13 @@ function configureSandboxTestCaseMenu(): void {
     const selected = testCase.id === authoring.selectedTestCaseId;
     option.setAttribute("aria-pressed", String(selected));
     option.addEventListener("click", () => {
-      setSandboxTestCaseOptionsOpen(false);
+      testCaseMenu.close();
       if (testCase.id === authoring.selectedTestCaseId) {
         return;
       }
       changeSandboxTestCase(() => sessions.selectActiveSandboxTestCase(testCase.id));
     });
-    testCaseOptions.append(option);
+    testCaseMenu.options.append(option);
   }
 
   const actions = document.createElement("div");
@@ -1410,7 +1379,7 @@ function configureSandboxTestCaseMenu(): void {
   duplicate.type = "button";
   duplicate.textContent = "DUPLICATE CURRENT";
   duplicate.addEventListener("click", () => {
-    setSandboxTestCaseOptionsOpen(false);
+    testCaseMenu.close();
     changeSandboxTestCase(() => sessions.duplicateActiveSandboxTestCase());
   });
   const selected = authoring.testCases.find(
@@ -1425,17 +1394,17 @@ function configureSandboxTestCaseMenu(): void {
   remove.disabled = selected.standard;
   remove.title = selected.standard ? "The standard test case cannot be deleted" : "";
   remove.addEventListener("click", () => {
-    setSandboxTestCaseOptionsOpen(false);
+    testCaseMenu.close();
     changeSandboxTestCase(() => sessions.deleteActiveSandboxTestCase());
   });
   actions.append(duplicate, remove);
-  testCaseOptions.append(actions);
+  testCaseMenu.options.append(actions);
 
-  testCaseDropup.hidden = false;
-  testCaseButton.textContent = `CASE: ${selected.name}`;
-  testCaseButton.title = "Choose, duplicate, or delete a sandbox puzzle test case";
-  testCaseButton.disabled = false;
-  setSandboxTestCaseOptionsOpen(false);
+  testCaseMenu.container.hidden = false;
+  testCaseMenu.button.textContent = `CASE: ${selected.name}`;
+  testCaseMenu.button.title = "Choose, duplicate, or delete a sandbox puzzle test case";
+  testCaseMenu.button.disabled = false;
+  testCaseMenu.close();
 }
 
 function changeSandboxTestCase(updateSession: () => void): void {
@@ -1530,7 +1499,7 @@ if (import.meta.env.DEV) {
         : null,
       activeSolutionId: screen.kind === "puzzle" ? screen.solutionId : null,
       simulation: {
-        running: running || puzzleTests.testing,
+        running: clock.running || puzzleTests.testing,
         tick: surface.simulation.tick,
         editable: surface.session.editingState.editable,
         puzzleResult,
@@ -1861,7 +1830,7 @@ playButton.addEventListener("click", () => {
   if (navigation.screen.kind === "puzzle") {
     puzzleTests.togglePlayback();
   } else {
-    setRunning(!running);
+    setRunning(!clock.running);
   }
 });
 
@@ -1869,16 +1838,12 @@ fastForwardButton.addEventListener("click", () => {
   puzzleTests.fastForward();
 });
 
-testCaseButton.addEventListener("click", () => {
-  if (navigation.screen.kind === "sandbox") {
-    setSandboxTestCaseOptionsOpen(testCaseOptions.hidden !== false);
-  } else {
-    puzzleTests.toggleCaseOptions();
-  }
+testCaseMenu.button.addEventListener("click", () => {
+  testCaseMenu.toggle();
 });
 
 stepButton.addEventListener("click", () => {
-  const duration = animationsEnabled() ? MANUAL_STEP_ANIMATION_MS : 0;
+  const duration = clock.manualStepDuration;
   if (navigation.screen.kind === "puzzle") {
     puzzleTests.step(duration);
   } else {
@@ -1887,53 +1852,49 @@ stepButton.addEventListener("click", () => {
 });
 animationToggle.addEventListener("change", finishAnimationIfDisabled);
 
-function setSpeedOptionsOpen(open: boolean): void {
-  speedOptions.hidden = !open;
-  speedButton.setAttribute("aria-expanded", String(open));
-}
-
-speedButton.addEventListener("click", () => {
-  setSpeedOptionsOpen(speedOptions.hidden !== false);
+speedMenu.button.addEventListener("click", () => {
+  speedMenu.toggle();
 });
-const speedButtons = [...speedOptions.querySelectorAll<HTMLButtonElement>("[data-speed]")];
+const speedButtons = [...speedMenu.options.querySelectorAll<HTMLButtonElement>("[data-speed]")];
 for (const button of speedButtons) {
   button.addEventListener("click", () => {
-    simulationSpeed = Number(button.dataset.speed);
-    speedButton.textContent = `SPEED: ${button.textContent}`;
+    clock.setTicksPerSecond(Number(button.dataset.speed));
+    speedMenu.button.textContent = `SPEED: ${button.textContent}`;
     for (const option of speedButtons) {
       option.setAttribute("aria-pressed", String(option === button));
     }
-    accumulatedTime = 0;
     finishAnimationIfDisabled();
-    setSpeedOptionsOpen(false);
-    speedButton.focus();
+    speedMenu.close();
+    speedMenu.button.focus();
   });
 }
-speedDropup.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && !speedOptions.hidden) {
+speedMenu.container.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && speedMenu.open) {
     event.preventDefault();
     event.stopPropagation();
-    setSpeedOptionsOpen(false);
-    speedButton.focus();
+    speedMenu.close();
+    speedMenu.button.focus();
   } else if (["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
     event.preventDefault();
     event.stopPropagation();
-    const wasClosed = speedOptions.hidden;
-    setSpeedOptionsOpen(true);
+    const wasClosed = !speedMenu.open;
+    speedMenu.setOpen(true);
     const current = speedButtons.indexOf(document.activeElement as HTMLButtonElement);
-    const selected = speedButtons.findIndex((button) => Number(button.dataset.speed) === simulationSpeed);
+    const selected = speedButtons.findIndex(
+      (button) => Number(button.dataset.speed) === clock.ticksPerSecond,
+    );
     const index = event.key === "Home" ? 0
       : event.key === "End" ? speedButtons.length - 1
       : wasClosed || current < 0 ? selected
       : (current + (event.key === "ArrowDown" ? 1 : -1) + speedButtons.length) % speedButtons.length;
     expectDefined(speedButtons[index], "Speed option is missing").focus();
-  } else if (!speedOptions.hidden && event.key !== "Tab") {
+  } else if (speedMenu.open && event.key !== "Tab") {
     event.stopPropagation();
   }
 });
-speedDropup.addEventListener("focusout", (event) => {
-  if (!(event.relatedTarget instanceof Node) || !speedDropup.contains(event.relatedTarget)) {
-    setSpeedOptionsOpen(false);
+speedMenu.container.addEventListener("focusout", (event) => {
+  if (!speedMenu.contains(event.relatedTarget)) {
+    speedMenu.close();
   }
 });
 
@@ -1982,26 +1943,6 @@ clearButton.addEventListener("click", () => {
   commitEditedWorld();
 });
 
-function downloadBlob(blob: Blob, filename: string): void {
-  const objectUrl = URL.createObjectURL(blob);
-  const download = document.createElement("a");
-  download.href = objectUrl;
-  download.download = filename;
-  document.body.append(download);
-  download.click();
-  download.remove();
-  URL.revokeObjectURL(objectUrl);
-}
-
-function setExportOptionsOpen(open: boolean): void {
-  exportOptions.hidden = !open;
-  exportButton.setAttribute("aria-expanded", String(open));
-}
-
-function closeExportOptions(): void {
-  setExportOptionsOpen(false);
-}
-
 function updateExportOptionsForSession(): void {
   const sandboxOnly = surface.session.editableRegion === null;
   downloadPuzzleButton.hidden = false;
@@ -2009,22 +1950,22 @@ function updateExportOptionsForSession(): void {
   sharePuzzleButton.hidden = !sandboxOnly;
   sharePuzzleButton.disabled = true;
   if (!sandboxOnly) {
-    closeExportOptions();
+    exportMenu.close();
   }
 }
 
-exportButton.addEventListener("click", () => {
-  setExportOptionsOpen(exportOptions.hidden !== false);
+exportMenu.button.addEventListener("click", () => {
+  exportMenu.toggle();
 });
 
 downloadSceneButton.addEventListener("click", () => {
-  closeExportOptions();
+  exportMenu.close();
   const source = serializeBoard(surface.session.world, surface.simulation.tick);
   downloadBlob(new Blob([source], { type: "application/json" }), "factory2d-scene.json");
 });
 
 copySceneButton.addEventListener("click", () => {
-  closeExportOptions();
+  exportMenu.close();
   const source = serializeBoard(surface.session.world, surface.simulation.tick);
   if (source.length > MAX_CLIPBOARD_EXPORT_CHARACTERS) {
     window.alert(
@@ -2038,7 +1979,7 @@ copySceneButton.addEventListener("click", () => {
 });
 
 downloadImageButton.addEventListener("click", () => {
-  closeExportOptions();
+  exportMenu.close();
   surface.renderer.render(surface.previousWorld, 1, performance.now(), theme.isLight);
   surface.renderer.cropRenderedBoard().toBlob((blob) => {
     if (blob === null) {
@@ -2049,7 +1990,7 @@ downloadImageButton.addEventListener("click", () => {
 });
 
 downloadPuzzleButton.addEventListener("click", () => {
-  closeExportOptions();
+  exportMenu.close();
   const screen = navigation.screen;
   if (screen.kind === "puzzle") {
     downloadBlob(
@@ -2075,21 +2016,17 @@ openPuzzleSandboxButton.addEventListener("click", () => {
   if (screen.kind !== "puzzle") {
     return;
   }
-  closeExportOptions();
+  exportMenu.close();
   finalizeActivePointerGesture();
   const sandbox = savedSandboxes.createFromPuzzle(screen.puzzleId);
   navigation.navigate({ kind: "sandbox", sandboxId: sandbox.id });
 });
 
 document.addEventListener("click", (event) => {
-  if (event.target instanceof Node && !speedDropup.contains(event.target)) {
-    setSpeedOptionsOpen(false);
-  }
-  if (event.target instanceof Node && !exportDropup.contains(event.target)) {
-    closeExportOptions();
-  }
-  if (event.target instanceof Node && !testCaseDropup.contains(event.target)) {
-    puzzleTests.closeCaseOptions();
+  for (const menu of [speedMenu, exportMenu, testCaseMenu]) {
+    if (!menu.contains(event.target)) {
+      menu.close();
+    }
   }
 });
 
@@ -2169,14 +2106,14 @@ canvas.addEventListener("wheel", (event) => {
 
 document.addEventListener("keydown", (event) => {
   if (textBoxTool.open || event.isComposing || event.keyCode === 229) return;
-  if (!exportOptions.hidden) {
+  if (exportMenu.open) {
     if (event.key === "Escape") {
       event.preventDefault();
-      closeExportOptions();
-      exportButton.focus();
+      exportMenu.close();
+      exportMenu.button.focus();
       return;
     }
-    if (event.target instanceof Node && exportDropup.contains(event.target)) {
+    if (exportMenu.contains(event.target)) {
       return;
     }
   }
@@ -2236,7 +2173,7 @@ document.addEventListener("keydown", (event) => {
   }
   const transportSpace =
     event.code === "Space" &&
-    (event.target === speedButton || event.target === animationToggle);
+    (event.target === speedMenu.button || event.target === animationToggle);
   if (
     event.ctrlKey ||
     event.metaKey ||
@@ -2365,7 +2302,7 @@ document.addEventListener("keydown", (event) => {
     if (navigation.screen.kind === "puzzle") {
       puzzleTests.togglePlayback();
     } else {
-      setRunning(!running);
+      setRunning(!clock.running);
     }
   } else if (
     event.code === "KeyN" ||
@@ -2420,18 +2357,7 @@ function frame(currentTime: number): void {
   puzzleTests.advanceFrame(currentTime, elapsed);
 
 
-  if (running) {
-    accumulatedTime += elapsed;
-    const ticksPerSecond = simulationSpeed;
-    const tickDuration = 1000 / ticksPerSecond;
-    while (accumulatedTime >= tickDuration) {
-      accumulatedTime -= tickDuration;
-      advanceSimulation(
-        animationsEnabled() ? Math.min(tickDuration, MAX_AUTOMATIC_ANIMATION_MS) : 0,
-        currentTime - accumulatedTime,
-      );
-    }
-  }
+  clock.advance(currentTime, elapsed, advanceSimulation);
   const devicePixelRatio = window.devicePixelRatio || 1;
   if (renderedPaletteDevicePixelRatio !== devicePixelRatio) {
     renderPalettePreviews();
@@ -2448,9 +2374,9 @@ function frame(currentTime: number): void {
   surface.renderer.setHighlightedTileId(
     signalTraces.visibleTileId(surface.world, hoveredSignalWorld, hoveredSignalTileId),
   );
-  const animationProgress = easedAnimationProgress(currentTime);
+  const animationProgress = clock.easedProgress(currentTime);
   surface.renderer.render(
-    animationDuration === 0 ? null : surface.previousWorld,
+    clock.animating ? surface.previousWorld : null,
     animationProgress,
     currentTime,
     theme.isLight,

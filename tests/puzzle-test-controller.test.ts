@@ -67,24 +67,14 @@ class FakeView implements PuzzleTestControllerView {
   configuredPuzzle: PuzzleDefinition | null = null;
   failure: string | null = null;
   report: PuzzleTestReport | null = null;
-  optionsOpen = false;
 
   configureCases(puzzle: PuzzleDefinition | null, selectedCaseId: string | null): void {
     this.configuredPuzzle = puzzle;
     this.selectedCaseId = selectedCaseId;
-    this.optionsOpen = false;
   }
 
   selectCase(testCaseId: string): void {
     this.selectedCaseId = testCaseId;
-  }
-
-  setCaseOptionsOpen(open: boolean): void {
-    this.optionsOpen = open;
-  }
-
-  toggleCaseOptions(): void {
-    this.optionsOpen = !this.optionsOpen;
   }
 
   hideStatus(): void {
