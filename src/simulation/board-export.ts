@@ -10,7 +10,7 @@ import {
   type ConfigurableComponentSnapshot,
   validateSignalLabel,
 } from "./configurable-components";
-import { furnaceRecipeFor } from "./furnace";
+import { isProcessingMachine, processingRecipeFor } from "./furnace";
 import { isCharge, type Charge } from "./circuit";
 import { PuzzleResult } from "./puzzle-result";
 import type { TextBox } from "./text-box";
@@ -290,7 +290,7 @@ function exportBoardContents(world: World): ExportedBoardContents {
           charges.push({ x, y, charge });
         }
       }
-      if (kind === TileKind.Welder || kind === TileKind.Splitter || kind === TileKind.LaserSplitter || kind === TileKind.Furnace) {
+      if (kind === TileKind.Welder || kind === TileKind.Splitter || kind === TileKind.LaserSplitter || isProcessingMachine(kind)) {
         const outputCharge = world.chargeAtPort(
           x,
           y,
@@ -300,7 +300,7 @@ function exportBoardContents(world: World): ExportedBoardContents {
           isolatedOutputCharges.push({ x, y, charge: outputCharge });
         }
       }
-      if (kind === TileKind.Furnace) {
+      if (isProcessingMachine(kind)) {
         const progress = world.furnaceProgressAt(x, y);
         const targetX = x + directionX(orientation);
         const targetY = y + directionY(orientation);
@@ -527,8 +527,9 @@ function importBoardContents(
     if (hasFurnaceState[cellIndex] === 1) {
       throw new Error(`Furnace ${index} duplicates cell (${x}, ${y})`);
     }
-    if (kinds[cellIndex] !== TileKind.Furnace) {
-      throw new Error(`Furnace ${index} targets a non-furnace tile`);
+    const kind = expectDefined(kinds[cellIndex], `processing machine kind at (${x}, ${y})`) as TileKind;
+    if (!isProcessingMachine(kind)) {
+      throw new Error(`Processing state ${index} targets a non-processing tile`);
     }
     const orientation = expectDefined(
       orientationByCell[cellIndex],
@@ -544,9 +545,9 @@ function importBoardContents(
       kinds[targetIndex],
       `furnace target kind at (${targetX}, ${targetY})`,
     ) as TileKind;
-    const recipe = furnaceRecipeFor(targetKind);
+    const recipe = processingRecipeFor(kind, targetKind);
     if (recipe === undefined) {
-      throw new Error(`Furnace ${index} has no bakeable target`);
+      throw new Error(`Processing machine ${index} has no processable target`);
     }
     furnaceProgressByCell[cellIndex] = requireInteger(
       state.progress,
@@ -639,7 +640,7 @@ function importBoardContents(
       throw new Error(`${chargeLabel} duplicates cell (${x}, ${y})`);
     }
     const kind = expectDefined(kinds[cellIndex], `tile kind at (${x}, ${y})`) as TileKind;
-    if (kind !== TileKind.Welder && kind !== TileKind.Splitter && kind !== TileKind.LaserSplitter && kind !== TileKind.Furnace) {
+    if (kind !== TileKind.Welder && kind !== TileKind.Splitter && kind !== TileKind.LaserSplitter && !isProcessingMachine(kind)) {
       throw new Error(`${chargeLabel} targets a tile without a separate isolated output`);
     }
     const charge = requireInteger(state.charge, `${chargeLabel} value`, -1, 1) as Charge;

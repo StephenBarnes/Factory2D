@@ -715,6 +715,47 @@ function drawDecoration(
       context.restore();
       break;
     }
+    case TileDecorationStyle.Grinder: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.strokeStyle = definition.decorationColor;
+      context.lineWidth = Math.max(1, size * 0.035);
+      context.lineJoin = "round";
+      // The open intake faces the target; the paired toothed rollers crush inward.
+      context.beginPath();
+      context.moveTo(-size * 0.25, -size * 0.3);
+      context.lineTo(-size * 0.1, -size * 0.17);
+      context.moveTo(size * 0.25, -size * 0.3);
+      context.lineTo(size * 0.1, -size * 0.17);
+      context.moveTo(-size * 0.24, size * 0.26);
+      context.lineTo(size * 0.24, size * 0.26);
+      context.stroke();
+      for (let roller = 0; roller < 2; roller += 1) {
+        context.save();
+        context.translate((roller === 0 ? -1 : 1) * size * 0.155, size * 0.025);
+        context.fillStyle = definition.decorationColor;
+        context.save();
+        context.rotate(roller * Math.PI / 8);
+        for (let tooth = 0; tooth < 8; tooth += 1) {
+          context.fillRect(-size * 0.035, -size * 0.15, size * 0.07, size * 0.065);
+          context.rotate(Math.PI / 4);
+        }
+        context.restore();
+        context.beginPath();
+        context.arc(0, 0, size * 0.105, 0, Math.PI * 2);
+        context.fillStyle = "#292a27";
+        context.fill();
+        context.stroke();
+        context.beginPath();
+        drawDot(context, 0, 0, Math.max(1, size * 0.035));
+        context.fillStyle = outputCharge === 1 ? "#f4dc91" : definition.decorationColor;
+        context.fill();
+        context.restore();
+      }
+      context.restore();
+      break;
+    }
     case TileDecorationStyle.Furnace: {
       context.save();
       context.translate(left + size / 2, top + size / 2);

@@ -56,6 +56,7 @@ export const enum TileKind {
   Comparer = 54,
   LaserSplitter = 55,
   Drill = 56,
+  Grinder = 57,
 }
 
 export const enum Direction {
@@ -121,6 +122,7 @@ export const enum TileDecorationStyle {
   Comparer = 43,
   LaserSplitter = 44,
   Drill = 45,
+  Grinder = 46,
 }
 
 export const enum PaletteCategory {
@@ -1086,6 +1088,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#6b5042",
     decorationStyle: TileDecorationStyle.Furnace,
     decorationColor: "#f0b25c",
+  },
+  [TileKind.Grinder]: {
+    name: "Grinder",
+    boardCode: "k",
+    defaultPrice: 20,
+    palette: {
+      order: 60,
+      category: PaletteCategory.Transformation,
+      description: "Grinds the block on its pointed side; linked side -1 pauses it; rear outputs +1 while grinding.",
+      extendedDescription: ["Stone and glass become sand after four active ticks. A -1 on the shared side circuit pauses progress; 0 or +1 allows grinding.", "The resulting sand cannot be welded, so grinding removes the target's welds.", "The isolated rear output is +1 on every active grinding tick, including completion. Moving a different target in front resets progress."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Right | WeldSide.Down | WeldSide.Left,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.Down,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#53615c",
+    decorationStyle: TileDecorationStyle.Grinder,
+    decorationColor: "#d2d7bd",
   },
   [TileKind.Conveyor]: {
     name: "Conveyor Belt",

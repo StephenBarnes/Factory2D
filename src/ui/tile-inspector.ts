@@ -1,5 +1,5 @@
 import { componentConfigurationForKind } from "../simulation/configurable-components";
-import { furnaceNeighborsPresent, furnaceRecipeFor } from "../simulation/furnace";
+import { furnaceNeighborsPresent, isProcessingMachine, processingRecipeFor } from "../simulation/furnace";
 import {
   Direction,
   PaletteCategory,
@@ -128,6 +128,7 @@ export class TileInspector {
   private readonly assemblerRow: HTMLElement;
   private readonly assembler: HTMLElement;
   private readonly furnaceRow: HTMLElement;
+  private readonly furnaceLabel: HTMLElement;
   private readonly configurationRow: HTMLElement;
   private readonly configuration: HTMLElement;
   private readonly configurationControlsRow: HTMLElement;
@@ -161,6 +162,7 @@ export class TileInspector {
     this.assemblerRow = requiredDescendant(root, "[data-inspector-assembler-row]");
     this.assembler = requiredDescendant(root, "[data-inspector-assembler]");
     this.furnaceRow = requiredDescendant(root, "[data-inspector-furnace-row]");
+    this.furnaceLabel = requiredDescendant(this.furnaceRow, "dt");
     this.configurationRow = requiredDescendant(root, "[data-inspector-configuration-row]");
     this.configuration = requiredDescendant(root, "[data-inspector-configuration]");
     this.configurationControlsRow = requiredDescendant(
@@ -340,8 +342,11 @@ export class TileInspector {
         : `${pending.length} QUEUED · ` +
           pending.map((output) => TILE_DEFINITIONS[output.kind].name.toUpperCase()).join(", ");
     }
-    this.furnaceRow.hidden = kind !== TileKind.Furnace;
-    if (kind === TileKind.Furnace) {
+    const processingMachine = isProcessingMachine(kind);
+    this.furnaceRow.hidden = !processingMachine;
+    if (processingMachine) {
+      const isFurnace = kind === TileKind.Furnace;
+      this.furnaceLabel.textContent = isFurnace ? "BAKE" : "PROCESS";
       const targetX = position.x + DIRECTION_X[orientation];
       const targetY = position.y + DIRECTION_Y[orientation];
       const targetKind = targetX >= 0 &&
@@ -350,9 +355,11 @@ export class TileInspector {
           targetY < this.world.height
         ? this.world.kindAt(targetX, targetY)
         : TileKind.Empty;
-      const recipe = furnaceRecipeFor(targetKind);
+      const recipe = processingRecipeFor(kind, targetKind);
       if (recipe === undefined) {
-        this.furnace.textContent = "IDLE · NO BAKEABLE TARGET";
+        this.furnace.textContent = isFurnace
+          ? "IDLE · NO BAKEABLE TARGET"
+          : "IDLE · NO GRINDABLE TARGET";
       } else {
         const progress = this.world.furnaceProgressAt(position.x, position.y);
         const status = recipe.requiredNeighbors !== undefined && !furnaceNeighborsPresent(
@@ -361,7 +368,9 @@ export class TileInspector {
           ? `WAITING FOR ${recipe.requiredNeighbors.map((kind) => TILE_DEFINITIONS[kind].name.toUpperCase()).join(" + ")} BESIDE TARGET`
           : progress === 0
             ? "READY"
-            : this.world.chargeAt(position.x, position.y) === 1 ? "BAKING" : "PAUSED";
+            : this.world.chargeAtPort(position.x, position.y, ((orientation + 2) & 3) as Direction) === 1
+              ? isFurnace ? "BAKING" : "PROCESSING"
+              : "PAUSED";
         this.furnace.textContent =
           `${status} · ${TILE_DEFINITIONS[recipe.input].name.toUpperCase()} → ` +
           `${TILE_DEFINITIONS[recipe.output].name.toUpperCase()} · ` +

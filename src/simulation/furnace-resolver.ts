@@ -1,10 +1,10 @@
 import { expectDefined } from "../util/assert";
-import { furnaceNeighborsPresent, furnaceRecipeFor } from "./furnace";
+import { furnaceNeighborsPresent, processingRecipeFor } from "./furnace";
 import { Direction, TileKind } from "./tile";
 import type { World } from "./world";
 import { WorldFeature } from "./world-features";
 
-/** Resolves and commits furnace progress using persistent, allocation-free scratch buffers. */
+/** Resolves furnace and grinder progress using persistent, allocation-free scratch buffers. */
 export class FurnaceResolver {
   private readonly world: World;
   private readonly nextProgress: Uint16Array;
@@ -39,7 +39,7 @@ export class FurnaceResolver {
       if (targetIndex < 0) {
         continue;
       }
-      const recipe = furnaceRecipeFor(this.world.kindAtIndex(targetIndex));
+      const recipe = processingRecipeFor(this.world.kindAtIndex(index), this.world.kindAtIndex(targetIndex));
       if (recipe === undefined) {
         continue;
       }

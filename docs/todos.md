@@ -36,7 +36,7 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Assembler follow-ups: the recipe table is a placeholder (sensor pair, piston, lodestone, conduits) and needs real game recipes using the available copper and other materials. Consider mirrored inputs (maybe just adding a mirrored recipe), a side circuit pulse on consumption or emission like the delivery box, a side disable input, and per-recipe output welds.
 * Flipper: attaches to one block, then flips the entire connected/welded group of blocks around that line horizontally or vertically, if it would not collide/overlap other blocks. Similar to Kaizen game's rotation.
 * Add a press/stamper/crusher. Behaves similarly to the piston, but (1) if piston extension is blocked by another tile, and that tile can't be moved, it instead unwelds and destroys that tile; and (2) we have a list of recipes for transforming the tile that the extended arm touches, on extension.
-* Grinder blocks that process a block in front into a product block - exactly like the furnace, but with a distinct table of recipes and different appearance (and later animation and sound).
+* DEFER Add grinding animation and sound to the grinder.
 * Replace the current magnet with an electromagnet. Positive and negative charges make it switch polarity; opposite sides have opposite polarity. Both nonzero polarities stick to iron. Like magnet sides repel, opposite magnet sides attract.
 * Maybe add static non-controllable magnets, which are also non-directional.
 * Component that makes its welded body immune to gravity, but can still be pushed down by an independent body on top that falls under gravity. (Platform block already does the first part, but cannot be pushed, and can't be moved by pistons.)

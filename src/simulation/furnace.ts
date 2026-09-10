@@ -28,8 +28,21 @@ export const FURNACE_RECIPES: readonly FurnaceRecipe[] = Object.freeze([
   }),
 ]);
 
-export function furnaceRecipeFor(input: TileKind): FurnaceRecipe | undefined {
-  for (const recipe of FURNACE_RECIPES) {
+/** Grinding uses the furnace progress lifecycle but never smelts its inputs. */
+export const GRINDER_RECIPES: readonly FurnaceRecipe[] = Object.freeze([
+  Object.freeze({ input: TileKind.Stone, output: TileKind.Sand, bakeTime: 4 }),
+  Object.freeze({ input: TileKind.Glass, output: TileKind.Sand, bakeTime: 4 }),
+]);
+
+export function isProcessingMachine(kind: TileKind): boolean {
+  return kind === TileKind.Furnace || kind === TileKind.Grinder;
+}
+
+export function processingRecipeFor(machine: TileKind, input: TileKind): FurnaceRecipe | undefined {
+  const recipes = machine === TileKind.Furnace ? FURNACE_RECIPES
+    : machine === TileKind.Grinder ? GRINDER_RECIPES : undefined;
+  if (recipes === undefined) return undefined;
+  for (const recipe of recipes) {
     if (recipe.input === input) {
       return recipe;
     }

@@ -1559,6 +1559,7 @@ export class CanvasRenderer {
       case TileKind.Piston:
       case TileKind.PistonBase:
       case TileKind.Furnace:
+      case TileKind.Grinder:
       case TileKind.Drill:
         this.drawSensorObservation(orientation);
         break;

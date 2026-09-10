@@ -19,7 +19,7 @@ import {
 } from "./configurable-components";
 import { CellStorage } from "./cell-storage";
 import { isCharge, type Charge } from "./circuit";
-import { furnaceRecipeFor } from "./furnace";
+import { isProcessingMachine, processingRecipeFor } from "./furnace";
 import { PuzzleResult } from "./puzzle-result";
 import { validateTextBoxes, type TextBox } from "./text-box";
 import {
@@ -685,16 +685,17 @@ export class World {
 
   restoreFurnaceProgress(x: number, y: number, progress: number): void {
     const index = this.indexOf(x, y);
-    if (this.cells.kinds[index] !== TileKind.Furnace) {
-      throw new Error(`Tile at (${x}, ${y}) is not a furnace`);
+    const kind = this.kindAtIndex(index);
+    if (!isProcessingMachine(kind)) {
+      throw new Error(`Tile at (${x}, ${y}) is not a processing machine`);
     }
     const targetIndex = this.directionalNeighborIndex(index);
     const targetKind = targetIndex < 0
       ? TileKind.Empty
       : this.cells.kinds[targetIndex] as TileKind;
-    const recipe = furnaceRecipeFor(targetKind);
+    const recipe = processingRecipeFor(kind, targetKind);
     if (recipe === undefined) {
-      throw new Error(`Furnace at (${x}, ${y}) has no bakeable target`);
+      throw new Error(`Processing machine at (${x}, ${y}) has no processable target`);
     }
     if (!Number.isSafeInteger(progress) || progress <= 0 || progress >= recipe.bakeTime) {
       throw new RangeError(
@@ -1098,7 +1099,7 @@ export class World {
         sourceForDestination[destination],
         "duplicated furnace source index",
       );
-      if (source < 0 || this.cells.kinds[source] !== TileKind.Furnace) {
+      if (source < 0 || !isProcessingMachine(this.kindAtIndex(source))) {
         continue;
       }
       const progress = expectDefined(

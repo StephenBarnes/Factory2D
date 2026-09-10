@@ -1,3 +1,4 @@
+import { isProcessingMachine } from "./furnace";
 import { expectDefined } from "../util/assert";
 import {
   TILE_DEFINITIONS,
@@ -50,7 +51,7 @@ for (const kind of TILE_KINDS) {
     kind === TileKind.Welder ||
     kind === TileKind.Splitter ||
     kind === TileKind.LaserSplitter ||
-    kind === TileKind.Furnace
+    isProcessingMachine(kind)
   ) {
     mask |= 1 << WorldFeature.CircuitSource;
   }
@@ -75,7 +76,7 @@ for (const kind of TILE_KINDS) {
   if (kind === TileKind.Welder || kind === TileKind.Splitter || kind === TileKind.LaserSplitter) {
     mask |= 1 << WorldFeature.WeldOperator;
   }
-  if (kind === TileKind.Furnace) {
+  if (isProcessingMachine(kind)) {
     mask |= 1 << WorldFeature.Furnace;
   }
   if (kind === TileKind.Drill) {
