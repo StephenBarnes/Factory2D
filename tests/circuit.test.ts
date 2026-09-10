@@ -889,6 +889,52 @@ describe("circuit networks", () => {
 
   it.each([
     {
+      name: "clockwise quarter turn",
+      turns: 1, horizontal: false, vertical: false,
+      width: 3, height: 2, cursor: 1,
+      values: [0, -1, 1, -1, 1, 0],
+    },
+    {
+      name: "vertical reflection",
+      turns: 0, horizontal: false, vertical: true,
+      width: 2, height: 3, cursor: 2,
+      values: [0, -1, -1, 1, 1, 0],
+    },
+    {
+      name: "horizontal reflection followed by rotation",
+      turns: 1, horizontal: true, vertical: false,
+      width: 3, height: 2, cursor: 4,
+      values: [-1, 1, 0, 0, -1, 1],
+    },
+  ])("transforms a rectangular ROM grid and live cursor: $name", (testCase) => {
+    const world = new World(1, 1);
+    world.place(0, 0, TileKind.Rom);
+    world.restoreComponentState(0, 0, {
+      type: "rom", width: 2, height: 3, cursor: 2,
+      values: [1, 0, -1, 1, 0, -1],
+    });
+
+    const transformed = world.transformed(
+      testCase.turns, testCase.horizontal, testCase.vertical,
+    );
+    expect(transformed.componentStateSnapshotAt(0, 0)).toEqual({
+      type: "rom",
+      width: testCase.width, height: testCase.height,
+      cursor: testCase.cursor, values: testCase.values,
+    });
+    // The cursor follows its cell rather than selecting another value after a turn.
+    expect(transformed.advanceRomAtIndex(0, 0, 0)).toBe(-1);
+    expect(transformed.advanceRomAtIndex(0, 1, 0)).toBe(
+      testCase.values[(testCase.cursor + 1) % testCase.values.length],
+    );
+    expect(world.componentStateSnapshotAt(0, 0)).toEqual({
+      type: "rom", width: 2, height: 3, cursor: 2,
+      values: [1, 0, -1, 1, 0, -1],
+    });
+  });
+
+  it.each([
+    {
       inputX: 0,
       inputY: 1,
       expectedCursors: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0],

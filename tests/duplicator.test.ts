@@ -48,7 +48,11 @@ describe("duplicators", () => {
       expect(world.kindAt(4, 3)).toBe(TileKind.Rom);
       expect(world.orientationAt(4, 3)).toBe(Direction.Down);
       expect(world.idAt(4, 3)).not.toBe(sourceId);
-      expect(world.componentStateSnapshotAt(4, 3)).toEqual(sourceState);
+      expect(world.componentStateSnapshotAt(4, 3)).toEqual({
+        type: "rom", width: 2, height: 2, cursor: 3,
+        values: [1, -1, -1, 0],
+      });
+      expect(world.componentStateSnapshotAt(4, 5)).toEqual(sourceState);
       expect(world.kindAt(anchorX, 3)).toBe(TileKind.Platform);
       expect(world.orientationAt(anchorX, 3)).toBe(Direction.Up);
       expect(world.isWelded(4, 3, anchorX, 3)).toBe(true);

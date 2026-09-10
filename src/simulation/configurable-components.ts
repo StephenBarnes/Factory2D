@@ -629,8 +629,8 @@ export function stateFromSnapshot(
 /**
  * Applies a selection-style transform (flips, then clockwise quarter turns) to a
  * component snapshot. Rune arrays rotate their inner board and side ports with the tile
- * so gravity inside always stays downward, and assemblers rotate the orientations of
- * their pending outputs. Other components carry no oriented state.
+ * so gravity inside always stays downward, assemblers rotate pending output orientations,
+ * and ROMs transform their value grid and cursor. Sequence checkers keep sequence order.
  */
 export function transformComponentSnapshot(
   snapshot: ConfigurableComponentSnapshot,
@@ -641,6 +641,31 @@ export function transformComponentSnapshot(
   const turns = ((quarterTurns % 4) + 4) % 4;
   if (turns === 0 && !flippedHorizontally && !flippedVertically) {
     return snapshot;
+  }
+  if (snapshot.type === "rom") {
+    const swapAxes = (turns & 1) === 1;
+    const width = swapAxes ? snapshot.height : snapshot.width;
+    const height = swapAxes ? snapshot.width : snapshot.height;
+    const values = new Array<Charge>(snapshot.values.length);
+    let cursor = 0;
+    snapshot.values.forEach((value, index) => {
+      const column = index % snapshot.width;
+      const row = Math.floor(index / snapshot.width);
+      let x = flippedHorizontally ? snapshot.width - 1 - column : column;
+      let y = flippedVertically ? snapshot.height - 1 - row : row;
+      for (let turn = 0; turn < turns; turn += 1) {
+        const rotatedHeight = (turn & 1) === 0 ? snapshot.height : snapshot.width;
+        const rotatedX = rotatedHeight - 1 - y;
+        y = x;
+        x = rotatedX;
+      }
+      const destination = y * width + x;
+      values[destination] = value;
+      if (index === snapshot.cursor) {
+        cursor = destination;
+      }
+    });
+    return { type: "rom", width, height, cursor, values };
   }
   if (snapshot.type === "assembler") {
     return {
