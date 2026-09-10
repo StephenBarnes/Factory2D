@@ -5,6 +5,29 @@ import { Direction, TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
 
 describe("gravity simulation", () => {
+  it("rebuilds stationary body topology after splitting, movement, and reset", () => {
+    const world = new World(2, 4);
+    world.place(0, 0, TileKind.Platform);
+    const stoneId = world.place(1, 0, TileKind.Stone);
+    world.setWeld(0, 0, 1, 0, true);
+    const baseline = world.clone();
+    const simulation = new Simulation(world);
+
+    expect(simulation.step()).toBe(0);
+    expect(simulation.step()).toBe(0);
+    world.setWeld(0, 0, 1, 0, false);
+    expect(simulation.step()).toBe(1);
+    expect(world.idAt(1, 1)).toBe(stoneId);
+    expect(simulation.step()).toBe(1);
+    expect(world.idAt(1, 2)).toBe(stoneId);
+
+    simulation.resetTo(baseline);
+    expect(simulation.step()).toBe(0);
+    expect(simulation.step()).toBe(0);
+    expect(world.idAt(1, 0)).toBe(stoneId);
+    expect(world.isWelded(0, 0, 1, 0)).toBe(true);
+  });
+
   it("moves sand down exactly one cell per tick and preserves its identity", () => {
     const world = new World(3, 4);
     const sandId = world.place(1, 0, TileKind.Sand);

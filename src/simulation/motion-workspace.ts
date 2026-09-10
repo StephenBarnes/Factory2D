@@ -27,6 +27,7 @@ export class MotionWorkspace {
   private tick = 0;
   private readonly bodyRoots: Int32Array;
   private readonly weldedBodyRoots: Int32Array;
+  private weldedGeometryRevision = -1;
   private readonly bodyHeads: Int32Array;
   private readonly nextBodyMember: Int32Array;
   private readonly bodyFalls: Uint8Array;
@@ -667,6 +668,11 @@ export class MotionWorkspace {
 
 
   private collectWeldedBodies(): void {
+    if (this.weldedGeometryRevision === this.world.geometryRevision) {
+      // Magnetic grouping and piston kinematics mutate bodyRoots, not this cache.
+      this.bodyRoots.set(this.weldedBodyRoots);
+      return;
+    }
     this.bodyRoots.fill(-1);
     this.weldedBodyRoots.fill(-1);
     for (
@@ -707,6 +713,7 @@ export class MotionWorkspace {
       this.bodyRoots[index] = root;
       this.weldedBodyRoots[index] = root;
     }
+    this.weldedGeometryRevision = this.world.geometryRevision;
   }
 
   /**

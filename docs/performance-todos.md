@@ -393,3 +393,28 @@ Implemented compact circuit nodes and cached forest-wide union topology, coverin
   - Circuit topology storage for 120,000 conduits is **1.37 MiB**: 0.46 MiB each for roots, driver sums, and the cell-to-node lookup. The previous roots and driver sums alone reserved **3.66 MiB**.
 
 The cached dense-circuit median is below the 50 ms workstation target, while p95 remains 6.6 ms above it. Motion/runtime scratch allocation is the next listed optimization priority.
+
+# Update 6
+
+Implemented the connected-body caching task from `todos.md`.
+
+## Changes
+
+- `WeldedBodyIndex.collect()` reuses membership, linked member lists, counts, and bounds while its world's geometry revision is unchanged.
+- `MotionWorkspace` reuses its existing ordinary welded-root buffer under the same revision check, copying roots back into mutable motion scratch before magnetic grouping. This adds no cell-sized storage.
+- Placement/removal, orientation changes, weld edits, movement, and reset invalidate through the existing geometry revision. Visual-only changes do not rebuild these caches.
+- Magnetic contacts, movement properties, and charge-dependent piston topology still recompute each pass. Start-of-tick observer topology and post-commit motion topology retain separate ownership.
+- Rendering already caches welded membership and paths with localized geometry invalidation. It remains independent: rendering consumes committed worlds (including previews), not simulation's start-of-tick observations or temporary magnetic/piston groups. A simulation getter would not replace those caches safely.
+
+## Verification
+
+- Focused simulation checks: 10 files, 152 tests passed, including a regression covering stationary ticks followed by weld splitting, falling, and reset.
+- `npm run build` passed.
+- Warmed headless-Chromium Vite benchmark: 400×300 board filled with one fully welded stationary stone body; 10 warmup calls and 40 measured calls per operation, same browser session before/after:
+
+| Operation | Before median / p95 | After median / p95 |
+|---|---:|---:|
+| `Simulation.step()` | 37.3 / 38.4 ms | 23.8 / 25.2 ms |
+| `WeldedBodyIndex.collect()` | 6.1 / 6.3 ms | below timer resolution |
+
+These results cover unchanged geometry, not moving factories; geometry-changing ticks still rebuild topology. The remaining motion passes still inspect bodies each tick.

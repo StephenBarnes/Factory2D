@@ -15,6 +15,7 @@ export class WeldedBodyIndex {
   private readonly bodyMinXs: Int32Array;
   private readonly bodyMinYs: Int32Array;
   private readonly bodyMemberCounts: Int32Array;
+  private collectedGeometryRevision = -1;
 
   constructor(world: World) {
     this.world = world;
@@ -27,6 +28,9 @@ export class WeldedBodyIndex {
   }
 
   collect(): void {
+    if (this.collectedGeometryRevision === this.world.geometryRevision) {
+      return;
+    }
     this.bodyRoots.fill(-1);
     this.bodyHeads.fill(-1);
     this.nextBodyMembers.fill(-1);
@@ -82,6 +86,7 @@ export class WeldedBodyIndex {
       }
       this.bodyMemberCounts[root] = count + 1;
     }
+    this.collectedGeometryRevision = this.world.geometryRevision;
   }
 
   rootAt(index: number): number {

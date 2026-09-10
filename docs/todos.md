@@ -61,7 +61,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 * Optimizations noted in `docs/performance-todos.md` - some have been completed and greatly improved performance.
 * Profile again after doing those already-noted performance tasks, and determine if there's any need to optimize further, and if so, what to optimize.
-* Check if we're caching connected/welded bodies, or flood-filling every frame. Could cache it and update only on the infrequent weld/unweld operations. Also check if the simulation and rendering are tracking connected bodies separately - if so, consider adding a getter on simulation system to read information on multi-tile bodies, and call that from the renderer.
 * Mark some tiles or regions as asleep, if they have no updates. Wake up only regions where things are happening. E.g. a static structure made of only solid no-action blocks doesn't need to be processed every frame, doesn't need to re-check gravity every frame, etc.
 * Cache circuit networks instead of rebuilding every tick.
 * Maybe: Compute the next simulation step async, while the last update is still being animated.
