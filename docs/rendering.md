@@ -25,6 +25,8 @@ Drills use a steel-grey slab with a pale tapered, spiral-cut bit pointing toward
 
 Grinders use paired toothed crushing rollers beneath an open intake, with pale axle highlights while active. The shared glyph rotates toward the front target on the board, palette, and previews; hover/placement highlights the immediate front cell.
 
+Floatstone uses a blue slab with a pale suspended diamond above two horizontal levitation lines, shared by the board, palette, and previews.
+
 Platforms use forest green; ROMs and graphers use jade/teal. Delay, counter, monitor, and array fills use sapphire/indigo, while fixed-charge/spark sources and sequence checkers use gold/amber. Channels and crossings retain neutral slate so wiring stays quieter than active components. These colors come from the shared tile metadata and are identical in both UI themes.
 
 Raw-material artwork uses colored rivets for metals and platforms, round grains for dirt and copper ore, grey square grains for iron ore, and curved grain with a knot for wood. Gemstones have cut-diamond outlines with bright/shaded facets and a white specular glint. All use the shared tile renderer, including palette and selection previews.

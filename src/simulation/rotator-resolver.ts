@@ -160,7 +160,7 @@ export class RotatorResolver {
     this.buildSweep(proposal);
     proposal.blocked = this.sweepLeavesWorld || this.selected[proposal.pivot] === 1;
     for (const source of proposal.selected) {
-      if (!TILE_DEFINITIONS[this.world.kindAtIndex(source)].affectedByGravity) {
+      if (TILE_DEFINITIONS[this.world.kindAtIndex(source)].immovable) {
         proposal.blocked = true;
         break;
       }

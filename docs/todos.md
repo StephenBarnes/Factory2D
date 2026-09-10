@@ -39,7 +39,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * DEFER Add grinding animation and sound to the grinder.
 * Replace the current magnet with an electromagnet. Positive and negative charges make it switch polarity; opposite sides have opposite polarity. Both nonzero polarities stick to iron. Like magnet sides repel, opposite magnet sides attract.
 * Maybe add static non-controllable magnets, which are also non-directional.
-* Component that makes its welded body immune to gravity, but can still be pushed down by an independent body on top that falls under gravity. (Platform block already does the first part, but cannot be pushed, and can't be moved by pistons.)
 * Animate committed rotator quarter-turns around their pivot. The simulation already commits them atomically; rendering needs to retain each accepted pivot, direction, and moved stable-ID set so every carried body follows the same circular interpolation without feeding continuous geometry back into collision resolution.
 * Add blocks that play a chime or other sound when charged.
 * Add a component that has no gravity, and moves forward one tile every time step; when blocked, attempt to push the tile in front. Could be useful as a model for many later components: arrows fired by elves, thrusters, etc.

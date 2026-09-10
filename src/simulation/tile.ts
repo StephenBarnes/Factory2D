@@ -57,6 +57,7 @@ export const enum TileKind {
   LaserSplitter = 55,
   Drill = 56,
   Grinder = 57,
+  Floatstone = 58,
 }
 
 export const enum Direction {
@@ -123,6 +124,7 @@ export const enum TileDecorationStyle {
   LaserSplitter = 44,
   Drill = 45,
   Grinder = 46,
+  Floatstone = 47,
 }
 
 export const enum PaletteCategory {
@@ -151,6 +153,8 @@ export interface TileDefinition {
     readonly extendedDescription: readonly string[];
   } | null;
   readonly affectedByGravity: boolean;
+  /** Anchors the whole welded body against all motion; omitted means movable. */
+  readonly immovable?: boolean;
   /** Opts a solid tile out of occupancy sensing; omitted means detectable. */
   readonly invisibleToSensor?: boolean;
   /** Immune to destructive tools such as drills; omitted means destructible. */
@@ -282,6 +286,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       extendedDescription: ["Anchors its entire welded body: it cannot fall or be pushed. Indestructible: drills cannot remove it. Use it as a foundation or to brace a moving machine."],
     },
     affectedByGravity: false,
+    immovable: true,
     indestructible: true,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
@@ -295,6 +300,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#595f7d",
     decorationStyle: TileDecorationStyle.Iron,
     decorationColor: "#2f2b43",
+  },
+  [TileKind.Floatstone]: {
+    name: "Floatstone",
+    boardCode: "z",
+    defaultPrice: 10,
+    palette: {
+      order: 61,
+      category: PaletteCategory.Motion,
+      description: "Holds its welded body aloft, but can still be pushed.",
+      extendedDescription: ["Prevents its entire welded body from falling on its own. An independent falling body on top pushes it downward if the whole chain has room.", "Pistons, conveyors, and rotators can move it. Welding it to a platform still anchors the body. It needs no charge."],
+    },
+    affectedByGravity: false,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.None,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#476d83",
+    decorationStyle: TileDecorationStyle.Floatstone,
+    decorationColor: "#bdeeff",
   },
   [TileKind.Magnet]: {
     name: "Lodestone",

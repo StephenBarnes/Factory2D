@@ -30,6 +30,9 @@ export class MotionWorkspace {
   private readonly bodyHeads: Int32Array;
   private readonly nextBodyMember: Int32Array;
   private readonly bodyFalls: Uint8Array;
+  private readonly bodyImmovable: Uint8Array;
+  private readonly gravityActivated: Uint8Array;
+  private hasFloatingTiles = false;
   private readonly bodySlidesDiagonally: Uint8Array;
   private readonly horizontalMoves: Int8Array;
   private readonly verticalMoves: Int8Array;
@@ -72,6 +75,8 @@ export class MotionWorkspace {
     this.bodyHeads = new Int32Array(world.cellCount);
     this.nextBodyMember = new Int32Array(world.cellCount);
     this.bodyFalls = new Uint8Array(world.cellCount);
+    this.bodyImmovable = new Uint8Array(world.cellCount);
+    this.gravityActivated = new Uint8Array(world.cellCount);
     this.bodySlidesDiagonally = new Uint8Array(world.cellCount);
     this.horizontalMoves = new Int8Array(world.cellCount);
     this.verticalMoves = new Int8Array(world.cellCount);
@@ -551,7 +556,7 @@ export class MotionWorkspace {
       this.drivenBodies[root] = 1;
       this.movementQueue[queueLength] = root;
       queueLength += 1;
-      if (this.bodyFalls[root] === 0 || this.pistonAnchoredBodies[root] === 1) {
+      if (this.bodyImmovable[root] === 1 || this.pistonAnchoredBodies[root] === 1) {
         this.blockMovementGroup(root);
       }
     }
@@ -591,7 +596,7 @@ export class MotionWorkspace {
         }
         if (
           this.pistonCanPush[root] === 0 ||
-          this.bodyFalls[blocker] === 0 ||
+          this.bodyImmovable[blocker] === 1 ||
           this.pistonAnchoredBodies[blocker] === 1
         ) {
           this.blockMovementGroup(root);
@@ -791,6 +796,8 @@ export class MotionWorkspace {
   private collectBodyMembers(): void {
     this.bodyHeads.fill(-1);
     this.bodyFalls.fill(1);
+    this.bodyImmovable.fill(0);
+    this.hasFloatingTiles = false;
     this.bodySlidesDiagonally.fill(1);
     for (
       let index = this.world.lastFeatureIndex(WorldFeature.Occupied);
@@ -808,6 +815,12 @@ export class MotionWorkspace {
       const definition = TILE_DEFINITIONS[this.world.kindAtIndex(index)];
       if (!definition.affectedByGravity) {
         this.bodyFalls[root] = 0;
+      }
+      if (definition.immovable) {
+        this.bodyImmovable[root] = 1;
+      }
+      if (!definition.affectedByGravity && !definition.immovable) {
+        this.hasFloatingTiles = true;
       }
       if (!definition.slidesDiagonally) {
         this.bodySlidesDiagonally[root] = 0;
@@ -946,7 +959,7 @@ export class MotionWorkspace {
       this.drivenBodies[root] = 1;
       this.movementQueue[queueLength] = root;
       queueLength += 1;
-      if (this.bodyFalls[root] === 0) {
+      if (this.bodyImmovable[root] === 1) {
         this.blockMovementGroup(root);
       }
     }
@@ -992,7 +1005,7 @@ export class MotionWorkspace {
           this.verticalMoves[otherBody] = moveY;
           this.movementQueue[queueLength] = otherBody;
           queueLength += 1;
-          if (this.bodyFalls[otherBody] === 0) {
+          if (this.bodyImmovable[otherBody] === 1) {
             this.blockMovementGroup(otherBody);
           }
           this.unionMovementGroups(root, otherBody);
@@ -1040,7 +1053,7 @@ export class MotionWorkspace {
           this.blockMovementGroup(root);
           continue;
         }
-        if (this.bodyFalls[blocker] === 0) {
+        if (this.bodyImmovable[blocker] === 1) {
           this.blockMovementGroup(root);
           continue;
         }
@@ -1178,7 +1191,7 @@ export class MotionWorkspace {
       ) {
         continue;
       }
-      if (this.bodyFalls[root] === 0) {
+      if (this.bodyImmovable[root] === 1) {
         this.jammedBodies[root] = 1;
         continue;
       }
@@ -1250,6 +1263,51 @@ export class MotionWorkspace {
         this.jammedBodies[dependent] = 1;
         this.blockedBodyQueue[queueLength] = dependent;
         queueLength += 1;
+      }
+    }
+
+    if (this.hasFloatingTiles) {
+      // Only successful falling bodies exert weight. Propagate it down through
+      // contacts; a body supported elsewhere must not push a floating neighbor.
+      this.gravityActivated.fill(0);
+      queueHead = 0;
+      queueLength = 0;
+      for (
+        let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
+        root >= 0;
+        root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+      ) {
+        if (
+          expectDefined(this.bodyHeads[root], "body head") >= 0 &&
+          this.bodyFalls[root] === 1 && this.jammedBodies[root] === 0
+        ) {
+          this.gravityActivated[root] = 1;
+          this.blockedBodyQueue[queueLength++] = root;
+        }
+      }
+      while (queueHead < queueLength) {
+        const root = expectDefined(this.blockedBodyQueue[queueHead++], "falling body queue entry");
+        for (
+          let member = expectDefined(this.bodyHeads[root], "body head");
+          member >= 0;
+          member = expectDefined(this.nextBodyMember[member], "next body member")
+        ) {
+          const blocker = expectDefined(this.bodyRoots[member + this.world.width], "gravity contact");
+          if (blocker < 0 || this.gravityActivated[blocker] === 1) {
+            continue;
+          }
+          this.gravityActivated[blocker] = 1;
+          this.blockedBodyQueue[queueLength++] = blocker;
+        }
+      }
+      for (
+        let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
+        root >= 0;
+        root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+      ) {
+        if (this.gravityActivated[root] === 0) {
+          this.jammedBodies[root] = 1;
+        }
       }
     }
 

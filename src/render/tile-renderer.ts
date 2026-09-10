@@ -620,6 +620,23 @@ function drawDecoration(
       context.fill();
       context.restore();
       break;
+    case TileDecorationStyle.Floatstone:
+      context.lineWidth = Math.max(1.5, size * 0.055);
+      context.lineCap = "round";
+      context.beginPath();
+      context.moveTo(left + size * 0.5, top + size * 0.2);
+      context.lineTo(left + size * 0.7, top + size * 0.4);
+      context.lineTo(left + size * 0.5, top + size * 0.6);
+      context.lineTo(left + size * 0.3, top + size * 0.4);
+      context.closePath();
+      context.stroke();
+      context.beginPath();
+      context.moveTo(left + size * 0.25, top + size * 0.7);
+      context.lineTo(left + size * 0.75, top + size * 0.7);
+      context.moveTo(left + size * 0.35, top + size * 0.8);
+      context.lineTo(left + size * 0.65, top + size * 0.8);
+      context.stroke();
+      break;
     case TileDecorationStyle.Iron: {
       const rivetOffset = size * 0.26;
       const rivetRadius = Math.max(1, size * 0.05);
