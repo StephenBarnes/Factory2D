@@ -5,6 +5,7 @@ import { expectDefined } from "../util/assert";
 
 export interface PuzzleScores {
   readonly price: number;
+  /** Arithmetic mean of cycles across all test cases, without rounding. */
   readonly cycles: number;
   readonly footprint: number;
   readonly combined: number;
@@ -83,14 +84,14 @@ export function computePuzzleScores(
   solution: World,
   cycles: number,
 ): PuzzleScores {
-  if (!Number.isSafeInteger(cycles) || cycles < 0) {
-    throw new RangeError("Puzzle score cycles must be a non-negative safe integer");
+  if (!isScoreNumber(cycles)) {
+    throw new RangeError("Puzzle score cycles must be a non-negative finite number within the safe range");
   }
 
   const metrics = computePuzzleDesignMetrics(puzzle, solution);
   const footprint = metrics.footprintWidth * metrics.footprintHeight;
   const combined = metrics.price + cycles + footprint;
-  if (!Number.isSafeInteger(combined)) {
+  if (!isScoreNumber(combined)) {
     throw new RangeError("Combined puzzle score exceeds the safe integer range");
   }
 
@@ -103,8 +104,9 @@ export function parsePuzzleScores(value: unknown, context: string): PuzzleScores
   }
   const record = value as Record<string, unknown>;
   for (const field of ["price", "cycles", "footprint", "combined"] as const) {
-    if (!Number.isSafeInteger(record[field]) || (record[field] as number) < 0) {
-      throw new Error(`${context} score ${field} must be a non-negative safe integer`);
+    const score = record[field];
+    if (!isScoreNumber(score) || ((field === "price" || field === "footprint") && !Number.isSafeInteger(score))) {
+      throw new Error(`${context} score ${field} must be non-negative and within the safe range; price and footprint must be integers`);
     }
   }
   if (record.combined !== (record.price as number) + (record.cycles as number) + (record.footprint as number)) {
@@ -117,4 +119,8 @@ export function parsePuzzleScores(value: unknown, context: string): PuzzleScores
     footprint: record.footprint as number,
     combined: record.combined as number,
   });
+}
+
+function isScoreNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= Number.MAX_SAFE_INTEGER;
 }

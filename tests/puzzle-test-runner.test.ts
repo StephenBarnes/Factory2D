@@ -71,12 +71,34 @@ describe("puzzle test runner", () => {
     expect(report.results.map((result) => result.cycles)).toEqual([2, 2]);
     expect(report.scores).toEqual({
       price: 1,
-      cycles: 4,
+      cycles: 2,
       footprint: 1,
-      combined: 6,
+      combined: 4,
     });
     expect(solution.puzzleResult).toBe(PuzzleResult.InProgress);
     expect(solution.kindAt(0, 0)).toBe(TileKind.FixedCharge);
+  });
+
+  it("averages unequal case lengths without rounding or weighting by case count", () => {
+    const solution = new World(3, 1);
+    const fastCase = caseDefinition("fast", 5, () => chargedVictoryWorld(1));
+    const slowCase = caseDefinition("slow", 5, () => {
+      const world = chargedVictoryWorld(1);
+      world.setCharge(1, 0, 0);
+      world.place(0, 0, TileKind.FixedCharge);
+      world.setWeld(0, 0, 1, 0, true);
+      return world;
+    });
+    const puzzle = { ...puzzleWith([fastCase, slowCase]), editableRegion: new GridRegion([]) };
+    const report = runPuzzleTests(puzzle, solution);
+    expect(report.results.map(({ cycles }) => cycles)).toEqual([1, 2]);
+    expect(report.scores).toEqual({ price: 0, cycles: 1.5, footprint: 0, combined: 1.5 });
+
+    const repeated = runPuzzleTests({
+      ...puzzle,
+      testCases: [fastCase, slowCase, fastCase, slowCase],
+    }, solution);
+    expect(repeated.scores).toEqual(report.scores);
   });
 
   it("preserves editable configurable-component settings in a case world", () => {

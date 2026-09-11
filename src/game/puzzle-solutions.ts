@@ -5,6 +5,8 @@ import { parsePuzzleScores, type PuzzleScores } from "./puzzle-scores";
 
 export const PUZZLE_SOLUTIONS_STORAGE_KEY = "factory2d.puzzle-solutions";
 const PUZZLE_SOLUTIONS_VERSION = 2;
+// Invalidate obsolete scores independently of saved designs and puzzle progression.
+const PUZZLE_SCORING_VERSION = 1;
 
 type PuzzleSolutionsStorage = Pick<Storage, "getItem" | "setItem">;
 
@@ -18,6 +20,7 @@ export interface SavedPuzzleSolution {
 
 interface StoredPuzzleSolutions {
   readonly version: typeof PUZZLE_SOLUTIONS_VERSION;
+  readonly scoringVersion: typeof PUZZLE_SCORING_VERSION;
   readonly nextSolutionId: number;
   readonly solutions: readonly SavedPuzzleSolution[];
 }
@@ -97,7 +100,7 @@ export class PuzzleSolutions {
         puzzleId: puzzle.id,
         name: solution.name,
         board: solution.board,
-        scores,
+        scores: record.scoringVersion === PUZZLE_SCORING_VERSION ? scores : null,
       };
     });
 
@@ -186,6 +189,7 @@ export class PuzzleSolutions {
   serialize(): string {
     const stored: StoredPuzzleSolutions = {
       version: PUZZLE_SOLUTIONS_VERSION,
+      scoringVersion: PUZZLE_SCORING_VERSION,
       nextSolutionId: this.nextSolutionId,
       solutions: this.solutions,
     };

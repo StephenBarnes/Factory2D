@@ -8,7 +8,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 * DEFER Add a step-back button to the control panel at the bottom, maybe? Requires keeping previous state in memory, or several so we can step back multiple ticks.
 * DEFER If we do the "asleep vs active regions" change below, or if we store previous state for step-back, then as a follow-up: when testing a solution, check for loops (no active regions, or previous state equals current state) and end the test early.
-* Modify scoring: instead of adding up cycles used in all test cases, rather use the median or mean. Otherwise the number of test cases greatly affects solution scores / relative weight of cycles vs price and footprint.
 
 ## New puzzle types
 

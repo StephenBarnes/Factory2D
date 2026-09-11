@@ -1,6 +1,7 @@
 import type { PuzzleTestReport } from "../game/puzzle-test-runner";
 import type { PuzzleDefinition } from "../game/puzzles";
 import { expectDefined } from "../util/assert";
+import { formatPuzzleScore } from "./puzzle-score-format";
 
 export interface PuzzleTestReportCallbacks {
   readonly onContinueEditing: () => void;
@@ -106,15 +107,15 @@ export class PuzzleTestReportView {
   }
 
   private showScore(element: HTMLElement, score: number, previousBest: number | undefined): void {
-    element.textContent = String(score);
+    element.textContent = formatPuzzleScore(score);
     if (previousBest === undefined) {
       return;
     }
     const delta = score - previousBest;
     const comparison = document.createElement("small");
     comparison.className = `test-report-delta ${delta < 0 ? "improved" : delta > 0 ? "worse" : "equal"}`;
-    comparison.textContent = `${delta > 0 ? "+" : ""}${delta} vs best`;
-    comparison.title = `Previous best: ${previousBest}. Lower is better.`;
+    comparison.textContent = `${delta > 0 ? "+" : ""}${formatPuzzleScore(delta)} vs best`;
+    comparison.title = `Previous best: ${formatPuzzleScore(previousBest)}. Lower is better.`;
     element.append(comparison);
   }
 

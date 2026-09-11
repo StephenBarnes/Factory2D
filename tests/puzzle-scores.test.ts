@@ -5,6 +5,7 @@ import { PuzzleComponents } from "../src/game/puzzle-components";
 import {
   computePuzzleDesignMetrics,
   computePuzzleScores,
+  parsePuzzleScores,
 } from "../src/game/puzzle-scores";
 import type { PuzzleDefinition } from "../src/game/puzzles";
 import { TileKind } from "../src/simulation/tile";
@@ -92,5 +93,26 @@ describe("puzzle scores", () => {
       footprint: 0,
       combined: 2,
     });
+  });
+
+  it("retains fractional cycle and combined scores through JSON validation", () => {
+    const scores = computePuzzleScores(scoringPuzzle(), new World(6, 5), 7 / 3);
+    expect(scores.cycles).toBe(7 / 3);
+    expect(parsePuzzleScores(JSON.parse(JSON.stringify(scores)), "Saved")).toEqual(scores);
+  });
+
+  it.each([
+    { cycles: NaN },
+    { cycles: Infinity },
+    { cycles: -1 },
+    { cycles: Number.MAX_SAFE_INTEGER + 1 },
+    { price: 0.5 },
+    { footprint: 0.5 },
+    { combined: Infinity },
+    { combined: 3 },
+  ])("rejects invalid score values %o", (invalid) => {
+    expect(() => parsePuzzleScores({
+      price: 0, cycles: 1.5, footprint: 0, combined: 1.5, ...invalid,
+    }, "Saved")).toThrow();
   });
 });

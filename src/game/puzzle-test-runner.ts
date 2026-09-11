@@ -146,7 +146,7 @@ export class PuzzleTestRun {
       ? computePuzzleScores(
         this.puzzle,
         this.solution,
-        frozenResults.reduce((cycles, result) => cycles + result.cycles, 0),
+        frozenResults.reduce((cycles, result) => cycles + result.cycles, 0) / frozenResults.length,
       )
       : null;
     this.reportValue = Object.freeze({ succeeded, results: frozenResults, scores });

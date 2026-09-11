@@ -1,5 +1,6 @@
 import type { SavedPuzzleSolution } from "../game/puzzle-solutions";
 import type { PuzzleDefinition } from "../game/puzzles";
+import { formatPuzzleScore } from "./puzzle-score-format";
 
 export interface PuzzleInfoOptions {
   readonly puzzle: PuzzleDefinition;
@@ -97,7 +98,7 @@ export class PuzzleInfoView {
     scores.className = "solution-scores";
     scores.append(
       this.createScore("PRICE", solution.scores?.price),
-      this.createScore("CYCLES", solution.scores?.cycles),
+      this.createScore("AVG CYCLES", solution.scores?.cycles),
       this.createScore("FOOTPRINT", solution.scores?.footprint),
       this.createScore("COMBINED", solution.scores?.combined),
     );
@@ -142,7 +143,7 @@ export class PuzzleInfoView {
     const heading = document.createElement("small");
     heading.textContent = label;
     const value = document.createElement("strong");
-    value.textContent = scoreValue === undefined ? "—" : String(scoreValue);
+    value.textContent = scoreValue === undefined ? "—" : formatPuzzleScore(scoreValue);
     score.append(heading, value);
     return score;
   }

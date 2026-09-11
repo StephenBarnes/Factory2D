@@ -35,9 +35,9 @@ describe("puzzle solutions", () => {
     const first = solutions.create("first-shift", initialBoard());
     solutions.recordTestResult(first.id, initialBoard(), {
       price: 1,
-      cycles: 2,
+      cycles: 2.5,
       footprint: 3,
-      combined: 6,
+      combined: 6.5,
     });
     const second = solutions.create("first-shift", initialBoard());
     const sandFall = solutions.create("sand-fall", initialBoard("sand-fall"));
@@ -51,9 +51,9 @@ describe("puzzle solutions", () => {
     ]);
     expect(duplicate.scores).toEqual({
       price: 1,
-      cycles: 2,
+      cycles: 2.5,
       footprint: 3,
-      combined: 6,
+      combined: 6.5,
     });
 
     const editedWorld = puzzleById("first-shift").createInitialWorld();
@@ -70,14 +70,30 @@ describe("puzzle solutions", () => {
     ]);
     expect(loaded.byId(first.id).scores).toEqual({
       price: 1,
-      cycles: 2,
+      cycles: 2.5,
       footprint: 3,
-      combined: 6,
+      combined: 6.5,
     });
     expect(loaded.byId(duplicate.id).scores).toBeNull();
     expect(loaded.byId(duplicate.id).board).toBe(editedBoard);
     expect(loaded.forPuzzle("sand-fall")).toHaveLength(1);
     expect(storage.getItem(PUZZLE_SOLUTIONS_STORAGE_KEY)).toBe(solutions.serialize());
+  });
+
+  it("discards scores from a different scoring contract without losing designs", () => {
+    const solutions = PuzzleSolutions.empty();
+    const board = initialBoard();
+    const solution = solutions.create("first-shift", board);
+    solutions.recordTestResult(solution.id, board, { price: 1, cycles: 9, footprint: 1, combined: 11 });
+    const stored = JSON.parse(solutions.serialize()) as { scoringVersion?: number };
+    delete stored.scoringVersion;
+
+    const loaded = PuzzleSolutions.deserialize(JSON.stringify(stored));
+    expect(loaded.byId(solution.id)).toEqual({ ...solution, board, scores: null });
+    loaded.recordTestResult(solution.id, board, { price: 1, cycles: 4.5, footprint: 1, combined: 6.5 });
+    expect(PuzzleSolutions.deserialize(loaded.serialize()).byId(solution.id).scores).toEqual({
+      price: 1, cycles: 4.5, footprint: 1, combined: 6.5,
+    });
   });
 
   it("keeps generated IDs unique after loading", () => {
