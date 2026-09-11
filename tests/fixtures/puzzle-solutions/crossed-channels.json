@@ -1,0 +1,207 @@
+{
+  "format": "factory2d-board",
+  "version": 15,
+  "width": 16,
+  "height": 9,
+  "tick": 0,
+  "result": "in-progress",
+  "grid": [
+    "################",
+    "####.......#####",
+    "1UmCC+C1+.CCmEC#",
+    "####C.eC*CC###C#",
+    "####eCC....###<V",
+    "####C.eC*CC###C#",
+    "1UmCC+C1+.CCmEC#",
+    "####.......#####",
+    "################"
+  ],
+  "orientations": [
+    {
+      "x": 1,
+      "y": 2,
+      "direction": "right"
+    },
+    {
+      "x": 5,
+      "y": 2,
+      "direction": "right"
+    },
+    {
+      "x": 8,
+      "y": 2,
+      "direction": "down"
+    },
+    {
+      "x": 13,
+      "y": 2,
+      "direction": "right"
+    },
+    {
+      "x": 6,
+      "y": 3,
+      "direction": "right"
+    },
+    {
+      "x": 8,
+      "y": 3,
+      "direction": "right"
+    },
+    {
+      "x": 4,
+      "y": 4,
+      "direction": "right"
+    },
+    {
+      "x": 14,
+      "y": 4,
+      "direction": "right"
+    },
+    {
+      "x": 6,
+      "y": 5,
+      "direction": "right"
+    },
+    {
+      "x": 8,
+      "y": 5,
+      "direction": "right"
+    },
+    {
+      "x": 1,
+      "y": 6,
+      "direction": "right"
+    },
+    {
+      "x": 5,
+      "y": 6,
+      "direction": "right"
+    },
+    {
+      "x": 13,
+      "y": 6,
+      "direction": "right"
+    }
+  ],
+  "components": [
+    {
+      "x": 1,
+      "y": 2,
+      "type": "rom",
+      "width": 3,
+      "height": 3,
+      "cursor": 0,
+      "values": [
+        1,
+        1,
+        1,
+        1,
+        0,
+        1,
+        1,
+        1,
+        0
+      ]
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "type": "monitor",
+      "label": "Top",
+      "category": "Input"
+    },
+    {
+      "x": 12,
+      "y": 2,
+      "type": "monitor",
+      "label": "Top",
+      "category": "Output"
+    },
+    {
+      "x": 13,
+      "y": 2,
+      "type": "checker",
+      "width": 3,
+      "height": 3,
+      "cursor": 0,
+      "failed": false,
+      "ignoreZeros": false,
+      "values": [
+        1,
+        0,
+        1,
+        0,
+        1,
+        0,
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "x": 1,
+      "y": 6,
+      "type": "rom",
+      "width": 3,
+      "height": 3,
+      "cursor": 0,
+      "values": [
+        1,
+        0,
+        1,
+        0,
+        1,
+        0,
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "x": 2,
+      "y": 6,
+      "type": "monitor",
+      "label": "Bottom",
+      "category": "Input"
+    },
+    {
+      "x": 12,
+      "y": 6,
+      "type": "monitor",
+      "label": "Bottom",
+      "category": "Output"
+    },
+    {
+      "x": 13,
+      "y": 6,
+      "type": "checker",
+      "width": 3,
+      "height": 3,
+      "cursor": 0,
+      "failed": false,
+      "ignoreZeros": false,
+      "values": [
+        1,
+        1,
+        1,
+        1,
+        0,
+        1,
+        1,
+        1,
+        0
+      ]
+    }
+  ],
+  "welds": [
+    "++++-------++++|",
+    "+++|.......++++|",
+    "+++++-|-|.+++++|",
+    "++++|.+----++++|",
+    "+++++-|....++++|",
+    "++++|.+-+-+++++|",
+    "++++--.-..-++++|",
+    "+++|.......++++|",
+    "---------------."
+  ]
+}

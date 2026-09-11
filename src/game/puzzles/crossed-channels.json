@@ -1,0 +1,259 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 5,
+  "width": 16,
+  "height": 9,
+  "id": "crossed-channels",
+  "group": "runelore",
+  "order": 10,
+  "name": "Crossed channels",
+  "description": "Cross two signals, without using a crossing rune",
+  "goal": "Transmit the top-left input to bottom-right, and bottom-left to top-right",
+  "cycleLimit": 50,
+  "components": [
+    {
+      "code": "C",
+      "price": 2
+    },
+    {
+      "code": "S",
+      "price": 10
+    },
+    {
+      "code": "1",
+      "price": 10
+    },
+    {
+      "code": "K",
+      "price": 10
+    },
+    {
+      "code": "I",
+      "price": 10
+    },
+    {
+      "code": "+",
+      "price": 10
+    },
+    {
+      "code": "R",
+      "price": 10
+    },
+    {
+      "code": "*",
+      "price": 10
+    },
+    {
+      "code": "-",
+      "price": 10
+    },
+    {
+      "code": "Q",
+      "price": 10
+    },
+    {
+      "code": "T",
+      "price": 10
+    },
+    {
+      "code": "e",
+      "price": 10
+    },
+    {
+      "code": "<",
+      "price": 10
+    },
+    {
+      "code": ">",
+      "price": 10
+    },
+    {
+      "code": "m",
+      "price": 0
+    },
+    {
+      "code": "A",
+      "price": 10
+    },
+    {
+      "code": "#",
+      "price": 1
+    }
+  ],
+  "editableRegions": [
+    {
+      "x": 4,
+      "y": 1,
+      "width": 7,
+      "height": 7
+    }
+  ],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 15,
+    "width": 16,
+    "height": 9,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "################",
+      "####.......#####",
+      "1UmC.......CmEC#",
+      "####.......###C#",
+      "####.......###<V",
+      "####.......###C#",
+      "1UmC.......CmEC#",
+      "####.......#####",
+      "################"
+    ],
+    "orientations": [
+      {
+        "x": 1,
+        "y": 2,
+        "direction": "right"
+      },
+      {
+        "x": 13,
+        "y": 2,
+        "direction": "right"
+      },
+      {
+        "x": 14,
+        "y": 4,
+        "direction": "right"
+      },
+      {
+        "x": 1,
+        "y": 6,
+        "direction": "right"
+      },
+      {
+        "x": 13,
+        "y": 6,
+        "direction": "right"
+      }
+    ],
+    "components": [
+      {
+        "x": 1,
+        "y": 2,
+        "type": "rom",
+        "width": 3,
+        "height": 3,
+        "cursor": 0,
+        "values": [
+          1,
+          1,
+          1,
+          1,
+          0,
+          1,
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "x": 2,
+        "y": 2,
+        "type": "monitor",
+        "label": "Top",
+        "category": "Input"
+      },
+      {
+        "x": 12,
+        "y": 2,
+        "type": "monitor",
+        "label": "Top",
+        "category": "Output"
+      },
+      {
+        "x": 13,
+        "y": 2,
+        "type": "checker",
+        "width": 3,
+        "height": 3,
+        "cursor": 0,
+        "failed": false,
+        "ignoreZeros": false,
+        "values": [
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "x": 1,
+        "y": 6,
+        "type": "rom",
+        "width": 3,
+        "height": 3,
+        "cursor": 0,
+        "values": [
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "x": 2,
+        "y": 6,
+        "type": "monitor",
+        "label": "Bottom",
+        "category": "Input"
+      },
+      {
+        "x": 12,
+        "y": 6,
+        "type": "monitor",
+        "label": "Bottom",
+        "category": "Output"
+      },
+      {
+        "x": 13,
+        "y": 6,
+        "type": "checker",
+        "width": 3,
+        "height": 3,
+        "cursor": 0,
+        "failed": false,
+        "ignoreZeros": false,
+        "values": [
+          1,
+          1,
+          1,
+          1,
+          0,
+          1,
+          1,
+          1,
+          0
+        ]
+      }
+    ],
+    "welds": [
+      "++++-------++++|",
+      "+++|.......++++|",
+      "+++|.......++++|",
+      "+++|.......++++|",
+      "+++|.......++++|",
+      "+++|.......++++|",
+      "+++|.......++++|",
+      "+++|.......++++|",
+      "---------------."
+    ]
+  },
+  "testCases": []
+}
