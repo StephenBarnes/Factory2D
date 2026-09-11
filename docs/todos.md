@@ -111,10 +111,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * DEFER Also style the 4 scores of each solution according to their grade in the histogram for that specific metric.
 * DEFER Add text and art in the puzzle briefing - write a story to explain why the player is solving this puzzle.
 
-## Workshop (puzzle/sandbox) screen
-
-* Add some way to copy-paste per-component configuration between configurable components. Maybe when the selection tool is used to select some components, add a "copy config from..." button which allows clicking on one component and then copies its config to all selected components of the same type.
-
 # Visuals
 
 * Add backgrounds for puzzles, maybe with parallax as the player pans.

@@ -25,6 +25,8 @@ import {
 } from "./game/snippet-library";
 import { SnippetLibraryController } from "./game/snippet-library-controller";
 import { WorkshopSurfaceController } from "./game/workshop-surface-controller";
+import { copyComponentConfiguration } from "./game/component-configuration-copy";
+import type { SelectionPreviewCell } from "./game/tile-selection";
 
 import { visitCrossedGridEdges } from "./render/grid-drag";
 import type { GridCell, GridEdge, GridPoint } from "./render/grid-drag";
@@ -180,6 +182,9 @@ const selectionSaveSnippetButton = requiredElement<HTMLButtonElement>(
 );
 const selectionDeleteButton = requiredElement<HTMLButtonElement>("selection-delete-button");
 const selectionCropButton = requiredElement<HTMLButtonElement>("selection-crop-button");
+const selectionCopyConfigButton = requiredElement<HTMLButtonElement>("selection-copy-config-button");
+const selectionPasteConfigButton = requiredElement<HTMLButtonElement>("selection-paste-config-button");
+let copiedComponentConfiguration: SelectionPreviewCell | null = null;
 const nestedViewBar = requiredElement<HTMLElement>("nested-view-bar");
 const nestedViewBackButton = requiredElement<HTMLButtonElement>("nested-view-back-button");
 const nestedViewTrail = requiredElement<HTMLElement>("nested-view-trail");
@@ -566,6 +571,16 @@ function syncTileSelectionOverlay(): void {
   saveSnippetButton.disabled = !surface.selection.active;
   selectionCropButton.hidden = navigation.screen.kind !== "sandbox" || surface.viewDepth !== 0;
   selectionCropButton.disabled = overlay === null || !overlay.valid;
+  selectionCopyConfigButton.disabled = overlay === null ||
+    singleConfigurationSource(overlay.previewCells) === null;
+  const copied = copiedComponentConfiguration;
+  selectionPasteConfigButton.disabled = !surface.session.editingState.editable ||
+    overlay === null || !overlay.valid || copied === null ||
+    !overlay.previewCells.some((cell) => cell.kind === copied.kind);
+  selectionPasteConfigButton.title = copied === null
+    ? "First select one configurable component and copy its configuration"
+    : `Paste ${TILE_DEFINITIONS[copied.kind].name} settings into matching selected components. ` +
+      "Copies E-dialog settings only; rune-array resizing may crop contents.";
 }
 
 function positionSelectionActions(): void {
@@ -1774,6 +1789,46 @@ function pasteTileSelection(): void {
   syncTileSelectionOverlay();
   refreshPointerHover();
 }
+
+function singleConfigurationSource(cells: readonly SelectionPreviewCell[]): SelectionPreviewCell | null {
+  let source: SelectionPreviewCell | null = null;
+  for (const cell of cells) {
+    if (componentConfigurationForKind(cell.kind) === null) continue;
+    if (source !== null) return null;
+    source = cell;
+  }
+  return source;
+}
+
+selectionCopyConfigButton.addEventListener("click", () => {
+  const overlay = surface.selection.overlay(canEditCell, componentIsAvailable);
+  if (overlay === null) return;
+  const source = singleConfigurationSource(overlay.previewCells);
+  if (source === null) return;
+  copiedComponentConfiguration = source;
+  syncTileSelectionOverlay();
+});
+
+selectionPasteConfigButton.addEventListener("click", () => {
+  if (!surface.session.editingState.editable) return;
+  const source = copiedComponentConfiguration;
+  const overlay = surface.selection.overlay(canEditCell, componentIsAvailable);
+  if (source === null || overlay === null || !overlay.valid) return;
+  const state = source.componentState;
+  if (state === null) throw new Error("Copied component configuration is missing");
+  const result = surface.selection.commit(surface.world, canEditCell, componentIsAvailable);
+  if (!result.accepted) {
+    syncTileSelectionOverlay();
+    return;
+  }
+  let changed = result.changed;
+  for (const cell of overlay.previewCells) {
+    changed = copyComponentConfiguration(surface.world, cell.x, cell.y, source.kind, state) || changed;
+  }
+  if (changed) commitEditedWorld();
+  syncTileSelectionOverlay();
+  refreshPointerHover();
+});
 
 selectionCopyButton.addEventListener("click", copyTileSelection);
 selectionPasteButton.addEventListener("click", pasteTileSelection);

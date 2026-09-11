@@ -911,6 +911,10 @@ canvas {
 .selection-actions {
   z-index: 3;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: max-content;
+  max-width: calc(100% - 12px);
   gap: 3px;
   padding: 4px;
   transform: translate(-50%, -100%);
@@ -929,6 +933,12 @@ canvas {
   background: var(--raised);
   color: var(--text-body);
   font-size: 1rem;
+}
+
+.selection-actions .selection-config-action {
+  width: auto;
+  padding: 0 6px;
+  font-size: 0.65rem;
 }
 
 .selection-actions button:hover:not(:disabled) {
