@@ -9,6 +9,7 @@ import { PUZZLE_GROUPS } from "../game/puzzle-groups";
 export interface MainMenuOptions {
   readonly puzzles: readonly PuzzleDefinition[];
   readonly completedPuzzleIds: ReadonlySet<PuzzleId>;
+  readonly allPuzzlesUnlocked: boolean;
   readonly onSelectPuzzle: (id: PuzzleId) => void;
 }
 
@@ -41,7 +42,8 @@ export function populatePuzzleMap(container: HTMLElement, options: MainMenuOptio
       (count, puzzle) => count + (options.completedPuzzleIds.has(puzzle.id) ? 1 : 0),
       0,
     );
-    const unlocked = isPuzzleGroupUnlocked(group, options.completedPuzzleIds);
+    const unlocked = options.allPuzzlesUnlocked ||
+      isPuzzleGroupUnlocked(group, options.completedPuzzleIds);
     const allCompleted = completedCount === groupPuzzles.length;
     const section = document.createElement("details");
     section.className = "puzzle-group";
@@ -69,7 +71,7 @@ export function populatePuzzleMap(container: HTMLElement, options: MainMenuOptio
     const puzzleList = document.createElement("div");
     puzzleList.className = "puzzle-group-list";
     for (const puzzle of groupPuzzles.values()) {
-      const puzzleUnlocked = isPuzzleUnlocked(
+      const puzzleUnlocked = options.allPuzzlesUnlocked || isPuzzleUnlocked(
         puzzle,
         options.completedPuzzleIds,
         options.puzzles,

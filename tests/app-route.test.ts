@@ -16,6 +16,7 @@ function routeAccess(
 ): AppRouteAccess {
   return {
     completedPuzzleIds: new Set(completedPuzzleIds),
+    allPuzzlesUnlocked: false,
     solutionExists: (puzzleId, solutionId) =>
       solutions.some(([candidatePuzzleId, candidateSolutionId]) =>
         candidatePuzzleId === puzzleId && candidateSolutionId === solutionId
@@ -113,6 +114,32 @@ describe("application routes", () => {
         resolveAppPath(path, routeAccess(completedOtherPuzzles)),
       ).toEqual({ kind: "puzzle-info", puzzleId: puzzle.id });
     }
+  });
+
+  it("bypasses progression without bypassing puzzle and solution identity checks", () => {
+    const puzzle = expectDefined(
+      PUZZLES.find((candidate) => !isPuzzleUnlocked(candidate, new Set())),
+      "Missing locked puzzle",
+    );
+    const access: AppRouteAccess = {
+      ...routeAccess([], [[puzzle.id, "own-solution"], [ROOT_PUZZLE.id, "other-solution"]]),
+      allPuzzlesUnlocked: true,
+    };
+    const path = `/puzzles/${puzzle.id}`;
+    const briefing = { kind: "puzzle-info", puzzleId: puzzle.id };
+
+    expect(resolveAppPath(path, access)).toEqual(briefing);
+    expect(resolveAppPath(`${path}/solutions/own-solution`, access)).toEqual({
+      kind: "puzzle",
+      puzzleId: puzzle.id,
+      solutionId: "own-solution",
+    });
+    expect(resolveAppPath(`${path}/solutions/missing`, access)).toEqual(briefing);
+    expect(resolveAppPath(`${path}/solutions/other-solution`, access)).toEqual(briefing);
+    expect(resolveAppScreen(
+      { kind: "puzzle-info", puzzleId: "not-a-puzzle" },
+      access,
+    )).toEqual({ kind: "main-menu" });
   });
 
   it("falls back to puzzle info for missing or mismatched solution IDs", () => {

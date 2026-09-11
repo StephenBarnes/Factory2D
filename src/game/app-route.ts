@@ -4,6 +4,7 @@ import type { AppScreen } from "./screen";
 
 export interface AppRouteAccess {
   readonly completedPuzzleIds: ReadonlySet<PuzzleId>;
+  readonly allPuzzlesUnlocked: boolean;
   readonly solutionExists: (puzzleId: PuzzleId, solutionId: string) => boolean;
   readonly sandboxExists: (sandboxId: string) => boolean;
 }
@@ -32,7 +33,10 @@ export function resolveAppScreen(screen: AppScreen, access: AppRouteAccess): App
   }
 
   const puzzle = PUZZLES.find((candidate) => candidate.id === screen.puzzleId);
-  if (puzzle === undefined || !isPuzzleUnlocked(puzzle, access.completedPuzzleIds)) {
+  if (
+    puzzle === undefined ||
+    (!access.allPuzzlesUnlocked && !isPuzzleUnlocked(puzzle, access.completedPuzzleIds))
+  ) {
     return { kind: "main-menu" };
   }
   if (

@@ -25,6 +25,7 @@ import { PuzzleResult } from "../simulation/puzzle-result";
 
 type PuzzleProgressStorage = Pick<Storage, "getItem" | "setItem">;
 type NavigationHistory = Pick<History, "pushState" | "replaceState">;
+const UNLOCK_ALL_PUZZLES_STORAGE_KEY = "factory2d.unlock-all-puzzles";
 
 
 export interface NavigationElements {
@@ -52,7 +53,7 @@ export class NavigationController {
   private readonly sandboxInfoView: SandboxInfoView;
   private readonly completedPuzzleIds: Set<PuzzleId>;
   private currentScreen: AppScreen = { kind: "main-menu" };
-  private readonly routeAccess: AppRouteAccess;
+  private routeAccess: AppRouteAccess;
 
 
   constructor(
@@ -75,6 +76,7 @@ export class NavigationController {
     }
     this.routeAccess = {
       completedPuzzleIds: this.completedPuzzleIds,
+      allPuzzlesUnlocked: storage.getItem(UNLOCK_ALL_PUZZLES_STORAGE_KEY) === "true",
       solutionExists: (puzzleId, solutionId) =>
         this.solutions.findById(solutionId)?.puzzleId === puzzleId,
       sandboxExists: (sandboxId) => this.sandboxes.findById(sandboxId) !== undefined,
@@ -85,6 +87,18 @@ export class NavigationController {
     return this.currentScreen;
   }
 
+  get allPuzzlesUnlocked(): boolean {
+    return this.routeAccess.allPuzzlesUnlocked;
+  }
+
+  setAllPuzzlesUnlocked(enabled: boolean): void {
+    this.storage.setItem(UNLOCK_ALL_PUZZLES_STORAGE_KEY, String(enabled));
+    this.routeAccess = { ...this.routeAccess, allPuzzlesUnlocked: enabled };
+    if (this.currentScreen.kind === "main-menu") {
+      this.showScreen(this.currentScreen);
+    }
+  }
+
   get nextPuzzle(): PuzzleDefinition | null {
     const screen = this.currentScreen;
     if (screen.kind !== "puzzle") {
@@ -92,7 +106,8 @@ export class NavigationController {
     }
     const index = PUZZLES.indexOf(puzzleById(screen.puzzleId));
     const next = PUZZLES[index + 1];
-    return next !== undefined && isPuzzleUnlocked(next, this.completedPuzzleIds)
+    return next !== undefined &&
+      (this.allPuzzlesUnlocked || isPuzzleUnlocked(next, this.completedPuzzleIds))
       ? next
       : null;
   }
@@ -131,6 +146,7 @@ export class NavigationController {
       populatePuzzleMap(this.elements.puzzleMap, {
         puzzles: PUZZLES,
         completedPuzzleIds: this.completedPuzzleIds,
+        allPuzzlesUnlocked: this.allPuzzlesUnlocked,
         onSelectPuzzle: (puzzleId) => {
           this.navigate({ kind: "puzzle-info", puzzleId });
         },

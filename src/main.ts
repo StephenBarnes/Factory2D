@@ -1547,6 +1547,17 @@ puzzlePrice.addEventListener("pointerleave", () => {
 sandboxButton.addEventListener("click", () => {
   navigation.navigate({ kind: "sandbox-info" });
 });
+const unlockAllPuzzlesButton = requiredElement<HTMLButtonElement>("unlock-all-puzzles-button");
+unlockAllPuzzlesButton.setAttribute("aria-pressed", String(navigation.allPuzzlesUnlocked));
+unlockAllPuzzlesButton.addEventListener("click", () => {
+  try {
+    navigation.setAllPuzzlesUnlocked(!navigation.allPuzzlesUnlocked);
+    unlockAllPuzzlesButton.setAttribute("aria-pressed", String(navigation.allPuzzlesUnlocked));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    window.alert(`Could not save puzzle unlock setting: ${message}`);
+  }
+});
 settingsButton.addEventListener("click", () => {
   settingsDialog.showModal();
 });
