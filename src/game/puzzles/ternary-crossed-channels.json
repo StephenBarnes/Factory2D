@@ -3,11 +3,11 @@
   "version": 5,
   "width": 16,
   "height": 9,
-  "id": "crossed-channels",
+  "id": "ternary-crossed-channels",
   "group": "runelore",
-  "order": 10,
-  "name": "Binary crossed channels",
-  "description": "Cross two binary signals, using only 0 and +1, without a crossing rune. Transmit one value per tick once each output begins; the sequence checkers allow an initial delay. Your circuit must pass every test case.",
+  "order": 11,
+  "name": "Ternary crossed channels",
+  "description": "Cross two full ternary signals, using -1, 0, and +1, without a crossing rune. Transmit one value per tick once each output begins; the sequence checkers allow an initial delay. Your circuit must pass every test case. Rune arrays provide room for a larger circuit.",
   "goal": "Transmit the top-left input to bottom-right, and bottom-left to top-right",
   "cycleLimit": 50,
   "components": [
@@ -145,12 +145,12 @@
           1,
           1,
           1,
-          1,
           0,
-          1,
-          1,
-          1,
-          0
+          0,
+          0,
+          -1,
+          -1,
+          -1
         ]
       },
       {
@@ -179,13 +179,13 @@
         "values": [
           1,
           0,
+          -1,
           1,
           0,
+          -1,
           1,
           0,
-          1,
-          0,
-          0
+          -1
         ]
       },
       {
@@ -198,13 +198,13 @@
         "values": [
           1,
           0,
+          -1,
           1,
           0,
+          -1,
           1,
           0,
-          1,
-          0,
-          0
+          -1
         ]
       },
       {
@@ -234,12 +234,12 @@
           1,
           1,
           1,
-          1,
           0,
-          1,
-          1,
-          1,
-          0
+          0,
+          0,
+          -1,
+          -1,
+          -1
         ]
       }
     ],
@@ -257,8 +257,126 @@
   },
   "testCases": [
     {
-      "id": "steady-top",
-      "name": "Steady top",
+      "id": "negative-start",
+      "name": "Negative start",
+      "overrides": {
+        "initialBoard": {
+          "components": [
+            {
+              "x": 1,
+              "y": 2,
+              "type": "rom",
+              "width": 3,
+              "height": 3,
+              "cursor": 0,
+              "values": [
+                -1,
+                0,
+                1,
+                -1,
+                1,
+                0,
+                0,
+                -1,
+                1
+              ]
+            },
+            {
+              "x": 2,
+              "y": 2,
+              "type": "monitor",
+              "label": "Top",
+              "category": "Input"
+            },
+            {
+              "x": 12,
+              "y": 2,
+              "type": "monitor",
+              "label": "Top",
+              "category": "Output"
+            },
+            {
+              "x": 13,
+              "y": 2,
+              "type": "checker",
+              "width": 3,
+              "height": 3,
+              "cursor": 0,
+              "failed": false,
+              "ignoreZeros": false,
+              "values": [
+                1,
+                -1,
+                0,
+                0,
+                1,
+                -1,
+                1,
+                0,
+                -1
+              ]
+            },
+            {
+              "x": 1,
+              "y": 6,
+              "type": "rom",
+              "width": 3,
+              "height": 3,
+              "cursor": 0,
+              "values": [
+                1,
+                -1,
+                0,
+                0,
+                1,
+                -1,
+                1,
+                0,
+                -1
+              ]
+            },
+            {
+              "x": 2,
+              "y": 6,
+              "type": "monitor",
+              "label": "Bottom",
+              "category": "Input"
+            },
+            {
+              "x": 12,
+              "y": 6,
+              "type": "monitor",
+              "label": "Bottom",
+              "category": "Output"
+            },
+            {
+              "x": 13,
+              "y": 6,
+              "type": "checker",
+              "width": 3,
+              "height": 3,
+              "cursor": 0,
+              "failed": false,
+              "ignoreZeros": false,
+              "values": [
+                -1,
+                0,
+                1,
+                -1,
+                1,
+                0,
+                0,
+                -1,
+                1
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "steady-positive",
+      "name": "Steady positive",
       "overrides": {
         "initialBoard": {
           "components": [
@@ -305,14 +423,14 @@
               "failed": false,
               "ignoreZeros": false,
               "values": [
-                1,
-                0,
-                0,
+                -1,
                 0,
                 1,
                 0,
+                -1,
+                -1,
                 0,
-                0,
+                1,
                 0
               ]
             },
@@ -324,14 +442,14 @@
               "height": 3,
               "cursor": 0,
               "values": [
-                1,
-                0,
-                0,
+                -1,
                 0,
                 1,
                 0,
+                -1,
+                -1,
                 0,
-                0,
+                1,
                 0
               ]
             },
@@ -375,8 +493,8 @@
       }
     },
     {
-      "id": "steady-bottom",
-      "name": "Steady bottom",
+      "id": "steady-negative",
+      "name": "Steady negative",
       "overrides": {
         "initialBoard": {
           "components": [
@@ -388,15 +506,15 @@
               "height": 3,
               "cursor": 0,
               "values": [
+                -1,
                 1,
                 0,
+                1,
+                -1,
                 0,
                 0,
                 1,
-                0,
-                0,
-                0,
-                0
+                -1
               ]
             },
             {
@@ -423,15 +541,15 @@
               "failed": false,
               "ignoreZeros": false,
               "values": [
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1
               ]
             },
             {
@@ -442,15 +560,15 @@
               "height": 3,
               "cursor": 0,
               "values": [
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1
               ]
             },
             {
@@ -477,133 +595,15 @@
               "failed": false,
               "ignoreZeros": false,
               "values": [
-                1,
-                0,
-                0,
-                0,
-                1,
-                0,
-                0,
-                0,
-                0
-              ]
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": "alternating",
-      "name": "Alternating",
-      "overrides": {
-        "initialBoard": {
-          "components": [
-            {
-              "x": 1,
-              "y": 2,
-              "type": "rom",
-              "width": 3,
-              "height": 3,
-              "cursor": 0,
-              "values": [
+                -1,
                 1,
                 0,
                 1,
+                -1,
+                0,
                 0,
                 1,
-                0,
-                1,
-                0,
-                1
-              ]
-            },
-            {
-              "x": 2,
-              "y": 2,
-              "type": "monitor",
-              "label": "Top",
-              "category": "Input"
-            },
-            {
-              "x": 12,
-              "y": 2,
-              "type": "monitor",
-              "label": "Top",
-              "category": "Output"
-            },
-            {
-              "x": 13,
-              "y": 2,
-              "type": "checker",
-              "width": 3,
-              "height": 3,
-              "cursor": 0,
-              "failed": false,
-              "ignoreZeros": false,
-              "values": [
-                1,
-                1,
-                0,
-                1,
-                0,
-                1,
-                0,
-                1,
-                0
-              ]
-            },
-            {
-              "x": 1,
-              "y": 6,
-              "type": "rom",
-              "width": 3,
-              "height": 3,
-              "cursor": 0,
-              "values": [
-                1,
-                1,
-                0,
-                1,
-                0,
-                1,
-                0,
-                1,
-                0
-              ]
-            },
-            {
-              "x": 2,
-              "y": 6,
-              "type": "monitor",
-              "label": "Bottom",
-              "category": "Input"
-            },
-            {
-              "x": 12,
-              "y": 6,
-              "type": "monitor",
-              "label": "Bottom",
-              "category": "Output"
-            },
-            {
-              "x": 13,
-              "y": 6,
-              "type": "checker",
-              "width": 3,
-              "height": 3,
-              "cursor": 0,
-              "failed": false,
-              "ignoreZeros": false,
-              "values": [
-                1,
-                0,
-                1,
-                0,
-                1,
-                0,
-                1,
-                0,
-                1
+                -1
               ]
             }
           ]
@@ -624,14 +624,14 @@
               "height": 3,
               "cursor": 0,
               "values": [
-                1,
-                1,
+                -1,
                 0,
                 0,
                 1,
+                1,
                 0,
-                1,
-                1,
+                -1,
+                -1,
                 0
               ]
             },
@@ -659,14 +659,14 @@
               "failed": false,
               "ignoreZeros": false,
               "values": [
-                1,
-                1,
+                -1,
                 0,
                 0,
                 1,
+                1,
                 0,
-                1,
-                1,
+                -1,
+                -1,
                 0
               ]
             },
@@ -678,14 +678,14 @@
               "height": 3,
               "cursor": 0,
               "values": [
-                1,
-                1,
+                -1,
                 0,
                 0,
                 1,
+                1,
                 0,
-                1,
-                1,
+                -1,
+                -1,
                 0
               ]
             },
@@ -713,14 +713,14 @@
               "failed": false,
               "ignoreZeros": false,
               "values": [
-                1,
-                1,
+                -1,
                 0,
                 0,
                 1,
+                1,
                 0,
-                1,
-                1,
+                -1,
+                -1,
                 0
               ]
             }
@@ -729,8 +729,8 @@
       }
     },
     {
-      "id": "late-divergence",
-      "name": "Late divergence",
+      "id": "opposite-polarities",
+      "name": "Opposite polarities",
       "overrides": {
         "initialBoard": {
           "components": [
@@ -744,13 +744,13 @@
               "values": [
                 1,
                 0,
+                -1,
+                -1,
                 0,
                 1,
-                0,
                 1,
-                1,
-                0,
-                1
+                -1,
+                0
               ]
             },
             {
@@ -777,13 +777,13 @@
               "failed": false,
               "ignoreZeros": false,
               "values": [
+                -1,
+                0,
+                1,
                 1,
                 0,
-                0,
-                1,
-                0,
-                0,
-                0,
+                -1,
+                -1,
                 1,
                 0
               ]
@@ -796,13 +796,13 @@
               "height": 3,
               "cursor": 0,
               "values": [
+                -1,
+                0,
+                1,
                 1,
                 0,
-                0,
-                1,
-                0,
-                0,
-                0,
+                -1,
+                -1,
                 1,
                 0
               ]
@@ -833,13 +833,13 @@
               "values": [
                 1,
                 0,
+                -1,
+                -1,
                 0,
                 1,
-                0,
                 1,
-                1,
-                0,
-                1
+                -1,
+                0
               ]
             }
           ]

@@ -68,6 +68,8 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 # Circuit network
 
+* Bug: See `./temp/bug-scene.json`. The combiner and multiplier should both be isolating their inputs from each other. However, if I step this scene, the conduit joining the multiplier and combiner becomes charged in the 2nd tick, resulting in a +1 output from the multiplier in tick 3. Investigate why this happens. (Fixing this will probably also break the solution fixture for the `crossed-channels` puzzle - its bottom-right combiner is pointing the wrong way but still seems to work, which is how this bug was first noticed. After fixing the bug, fix the fixture by rotating that combiner 180 degrees.)
+
 ## New circuit components
 
 * Add a component with one input and one output, that disregards its first N received signal values and then passes the rest through. Allow configuring that value N. See for example `tests/fixtures/puzzle-solutions/crossed-channels.json` - this requires 2 multipliers, 2 fixed charges, and 2 combiners to remove the spurious initial +1 charges.
