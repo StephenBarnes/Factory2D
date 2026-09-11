@@ -139,6 +139,7 @@ const componentConfigurationDialogElement = requiredElement<HTMLDialogElement>(
 );
 const stepButton = requiredElement<HTMLButtonElement>("step-button");
 const resetButton = requiredElement<HTMLButtonElement>("reset-button");
+let resetFeedbackAnimation: Animation | null = null;
 const clearButton = requiredElement<HTMLButtonElement>("clear-button");
 const exportMenu = new DropupMenu(
   requiredElement<HTMLElement>("export-dropup"),
@@ -374,6 +375,8 @@ function setRunning(nextRunning: boolean): void {
 }
 
 surface.setMountListener(() => {
+  resetFeedbackAnimation?.cancel();
+  resetFeedbackAnimation = null;
   if (selectedTool === "editable-region" && surface.editableRegionAuthoring === null) {
     selectedTool = "tile";
     configureComponentPalette();
@@ -1030,13 +1033,29 @@ function weldEligibleEditableNeighbors(x: number, y: number): boolean {
   return changed;
 }
 
+function rejectLockedEdit(): void {
+  resetFeedbackAnimation?.cancel();
+  resetFeedbackAnimation = resetButton.animate(
+    [
+      { boxShadow: "0 0 0 3px #e15a4f", backgroundColor: "#a52e26", offset: 0 },
+      { boxShadow: "0 0 0 3px #e15a4f", backgroundColor: "#a52e26", offset: 0.35 },
+      { boxShadow: "0 0 0 0 transparent", offset: 1 },
+    ],
+    { duration: 700, easing: "ease-out" },
+  );
+}
+
 function editCellLine(
   from: GridCell,
   to: GridCell,
   erase: boolean,
   weldPlacedTiles: boolean,
 ): boolean {
-  if (!surface.session.editingState.editable || (!erase && !componentIsAvailable(selectedKind))) {
+  if (!surface.session.editingState.editable) {
+    rejectLockedEdit();
+    return false;
+  }
+  if (!erase && !componentIsAvailable(selectedKind)) {
     return false;
   }
 
@@ -1055,7 +1074,8 @@ function editCellLine(
   const orientation = orientationForKind(selectedKind, selectedOrientation);
 
   while (true) {
-    if (canEditCell(x, y)) {
+    const editable = canEditCell(x, y);
+    if (editable) {
       if (
         surface.world.kindAt(x, y) !== kind ||
         (
@@ -1071,6 +1091,7 @@ function editCellLine(
         changed = weldEligibleEditableNeighbors(x, y) || changed;
       }
     }
+    if (!editable) surface.renderer.flashRejectedRegion();
     if (
       !erase &&
       (x !== previousX || y !== previousY) &&
@@ -1197,13 +1218,25 @@ function adjustHoveredNumericComponent(delta: number): boolean {
 }
 
 
+function setEditableWeld(x1: number, y1: number, x2: number, y2: number, erase: boolean): boolean {
+  if (!canEditEdge(x1, y1, x2, y2)) {
+    surface.renderer.flashRejectedRegion();
+    return false;
+  }
+  if (!erase && !surface.world.canWeld(x1, y1, x2, y2)) {
+    surface.renderer.flashRejectedWeld(x1, y1, x2, y2);
+    return false;
+  }
+  return surface.world.setWeld(x1, y1, x2, y2, !erase);
+}
+
 function editWeld(edge: GridEdge, erase: boolean): boolean {
-  if (surface.session.editingState.editable && surface.selection.active) commitTileSelection();
-  const changed = (
-    surface.session.editingState.editable &&
-    canEditEdge(edge.x1, edge.y1, edge.x2, edge.y2) &&
-    surface.world.setWeld(edge.x1, edge.y1, edge.x2, edge.y2, !erase)
-  );
+  if (!surface.session.editingState.editable) {
+    rejectLockedEdit();
+    return false;
+  }
+  if (surface.selection.active) commitTileSelection();
+  const changed = setEditableWeld(edge.x1, edge.y1, edge.x2, edge.y2, erase);
   if (changed) sounds.edit(erase ? "unweld" : "weld");
   return changed;
 }
@@ -1215,26 +1248,22 @@ function editWeldSegment(
   erase: boolean,
 ): boolean {
   if (!surface.session.editingState.editable) {
+    rejectLockedEdit();
     return false;
   }
   if (surface.selection.active) commitTileSelection();
 
   let changed = false;
   visitCrossedGridEdges(from, to, surface.world.width, surface.world.height, (x1, y1, x2, y2) => {
-    if (canEditEdge(x1, y1, x2, y2)) {
-      changed = surface.world.setWeld(x1, y1, x2, y2, !erase) || changed;
-    }
+    changed = setEditableWeld(x1, y1, x2, y2, erase) || changed;
   });
-  if (
-    endpointEdge !== null &&
-    canEditEdge(endpointEdge.x1, endpointEdge.y1, endpointEdge.x2, endpointEdge.y2)
-  ) {
-    changed = surface.world.setWeld(
+  if (endpointEdge !== null) {
+    changed = setEditableWeld(
       endpointEdge.x1,
       endpointEdge.y1,
       endpointEdge.x2,
       endpointEdge.y2,
-      !erase,
+      erase,
     ) || changed;
   }
   if (changed) sounds.edit(erase ? "unweld" : "weld");
@@ -1262,6 +1291,7 @@ const canvasInteraction = new CanvasInteractionController(surface, {
   pickTile: pickTileAt,
   openConfiguration: openComponentConfiguration,
   commitEditTransaction: commitEditedWorld,
+  rejectLockedEdit,
 });
 surface.setInteractionCanceler(() => {
   cancelPalettePlacement();

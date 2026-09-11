@@ -187,6 +187,7 @@ function interactionHarness(): InteractionHarness {
       counts.pick += 1;
     },
     openConfiguration: () => undefined,
+    rejectLockedEdit: () => undefined,
     commitEditTransaction: () => {
       counts.commit += 1;
     },

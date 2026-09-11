@@ -53,6 +53,7 @@ export interface CanvasInteractionCallbacks {
   readonly pickTile: (cell: GridCell) => void;
   readonly openConfiguration: (cell: GridCell) => void;
   readonly commitEditTransaction: () => void;
+  readonly rejectLockedEdit: () => void;
 }
 
 interface PointerEventData {
@@ -135,7 +136,9 @@ export class CanvasInteractionController {
     const point = this.surface.renderer.gridPointFromClientPoint(event.clientX, event.clientY);
     const cell = this.surface.renderer.cellFromGridPoint(point);
     const gesture = pointerGesture(event.button, event.altKey);
-    if (gesture === null || (!this.surface.session.editingState.editable && gesture === "edit")) {
+    if (gesture === null) return;
+    if (!this.surface.session.editingState.editable && gesture === "edit") {
+      if (cell !== null) this.callbacks.rejectLockedEdit();
       return;
     }
     const buttonMask = pointerButtonMask(event.button);

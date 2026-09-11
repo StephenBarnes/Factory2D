@@ -35,6 +35,8 @@ const EDITABLE_REGION_DASH_PATTERN = [4, 4];
 const PORT_CELL_DASH_PATTERN = [3, 3];
 const NESTED_FRAME_COLOR = "#7a88c4";
 const PORT_CELL_COLOR = "rgb(199 211 244 / 55%)";
+const EDIT_REJECTION_DURATION_MS = 700;
+const EDIT_REJECTION_DASH_PATTERN: readonly number[] = [];
 /** Below this screen-space size, procedural details cost more than they communicate. */
 const LOW_DETAIL_CELL_SIZE = 6;
 const LOW_DETAIL_MOTION_BUCKETS = 9;
@@ -93,6 +95,8 @@ export class CanvasRenderer {
   private tileSelectionDraft: GridRegion | null = null;
   private textBoxPreview: TextBox | null = null;
   private readonly textBoxLayouts = new WeakMap<TextBox, TextBoxLayout>();
+  private rejectedRegionUntil = 0;
+  private readonly rejectedCells = new Map<number, number>();
 
   private cellSize = MAX_TILE_SIZE;
   private originX = 0;
@@ -275,6 +279,18 @@ export class CanvasRenderer {
     this.renderInvalidated = true;
   }
 
+  flashRejectedRegion(): void {
+    this.rejectedRegionUntil = performance.now() + EDIT_REJECTION_DURATION_MS;
+    this.renderInvalidated = true;
+  }
+
+  flashRejectedWeld(x1: number, y1: number, x2: number, y2: number): void {
+    const expiresAt = performance.now() + EDIT_REJECTION_DURATION_MS;
+    this.rejectedCells.set(y1 * this.world.width + x1, expiresAt);
+    this.rejectedCells.set(y2 * this.world.width + x2, expiresAt);
+    this.renderInvalidated = true;
+  }
+
   render(previousWorld: World | null = null, progress = 1, animationTime = 0, lightMode = false): void {
     if (this.renderedBevels !== tileAppearance.bevels) {
       this.renderedBevels = tileAppearance.bevels;
@@ -315,6 +331,7 @@ export class CanvasRenderer {
     this.drawHover(animationTime);
     this.drawTextBoxes();
     this.drawHighlightedTile(previousWorld, boundedProgress);
+    this.drawEditRejection();
 
     this.renderInvalidated = false;
     this.renderedWorldRevision = this.world.revision;
@@ -721,6 +738,46 @@ export class CanvasRenderer {
         this.originY + portY * cellSize + 2.5,
         cellSize - 5,
         cellSize - 5,
+      );
+    }
+    context.restore();
+  }
+
+  private drawEditRejection(): void {
+    if (this.rejectedRegionUntil === 0 && this.rejectedCells.size === 0) return;
+    const now = performance.now();
+    const { context, cellSize } = this;
+    context.save();
+    // Hold briefly, then fade; wall-clock feedback also animates while simulation is paused.
+    if (this.rejectedRegionUntil > now) {
+      this.hasTimeDependentVisuals = true;
+      context.globalAlpha = Math.min(1, (this.rejectedRegionUntil - now) / 450);
+      if (this.editableRegion !== null && this.editableRegion.boundaryEdges.length > 0) {
+        this.strokeGridRegion(this.editableRegion, EDIT_REJECTION_DASH_PATTERN, "#e15a4f");
+      } else {
+        // Fixed nested arrays have no editable boundary; flash their enclosing board instead.
+        context.strokeStyle = "#e15a4f";
+        context.lineWidth = 3;
+        context.strokeRect(
+          this.originX, this.originY, this.world.width * cellSize, this.world.height * cellSize,
+        );
+      }
+    } else {
+      this.rejectedRegionUntil = 0;
+    }
+    context.fillStyle = "#e15a4f";
+    for (const [index, expiresAt] of this.rejectedCells) {
+      if (expiresAt <= now) {
+        this.rejectedCells.delete(index);
+        continue;
+      }
+      this.hasTimeDependentVisuals = true;
+      context.globalAlpha = 0.3 * Math.min(1, (expiresAt - now) / 450);
+      context.fillRect(
+        this.originX + (index % this.world.width) * cellSize,
+        this.originY + Math.floor(index / this.world.width) * cellSize,
+        cellSize,
+        cellSize,
       );
     }
     context.restore();
