@@ -8,6 +8,9 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 * DEFER Add a step-back button to the control panel at the bottom, maybe? Requires keeping previous state in memory, or several so we can step back multiple ticks.
 * DEFER If we do the "asleep vs active regions" change below, or if we store previous state for step-back, then as a follow-up: when testing a solution, check for loops (no active regions, or previous state equals current state) and end the test early.
+* Modify scoring: instead of adding up cycles used in all test cases, rather use the median or mean. Otherwise the number of test cases greatly affects solution scores / relative weight of cycles vs price and footprint.
+* When testing a puzzle solution with "fast" button, don't play the victory sound every time a victory block is triggered - else we play the sound for each test case in rapid succession. Rather play once when displaying the "all tests passed" modal, or block playing it if it's already playing.
+* Add a cheat button in the settings menu to unlock all puzzles and all puzzle groups. This is useful for testing, and some players might want it.
 
 ## New puzzle types
 
@@ -68,12 +71,10 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 # Circuit network
 
-* Bug: See `./temp/bug-scene.json`. The combiner and multiplier should both be isolating their inputs from each other. However, if I step this scene, the conduit joining the multiplier and combiner becomes charged in the 2nd tick, resulting in a +1 output from the multiplier in tick 3. Investigate why this happens. (Fixing this will probably also break the solution fixture for the `crossed-channels` puzzle - its bottom-right combiner is pointing the wrong way but still seems to work, which is how this bug was first noticed. After fixing the bug, fix the fixture by rotating that combiner 180 degrees.)
-
 ## New circuit components
 
-* Add a component with one input and one output, that disregards its first N received signal values and then passes the rest through. Allow configuring that value N. See for example `tests/fixtures/puzzle-solutions/crossed-channels.json` - this requires 2 multipliers, 2 fixed charges, and 2 combiners to remove the spurious initial +1 charges.
-* Add a sensor that detects when the sensor's own tile moves, and outputs +1 on that side, -1 on the other side.
+* Add a component with one input and one output, that disregards its first N received signal values and then passes the rest through. Allow configuring that value N. See for example `tests/fixtures/puzzle-solutions/crossed-channels.json` - this requires 2 multipliers, 2 fixed charges, and 2 combiners to remove the spurious initial +1 charges. (Can do this in some better ways, though - e.g. set up a stone to drop in front of a sensor after N ticks, and multiply sensor's output by the signal to head-discard.)
+* Add a sensor that detects when the sensor's own tile moves, and outputs +1 on that side, -1 on the opposite side.
 * Add a ternary LUT component. Two input lines, two identical outputs, similar to the ROM. Make it configurable (via E-key config modal) using a 3x3 grid, similar to the grids we have for ROMs but with fixed size. Each tick, it should read its two inputs and map them to a unique configured cell in the 3x3 grid, then output the value stored there. We probably won't allow this for most puzzles, or make it expensive, since it subsumes various other components (rectifier, combiner, inverter), but it could still be useful. This is overall similar to the ROM, except that (1) it doesn't have a cursor moved in (0, 1) or (1, 0) increments but instead uses direct addresses given by the two inputs; and (2) it has a fixed 3x3 grid size for the possible 2-trit input combinations. We also don't need to support the ROM grapher component for this LUT.
 * Add a "rune engine" component that's like a programmable logic array / gate array, but more native to signed ternary than binary. Probably take 2 inputs and produce 2 outputs. The rune engine has a grid of ternary bits which determine the I/O relation. Details to be determined. Could include an internal latch for feedback, like the PGA in Shenzhen IO. Maybe visualize the engine block as a variation on the existing "rune array" component, but with a specific pattern of pre-set runes inside it, which cannot be modified, except maybe by rotating them, or by toggling between inert stone blocks and the pre-set rune.
 * Add a stack block with push/pop to store arbitrary amounts of data. Maybe front inputs of +1 and -1 are placed on the stack, while front input 0 is ignored. Side input of +1 pops one value, writing it to the back for one tick.

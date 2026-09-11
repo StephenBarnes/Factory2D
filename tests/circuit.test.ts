@@ -486,6 +486,34 @@ describe("circuit networks", () => {
     expect(world.chargeAt(3, 0)).toBe(1);
   });
 
+  it("does not read a directly welded gate's output through its input port", () => {
+    const world = new World(2, 2);
+    world.place(1, 0, TileKind.Multiplier, Direction.Right);
+    world.place(0, 1, TileKind.FixedCharge);
+    world.place(1, 1, TileKind.Combiner, Direction.Down);
+    world.setWeld(1, 0, 1, 1, true);
+    world.setWeld(0, 1, 1, 1, true);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(0);
+    expect(world.chargeAt(1, 1)).toBe(0);
+
+    simulation.step();
+    expect(world.chargeAt(1, 1)).toBe(1);
+    expect(world.chargeAtPort(1, 1, Direction.Up)).toBe(0);
+
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(0);
+    expect(world.chargeAt(1, 1)).toBe(1);
+
+    // Turning the combiner's output toward the multiplier makes this a real gate chain.
+    world.place(1, 1, TileKind.Combiner, Direction.Up);
+    simulation.step();
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(1);
+  });
+
   it.each([
     { input: -1 as const, output: -1 as const },
     { input: 0 as const, output: 0 as const },

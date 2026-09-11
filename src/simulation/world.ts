@@ -1442,6 +1442,7 @@ export class World {
     return this.chargeAtPortIndex(this.indexOf(x, y), direction);
   }
 
+  /** Charge exposed to neighbors; isolated inputs never expose the tile's output. */
   chargeAtPortIndex(index: number, direction: Direction): Charge {
     this.assertIndex(index);
     if (
@@ -1456,6 +1457,13 @@ export class World {
       return this.requireRuneArrayStateAtIndex(index).ports[direction] as Charge;
     }
     const definition = TILE_DEFINITIONS[kind];
+    const inputSides = orientedSides(
+      definition.circuitInputPorts,
+      this.cells.orientations[index] as Direction,
+    );
+    if ((inputSides & (1 << direction)) !== 0) {
+      return 0;
+    }
     const outputSides = orientedSides(
       definition.circuitOutputPorts,
       this.cells.orientations[index] as Direction,

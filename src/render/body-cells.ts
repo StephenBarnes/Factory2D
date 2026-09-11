@@ -42,7 +42,11 @@ export function populateBodyCell(world: World, index: number, cell: BodyCell): v
   cell.y = (index - x) / width;
   cell.kind = world.kindAtIndex(index);
   cell.orientation = world.orientationAtIndex(index);
-  const networkCharge = world.chargeAtPortIndex(index, Direction.Up);
+  const definition = TILE_DEFINITIONS[cell.kind];
+  // Gate glyphs show their stored output, independent of which side faces up.
+  const networkCharge = definition.circuitInputPorts !== WeldSide.None
+    ? world.chargeAt(x, cell.y)
+    : world.chargeAtPortIndex(index, Direction.Up);
   cell.outputCharge = cell.kind === TileKind.Sensor
     ? world.sensorOutputAtIndex(index)
     : networkCharge;
@@ -56,7 +60,7 @@ export function populateBodyCell(world: World, index: number, cell: BodyCell): v
     cell.nestedWorld = null;
   }
   const inputPorts = orientedSides(
-    TILE_DEFINITIONS[cell.kind].circuitInputPorts,
+    definition.circuitInputPorts,
     cell.orientation,
   );
   for (let value = Direction.Up; value <= Direction.Left; value += 1) {
