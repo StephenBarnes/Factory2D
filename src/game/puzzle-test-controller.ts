@@ -71,6 +71,7 @@ export interface PuzzleTestControllerDependencies {
   readonly beforeStep: () => World;
   /** Observes the live case world after every committed test step, including fast-forwarding. */
   readonly afterStep: (world: World, tick: number) => void;
+  readonly onSuccess: () => void;
   readonly onFailure: () => void;
   readonly setStepAnimation: (startedAt: number, duration: number) => void;
   readonly finishAnimation: () => void;
@@ -428,6 +429,7 @@ export class PuzzleTestController {
     if (report.succeeded) {
       this.view.hideStatus();
       this.view.showReport(report, this.dependencies.getNextPuzzle(), previousBest);
+      this.dependencies.onSuccess();
     } else {
       const failed = expectDefined(
         report.results[report.results.length - 1],

@@ -106,6 +106,7 @@ interface ControllerHarness {
     finishAnimation: number;
     transport: number;
     hover: number;
+    success: number;
   };
 }
 
@@ -120,6 +121,7 @@ function controllerHarness(solution: World): ControllerHarness {
     finishAnimation: 0,
     transport: 0,
     hover: 0,
+    success: 0,
   };
   const dependencies: PuzzleTestControllerDependencies = {
     getBaseline: () => solution,
@@ -137,6 +139,10 @@ function controllerHarness(solution: World): ControllerHarness {
     },
     beforeStep: () => solution,
     afterStep: () => undefined,
+    onSuccess: () => {
+      expect(view.report?.succeeded).toBe(true);
+      counts.success += 1;
+    },
     onFailure: () => undefined,
     setStepAnimation: () => undefined,
     finishAnimation: () => {
@@ -294,7 +300,14 @@ describe("puzzle test controller", () => {
       advanceUntilComplete(harness.controller);
     }
     harness.controller.fastForward();
+    const previousSuccesses = harness.counts.success;
+    harness.controller.advanceFrame(16, 16);
+    expect(harness.controller.lifecycle.kind).toBe("between-cases");
+    expect(harness.counts.success).toBe(previousSuccesses);
     advanceUntilComplete(harness.controller);
+    expect(harness.counts.success).toBe(previousSuccesses + 1);
+    harness.controller.advanceFrame(10_000, 10_000);
+    expect(harness.counts.success).toBe(previousSuccesses + 1);
 
     expect(harness.controller.lifecycle.kind).toBe("succeeded");
     expect(harness.view.report?.succeeded).toBe(true);

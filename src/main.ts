@@ -1322,8 +1322,8 @@ const puzzleTests = new PuzzleTestController(
     },
     afterStep: (world, tick) => {
       signalTraces.sync(world, tick);
-      if (world.puzzleResult === PuzzleResult.Won) sounds.victory();
     },
+    onSuccess: () => sounds.victory(),
     onFailure: () => sounds.loss(),
     setStepAnimation: (startedAt, duration) => clock.beginAnimation(startedAt, duration),
     finishAnimation,
