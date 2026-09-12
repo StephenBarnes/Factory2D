@@ -312,11 +312,14 @@ function exportBoardContents(world: World): ExportedBoardContents {
           charges.push({ x, y, charge });
         }
       }
-      if (kind === TileKind.Welder || kind === TileKind.Splitter || kind === TileKind.LaserSplitter || isProcessingMachine(kind)) {
+      if (kind === TileKind.Welder || kind === TileKind.Splitter || kind === TileKind.LaserSplitter ||
+          kind === TileKind.Assembler || isProcessingMachine(kind)) {
         const outputCharge = world.chargeAtPort(
           x,
           y,
-          oppositeDirection(orientation),
+          kind === TileKind.Assembler
+            ? ((orientation + Direction.Right) & 3) as Direction
+            : oppositeDirection(orientation),
         );
         if (outputCharge !== 0) {
           isolatedOutputCharges.push({ x, y, charge: outputCharge });
@@ -662,7 +665,8 @@ function importBoardContents(
       throw new Error(`${chargeLabel} duplicates cell (${x}, ${y})`);
     }
     const kind = expectDefined(kinds[cellIndex], `tile kind at (${x}, ${y})`) as TileKind;
-    if (kind !== TileKind.Welder && kind !== TileKind.Splitter && kind !== TileKind.LaserSplitter && !isProcessingMachine(kind)) {
+    if (kind !== TileKind.Welder && kind !== TileKind.Splitter && kind !== TileKind.LaserSplitter &&
+        kind !== TileKind.Assembler && !isProcessingMachine(kind)) {
       throw new Error(`${chargeLabel} targets a tile without a separate isolated output`);
     }
     const charge = requireInteger(state.charge, `${chargeLabel} value`, -1, 1) as Charge;

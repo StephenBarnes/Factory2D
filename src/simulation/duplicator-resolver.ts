@@ -109,6 +109,11 @@ export class DuplicatorResolver {
     }
   }
 
+  /** Accepted output claims, available after collect and before any commits. */
+  willFill(index: number): boolean {
+    return expectDefined(this.sourceForDestination[index], "duplication source") >= 0;
+  }
+
   commit(interpolationSource?: World): void {
     if (this.acceptedDestinationCount === 0) {
       return;

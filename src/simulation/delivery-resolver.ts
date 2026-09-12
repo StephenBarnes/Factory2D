@@ -94,6 +94,13 @@ export class DeliveryResolver {
     }
   }
 
+  /** Whether an accepted delivery will remove this start-of-tick body member. */
+  willAbsorb(index: number): boolean {
+    const owner = expectDefined(this.absorbedBodyOwners[index], "delivery body owner");
+    return owner >= 0 &&
+      expectDefined(this.absorptionTargetIndices[owner], "accepted delivery target") >= 0;
+  }
+
   commit(): void {
     if (this.absorptionCount === 0) {
       return;

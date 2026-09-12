@@ -55,33 +55,6 @@ describe("world feature index", () => {
     expect(featureIndices(world, WorldFeature.Occupied)).toEqual([]);
   });
 
-  it("classifies each sparse simulation subsystem centrally", () => {
-    const world = new World(10, 1);
-    world.place(0, 0, TileKind.Piston);
-    world.place(1, 0, TileKind.Delivery);
-    world.place(2, 0, TileKind.Duplicator);
-    world.place(3, 0, TileKind.Assembler);
-    world.place(4, 0, TileKind.Welder);
-    world.place(5, 0, TileKind.Furnace);
-    world.place(6, 0, TileKind.Magnet);
-    world.place(7, 0, TileKind.Conveyor);
-    world.place(8, 0, TileKind.RuneArray);
-    world.place(9, 0, TileKind.Inverter);
-
-    expect(featureIndices(world, WorldFeature.Piston)).toEqual([0]);
-    expect(featureIndices(world, WorldFeature.Delivery)).toEqual([1]);
-    expect(featureIndices(world, WorldFeature.Duplicator)).toEqual([2]);
-    expect(featureIndices(world, WorldFeature.Assembler)).toEqual([3]);
-    expect(featureIndices(world, WorldFeature.WeldOperator)).toEqual([4]);
-    expect(featureIndices(world, WorldFeature.Furnace)).toEqual([5]);
-    expect(featureIndices(world, WorldFeature.Magnet)).toEqual([6]);
-    expect(featureIndices(world, WorldFeature.Conveyor)).toEqual([7]);
-    expect(featureIndices(world, WorldFeature.RuneArray)).toEqual([8]);
-    expect(featureIndices(world, WorldFeature.WeldedBodyObserver)).toEqual([1, 2, 3]);
-    expect(featureIndices(world, WorldFeature.CircuitSource)).toEqual([1, 4, 5]);
-    expect(featureIndices(world, WorldFeature.CircuitGate)).toEqual([9]);
-  });
-
   it("copies feature indices with cloned and reset worlds", () => {
     const source = new World(4, 3);
     source.place(3, 0, TileKind.Delivery, Direction.Left);

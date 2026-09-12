@@ -1,6 +1,8 @@
 import { expectDefined } from "../util/assert";
 import { ASSEMBLER_PATTERNS, type AssemblerPattern } from "./assembler";
 import { MAX_ASSEMBLER_OUTPUTS } from "./configurable-components";
+import type { DeliveryResolver } from "./delivery-resolver";
+import type { DuplicatorResolver } from "./duplicator-resolver";
 import {
   Direction,
   oppositeDirection,
@@ -48,7 +50,7 @@ export class AssemblerResolver {
     this.emitOwners = new Int32Array(world.cellCount);
   }
 
-  collect(): void {
+  collect(duplications: DuplicatorResolver | null, deliveries: DeliveryResolver | null): void {
     this.consumeTargetIndices.fill(-1);
     this.bodyOwners.fill(-1);
     this.queuedCounts.fill(0);
@@ -62,9 +64,16 @@ export class AssemblerResolver {
       assembler = this.world.nextFeatureIndex(WorldFeature.Assembler, assembler)
     ) {
       const orientation = this.world.orientationAtIndex(assembler);
+      const left = ((orientation + Direction.Left) & 3) as Direction;
+      if (this.world.chargeAtPortIndex(assembler, left) === -1 ||
+          deliveries?.willAbsorb(assembler)) {
+        continue;
+      }
       if (this.world.assemblerPendingCountAtIndex(assembler) > 0) {
         const output = this.neighborIndex(assembler, oppositeDirection(orientation));
-        if (output < 0 || this.world.kindAtIndex(output) !== TileKind.Empty) {
+        // Production pulses resolve before commits, so exclude earlier-phase claims now.
+        if (output < 0 || this.world.kindAtIndex(output) !== TileKind.Empty ||
+            duplications?.willFill(output)) {
           continue;
         }
         this.emitTargetIndices[assembler] = output;
@@ -123,6 +132,11 @@ export class AssemblerResolver {
         this.queuedCounts[assembler] = 0;
       }
     }
+  }
+
+  /** Resolved production intent used by the same-tick isolated circuit output. */
+  willEmit(index: number): boolean {
+    return expectDefined(this.emitTargetIndices[index], "assembler emit target") >= 0;
   }
 
   /**

@@ -27,7 +27,6 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 
 # New non-circuit components
 
-* Assembler: add a left side input where a -1 value disables the assembler, and add a right-side output which pulses +1 on ticks where the assembler created an output block.
 * Flipper: attaches to one block, then flips the entire connected/welded group of blocks around that line horizontally or vertically, if it would not collide/overlap other blocks. Similar to Kaizen game's rotation.
 * DEFER Add a press/stamper/crusher. Behaves similarly to the piston, but (1) if piston extension is blocked by another tile, and that tile can't be moved, it instead unwelds and destroys that tile; and (2) we have a list of recipes for transforming the tile that the extended arm touches, on extension.
 * DEFER Add grinding animation and sound to the grinder.

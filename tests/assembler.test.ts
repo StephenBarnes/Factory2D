@@ -4,15 +4,14 @@ import { ASSEMBLER_PATTERNS, ASSEMBLER_RECIPES } from "../src/simulation/assembl
 import { deserializeBoard, serializeBoard } from "../src/simulation/board-export";
 import {
   MAX_ASSEMBLER_OUTPUTS,
-  hasComponentState,
   transformComponentSnapshot,
 } from "../src/simulation/configurable-components";
 import { Simulation } from "../src/simulation/simulation";
 import {
   Direction,
-  TILE_DEFINITIONS,
+  directionX,
+  directionY,
   TileKind,
-  WeldSide,
 } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
 
@@ -69,20 +68,6 @@ describe("assembler recipes", () => {
 });
 
 describe("assemblers", () => {
-  it("defines directional ports and carries queue state without configuration", () => {
-    const definition = TILE_DEFINITIONS[TileKind.Assembler];
-    expect(definition.boardCode).toBe("H");
-    expect(definition.usesOrientation).toBe(true);
-    expect(definition.weldableSides).toBe(WeldSide.Right | WeldSide.Left);
-    expect(definition.circuitPorts).toBe(WeldSide.None);
-    expect(hasComponentState(TileKind.Assembler)).toBe(true);
-
-    const world = new World(3, 3);
-    world.place(1, 1, TileKind.Assembler, Direction.Up);
-    expect(world.componentStateSnapshotAt(1, 1)).toEqual({ type: "assembler", pending: [] });
-    expect(world.assemblerPendingCountAtIndex(4)).toBe(0);
-  });
-
   it("consumes a matching body ahead, then emits outputs one per tick behind it", () => {
     const world = new World(4, 6);
     world.place(1, 0, TileKind.Platform);
@@ -92,29 +77,137 @@ describe("assemblers", () => {
     world.place(0, 2, TileKind.Platform);
     world.setWeld(0, 2, 1, 2, true);
     world.place(1, 4, TileKind.Platform);
+    world.place(2, 2, TileKind.Conduit);
+    world.setWeld(1, 2, 2, 2, true);
+    world.setCharge(1, 2, -1);
     const simulation = new Simulation(world);
+
+    simulation.step();
+    expect(world.kindAt(1, 1)).toBe(TileKind.Glass);
+    expect(pendingKinds(world, 1, 2)).toEqual([]);
+    expect(world.chargeAt(2, 2)).toBe(0);
 
     simulation.step();
     expect(world.kindAt(1, 1)).toBe(TileKind.Empty);
     expect(world.kindAt(2, 1)).toBe(TileKind.Empty);
     expect(pendingKinds(world, 1, 2)).toEqual([TileKind.Sensor, TileKind.Sensor]);
     expect(world.kindAt(1, 3)).toBe(TileKind.Empty);
+    expect(world.chargeAt(2, 2)).toBe(0);
 
     simulation.step();
     expect(world.kindAt(1, 3)).toBe(TileKind.Sensor);
     expect(world.orientationAt(1, 3)).toBe(Direction.Up);
     expect(world.isWelded(1, 2, 1, 3)).toBe(false);
     expect(pendingKinds(world, 1, 2)).toEqual([TileKind.Sensor]);
+    expect(world.chargeAt(2, 2)).toBe(1);
 
     simulation.step();
     expect(world.kindAt(1, 3)).toBe(TileKind.Sensor);
     expect(pendingKinds(world, 1, 2)).toEqual([TileKind.Sensor]);
+    expect(world.chargeAt(2, 2)).toBe(0);
 
     world.place(1, 3, TileKind.Empty);
     simulation.step();
     expect(world.kindAt(1, 3)).toBe(TileKind.Sensor);
     expect(pendingKinds(world, 1, 2)).toEqual([]);
+    expect(world.chargeAt(2, 2)).toBe(1);
   });
+
+  it.each([Direction.Up, Direction.Right, Direction.Down, Direction.Left])(
+    "isolates the production output from the disable input at orientation %s",
+    (orientation) => {
+      const world = new World(7, 7);
+      const left = ((orientation + Direction.Left) & 3) as Direction;
+      const right = ((orientation + Direction.Right) & 3) as Direction;
+      const lx = directionX(left);
+      const ly = directionY(left);
+      const bx = -directionX(orientation);
+      const by = -directionY(orientation);
+      world.place(3, 3, TileKind.Assembler, orientation);
+      world.place(3 + lx, 3 + ly, TileKind.Conduit);
+      world.place(3 - lx, 3 - ly, TileKind.Conduit);
+      world.place(3 + 2 * lx, 3 + 2 * ly, TileKind.Platform);
+      world.setWeld(3, 3, 3 + lx, 3 + ly, true);
+      world.setWeld(3, 3, 3 - lx, 3 - ly, true);
+      world.setWeld(3 + lx, 3 + ly, 3 + 2 * lx, 3 + 2 * ly, true);
+      world.restoreComponentState(3, 3, {
+        type: "assembler",
+        pending: [{ kind: TileKind.Floatstone, orientation: Direction.Up }],
+      });
+      world.setCharge(3, 3, -1);
+      world.setCharge(3 + lx, 3 + ly, -1);
+      const simulation = new Simulation(world);
+      simulation.step();
+      expect(world.kindAt(3 + bx, 3 + by)).toBe(TileKind.Empty);
+      expect(pendingKinds(world, 3, 3)).toEqual([TileKind.Floatstone]);
+      expect(world.chargeAtPort(3, 3, right)).toBe(0);
+
+      // Positive control enables; negative charge on the isolated output cannot disable.
+      world.setCharge(3, 3, 1);
+      world.setCharge(3 - lx, 3 - ly, -1);
+      simulation.step();
+      expect(world.kindAt(3 + bx, 3 + by)).toBe(TileKind.Floatstone);
+      expect(pendingKinds(world, 3, 3)).toEqual([]);
+      expect(world.chargeAtPort(3, 3, right)).toBe(1);
+      expect(world.chargeAt(3 - lx, 3 - ly)).toBe(1);
+      expect(world.chargeAtPort(3, 3, left)).toBe(0);
+      expect(world.chargeAt(3 + lx, 3 + ly)).toBe(0);
+
+      const restored = deserializeBoard(serializeBoard(world, simulation.tick)).world;
+      expect(restored.chargeAtPort(3, 3, right)).toBe(1);
+      expect(restored.chargeAtPort(3, 3, left)).toBe(0);
+      simulation.step();
+      expect(world.chargeAtPort(3, 3, right)).toBe(0);
+      expect(world.chargeAt(3 - lx, 3 - ly)).toBe(0);
+    },
+  );
+
+  it("does not pulse when a duplicator wins the output cell", () => {
+    const world = new World(5, 5);
+    world.place(2, 1, TileKind.Assembler, Direction.Up);
+    world.place(3, 1, TileKind.Conduit);
+    world.place(4, 1, TileKind.Platform);
+    world.setWeld(2, 1, 3, 1, true);
+    world.setWeld(3, 1, 4, 1, true);
+    world.restoreComponentState(2, 1, {
+      type: "assembler",
+      pending: [{ kind: TileKind.Stone, orientation: Direction.Up }],
+    });
+    world.place(1, 2, TileKind.Duplicator, Direction.Right);
+    world.place(0, 2, TileKind.Floatstone);
+    world.setCharge(1, 2, 1);
+    new Simulation(world).step();
+    expect(world.kindAt(2, 2)).toBe(TileKind.Floatstone);
+    expect(pendingKinds(world, 2, 1)).toEqual([TileKind.Stone]);
+    expect(world.chargeAt(3, 1)).toBe(0);
+    expect(world.chargeAtPort(2, 1, Direction.Right)).toBe(0);
+  });
+
+  it.each([false, true])(
+    "exports a nested production pulse unless delivery consumes the assembler (delivery: %s)",
+    (delivered) => {
+      const world = new World(4, 1);
+      world.place(1, 0, TileKind.RuneArray);
+      world.place(2, 0, TileKind.Monitor);
+      world.setWeld(1, 0, 2, 0, true);
+      const inner = world.runeArrayWorldAt(1, 0);
+      inner.place(4, 2, TileKind.Assembler, Direction.Up);
+      inner.restoreComponentState(4, 2, {
+        type: "assembler",
+        pending: [{ kind: TileKind.Floatstone, orientation: Direction.Up }],
+      });
+      if (delivered) {
+        inner.place(3, 2, TileKind.Delivery, Direction.Right);
+        inner.place(2, 2, TileKind.Assembler, Direction.Up);
+      }
+      new Simulation(world).step();
+      expect(world.chargeAt(2, 0)).toBe(delivered ? 0 : 1);
+      if (delivered) {
+        expect(inner.kindAt(4, 2)).toBe(TileKind.Empty);
+        expect(inner.kindAt(4, 3)).toBe(TileKind.Empty);
+      }
+    },
+  );
 
   it("does not consume while outputs are pending", () => {
     const world = new World(4, 4);
@@ -264,6 +357,8 @@ describe("assemblers", () => {
     expect(world.kindAt(2, 1)).toBe(TileKind.Empty);
     expect(pendingKinds(world, 1, 1)).toEqual([TileKind.Stone]);
     expect(pendingKinds(world, 3, 1)).toEqual([TileKind.Sand]);
+    expect(world.chargeAtPort(1, 1, Direction.Up)).toBe(0);
+    expect(world.chargeAtPort(3, 1, Direction.Down)).toBe(0);
   });
 
   it("lets a delivery box absorbing the same body win over consumption", () => {

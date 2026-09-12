@@ -88,7 +88,10 @@ export class WorldRuntime {
       this.duplicatorResolver.collect();
     }
     if (this.collectedAssemblers) {
-      this.assemblerResolver.collect();
+      this.assemblerResolver.collect(
+        this.collectedDuplicators ? this.duplicatorResolver : null,
+        this.collectedDeliveries ? this.deliveryResolver : null,
+      );
     }
     if (this.collectedWeldOperators) {
       this.weldOperationResolver.collect();
