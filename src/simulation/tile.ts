@@ -620,7 +620,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationColor: "#d2edf5",
   },
   [TileKind.ChargeSensor]: {
-    name: "Mana Sensor Rune",
+    name: "Charge Sensor Rune",
     boardCode: "Q",
     defaultPrice: 10,
     palette: {

@@ -1176,12 +1176,12 @@ function drawDecoration(
       context.lineJoin = "round";
       context.beginPath();
       // Hagalaz: two staves joined by a descending diagonal.
-      context.moveTo(-size * 0.15, -size * 0.18);
-      context.lineTo(-size * 0.15, size * 0.2);
-      context.moveTo(size * 0.15, -size * 0.18);
-      context.lineTo(size * 0.15, size * 0.2);
-      context.moveTo(-size * 0.15, -size * 0.13);
-      context.lineTo(size * 0.15, size * 0.15);
+      context.moveTo(-size * 0.13, -size * 0.13);
+      context.lineTo(-size * 0.13, size * 0.17);
+      context.moveTo(size * 0.13, -size * 0.13);
+      context.lineTo(size * 0.13, size * 0.17);
+      context.moveTo(-size * 0.13, -size * 0.07);
+      context.lineTo(size * 0.13, size * 0.10);
       context.stroke();
       context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
       context.beginPath();
@@ -1220,10 +1220,11 @@ function drawDecoration(
       context.lineCap = "round";
       context.lineJoin = "round";
       context.beginPath();
-      context.moveTo(-size * 0.11, 0);
-      context.lineTo(size * 0.11, 0);
-      context.moveTo(0, -size * 0.11);
-      context.lineTo(0, size * 0.11);
+      const s = size * 0.18;
+      context.moveTo(-s, 0);
+      context.lineTo(s, 0);
+      context.moveTo(0, -s);
+      context.lineTo(0, s);
       context.stroke();
       drawPortArrows(context, -size / 2, -size / 2, size, Direction.Up,
         WeldSide.None, WeldSide.Up, CIRCUIT_CHARGE_COLORS[outputCharge]);
@@ -1238,10 +1239,11 @@ function drawDecoration(
       context.lineCap = "round";
       context.lineJoin = "round";
       context.beginPath();
-      context.moveTo(-size * 0.1, -size * 0.1);
-      context.lineTo(size * 0.1, size * 0.1);
-      context.moveTo(size * 0.1, -size * 0.1);
-      context.lineTo(-size * 0.1, size * 0.1);
+      const s = size * 0.14;
+      context.moveTo(-s, -s);
+      context.lineTo(s, s);
+      context.moveTo(s, -s);
+      context.lineTo(-s, s);
       context.stroke();
       drawPortArrows(context, -size / 2, -size / 2, size, Direction.Up,
         WeldSide.None, WeldSide.Up, CIRCUIT_CHARGE_COLORS[outputCharge]);
@@ -1256,12 +1258,12 @@ function drawDecoration(
       context.lineCap = "round";
       context.lineJoin = "round";
       context.beginPath();
-      context.moveTo(-size * 0.12, 0);
-      context.lineTo(size * 0.12, 0);
-      context.moveTo(-size * 0.055, size * 0.22);
-      context.lineTo(size * 0.055, size * 0.22);
-      context.moveTo(0, size * 0.165);
-      context.lineTo(0, size * 0.275);
+      context.moveTo(-size * 0.18, 0);
+      context.lineTo(size * 0.18, 0);
+      context.moveTo(-size * 0.1, size * 0.15);
+      context.lineTo(size * 0.1, size * 0.15);
+      context.moveTo(0, 0);
+      context.lineTo(0, size * 0.25);
       context.stroke();
       drawPortArrows(context, -size / 2, -size / 2, size, Direction.Up,
         WeldSide.None, WeldSide.Up, CIRCUIT_CHARGE_COLORS[outputCharge]);
@@ -1311,10 +1313,10 @@ function drawDecoration(
       context.lineJoin = "round";
       context.beginPath();
       if (definition.decorationStyle === TileDecorationStyle.Equality) {
-        context.moveTo(-size * 0.12, -size * 0.04);
-        context.lineTo(size * 0.12, -size * 0.04);
-        context.moveTo(-size * 0.12, size * 0.1);
-        context.lineTo(size * 0.12, size * 0.1);
+        context.moveTo(-size * 0.15, -size * 0.04);
+        context.lineTo(size * 0.15, -size * 0.04);
+        context.moveTo(-size * 0.15, size * 0.1);
+        context.lineTo(size * 0.15, size * 0.1);
       } else {
         const tipY = definition.decorationStyle === TileDecorationStyle.Minimum
           ? size * 0.11
