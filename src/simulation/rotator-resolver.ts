@@ -103,6 +103,15 @@ export class RotatorResolver {
         proposal.pivot,
         proposal.quarterTurn,
       );
+      if (this.world.hasFeature(WorldFeature.Fastener)) {
+        for (const source of proposal.selected) {
+          const destination = this.destinationFor(source, proposal.pivot, proposal.quarterTurn);
+          if (this.world.kindAtIndex(destination) === TileKind.Fastener) {
+            const x = destination % this.world.width;
+            this.world.place(x, (destination - x) / this.world.width, TileKind.Empty);
+          }
+        }
+      }
       this.world.setRotatorDirectionAtIndex(proposal.pivot, proposal.nextDirection);
     }
     return rotatedCellCount;

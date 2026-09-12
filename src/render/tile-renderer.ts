@@ -645,6 +645,48 @@ function drawDecoration(
       context.lineTo(left + size * 0.65, top + size * 0.8);
       context.stroke();
       break;
+    case TileDecorationStyle.Fastener:
+      context.lineWidth = Math.max(1, size * 0.035);
+      context.lineJoin = "miter";
+      context.lineCap = "butt";
+      context.strokeStyle = "#302b28";
+      // A forged hexagonal head over a tapered, threaded fastening pin.
+      context.beginPath();
+      context.moveTo(left + size * 0.41, top + size * 0.4);
+      context.lineTo(left + size * 0.59, top + size * 0.4);
+      context.lineTo(left + size * 0.59, top + size * 0.71);
+      context.lineTo(left + size * 0.5, top + size * 0.84);
+      context.lineTo(left + size * 0.41, top + size * 0.71);
+      context.closePath();
+      context.fill();
+      context.stroke();
+      context.beginPath();
+      context.moveTo(left + size * 0.36, top + size * 0.17);
+      context.lineTo(left + size * 0.64, top + size * 0.17);
+      context.lineTo(left + size * 0.73, top + size * 0.32);
+      context.lineTo(left + size * 0.64, top + size * 0.47);
+      context.lineTo(left + size * 0.36, top + size * 0.47);
+      context.lineTo(left + size * 0.27, top + size * 0.32);
+      context.closePath();
+      context.fill();
+      context.stroke();
+      context.lineWidth = Math.max(1.5, size * 0.05);
+      context.beginPath();
+      context.moveTo(left + size * 0.37, top + size * 0.32);
+      context.lineTo(left + size * 0.63, top + size * 0.32);
+      context.moveTo(left + size * 0.41, top + size * 0.57);
+      context.lineTo(left + size * 0.59, top + size * 0.52);
+      context.moveTo(left + size * 0.41, top + size * 0.69);
+      context.lineTo(left + size * 0.59, top + size * 0.64);
+      context.stroke();
+      context.strokeStyle = "#fff0c7";
+      context.lineWidth = Math.max(1, size * 0.025);
+      context.beginPath();
+      context.moveTo(left + size * 0.32, top + size * 0.3);
+      context.lineTo(left + size * 0.39, top + size * 0.21);
+      context.lineTo(left + size * 0.61, top + size * 0.21);
+      context.stroke();
+      break;
     case TileDecorationStyle.Iron: {
       const rivetOffset = size * 0.26;
       const rivetRadius = Math.max(1, size * 0.05);

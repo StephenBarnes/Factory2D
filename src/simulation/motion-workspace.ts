@@ -68,6 +68,7 @@ export class MotionWorkspace {
   private readonly pistonRecoilExtensions: Uint8Array;
   private readonly pistonTransitionActions: Int8Array;
   private readonly pistonTransitionHeadWelds: Uint8Array;
+  private readonly breakingFastenerDestinations: number[] = [];
 
   constructor(world: World) {
     this.world = world;
@@ -119,11 +120,14 @@ export class MotionWorkspace {
     this.connectMagneticallyAttractedBodies();
     this.collectBodyMembers();
     this.chooseMovements();
-    return this.world.moveBodies(
+    this.collectBreakingFasteners(false);
+    const movementCount = this.world.moveBodies(
       this.bodyRoots,
       this.horizontalMoves,
       this.verticalMoves,
     );
+    this.breakMovedFasteners();
+    return movementCount;
   }
 
   resolvePistons(): number {
@@ -139,17 +143,50 @@ export class MotionWorkspace {
     }
     this.validatePistonMovements();
     this.preparePistonTransitions();
+    this.collectBreakingFasteners(true);
 
     const movementCount = this.world.moveBodies(
       this.bodyRoots,
       this.horizontalMoves,
       this.verticalMoves,
     );
-    return movementCount + this.world.applyPistonTransitions(
+    const transitionCount = this.world.applyPistonTransitions(
       this.pistonTransitionActions,
       this.pistonTransitionHeadWelds,
       this.pistonArmIds,
     );
+    this.breakMovedFasteners();
+    return movementCount + transitionCount;
+  }
+
+  /** Keep fasteners solid through conflict resolution and piston head-weld transitions. */
+  private collectBreakingFasteners(pistonMovement: boolean): void {
+    this.breakingFastenerDestinations.length = 0;
+    for (
+      let index = this.world.firstFeatureIndex(WorldFeature.Fastener);
+      index >= 0;
+      index = this.world.nextFeatureIndex(WorldFeature.Fastener, index)
+    ) {
+      const root = expectDefined(this.bodyRoots[index], "fastener body root");
+      if (!pistonMovement && this.drivenBodies[root] !== 1) {
+        continue;
+      }
+      const moveX = expectDefined(this.horizontalMoves[root], "fastener horizontal movement");
+      const moveY = expectDefined(this.verticalMoves[root], "fastener vertical movement");
+      if (moveX !== 0 || moveY !== 0) {
+        this.breakingFastenerDestinations.push(index + moveX + moveY * this.world.width);
+      }
+    }
+  }
+
+  private breakMovedFasteners(): void {
+    for (const index of this.breakingFastenerDestinations) {
+      if (this.world.kindAtIndex(index) !== TileKind.Fastener) {
+        throw new Error(`Moved fastener missing at index ${index}`);
+      }
+      const x = index % this.world.width;
+      this.world.place(x, (index - x) / this.world.width, TileKind.Empty);
+    }
   }
 
   /**

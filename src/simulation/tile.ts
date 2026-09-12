@@ -60,6 +60,7 @@ export const enum TileKind {
   Floatstone = 58,
   Discard = 59,
   Lut = 60,
+  Fastener = 61,
 }
 
 export const enum Direction {
@@ -129,6 +130,7 @@ export const enum TileDecorationStyle {
   Floatstone = 47,
   Discard = 48,
   Lut = 49,
+  Fastener = 50,
 }
 
 export const enum PaletteCategory {
@@ -328,6 +330,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#476d83",
     decorationStyle: TileDecorationStyle.Floatstone,
     decorationColor: "#bdeeff",
+  },
+  [TileKind.Fastener]: {
+    name: "Fastener",
+    boardCode: "y",
+    defaultPrice: 4,
+    palette: {
+      order: 64,
+      category: PaletteCategory.Motion,
+      description: "Holds its welded body aloft until machinery moves it and breaks the fastener.",
+      extendedDescription: ["Prevents its entire welded body from falling on its own. Needs no charge and can be welded on every side.", "A successful conveyor move, piston push or pull, or rotator turn destroys the fastener and its welds after moving the body. Blocked machinery attempts do not break it.", "An independent falling body can push it downward if the whole chain has room; gravity-driven movement does not break it. Welding it to a platform still anchors the body."],
+    },
+    affectedByGravity: false,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.None,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#66594a",
+    decorationStyle: TileDecorationStyle.Fastener,
+    decorationColor: "#e3c693",
   },
   [TileKind.Magnet]: {
     name: "Lodestone",

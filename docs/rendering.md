@@ -27,6 +27,8 @@ Grinders use paired toothed crushing rollers beneath an open intake, with pale a
 
 Floatstone uses a blue slab with a pale suspended diamond above two horizontal levitation lines, shared by the board, palette, and previews.
 
+Fasteners use a bronze-grey slab with a pale forged fastening pin: a broad slotted hexagonal head, tapered shaft, dark thread cuts, and a gilded edge highlight. The non-directional glyph is shared by the board, palette, and previews. Fasteners hold their welded body against its own gravity until successful conveyor, piston, or rotator movement breaks them; blocked machinery attempts and gravity-driven downward pushes leave them intact.
+
 Platforms use forest green; ROMs and graphers use jade/teal. Delay, counter, monitor, and array fills use sapphire/indigo, while fixed-charge/spark sources and sequence checkers use gold/amber. Channels and crossings retain neutral slate so wiring stays quieter than active components. These colors come from the shared tile metadata and are identical in both UI themes.
 
 Discard runes use an indigo slab with a directional shutter and upright remaining-tick count. The shutter opens into a charge-colored forward arrow after the discard window; the shared glyph and rear/front port arrows follow orientation on the board and every preview.
