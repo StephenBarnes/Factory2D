@@ -1249,8 +1249,8 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 27,
       category: PaletteCategory.CircuitComplex,
-      description: "Delays the isolated rear input by a configurable number of ticks. Press E to configure.",
-      extendedDescription: ["Each tick outputs the oldest queued value, then stores the rear input, including 0. The queue starts neutral. Configure its length with E to change the delay."],
+      description: "Delays the isolated rear input by a configurable number of ticks. Press E or shift + mousewheel to configure.",
+      extendedDescription: ["Each tick outputs the oldest queued value, then stores the rear input, including 0. The queue starts neutral. Change the delay by pressing E or shift + mousewheel."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -1273,8 +1273,8 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 62,
       category: PaletteCategory.CircuitComplex,
-      description: "Discards the first N rear-input ticks, then passes the rest through. Press E to configure.",
-      extendedDescription: ["Outputs 0 for the first N ticks, counting neutral and disconnected inputs too. Afterward, copies the rear input to the isolated front output each tick, with ordinary rune timing. Configure N from 0 to 99 with E; changing N restarts the discard count. Reset restores the saved starting state."],
+      description: "Discards the first N rear-input ticks, then passes the rest through. Press E or shift + mousewheel to configure.",
+      extendedDescription: ["Outputs 0 for the first N ticks. Afterward, copies the rear input to the isolated front output with a 1-tick delay. Configure N from 0 to 99 by pressing E or shift + mousewheel."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -1297,8 +1297,8 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 28,
       category: PaletteCategory.CircuitComplex,
-      description: "Adds signed rear inputs and pulses with the wrap direction. Press E to configure.",
-      extendedDescription: ["Adds the rear charge to its stored count each tick. Crossing the configured threshold wraps the count and emits +1; wrapping backward emits -1. Other ticks output 0."],
+      description: "Adds signed rear inputs and pulses with the wrap direction. Press E or shift + mousewheel to configure.",
+      extendedDescription: ["Adds the rear charge to its stored count each tick. Crossing the configured threshold wraps the count and emits +1; wrapping backward emits -1. Other ticks output 0. Configure by pressing E or shift + mousewheel."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,

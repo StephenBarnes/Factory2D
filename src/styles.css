@@ -935,6 +935,10 @@ canvas {
   font-size: 1rem;
 }
 
+#selection-save-snippet-button {
+  color: var(--gold-bright);
+}
+
 .selection-actions .selection-config-action {
   width: auto;
   padding: 0 6px;
@@ -1032,6 +1036,13 @@ canvas {
   color: var(--text-mid);
   font-size: 0.78rem;
   line-height: 1.4;
+}
+
+.inspector-palette [data-inspector-palette-description] > hr {
+  margin: 8px 0 0;
+  background-color: var(--text-faint);
+  border: none;
+  height: 1px;
 }
 
 .inspector-truth-table {

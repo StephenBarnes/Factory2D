@@ -1,19 +1,17 @@
 Tasks that are not actionable yet due to prerequisites, or are lower priority, are marked as DEFER.
-Tasks that are likely to be easy to implement marked as EASY.
-Tasks that are key blockers to shipping the first version are marked as PRIORITY - once these are resolved, we'll upload our first version to Itch.io.
 
 # Game flow
 
 ## Sim test/play flow
 
-* DEFER Add a step-back button to the control panel at the bottom, maybe? Requires keeping previous state in memory, or several so we can step back multiple ticks.
-* DEFER If we do the "asleep vs active regions" change below, or if we store previous state for step-back, then as a follow-up: when testing a solution, check for loops (no active regions, or previous state equals current state) and end the test early.
+* DEFER Maybe add a step-back button to the control panel at the bottom. Requires keeping previous state in memory, or several so we can step back multiple ticks.
+* DEFER If we do the "asleep vs active regions" optimization below, or if we store previous state for step-back, then as a follow-up: when testing a solution, check for loops (no active regions, or previous state equals current state) and end the test early.
 
 ## New puzzle types
 
-* DEFER Add support for a new puzzle type, where the player starts with a machine that doesn't work. They have to modify as few tiles as possible to make it work. Same scoring rules but we only count modified tiles. Add some way to view what tiles have been modified - maybe color grid lines yellow if their contained cell is modified. Could auto-generate some of these puzzles from reference solutions.
-* DEFER After the last set of puzzles is unlocked, also unlock a "full toolbelt" equivalent of every puzzle - a variant where all components are available, with the same list of prices for each. This adds some content, lets players compete on more histograms.
-* DEFER Add a variant of puzzle pricing, where instead of a price per block, you have a fixed number of each block, shown on the palette. We still allow placing more than that, but if a test with that succeeds, we don't register it as a solved puzzle; replace the victory modal with a modal explaining this. Show warning in bottom-left if puzzle exceeds allowed amount. (Example use: we want them to build a machine to sort a mixed gemstone input stream down different chutes. They may want to compare gemstones using a comparer block; but the comparer and compared gem must be next to the placed gems. If we place the gemstones for them, they have to compare it there, limiting their designs; if we allow placing gemstones using the existing price system, it may be cheapest to not submit the gemstones from the input but instead dispense from boxes of gemstones they buy. In this case we can sidestep the issue by making each test case have a long string of gemstone inputs to make it infeasible to cheat in this way.)
+* DEFER Add support for a new puzzle type, where the player starts with a machine that doesn't work. They have to modify as few tiles as possible to make it work. Same scoring rules but we only count modified tiles. Add some way to view what tiles have been modified - maybe color grid lines yellow if their contained cell is modified.
+* DEFER After the last set of puzzles is unlocked, also unlock a "full toolbelt" equivalent of every puzzle - a variant where all components are available, with the same list of prices for each. This adds content, lets players compete on more histograms.
+* DEFER Add a variant of puzzle pricing, where instead of a price per block, you have a fixed number of each block, shown on the palette. Allow placing more than that, but show warning in bottom-left if puzzle exceeds allowed amount, and don't register success or entirely block testing.
 
 # Storage format, import/export
 
@@ -24,26 +22,21 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Add back-end server and database. Probably Cloudflare Workers + D1 + R2. Then make the game request histogram data and (later) shared puzzles, and allow submitting scores and shared puzzles. Use `crypto.randomUUID()` to assign each install an ID.
 * DEFER Allow voting community-created puzzles up and down. We can assume users aren't malicious, this is a zero-stakes indie game; expect under 10 players per day. We want to avoid setting up a whole auth system or requiring email addresses, etc. Using a simple unique ID allows exploits (e.g. clear browser data and double-vote) but we'll assume nobody does that. Version the database and roll back manually if needed. If the game becomes popular enough to need more than that, upgrade to a more robust system.
 	* Also, when using the "clear all player data" button, do not erase the UUID. Unclear what we should do when importing/exporting - maybe transfer the UUID.
-* DEFER For community puzzles, organize them automatically by their set of allowed components. Unlock each after the earliest built-in progression point where all of those components have appeared in that group or an earlier group.
+* DEFER For community puzzles, organize them by their set of allowed components. Unlock each community puzzle group after the earliest progression point where all of those components have appeared in that group or an earlier group.
 * Add histograms on the puzzle solution result modal. Rate solutions by percentile as coal, iron, gold, mithril. On the puzzle briefing screen, show the player's best score and percentile-mineral rank on each of the 4 metrics - for each metric, take the min/best over all their solutions. Also, if they have 2 or more solutions, the result modal should show their best score and the current solution's score for each metric, on each histogram. The histograms for each metric should use data from each player's best solution on each metric to that puzzle - so we'll need to remove the old value and add the new value.
-
-# Hardening
-
-* DEFER Try to do some fuzzing to find crashes or undesirable behaviors. There may be edge cases involving things like pistons welded to other pistons and magnets, etc. Could also check for cases of machines that can fly/levitate, or produce blocks endlessly, though those should not be "fixed" until we've looked at them manually to decide whether they should be considered bugs or features.
 
 # New non-circuit components
 
-* Assembler follow-ups: the recipe table is a placeholder (sensor pair, piston, lodestone, conduits) and needs real game recipes using the available copper and other materials. Consider mirrored inputs (maybe just adding a mirrored recipe), a side circuit pulse on consumption or emission like the delivery box, a side disable input, and per-recipe output welds.
+* Assembler: add a left side input where a -1 value disables the assembler, and add a right-side output which pulses +1 on ticks where the assembler created an output block.
 * Flipper: attaches to one block, then flips the entire connected/welded group of blocks around that line horizontally or vertically, if it would not collide/overlap other blocks. Similar to Kaizen game's rotation.
-* Add a press/stamper/crusher. Behaves similarly to the piston, but (1) if piston extension is blocked by another tile, and that tile can't be moved, it instead unwelds and destroys that tile; and (2) we have a list of recipes for transforming the tile that the extended arm touches, on extension.
+* DEFER Add a press/stamper/crusher. Behaves similarly to the piston, but (1) if piston extension is blocked by another tile, and that tile can't be moved, it instead unwelds and destroys that tile; and (2) we have a list of recipes for transforming the tile that the extended arm touches, on extension.
 * DEFER Add grinding animation and sound to the grinder.
-* Replace the current magnet with an electromagnet. Positive and negative charges make it switch polarity; opposite sides have opposite polarity. Both nonzero polarities stick to iron. Like magnet sides repel, opposite magnet sides attract.
-* Maybe add static non-controllable magnets, which are also non-directional.
-* Add blocks that play a chime or other sound when charged.
-* Add a component that has no gravity, and moves forward one tile every time step; when blocked, attempt to push the tile in front. Could be useful as a model for many later components: arrows fired by elves, thrusters, etc.
+* DEFER Add an electromagnet, and rework the current magnet block. Positive and negative charges make it switch polarity; opposite sides have opposite polarity. Both nonzero polarities stick to iron. Like sides repel, opposite sides attract, any any side is attracted to neutral magnetic blocks like iron. Maybe add static non-controllable magnets, which are also non-directional.
+* Add a bell block that plays a sound when it moves left/right (but not when moving up/down). Add configuration dialog to choose the pitch and maybe sound type like sine or triangle. Also add a resonator rune with matching configuration, which emits a charge when a matching bell rings, anywhere on the grid.
+* Add a thruster component that has no gravity, and moves forward one tile every tick. When blocked, attempt to push the tile in front.
 * Add a "box" component that has an internal grid of miniature components. Similar to the implemented rune array (reuse its nested `World` state, `WorldRuntime` tree, entering/leaving view, and nested board format), but instead of circuit signal ports, add holes where blocks can fall in/out or be pushed in/out. A miniature block that falls out through a hole becomes a full block on that side of the box; a full block that falls in becomes a miniature block. Similar to Factorio's warehouse mods, or Patrick's Parabox.
 * Add a slider component that cannot be moved in one axis, only the other axis. Allow rotation, which changes which axis is fixed. A welded body with sliders has all of their constraints - so with both horizontal and vertical sliders, it can't move at all.
-* Add a fastener block. It makes its welded body immune to gravity, but as soon as the body is pushed by any force besides gravity (currently pistons, conveyor belts), the fastener block is destroyed. If another block falls onto the fastened body, that doesn't break the fastener (because otherwise there'd be weird behaviors where unwelding one block in the fastened body makes the fastener break).
+* Add a fastener block. It makes its welded body immune to gravity, but as soon as the body is pushed by any force besides gravity (currently pistons, conveyor belts), the fastener block is destroyed. Similar to the current floatstone block, but with the added behavior of destruction on movement.
 * Add a magic barrier creator block: casts barrier of unlimited length in its forward direction, when it receives a charge. The barrier occupies multiple blocks in a straight line, from the front of the barrier-creator block until it meets any non-empty block. Other bodies cannot pass through this barrier region. Uncertain whether we should model the barrier line as being made of blocks (immune to gravity, immovable, disappear once the barrier-creator loses charge) or as a separate system constraining motion of bodies.
 * Push-at-a-distance block - like magic barrier, but the beam's tip pushes bodies it touches in the forward direction, at arbitrary distance from the beam-creating block. This can be done with a tower of linked pistons, but it seems like we'd want to use this for puzzle design, and we want to simplify puzzle creation. Best would be to add one new "mana beam" block that creates a beam, for this item and the item above (magic barrier), with the one beam serving both functions.
 * Add a "lock gate" block. When it receives a +1 charge on the side, it consumes the body in front of it and creates that body behind itself, flipped. Maybe opposite direction when given -1 charge. This combines parts of functionality of some other blocks - delivery box and assembler consume bodies, duplicator block creates flipped bodies. This could be useful for creating barriers that only certain bodies can pass (by feeding comparer's value into the lock gate).
@@ -61,7 +54,7 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Profile again after doing those already-noted performance tasks, and determine if there's any need to optimize further, and if so, what to optimize.
 * Mark some tiles or regions as asleep, if they have no updates. Wake up only regions where things are happening. E.g. a static structure made of only solid no-action blocks doesn't need to be processed every frame, doesn't need to re-check gravity every frame, etc.
 * Cache circuit networks instead of rebuilding every tick.
-* Maybe: Compute the next simulation step async, while the last update is still being animated.
+* DEFER Compute the next simulation step async, while the last update is still being animated.
 * Potential issue later: we may have very large connected bodies. For example a puzzle in a 400x300 map almost entirely filled with welded stone blocks, where the player needs to build a mining machine. Every time they mine one block, that entire welded body changes and may trigger work to update its entire border. We might need to split the body into chunks and make separate paths for their borders, meeting at the chunk boundary, or something like that.
 
 # Circuit network
@@ -75,30 +68,15 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Add a delay block, but instead of advancing 1 space per tick, it advances when an additional input is +1. Maybe also allow -1 to scroll back. Uncertain, this seems similar to the RAM block.
 * Add a delay block variant that only steps forward if the input is +1 or -1, ignoring zeros. Like the current delay block, on every tick, it outputs the queued value; but we only shift the ring buffer forward and write a value when the back value is +1.
 * Figure out what components are necessary to build a version of the ROM that exists in-world, and isn't extremely complex, then add those components. We'll keep the ROM rune, but mostly use this in-world version instead. (Similar to how we'll mostly build a chain of combiners instead of using delay runes.) What components are necessary? A line of fixed charge blocks, some with inverters, could provide an arbitrary trit string, though we'd need to select/index. A 2D version would be more interesting, though; maybe create an NxM block of ruby and sapphire blocks, and then add components needed to read a specific coordinate, or to advance one reader up/down and another left/right and then a way to read the intersection. Maybe make conveyors magnetic, so that a magnet can allow the reader to stick to a conveyor belt, and move up/down using +1 and -1 charges on conveyor belt.
-* Maybe add linked signal readers and writers. Potentially two blocks at some distance from each other but with a circuit connection between them as though they were conduits. Or we could use a radio-like system where one rune writes to a given channel and the other rune reads from a given channel.
 
-## Circuit component modifications
-
-* DEFER Sequence checker follow-ups: the expected sequence must begin with a nonzero value because the checker starts on the player's first nonzero output, so the "bursts" rectifier-puzzle case cannot verify silence during its leading negative burst. Consider an optional arm/start input port, or an explicit "expect silence for N ticks before the first value" configuration, if a puzzle needs it. Also consider a configurable maximum latency that fails a solution outright instead of relying on the cycle limit. Defer until a puzzle actually needs this.
-* DEFER Maybe reconsider our current circuit/delay model - rework things to add zero-delay gates? Notes moved to docs/circuits-without-delay.md. Current status: If we do this, it'll be a special case, e.g. only occurring inside rune arrays.
-
-## Circuit components to not add
-
-* No AND/OR gates - we have min/max.
-* Don't add dedicated edge detector, latch, absolute-value, clock - can be built from 1-2 existing blocks.
-* Don't extend the set of signed ternary values to add an orthogonal dimension, or 2-wire tiles.
-* Don't add a block that's programmable with text. The "rune array" covers that role and fits better with our game.
-
-# Game feel
-
-* Add various animations for clicking buttons, placing blocks, starting a puzzle, etc.
 
 # UI
 
+* Add various animations for clicking buttons, placing blocks, starting a puzzle, etc.
 * Implement undo and redo when editing.
-* Add support for mobile and touch screens. Check if it's playable.
-* Review general UI scaling on 4k monitors beyond inspector prices (now enlarged to match component names).
-* Allow mirroring components with some hotkey. Because we allow mirroring selections, and we'll add components like flippers. But this probably currently breaks things like ROMs which do not have mirror symmetry. Also check all components for any that have rotational asymmetry that may cause a rotated machine to behave differently, e.g. ROM cursor's wrapping behavior may break rotational symmetry.
+* Add support for mobile and touch screens.
+* Review general UI scaling on 4k monitors.
+* Allow mirroring components with some hotkey. Because we allow mirroring selections, and we'll add components like flippers. But this would currently break blocks without bilateral symmetry, like ROMs and selector runes.
 * DEFER Maybe support selections that are a union of rectangles, created by shift-LMB-drag.
 
 ## Puzzle briefing screen
@@ -109,7 +87,7 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 # Visuals
 
-* Add backgrounds for puzzles, maybe with parallax as the player pans.
+* DEFER Add background art for puzzles. Maybe caves, multiple layers, with parallax as player pans.
 
 ## Specific block appearance changes
 
@@ -125,11 +103,9 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 
 # Larger projects, DEFER to later or never, and break up into tasks:
 
-* DEFER Add a hexagonal variant. All tiles become hexagons. Most of our code probably still works, though using 6 neighbors instead of 4.
-* DEFER Add a system of mechanical devices, a bit like our current ternary circuit system (conduits, inverter, etc.) but with different visuals and different mechanics. Since the game is 2D, we're restricted to motion that's legible in 2D - so use chain drives rather than driveshafts. Add chain drives that can rotate clockwise (+1), counterclockwise (-1), or stay still. Add gears (closer to one edge of the cell) that rotate in the inverse direction from that cell. Tint rotating components blue/red to make charges more visually distinct. Add equivalents for our runes: sensor rune becomes pressure plate, inverter is just a gear, wire-crossing is crossed chains. Others I'm not sure about: combiner, rectifier, multiplier, subtractor, sensor, selector. Also motors and generators to convert between runes/conduits and these clockwork components; maybe unify with the rotator block. We may add this as a later alternative to runes and conduits, for additional challenge.
-* DEFER Add recursive puzzles in the style of Patrick's Parabox - the entire puzzle is a block which contains itself. Use the miniature-block box component mentioned in another item - the entire level is a box that contains itself as one internal tile.
-* DEFER Blocks that set specific rules, e.g. what can be smelted to what. Allows puzzles in the vein of Baba Is You, or just more freedom in puzzle design. Advanced puzzles could involve changing the rules physically on the game board. Maybe have a "rule" block that looks like an arrow. Can be configured to set furnace recipes, grinder recipes, assembler recipes.
-* DEFER Look at other puzzle games (The Witness, various Zachtronics games, Roody:2d) for inspiration, though not lazy copying of puzzles. Add any components necessary to allow implementing similar puzzles in our game. For example, we could make Witness-style mazes by letting the player place only conduits, and they have to link a fixed charge to the victory block; but how could we implement other constraints from Witness's puzzles?
+* DEFER Add hexagonal grids for some puzzles.
+* DEFER Add a system of mechanical devices, like our current ternary circuit system (conduits, inverter, etc.) but with different visuals and different mechanics. We're restricted to motion that's legible in our 2D side view. Add chain drives that can rotate clockwise (+1), counterclockwise (-1), or stay still. Add gears that rotate in the inverse direction from a neighbor, and equivalents to other rune/circuit components.
+* DEFER Blocks that set specific rules, e.g. what can be smelted to what, or what the assembler recipes are. Allows puzzles in the vein of Baba Is You, and more freedom in puzzle design.
 * DEFER Add elf archers with some simple behavior. Add arrows that they can shoot, which arc up for 2 tiles diagonally, then travel to the side and destroy the first block they hit.
 
 # Puzzle ideas
@@ -140,8 +116,11 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Physical subtraction: Receive some number of stone blocks and some number of iron blocks; output a number of blocks equal to the absolute value of the difference, then press a button to validate answer.
 * Puzzle: Given a supply of sand blocks, and a conduit that pulses N times, move N sand blocks to the output, and the rest to a different output. Alternatively, provide the requested amount via a clock that pulses every N ticks; or via a few separate buttons for requesting different amounts (say 1, 2, 3, 5; or ternary -3, -1, +1, +3, +5, and if multiple are on, they must output the sum).
 * Puzzle: ROM implemented in-world with basic components. Given an NxM rectangle of ruby and sapphire blocks, and circuit impulses on a given column or row, read the ruby/sapphire state at that specific 2-dimensional index. Repeat for several lookups in the same NxM rectangle.
-* Runeweaving: receive N signals in order on the left, must be output in reverse order on right, no rune crossing blocks allowed. Reverse order meaning vertically flipped; not time reversal.
-* Puzzle: given N circuit inputs, output the most common one, which could be zero.
+* Receive N signals in order on the left, must be output in reverse order on right, no rune crossing blocks allowed. Reverse order meaning vertically flipped; not time reversal. We've implemented puzzles for the N = 2 case; greater N can be done by repeating solutions to those. Could have variants, e.g. inner block gives signals and outer ring must receive them after some permutation.
+* Puzzle: given N circuit inputs, output the most common one among them. As a variant, give them one signal with +1 and -1 over different ticks, and they must output the modal value / sign of the sum.
+* Look at other puzzle games (The Witness, various Zachtronics games, Roody:2d) for inspiration. Add any components necessary to allow implementing similar puzzles in our game. For example, we could make Witness-style mazes by letting the player place only conduits, and they have to link a fixed charge to the victory block; but how could we implement other constraints from Witness's puzzles?
 * Various straightforward mechanical manipulation puzzles, e.g. given stone blocks, weld them into 1x2 bodies, or 2x2, or one of each tetromino, or shapes made of different block types in specific configurations. Could add various constraints, e.g. use lock gate pattern to enforce creating some intermediate, then unwelding that and reassembling into a different shape.
+* Add a tutorial puzzle where the player can place victory blocks and inverters. Provide them with a -1 signal. This teaches how the in-world puzzle infrastructure works.
+* Given rotator blocks and various circuit blocks, carry stone blocks from a low starting position to a high delivery block, by rotating them repeatedly.
 * PRIORITY Create a few puzzles that are actually difficult - maybe some of those above.
 * PRIORITY Create a few better tutorial puzzles. Use the text box component we've added.

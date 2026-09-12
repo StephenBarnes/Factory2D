@@ -202,8 +202,10 @@ export class TileInspector {
     this.referenceKind = kind;
     this.paletteDescription.replaceChildren(...[
       palette.description,
+      "hr",
       ...palette.extendedDescription,
     ].map((text) => {
+      if (text === "hr") return document.createElement("hr");
       const paragraph = document.createElement("p");
       paragraph.textContent = text;
       return paragraph;
