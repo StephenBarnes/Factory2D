@@ -1028,7 +1028,7 @@ function canEditEdge(x1: number, y1: number, x2: number, y2: number): boolean {
 
 function setAnimatedWeld(x1: number, y1: number, x2: number, y2: number, welded: boolean): boolean {
   if (!surface.world.setWeld(x1, y1, x2, y2, welded)) return false;
-  recordWeldAnimation(surface.world, x1, y1, x2, y2);
+  recordWeldAnimation(surface.world, x1, y1, x2, y2, welded);
   return true;
 }
 
@@ -1237,6 +1237,13 @@ function adjustHoveredNumericComponent(delta: number): boolean {
 
 
 function setEditableWeld(x1: number, y1: number, x2: number, y2: number, erase: boolean): boolean {
+  // Empty edges are obvious no-ops, even outside the editable region.
+  if (
+    surface.world.kindAt(x1, y1) === TileKind.Empty ||
+    surface.world.kindAt(x2, y2) === TileKind.Empty
+  ) {
+    return false;
+  }
   if (!canEditEdge(x1, y1, x2, y2)) {
     surface.renderer.flashRejectedRegion();
     return false;

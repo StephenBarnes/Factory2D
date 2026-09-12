@@ -27,7 +27,7 @@ import {
   drawTile,
   setCircuitPortCharge,
 } from "./tile-renderer";
-import { watchWeldAnimation } from "../simulation/weld-animation";
+import { watchWeldAnimation, type WeldAnimation } from "../simulation/weld-animation";
 import { drawWeldSparks } from "./weld-sparks";
 
 
@@ -100,7 +100,7 @@ export class CanvasRenderer {
   private readonly textBoxLayouts = new WeakMap<TextBox, TextBoxLayout>();
   private rejectedRegionUntil = 0;
   private readonly rejectedCells = new Map<number, number>();
-  private readonly weldAnimations: Map<number, number>;
+  private readonly weldAnimations: Map<number, WeldAnimation>;
 
   private cellSize = MAX_TILE_SIZE;
   private originX = 0;

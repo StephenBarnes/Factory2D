@@ -1,9 +1,11 @@
+import type { WeldAnimation } from "../simulation/weld-animation";
+
 const SPARK_DURATION_MS = 350;
 
 /** Draw two white sparks along the shared edge, fixed at the operation site. */
 export function drawWeldSparks(
   context: CanvasRenderingContext2D,
-  edges: Map<number, number>,
+  edges: Map<number, WeldAnimation>,
   width: number,
   height: number,
   originX: number,
@@ -19,8 +21,8 @@ export function drawWeldSparks(
   context.lineCap = "round";
   context.strokeStyle = "#fff9e8";
   context.fillStyle = "#ffffff";
-  for (const [edge, startedAt] of edges) {
-    const progress = (now - startedAt) / SPARK_DURATION_MS;
+  for (const [edge, animation] of edges) {
+    const progress = (now - animation.startedAt) / SPARK_DURATION_MS;
     if (progress >= 1) {
       edges.delete(edge);
       continue;
@@ -29,10 +31,11 @@ export function drawWeldSparks(
     const horizontal = (edge & 1) === 0;
     const x = originX + ((index % width) + (horizontal ? 1 : 0.5)) * cellSize;
     const y = originY + (Math.floor(index / width) + (horizontal ? 0.5 : 1)) * cellSize;
-    const distance = (0.04 + 0.65 * (1 - (1 - progress) ** 2)) * cellSize;
-    const trail = (0.03 + 0.13 * (1 - progress)) * cellSize;
+    const remaining = (1 - progress) ** 2;
+    const distance = (animation.welded ? 0.04 + 0.65 * (1 - remaining) : 0.69 * remaining) * cellSize;
+    const trail = (0.03 + 0.13 * (1 - progress)) * cellSize * (animation.welded ? 1 : -1);
     const radius = Math.max(0.75, cellSize * 0.045) * (1 - progress * 0.6);
-    context.globalAlpha = (1 - progress) ** 2;
+    context.globalAlpha = remaining;
     context.lineWidth = radius;
     for (let sign = -1; sign <= 1; sign += 2) {
       const dx = horizontal ? 0 : sign;

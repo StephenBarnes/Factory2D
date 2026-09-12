@@ -109,7 +109,7 @@ export class WeldOperationResolver {
       )) {
         throw new Error(`Accepted weld operation for edge ${edge} could not be committed`);
       }
-      recordWeldAnimation(this.world, firstX, firstY, secondX, secondY);
+      recordWeldAnimation(this.world, firstX, firstY, secondX, secondY, intent === EdgeIntent.Weld);
     }
   }
 
