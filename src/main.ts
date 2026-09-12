@@ -1214,11 +1214,11 @@ function adjustHoveredNumericComponent(delta: number): boolean {
   if (
     configuration === null ||
     configuration.type !== "number" ||
-    (state?.type !== "delay" && state?.type !== "counter")
+    (state?.type !== "delay" && state?.type !== "counter" && state?.type !== "discard")
   ) {
     return false;
   }
-  const currentValue = state.type === "delay" ? state.length : state.threshold;
+  const currentValue = state.type === "delay" ? state.length : state.type === "counter" ? state.threshold : state.length;
   const nextValue = Math.min(
     configuration.maximum,
     Math.max(configuration.minimum, currentValue + delta),
