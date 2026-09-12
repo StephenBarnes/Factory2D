@@ -1,6 +1,6 @@
 const SPARK_DURATION_MS = 350;
 
-/** Draw two white sparks along the joined cells' axis, fixed at the operation site. */
+/** Draw two white sparks along the shared edge, fixed at the operation site. */
 export function drawWeldSparks(
   context: CanvasRenderingContext2D,
   edges: Map<number, number>,
@@ -35,8 +35,8 @@ export function drawWeldSparks(
     context.globalAlpha = (1 - progress) ** 2;
     context.lineWidth = radius;
     for (let sign = -1; sign <= 1; sign += 2) {
-      const dx = horizontal ? sign : 0;
-      const dy = horizontal ? 0 : sign;
+      const dx = horizontal ? 0 : sign;
+      const dy = horizontal ? sign : 0;
       const tipX = x + dx * distance;
       const tipY = y + dy * distance;
       context.beginPath();
