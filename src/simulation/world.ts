@@ -711,6 +711,25 @@ export class World {
     this.touchVisualRevision();
   }
 
+  /** Drill commits reuse processing storage so movement, snapshots, and copies retain progress. */
+  applyDrillProgress(index: number, progress: number, targetId: number): void {
+    this.assertIndex(index);
+    if (this.kindAtIndex(index) !== TileKind.Drill) {
+      throw new Error(`Tile at index ${index} is not a drill`);
+    }
+    const target = this.directionalNeighborIndex(index);
+    const recipe = target < 0 ? undefined : processingRecipeFor(TileKind.Drill, this.kindAtIndex(target));
+    if (!Number.isInteger(progress) || progress < 0 ||
+        (progress === 0 ? targetId !== 0 :
+          recipe === undefined || progress >= recipe.bakeTime || targetId === 0 || this.idAtIndex(target) !== targetId)) {
+      throw new Error(`Drill at index ${index} has inconsistent progress state`);
+    }
+    if (this.cells.furnaceProgress[index] === progress && this.cells.furnaceTargetIds[index] === targetId) return;
+    this.cells.furnaceProgress[index] = progress;
+    this.cells.furnaceTargetIds[index] = targetId;
+    this.touchVisualRevision();
+  }
+
   applyFurnaceResults(
     progresses: Uint16Array,
     targetIds: Uint32Array,

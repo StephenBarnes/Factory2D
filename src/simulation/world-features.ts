@@ -76,7 +76,7 @@ for (const kind of TILE_KINDS) {
   if (kind === TileKind.Welder || kind === TileKind.Splitter || kind === TileKind.LaserSplitter) {
     mask |= 1 << WorldFeature.WeldOperator;
   }
-  if (isProcessingMachine(kind)) {
+  if (kind === TileKind.Furnace || kind === TileKind.Grinder) {
     mask |= 1 << WorldFeature.Furnace;
   }
   if (kind === TileKind.Drill) {

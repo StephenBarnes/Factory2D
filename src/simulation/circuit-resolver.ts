@@ -232,8 +232,10 @@ export class CircuitResolver {
         const targetIndex = neighborIndex(world, index, orientation);
         const targetKind = targetIndex < 0 ? TileKind.Empty : world.kindAtIndex(targetIndex);
         const recipe = processingRecipeFor(kind, targetKind);
-        const outputCharge = !disabled && recipe !== undefined &&
-          furnaceNeighborsPresent(world, targetIndex, recipe) ? 1 : 0;
+        const outputCharge = kind === TileKind.Drill
+          ? runtime.drillResolver.activeDrills[index] === 1 ? 1 : 0
+          : !disabled && recipe !== undefined &&
+            furnaceNeighborsPresent(world, targetIndex, recipe) ? 1 : 0;
         runtime.nextIsolatedOutputCharges[index] = outputCharge;
         this.driveOutputs(
           runtime,

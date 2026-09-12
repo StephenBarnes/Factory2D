@@ -346,6 +346,7 @@ export class TileInspector {
     this.furnaceRow.hidden = !processingMachine;
     if (processingMachine) {
       const isFurnace = kind === TileKind.Furnace;
+      const isDrill = kind === TileKind.Drill;
       this.furnaceLabel.textContent = isFurnace ? "BAKE" : "PROCESS";
       const targetX = position.x + DIRECTION_X[orientation];
       const targetY = position.y + DIRECTION_Y[orientation];
@@ -359,7 +360,7 @@ export class TileInspector {
       if (recipe === undefined) {
         this.furnace.textContent = isFurnace
           ? "IDLE · NO BAKEABLE TARGET"
-          : "IDLE · NO GRINDABLE TARGET";
+          : isDrill ? "IDLE · NO DESTRUCTIBLE TARGET" : "IDLE · NO GRINDABLE TARGET";
       } else {
         const progress = this.world.furnaceProgressAt(position.x, position.y);
         const status = recipe.requiredNeighbors !== undefined && !furnaceNeighborsPresent(
@@ -369,11 +370,11 @@ export class TileInspector {
           : progress === 0
             ? "READY"
             : this.world.chargeAtPort(position.x, position.y, ((orientation + 2) & 3) as Direction) === 1
-              ? isFurnace ? "BAKING" : "PROCESSING"
+              ? isFurnace ? "BAKING" : isDrill ? "DRILLING" : "PROCESSING"
               : "PAUSED";
         this.furnace.textContent =
           `${status} · ${TILE_DEFINITIONS[recipe.input].name.toUpperCase()} → ` +
-          `${TILE_DEFINITIONS[recipe.output].name.toUpperCase()} · ` +
+          `${isDrill ? "DESTROYED" : TILE_DEFINITIONS[recipe.output].name.toUpperCase()} · ` +
           `${progress}/${recipe.bakeTime} TICKS`;
       }
     }

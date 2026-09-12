@@ -55,7 +55,6 @@ Tasks that are key blockers to shipping the first version are marked as PRIORITY
 * Add a fragility flag to tile kinds, and set it to true for glass blocks. A fragile block with no welds that drops and then stops falling should be deleted (later animated with a shatter effect), unless it fell only one tile before stopping; would require storing additional data per fragile block. Most blocks won't be fragile so this is fine. Could create interesting puzzles like lowering blocks one tile at a time with pistons, or welding before dropping and then unwelding.
 * Modify the assembler to add reaction force: When it has a pending output, but no space to output, shift the assembler in its forwards direction, emitting the product out the back (at assembler's pre-movement position). Allow this motion to push other blocks that are in front of the assembler.
 * Modify the duplicator in the same way as assembler above - make it also attempt to push itself away from the output side, if it's trying to duplicate a single-tile body but there's something blocking the output. When duplicating multi-tile bodies, don't do this - require already empty space for the whole body.
-* Make the drill block take multiple ticks to destroy a block. Make it connect to circuits on its back side, emitting +1 on ticks where it's working on destroying a block, similar to the furnace block. Keep this back network separate from the side network where a -1 charge deactivates it.
 
 # Performance
 

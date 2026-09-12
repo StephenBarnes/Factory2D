@@ -1,4 +1,4 @@
-import { TileKind } from "./tile";
+import { TILE_DEFINITIONS, TILE_KINDS, TileKind } from "./tile";
 import type { World } from "./world";
 
 export interface FurnaceRecipe {
@@ -34,11 +34,21 @@ export const GRINDER_RECIPES: readonly FurnaceRecipe[] = Object.freeze([
   Object.freeze({ input: TileKind.Glass, output: TileKind.Sand, bakeTime: 4 }),
 ]);
 
+export const DRILL_TICKS = 4;
+
+/** Drilling shares processing state and ports, but commits destruction in its own phase. */
+const DRILL_RECIPES = new Map<TileKind, FurnaceRecipe>(
+  TILE_KINDS
+    .filter((kind) => kind !== TileKind.Empty && !TILE_DEFINITIONS[kind].indestructible)
+    .map((input) => [input, Object.freeze({ input, output: TileKind.Empty, bakeTime: DRILL_TICKS })]),
+);
+
 export function isProcessingMachine(kind: TileKind): boolean {
-  return kind === TileKind.Furnace || kind === TileKind.Grinder;
+  return kind === TileKind.Furnace || kind === TileKind.Grinder || kind === TileKind.Drill;
 }
 
 export function processingRecipeFor(machine: TileKind, input: TileKind): FurnaceRecipe | undefined {
+  if (machine === TileKind.Drill) return DRILL_RECIPES.get(input);
   const recipes = machine === TileKind.Furnace ? FURNACE_RECIPES
     : machine === TileKind.Grinder ? GRINDER_RECIPES : undefined;
   if (recipes === undefined) return undefined;
