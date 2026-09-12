@@ -3,9 +3,11 @@ import {
   MAX_ASSEMBLER_OUTPUTS,
   MAX_COUNTER_THRESHOLD,
   MAX_DELAY_LENGTH,
+  MAX_DISCARD_LENGTH,
   MAX_ROM_DIMENSION,
   MIN_COUNTER_THRESHOLD,
   MIN_DELAY_LENGTH,
+  MIN_DISCARD_LENGTH,
   MIN_ROM_DIMENSION,
   type ConfigurableComponentSnapshot,
   validateSignalLabel,
@@ -100,6 +102,14 @@ interface ExportedDelay {
   readonly data: readonly Charge[];
 }
 
+interface ExportedDiscard {
+  readonly x: number;
+  readonly y: number;
+  readonly type: "discard";
+  readonly length: number;
+  readonly discarded: number;
+}
+
 interface ExportedCounter {
   readonly x: number;
   readonly y: number;
@@ -172,6 +182,7 @@ type ExportedComponent =
   | ExportedAssembler
   | ExportedRotator
   | ExportedDelay
+  | ExportedDiscard
   | ExportedCounter
   | ExportedRom
   | ExportedChecker
@@ -668,6 +679,7 @@ function importBoardContents(
       "type",
       "length",
       "cursor",
+      "discarded",
       "data",
       "threshold",
       "count",
@@ -690,6 +702,8 @@ function importBoardContents(
       ? ["x", "y", "type", "pending"]
       : type === "rotator"
         ? ["x", "y", "type", "direction"]
+        : type === "discard"
+          ? ["x", "y", "type", "length", "discarded"]
         : type === "delay"
           ? ["x", "y", "type", "length", "cursor", "data"]
           : type === "counter"
@@ -759,6 +773,18 @@ function importBoardContents(
         length,
         cursor: requireInteger(state.cursor, `${componentLabel} cursor`, 0, length - 1),
         data: requireChargeArray(state.data, length, `${componentLabel} data`),
+      };
+    } else if (type === "discard") {
+      const length = requireInteger(
+        state.length,
+        `${componentLabel} length`,
+        MIN_DISCARD_LENGTH,
+        MAX_DISCARD_LENGTH,
+      );
+      snapshot = {
+        type,
+        length,
+        discarded: requireInteger(state.discarded, `${componentLabel} discarded`, 0, length),
       };
     } else if (type === "counter") {
       const threshold = requireInteger(
@@ -868,6 +894,7 @@ function importBoardContents(
       (snapshot.type === "assembler" && kind !== TileKind.Assembler) ||
       (snapshot.type === "rotator" && kind !== TileKind.Rotator) ||
       (snapshot.type === "delay" && kind !== TileKind.Delay) ||
+      (snapshot.type === "discard" && kind !== TileKind.Discard) ||
       (snapshot.type === "counter" && kind !== TileKind.Counter) ||
       (snapshot.type === "rom" && kind !== TileKind.Rom) ||
       (snapshot.type === "checker" && kind !== TileKind.Checker) ||

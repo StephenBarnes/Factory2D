@@ -370,6 +370,12 @@ export class World {
       state.length = value;
       state.cursor = 0;
       state.data = new Int8Array(value);
+    } else if (state.type === "discard") {
+      if (state.length === value) {
+        return false;
+      }
+      state.length = value;
+      state.discarded = 0;
     } else if (state.type === "counter") {
       if (state.threshold === value) {
         return false;
@@ -591,6 +597,19 @@ export class World {
       this.touchVisualRevision();
     }
     return output;
+  }
+
+  advanceDiscardAtIndex(index: number, input: Charge): Charge {
+    const state = this.requireComponentStateAtIndex(index);
+    if (state.type !== "discard") {
+      throw new Error(`Tile at index ${index} is not a discard`);
+    }
+    if (state.discarded < state.length) {
+      state.discarded += 1;
+      this.touchVisualRevision();
+      return 0;
+    }
+    return input;
   }
 
   advanceCounterAtIndex(index: number, input: Charge): Charge {

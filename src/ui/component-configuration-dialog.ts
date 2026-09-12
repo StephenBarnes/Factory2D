@@ -246,14 +246,14 @@ export class ComponentConfigurationDialog {
     this.openArrayAfterSave = false;
 
     if (configuration.type === "number") {
-      if (state.type !== "delay" && state.type !== "counter") {
+      if (state.type !== "delay" && state.type !== "discard" && state.type !== "counter") {
         throw new Error(`${TILE_DEFINITIONS[kind].name} is missing numeric state`);
       }
       this.numericLabel.textContent = configuration.label.toUpperCase();
       this.numericInput.min = String(configuration.minimum);
       this.numericInput.max = String(configuration.maximum);
       this.numericInput.value = String(
-        state.type === "delay" ? state.length : state.threshold,
+        state.type === "counter" ? state.threshold : state.length,
       );
       this.description.textContent =
         `Choose an integer from ${configuration.minimum} through ${configuration.maximum}.`;

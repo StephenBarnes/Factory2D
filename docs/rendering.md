@@ -29,6 +29,8 @@ Floatstone uses a blue slab with a pale suspended diamond above two horizontal l
 
 Platforms use forest green; ROMs and graphers use jade/teal. Delay, counter, monitor, and array fills use sapphire/indigo, while fixed-charge/spark sources and sequence checkers use gold/amber. Channels and crossings retain neutral slate so wiring stays quieter than active components. These colors come from the shared tile metadata and are identical in both UI themes.
 
+Discard runes use an indigo slab with a directional shutter and upright remaining-tick count. The shutter opens into a charge-colored forward arrow after the discard window; the shared glyph and rear/front port arrows follow orientation on the board and every preview.
+
 Raw-material artwork uses colored rivets for metals and platforms, round grains for dirt and copper ore, grey square grains for iron ore, and curved grain with a knot for wood. Gemstones have cut-diamond outlines with bright/shaded facets and a white specular glint. All use the shared tile renderer, including palette and selection previews.
 
 Raw-material ordering is shared by the palette and authoring cost controls through tile metadata: basic structural materials, sand/glass, iron ore/iron, copper ore/copper, remaining metals, then gemstones.

@@ -1,4 +1,7 @@
-import type { ConfigurableComponentSnapshot } from "../simulation/configurable-components";
+import {
+  DEFAULT_DISCARD_LENGTH,
+  type ConfigurableComponentSnapshot,
+} from "../simulation/configurable-components";
 import { CIRCUIT_CHARGE_COLORS, type Charge } from "../simulation/circuit";
 import { runeArrayPortCellIndex } from "../simulation/rune-array";
 import type { World } from "../simulation/world";
@@ -431,6 +434,7 @@ function drawDecoration(
   if (circuitConnections !== WeldSide.None) {
     const hasComponentDisplay =
       definition.decorationStyle === TileDecorationStyle.Delay ||
+      definition.decorationStyle === TileDecorationStyle.Discard ||
       definition.decorationStyle === TileDecorationStyle.Counter ||
       definition.decorationStyle === TileDecorationStyle.Rom ||
       definition.decorationStyle === TileDecorationStyle.Checker ||
@@ -445,6 +449,7 @@ function drawDecoration(
       definition.decorationStyle === TileDecorationStyle.Minimum ||
       definition.decorationStyle === TileDecorationStyle.Maximum ||
       definition.decorationStyle === TileDecorationStyle.Delay ||
+      definition.decorationStyle === TileDecorationStyle.Discard ||
       definition.decorationStyle === TileDecorationStyle.Counter ||
       definition.decorationStyle === TileDecorationStyle.Checker;
     drawCircuitConnections(
@@ -1340,6 +1345,66 @@ function drawDecoration(
           context.arc(x, y, radius * 1.55, 0, Math.PI * 2);
           context.stroke();
         }
+      }
+      drawPortArrows(
+        context,
+        left,
+        top,
+        size,
+        orientation,
+        WeldSide.Down,
+        WeldSide.Up,
+        circuitPortCharges,
+      );
+      break;
+    }
+    case TileDecorationStyle.Discard: {
+      const state = componentState?.type === "discard" ? componentState : null;
+      const remaining = (state?.length ?? DEFAULT_DISCARD_LENGTH) - (state?.discarded ?? 0);
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.lineWidth = Math.max(1, size * 0.04);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      // A rear shutter blocks incoming ticks, then opens into a forward arrow.
+      context.beginPath();
+      context.moveTo(-size * 0.24, -size * 0.2);
+      context.lineTo(-size * 0.24, size * 0.2);
+      context.moveTo(size * 0.24, -size * 0.2);
+      context.lineTo(size * 0.24, size * 0.2);
+      if (remaining > 0) {
+        context.moveTo(-size * 0.24, size * 0.2);
+        context.lineTo(size * 0.24, size * 0.2);
+        context.moveTo(0, size * 0.2);
+        context.lineTo(0, size * 0.29);
+      } else {
+        context.moveTo(-size * 0.24, size * 0.2);
+        context.lineTo(-size * 0.16, size * 0.2);
+        context.moveTo(size * 0.16, size * 0.2);
+        context.lineTo(size * 0.24, size * 0.2);
+      }
+      context.stroke();
+      if (remaining === 0) {
+        context.strokeStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
+        context.lineWidth = Math.max(1.5, size * 0.06);
+        context.beginPath();
+        context.moveTo(0, size * 0.26);
+        context.lineTo(0, -size * 0.23);
+        context.moveTo(-size * 0.11, -size * 0.1);
+        context.lineTo(0, -size * 0.23);
+        context.lineTo(size * 0.11, -size * 0.1);
+        context.stroke();
+      }
+      context.restore();
+      if (remaining > 0) {
+        context.save();
+        context.fillStyle = definition.decorationColor;
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.font = `700 ${Math.max(7, size * 0.26)}px ui-monospace, monospace`;
+        context.fillText(String(remaining), left + size / 2, top + size / 2);
+        context.restore();
       }
       drawPortArrows(
         context,

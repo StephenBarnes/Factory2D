@@ -18,6 +18,9 @@ import type { World } from "./world";
 export const MIN_DELAY_LENGTH = 1;
 export const MAX_DELAY_LENGTH = 27;
 export const DEFAULT_DELAY_LENGTH = 3;
+export const MIN_DISCARD_LENGTH = 0;
+export const MAX_DISCARD_LENGTH = 99;
+export const DEFAULT_DISCARD_LENGTH = 3;
 export const MIN_COUNTER_THRESHOLD = 1;
 export const MAX_COUNTER_THRESHOLD = 99;
 export const DEFAULT_COUNTER_THRESHOLD = 4;
@@ -69,6 +72,13 @@ const DELAY_CONFIGURATION: NumericComponentConfiguration = Object.freeze({
   maximum: MAX_DELAY_LENGTH,
   configureOnPlacement: false,
 });
+const DISCARD_CONFIGURATION: NumericComponentConfiguration = Object.freeze({
+  type: "number",
+  label: "Discard length",
+  minimum: MIN_DISCARD_LENGTH,
+  maximum: MAX_DISCARD_LENGTH,
+  configureOnPlacement: false,
+});
 const COUNTER_CONFIGURATION: NumericComponentConfiguration = Object.freeze({
   type: "number",
   label: "Threshold",
@@ -108,6 +118,8 @@ export function componentConfigurationForKind(
   switch (kind) {
     case TileKind.Delay:
       return DELAY_CONFIGURATION;
+    case TileKind.Discard:
+      return DISCARD_CONFIGURATION;
     case TileKind.Counter:
       return COUNTER_CONFIGURATION;
     case TileKind.Rom:
@@ -128,6 +140,12 @@ export interface DelayComponentState {
   length: number;
   cursor: number;
   data: Int8Array;
+}
+
+export interface DiscardComponentState {
+  readonly type: "discard";
+  length: number;
+  discarded: number;
 }
 
 export interface CounterComponentState {
@@ -211,6 +229,7 @@ export type ConfigurableComponentState =
   | AssemblerComponentState
   | RotatorComponentState
   | DelayComponentState
+  | DiscardComponentState
   | CounterComponentState
   | RomComponentState
   | CheckerComponentState
@@ -223,6 +242,12 @@ export interface DelayComponentSnapshot {
   readonly length: number;
   readonly cursor: number;
   readonly data: readonly Charge[];
+}
+
+export interface DiscardComponentSnapshot {
+  readonly type: "discard";
+  readonly length: number;
+  readonly discarded: number;
 }
 
 export interface CounterComponentSnapshot {
@@ -286,6 +311,7 @@ export type ConfigurableComponentSnapshot =
   | AssemblerComponentSnapshot
   | RotatorComponentSnapshot
   | DelayComponentSnapshot
+  | DiscardComponentSnapshot
   | CounterComponentSnapshot
   | RomComponentSnapshot
   | CheckerComponentSnapshot
@@ -318,6 +344,12 @@ export function createDefaultComponentState(
         length: DEFAULT_DELAY_LENGTH,
         cursor: 0,
         data: new Int8Array(DEFAULT_DELAY_LENGTH),
+      };
+    case TileKind.Discard:
+      return {
+        type: "discard",
+        length: DEFAULT_DISCARD_LENGTH,
+        discarded: 0,
       };
     case TileKind.Counter:
       return {
@@ -379,6 +411,8 @@ export function cloneComponentState(
         cursor: state.cursor,
         data: state.data.slice(),
       };
+    case "discard":
+      return { type: "discard", length: state.length, discarded: state.discarded };
     case "counter":
       return {
         type: "counter",
@@ -439,6 +473,8 @@ export function snapshotComponentState(
         cursor: state.cursor,
         data: Array.from(state.data) as Charge[],
       };
+    case "discard":
+      return { type: "discard", length: state.length, discarded: state.discarded };
     case "counter":
       return {
         type: "counter",
@@ -500,6 +536,10 @@ export function validateComponentSnapshot(
       requireInteger(snapshot.length, "Delay length", MIN_DELAY_LENGTH, MAX_DELAY_LENGTH);
       requireInteger(snapshot.cursor, "Delay cursor", 0, snapshot.length - 1);
       requireCharges(snapshot.data, snapshot.length, "Delay data");
+      break;
+    case "discard":
+      requireInteger(snapshot.length, "Discard length", MIN_DISCARD_LENGTH, MAX_DISCARD_LENGTH);
+      requireInteger(snapshot.discarded, "Discard progress", 0, snapshot.length);
       break;
     case "counter":
       requireInteger(
@@ -589,6 +629,8 @@ export function stateFromSnapshot(
         cursor: snapshot.cursor,
         data: Int8Array.from(snapshot.data),
       };
+    case "discard":
+      return { type: "discard", length: snapshot.length, discarded: snapshot.discarded };
     case "counter":
       return {
         type: "counter",
@@ -727,6 +769,7 @@ export function componentStateMatchesKind(
   return (
     (state.type === "assembler" && kind === TileKind.Assembler) ||
     (state.type === "delay" && kind === TileKind.Delay) ||
+    (state.type === "discard" && kind === TileKind.Discard) ||
     (state.type === "rotator" && kind === TileKind.Rotator) ||
     (state.type === "counter" && kind === TileKind.Counter) ||
     (state.type === "rom" && kind === TileKind.Rom) ||

@@ -408,6 +408,9 @@ export class CircuitResolver {
         case TileKind.Delay:
           outputCharge = world.advanceDelayAtIndex(index, rearInput);
           break;
+        case TileKind.Discard:
+          outputCharge = world.advanceDiscardAtIndex(index, rearInput);
+          break;
         case TileKind.Counter:
           outputCharge = world.advanceCounterAtIndex(index, rearInput);
           break;

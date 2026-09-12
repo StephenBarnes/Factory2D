@@ -58,6 +58,7 @@ export const enum TileKind {
   Drill = 56,
   Grinder = 57,
   Floatstone = 58,
+  Discard = 59,
 }
 
 export const enum Direction {
@@ -125,6 +126,7 @@ export const enum TileDecorationStyle {
   Drill = 45,
   Grinder = 46,
   Floatstone = 47,
+  Discard = 48,
 }
 
 export const enum PaletteCategory {
@@ -1261,6 +1263,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#3c568c",
     decorationStyle: TileDecorationStyle.Delay,
     decorationColor: "#d3e3f2",
+  },
+  [TileKind.Discard]: {
+    name: "Discard Rune",
+    boardCode: "n",
+    defaultPrice: 10,
+    palette: {
+      order: 62,
+      category: PaletteCategory.CircuitComplex,
+      description: "Discards the first N rear-input ticks, then passes the rest through. Press E to configure.",
+      extendedDescription: ["Outputs 0 for the first N ticks, counting neutral and disconnected inputs too. Afterward, copies the rear input to the isolated front output each tick, with ordinary rune timing. Configure N from 0 to 99 with E; changing N restarts the discard count. Reset restores the saved starting state."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Up | WeldSide.Down,
+    circuitInputPorts: WeldSide.Down,
+    circuitOutputPorts: WeldSide.Up,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#435087",
+    decorationStyle: TileDecorationStyle.Discard,
+    decorationColor: "#dce3f7",
   },
   [TileKind.Counter]: {
     name: "Counter Rune",

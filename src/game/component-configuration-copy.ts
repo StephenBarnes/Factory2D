@@ -13,6 +13,7 @@ export function copyComponentConfiguration(
   if (world.kindAt(x, y) !== kind) return false;
   switch (source.type) {
     case "delay":
+    case "discard":
       return world.configureNumericComponent(x, y, source.length);
     case "counter":
       return world.configureNumericComponent(x, y, source.threshold);

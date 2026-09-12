@@ -288,6 +288,10 @@ export class TileInspector {
       if (componentState.type === "delay") {
         this.configuration.textContent =
           `${componentState.length} TICKS · CURSOR ${componentState.cursor + 1}`;
+      } else if (componentState.type === "discard") {
+        this.configuration.textContent =
+          `SUPPRESSED ${componentState.discarded} / ${componentState.length} TICKS` +
+          (componentState.discarded === componentState.length ? " · PASS-THROUGH" : "");
       } else if (componentState.type === "counter") {
         this.configuration.textContent =
           `COUNT ${componentState.count} · THRESHOLD ${componentState.threshold}`;
