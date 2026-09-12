@@ -2682,6 +2682,19 @@ kbd {
   border-radius: 1px;
 }
 
+.lut-configuration-grid {
+  grid-template-columns: max-content repeat(3, minmax(22px, 40px));
+  align-items: center;
+}
+
+.lut-configuration-axis {
+  padding: 4px;
+  color: var(--text-mid);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+
 .component-array-size-preview {
   display: grid;
   grid-template-columns: minmax(88px, 1fr) minmax(0, 2fr);

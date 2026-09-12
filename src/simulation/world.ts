@@ -4,6 +4,7 @@ import {
   componentStateMatchesKind,
   createDefaultComponentState,
   hasComponentState,
+  LUT_DIMENSION,
   MAX_ASSEMBLER_OUTPUTS,
   MAX_ROM_DIMENSION,
   MIN_ROM_DIMENSION,
@@ -390,7 +391,7 @@ export class World {
     return true;
   }
 
-  /** Replaces a ROM's or sequence checker's value grid and rewinds its progress. */
+  /** Replaces a ternary value grid, clearing its output and any sequence/cursor progress. */
   configureTernaryGrid(
     x: number,
     y: number,
@@ -401,8 +402,11 @@ export class World {
   ): boolean {
     const index = this.indexOf(x, y);
     const state = this.requireComponentStateAtIndex(index);
-    if (state.type !== "rom" && state.type !== "checker") {
+    if (state.type !== "rom" && state.type !== "lut" && state.type !== "checker") {
       throw new Error(`Tile at (${x}, ${y}) does not have a ternary value grid`);
+    }
+    if (state.type === "lut" && (width !== LUT_DIMENSION || height !== LUT_DIMENSION)) {
+      throw new RangeError(`Lookup grid dimensions must be exactly ${LUT_DIMENSION} by ${LUT_DIMENSION}`);
     }
     if (
       !Number.isInteger(width) ||
@@ -445,7 +449,9 @@ export class World {
     }
     state.width = width;
     state.height = height;
-    state.cursor = 0;
+    if (state.type !== "lut") {
+      state.cursor = 0;
+    }
     state.values = Int8Array.from(values);
     if (state.type === "checker") {
       state.failed = false;
@@ -657,6 +663,15 @@ export class World {
       this.touchVisualRevision();
     }
     return state.values[state.cursor] as Charge;
+  }
+
+  /** Reads the logical truth table without moving a cursor or allocating a snapshot. */
+  lookupLutAtIndex(index: number, leftInput: Charge, rearInput: Charge): Charge {
+    const state = this.requireComponentStateAtIndex(index);
+    if (state.type !== "lut") {
+      throw new Error(`Tile at index ${index} is not a lookup rune`);
+    }
+    return state.values[(rearInput + 1) * LUT_DIMENSION + leftInput + 1] as Charge;
   }
 
   /**

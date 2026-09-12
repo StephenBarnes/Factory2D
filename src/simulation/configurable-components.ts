@@ -28,6 +28,7 @@ export const MIN_ROM_DIMENSION = 1;
 export const MAX_ROM_DIMENSION = 9;
 export const DEFAULT_ROM_WIDTH = 3;
 export const DEFAULT_ROM_HEIGHT = 3;
+export const LUT_DIMENSION = 3;
 export const MAX_SIGNAL_LABEL_LENGTH = 12;
 /** Upper bound on the outputs one assembler recipe emits, and on a pending queue. */
 export const MAX_ASSEMBLER_OUTPUTS = 9;
@@ -40,7 +41,7 @@ export interface NumericComponentConfiguration {
   readonly configureOnPlacement: boolean;
 }
 
-/** Two-dimensional ternary value grid shared by ROMs and sequence checkers. */
+/** Two-dimensional ternary value grid shared by ROMs, lookup runes, and sequence checkers. */
 export interface TernaryGridComponentConfiguration {
   readonly type: "grid";
   readonly configureOnPlacement: boolean;
@@ -123,6 +124,7 @@ export function componentConfigurationForKind(
     case TileKind.Counter:
       return COUNTER_CONFIGURATION;
     case TileKind.Rom:
+    case TileKind.Lut:
     case TileKind.Checker:
       return TERNARY_GRID_CONFIGURATION;
     case TileKind.Monitor:
@@ -159,6 +161,13 @@ export interface RomComponentState {
   width: number;
   height: number;
   cursor: number;
+  values: Int8Array;
+}
+
+export interface LutComponentState {
+  readonly type: "lut";
+  width: number;
+  height: number;
   values: Int8Array;
 }
 
@@ -232,6 +241,7 @@ export type ConfigurableComponentState =
   | DiscardComponentState
   | CounterComponentState
   | RomComponentState
+  | LutComponentState
   | CheckerComponentState
   | MonitorComponentState
   | GrapherComponentState
@@ -261,6 +271,13 @@ export interface RomComponentSnapshot {
   readonly width: number;
   readonly height: number;
   readonly cursor: number;
+  readonly values: readonly Charge[];
+}
+
+export interface LutComponentSnapshot {
+  readonly type: "lut";
+  readonly width: number;
+  readonly height: number;
   readonly values: readonly Charge[];
 }
 
@@ -314,6 +331,7 @@ export type ConfigurableComponentSnapshot =
   | DiscardComponentSnapshot
   | CounterComponentSnapshot
   | RomComponentSnapshot
+  | LutComponentSnapshot
   | CheckerComponentSnapshot
   | MonitorComponentSnapshot
   | GrapherComponentSnapshot
@@ -364,6 +382,13 @@ export function createDefaultComponentState(
         height: DEFAULT_ROM_HEIGHT,
         cursor: 0,
         values: new Int8Array(DEFAULT_ROM_WIDTH * DEFAULT_ROM_HEIGHT),
+      };
+    case TileKind.Lut:
+      return {
+        type: "lut",
+        width: LUT_DIMENSION,
+        height: LUT_DIMENSION,
+        values: new Int8Array(LUT_DIMENSION * LUT_DIMENSION),
       };
     case TileKind.Checker:
       return {
@@ -427,6 +452,13 @@ export function cloneComponentState(
         cursor: state.cursor,
         values: state.values.slice(),
       };
+    case "lut":
+      return {
+        type: "lut",
+        width: state.width,
+        height: state.height,
+        values: state.values.slice(),
+      };
     case "checker":
       return {
         type: "checker",
@@ -487,6 +519,13 @@ export function snapshotComponentState(
         width: state.width,
         height: state.height,
         cursor: state.cursor,
+        values: Array.from(state.values) as Charge[],
+      };
+    case "lut":
+      return {
+        type: "lut",
+        width: state.width,
+        height: state.height,
         values: Array.from(state.values) as Charge[],
       };
     case "checker":
@@ -555,6 +594,11 @@ export function validateComponentSnapshot(
       requireInteger(snapshot.height, "ROM height", MIN_ROM_DIMENSION, MAX_ROM_DIMENSION);
       requireInteger(snapshot.cursor, "ROM cursor", 0, snapshot.width * snapshot.height - 1);
       requireCharges(snapshot.values, snapshot.width * snapshot.height, "ROM values");
+      break;
+    case "lut":
+      requireInteger(snapshot.width, "Lookup width", LUT_DIMENSION, LUT_DIMENSION);
+      requireInteger(snapshot.height, "Lookup height", LUT_DIMENSION, LUT_DIMENSION);
+      requireCharges(snapshot.values, LUT_DIMENSION * LUT_DIMENSION, "Lookup values");
       break;
     case "checker": {
       requireInteger(snapshot.width, "Checker width", MIN_ROM_DIMENSION, MAX_ROM_DIMENSION);
@@ -645,6 +689,13 @@ export function stateFromSnapshot(
         cursor: snapshot.cursor,
         values: Int8Array.from(snapshot.values),
       };
+    case "lut":
+      return {
+        type: "lut",
+        width: snapshot.width,
+        height: snapshot.height,
+        values: Int8Array.from(snapshot.values),
+      };
     case "checker":
       return {
         type: "checker",
@@ -672,7 +723,7 @@ export function stateFromSnapshot(
  * Applies a selection-style transform (flips, then clockwise quarter turns) to a
  * component snapshot. Rune arrays rotate their inner board and side ports with the tile
  * so gravity inside always stays downward, assemblers rotate pending output orientations,
- * and ROMs transform their value grid and cursor. Sequence checkers keep sequence order.
+ * and ROMs transform their value grid and cursor. Checkers and lookup tables keep value order.
  */
 export function transformComponentSnapshot(
   snapshot: ConfigurableComponentSnapshot,
@@ -773,6 +824,7 @@ export function componentStateMatchesKind(
     (state.type === "rotator" && kind === TileKind.Rotator) ||
     (state.type === "counter" && kind === TileKind.Counter) ||
     (state.type === "rom" && kind === TileKind.Rom) ||
+    (state.type === "lut" && kind === TileKind.Lut) ||
     (state.type === "checker" && kind === TileKind.Checker) ||
     (state.type === "monitor" && kind === TileKind.Monitor) ||
     (state.type === "grapher" && kind === TileKind.Grapher) ||

@@ -1,5 +1,6 @@
 import {
   hasComponentState,
+  LUT_DIMENSION,
   MAX_ASSEMBLER_OUTPUTS,
   MAX_COUNTER_THRESHOLD,
   MAX_DELAY_LENGTH,
@@ -128,6 +129,15 @@ interface ExportedRom {
   readonly values: readonly Charge[];
 }
 
+interface ExportedLut {
+  readonly x: number;
+  readonly y: number;
+  readonly type: "lut";
+  readonly width: number;
+  readonly height: number;
+  readonly values: readonly Charge[];
+}
+
 interface ExportedChecker {
   readonly x: number;
   readonly y: number;
@@ -185,6 +195,7 @@ type ExportedComponent =
   | ExportedDiscard
   | ExportedCounter
   | ExportedRom
+  | ExportedLut
   | ExportedChecker
   | ExportedSignalLabel
   | ExportedRuneArray;
@@ -708,6 +719,8 @@ function importBoardContents(
           ? ["x", "y", "type", "length", "cursor", "data"]
           : type === "counter"
             ? ["x", "y", "type", "threshold", "count"]
+            : type === "lut"
+              ? ["x", "y", "type", "width", "height", "values"]
             : type === "rom"
               ? ["x", "y", "type", "width", "height", "cursor", "values"]
               : type === "checker"
@@ -797,6 +810,17 @@ function importBoardContents(
         type,
         threshold,
         count: requireInteger(state.count, `${componentLabel} count`, 0, threshold - 1),
+      };
+    } else if (type === "lut") {
+      snapshot = {
+        type,
+        width: requireInteger(state.width, `${componentLabel} width`, LUT_DIMENSION, LUT_DIMENSION),
+        height: requireInteger(state.height, `${componentLabel} height`, LUT_DIMENSION, LUT_DIMENSION),
+        values: requireChargeArray(
+          state.values,
+          LUT_DIMENSION * LUT_DIMENSION,
+          `${componentLabel} values`,
+        ),
       };
     } else if (type === "array") {
       const description = requireString(state.description, `${componentLabel} description`);
@@ -897,6 +921,7 @@ function importBoardContents(
       (snapshot.type === "discard" && kind !== TileKind.Discard) ||
       (snapshot.type === "counter" && kind !== TileKind.Counter) ||
       (snapshot.type === "rom" && kind !== TileKind.Rom) ||
+      (snapshot.type === "lut" && kind !== TileKind.Lut) ||
       (snapshot.type === "checker" && kind !== TileKind.Checker) ||
       (snapshot.type === "monitor" && kind !== TileKind.Monitor) ||
       (snapshot.type === "grapher" && kind !== TileKind.Grapher) ||

@@ -59,6 +59,7 @@ export const enum TileKind {
   Grinder = 57,
   Floatstone = 58,
   Discard = 59,
+  Lut = 60,
 }
 
 export const enum Direction {
@@ -127,6 +128,7 @@ export const enum TileDecorationStyle {
   Grinder = 46,
   Floatstone = 47,
   Discard = 48,
+  Lut = 49,
 }
 
 export const enum PaletteCategory {
@@ -1335,6 +1337,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#23775d",
     decorationStyle: TileDecorationStyle.Rom,
     decorationColor: "#d1ece1",
+  },
+  [TileKind.Lut]: {
+    name: "Lookup Rune",
+    boardCode: "p",
+    defaultPrice: 20,
+    palette: {
+      order: 63,
+      category: PaletteCategory.CircuitComplex,
+      description: "Looks up two ternary inputs in an editable 3 by 3 table. Front and right output the same value. Press E to configure.",
+      extendedDescription: ["The previous-tick left input selects the column and the rear input selects the row. Both axes run -1, 0, +1: columns left to right and rows top to bottom. Disconnected inputs count as 0.", "Both isolated outputs drive the selected value with ordinary rune timing. The fixed table has no cursor, does not change when rotated or reflected, and cannot be displayed by a Lore Grapher."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.All,
+    circuitInputPorts: WeldSide.Left | WeldSide.Down,
+    circuitOutputPorts: WeldSide.Up | WeldSide.Right,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#176f75",
+    decorationStyle: TileDecorationStyle.Lut,
+    decorationColor: "#c9f4e6",
   },
   [TileKind.Welder]: {
     name: "Welder",

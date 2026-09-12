@@ -227,8 +227,8 @@ export class ComponentConfigurationDialog {
     this.checkerIgnoreZeros.disabled = kind !== TileKind.Checker || submit === null;
     this.checkerIgnoreZeros.checked = state.type === "checker" && state.ignoreZeros;
     this.numericInput.disabled = configuration.type !== "number";
-    this.romWidth.disabled = configuration.type !== "grid";
-    this.romHeight.disabled = configuration.type !== "grid";
+    this.romWidth.disabled = configuration.type !== "grid" || kind === TileKind.Lut;
+    this.romHeight.disabled = configuration.type !== "grid" || kind === TileKind.Lut;
     this.textInput.disabled = configuration.type !== "text";
     this.categoryInput.disabled = configuration.type !== "text";
     this.arrayWidth.disabled = configuration.type !== "array";
@@ -288,14 +288,20 @@ export class ComponentConfigurationDialog {
         "cells connect to the array's sides. Open the array to place components inside it " +
         "with the usual tools, or press Enter while hovering it on the board.";
     } else {
-      if (state.type !== "rom" && state.type !== "checker") {
+      if (state.type !== "rom" && state.type !== "lut" && state.type !== "checker") {
         throw new Error(`${TILE_DEFINITIONS[kind].name} is missing value grid state`);
+      }
+      if (state.type === "lut" && (state.width !== 3 || state.height !== 3 || state.values.length !== 9)) {
+        throw new Error("Lookup Rune requires a 3 × 3 truth table");
       }
       this.romWidth.value = String(state.width);
       this.romHeight.value = String(state.height);
       this.romValues = [...state.values];
       this.description.textContent =
-        (state.type === "checker" ? "Expected values are read row by row. " : "") +
+        (state.type === "checker" ? "Expected values are read row by row. " :
+          state.type === "lut" ? "Fixed 3 × 3 truth table: left input selects the column; " +
+            "rear input selects the row. Both axes run −1, 0, +1. " +
+            "Front and right outputs emit the selected value. " : "") +
         "Left-click to alternate +1 and -1; drag to paint that value. " +
         "Right-click or right-drag clears to 0. Fill buttons replace the whole grid.";
       this.renderRomGrid(state.width, state.height);
@@ -319,6 +325,8 @@ export class ComponentConfigurationDialog {
       this.textInput.select();
     } else if (configuration.type === "array") {
       this.arrayDescription.focus();
+    } else if (kind === TileKind.Lut) {
+      requiredDescendant<HTMLButtonElement>(this.romGrid, "button").focus();
     } else {
       this.romWidth.focus();
     }
@@ -372,8 +380,8 @@ export class ComponentConfigurationDialog {
         open,
       });
     } else {
-      const width = this.romWidth.valueAsNumber;
-      const height = this.romHeight.valueAsNumber;
+      const width = this.currentKind === TileKind.Lut ? 3 : this.romWidth.valueAsNumber;
+      const height = this.currentKind === TileKind.Lut ? 3 : this.romHeight.valueAsNumber;
       if (this.romValues.length !== width * height) {
         throw new Error("Grid draft dimensions do not match its values");
       }
@@ -477,6 +485,7 @@ export class ComponentConfigurationDialog {
   }
 
   private resizeRomDraft(): void {
+    if (this.currentKind === TileKind.Lut) return;
     if (!this.romWidth.validity.valid || !this.romHeight.validity.valid) {
       return;
     }
@@ -504,13 +513,42 @@ export class ComponentConfigurationDialog {
   private renderRomGrid(width: number, height: number): void {
     this.endRomStroke();
     this.romGrid.style.setProperty("--rom-width", String(width));
-    const cells: HTMLButtonElement[] = [];
+    const isLut = this.currentKind === TileKind.Lut;
+    this.romGrid.classList.toggle("lut-configuration-grid", isLut);
+    const cells: HTMLElement[] = [];
+    if (isLut) {
+      const axis = document.createElement("span");
+      axis.className = "lut-configuration-axis";
+      axis.textContent = "LEFT INPUT";
+      axis.style.gridColumn = "2 / span 3";
+      cells.push(axis);
+      const rear = document.createElement("span");
+      rear.className = "lut-configuration-axis";
+      rear.textContent = "REAR INPUT";
+      rear.style.gridRow = "2";
+      rear.style.gridColumn = "1";
+      cells.push(rear);
+      for (let index = 0; index < 3; index += 1) {
+        for (const column of [true, false]) {
+          const label = document.createElement("span");
+          label.className = "lut-configuration-axis";
+          label.textContent = index === 0 ? "−1" : index === 1 ? "0" : "+1";
+          label.style.gridColumn = String(column ? index + 2 : 1);
+          label.style.gridRow = String(column ? 2 : index + 3);
+          cells.push(label);
+        }
+      }
+    }
     for (let index = 0; index < width * height; index += 1) {
       const cell = document.createElement("button");
       cell.type = "button";
       cell.className = "rom-configuration-cell";
       cell.disabled = this.submit === null;
       cell.dataset.romIndex = String(index);
+      if (isLut) {
+        cell.style.gridColumn = String(index % 3 + 2);
+        cell.style.gridRow = String(Math.floor(index / 3) + 3);
+      }
       this.updateRomCell(cell, expectDefined(this.romValues[index], "ROM draft value"));
       cell.addEventListener("click", (event) => {
         // Pointer gestures paint on press; keyboard activation still alternates.
@@ -545,8 +583,16 @@ export class ComponentConfigurationDialog {
   private updateRomCell(cell: HTMLButtonElement, value: Charge): void {
     cell.dataset.charge = String(value);
     cell.style.backgroundColor = value === 0 ? "#17131f" : CIRCUIT_CHARGE_COLORS[value];
-    cell.setAttribute("aria-label", `ROM value ${value > 0 ? "+1" : String(value)}`);
-    cell.title = value > 0 ? "+1" : String(value);
+    const output = value > 0 ? "+1" : String(value);
+    const index = Number(cell.dataset.romIndex);
+    const leftInput = index % 3 - 1;
+    const rearInput = Math.floor(index / 3) - 1;
+    const label = this.currentKind === TileKind.Lut
+      ? `Left input ${leftInput > 0 ? "+1" : leftInput}, ` +
+        `rear input ${rearInput > 0 ? "+1" : rearInput}: output ${output}`
+      : `ROM value ${output}`;
+    cell.setAttribute("aria-label", label);
+    cell.title = this.currentKind === TileKind.Lut ? label : output;
   }
 }
 

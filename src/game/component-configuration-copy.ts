@@ -21,6 +21,7 @@ export function copyComponentConfiguration(
     case "grapher":
       return world.configureSignalLabel(x, y, source.label, source.category);
     case "rom":
+    case "lut":
     case "checker":
       return world.configureTernaryGrid(
         x, y, source.width, source.height, source.values,

@@ -298,6 +298,9 @@ export class TileInspector {
       } else if (componentState.type === "rom") {
         this.configuration.textContent =
           `${componentState.width} × ${componentState.height} · CELL ${componentState.cursor + 1}`;
+      } else if (componentState.type === "lut") {
+        this.configuration.textContent =
+          "3 × 3 TRUTH TABLE · LEFT = COLUMN · REAR = ROW · AXES −1, 0, +1";
       } else if (componentState.type === "checker") {
         const valueCount = componentState.width * componentState.height;
         const status = componentState.failed

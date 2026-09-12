@@ -417,6 +417,9 @@ export class CircuitResolver {
         case TileKind.Checker:
           outputCharge = world.advanceCheckerAtIndex(index, rearInput);
           break;
+        case TileKind.Lut:
+          outputCharge = world.lookupLutAtIndex(index, leftInput, rearInput);
+          break;
         case TileKind.Rom: {
           const leftInputSide = ((orientation + Direction.Left) & 3) as Direction;
           const rearInputSide = ((orientation + Direction.Down) & 3) as Direction;

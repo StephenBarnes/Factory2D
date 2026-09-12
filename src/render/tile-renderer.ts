@@ -437,6 +437,7 @@ function drawDecoration(
       definition.decorationStyle === TileDecorationStyle.Discard ||
       definition.decorationStyle === TileDecorationStyle.Counter ||
       definition.decorationStyle === TileDecorationStyle.Rom ||
+      definition.decorationStyle === TileDecorationStyle.Lut ||
       definition.decorationStyle === TileDecorationStyle.Checker ||
       definition.decorationStyle === TileDecorationStyle.Rotator ||
       definition.decorationStyle === TileDecorationStyle.RuneArray;
@@ -473,7 +474,9 @@ function drawDecoration(
           ? WeldSide.All
           : WeldSide.None)) as WeldSide,
       hasComponentDisplay ? 0.39 : 0.26,
-      hasOutputArrow ? orientedSides(WeldSide.Up, orientation) : WeldSide.None,
+      definition.decorationStyle === TileDecorationStyle.Lut
+        ? orientedSides(WeldSide.Up | WeldSide.Right, orientation)
+        : hasOutputArrow ? orientedSides(WeldSide.Up, orientation) : WeldSide.None,
     );
   }
   context.fillStyle = definition.decorationColor;
@@ -1446,8 +1449,11 @@ function drawDecoration(
       );
       break;
     }
-    case TileDecorationStyle.Rom: {
-      const state = componentState?.type === "rom" ? componentState : null;
+    case TileDecorationStyle.Rom:
+    case TileDecorationStyle.Lut: {
+      const isLut = definition.decorationStyle === TileDecorationStyle.Lut;
+      const state = componentState?.type === "lut" || componentState?.type === "rom"
+        ? componentState : null;
       const width = state?.width ?? 3;
       const height = state?.height ?? 3;
       const gridSize = size * 0.52;
@@ -1459,14 +1465,14 @@ function drawDecoration(
         const charge = state?.values[valueIndex] ?? 0;
         const x = gridLeft + (valueIndex % width) * cellSize;
         const y = gridTop + Math.floor(valueIndex / width) * cellSize;
-        context.fillStyle = charge === 0 ? "#2b1838" : CIRCUIT_CHARGE_COLORS[charge];
+        context.fillStyle = charge === 0 ? (isLut ? "#102e2a" : "#2b1838") : CIRCUIT_CHARGE_COLORS[charge];
         context.fillRect(
           x + inset,
           y + inset,
           Math.max(1, cellSize - inset * 2),
           Math.max(1, cellSize - inset * 2),
         );
-        if (valueIndex === (state?.cursor ?? 0)) {
+        if (!isLut && valueIndex === (state?.type === "rom" ? state.cursor : 0)) {
           context.strokeStyle = "#f1cc38";
           context.lineWidth = Math.max(1, size * 0.025);
           context.strokeRect(
@@ -1477,6 +1483,11 @@ function drawDecoration(
           );
         }
       }
+      if (isLut) {
+        context.strokeStyle = definition.decorationColor;
+        context.lineWidth = Math.max(1, size * 0.025);
+        context.strokeRect(gridLeft, gridTop, width * cellSize, height * cellSize);
+      }
       drawPortArrows(
         context,
         left,
@@ -1484,7 +1495,7 @@ function drawDecoration(
         size,
         orientation,
         WeldSide.Left | WeldSide.Down,
-        WeldSide.None,
+        isLut ? WeldSide.Up | WeldSide.Right : WeldSide.None,
         circuitPortCharges,
       );
       break;
