@@ -35,6 +35,7 @@ import { componentConfigurationForKind } from "./simulation/configurable-compone
 import { serializeBoard } from "./simulation/board-export";
 import { PuzzleResult } from "./simulation/puzzle-result";
 import type { World } from "./simulation/world";
+import { recordWeldAnimation } from "./simulation/weld-animation";
 import {
   directionX,
   directionY,
@@ -1025,11 +1026,13 @@ function canEditEdge(x1: number, y1: number, x2: number, y2: number): boolean {
   return surface.editableRegion?.containsEdge(x1, y1, x2, y2) ?? true;
 }
 
-function weldEligibleEditableNeighbors(x: number, y: number): boolean {
-  if (surface.editableRegion === null) {
-    return surface.world.weldEligibleNeighbors(x, y);
-  }
+function setAnimatedWeld(x1: number, y1: number, x2: number, y2: number, welded: boolean): boolean {
+  if (!surface.world.setWeld(x1, y1, x2, y2, welded)) return false;
+  recordWeldAnimation(surface.world, x1, y1, x2, y2);
+  return true;
+}
 
+function weldEligibleEditableNeighbors(x: number, y: number): boolean {
   let changed = false;
   for (let value = Direction.Up; value <= Direction.Left; value += 1) {
     const direction = value as Direction;
@@ -1042,7 +1045,7 @@ function weldEligibleEditableNeighbors(x: number, y: number): boolean {
       neighborY < surface.world.height &&
       canEditEdge(x, y, neighborX, neighborY)
     ) {
-      changed = surface.world.setWeld(x, y, neighborX, neighborY, true) || changed;
+      changed = setAnimatedWeld(x, y, neighborX, neighborY, true) || changed;
     }
   }
   return changed;
@@ -1112,7 +1115,7 @@ function editCellLine(
       (x !== previousX || y !== previousY) &&
       canEditEdge(previousX, previousY, x, y)
     ) {
-      changed = surface.world.setWeld(previousX, previousY, x, y, true) || changed;
+      changed = setAnimatedWeld(previousX, previousY, x, y, true) || changed;
     }
     if (x === to.x && y === to.y) {
       break;
@@ -1242,7 +1245,7 @@ function setEditableWeld(x1: number, y1: number, x2: number, y2: number, erase: 
     surface.renderer.flashRejectedWeld(x1, y1, x2, y2);
     return false;
   }
-  return surface.world.setWeld(x1, y1, x2, y2, !erase);
+  return setAnimatedWeld(x1, y1, x2, y2, !erase);
 }
 
 function editWeld(edge: GridEdge, erase: boolean): boolean {

@@ -94,7 +94,6 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 
 ## Animations
 
-* Animate when joints are welded or split, including by the welder/splitter components and by the player. Maybe a simple particle system where a horizontal weld causes two white particles to flash and move to the left/right sides respectively, and similar for vertical throwing two particles up/down, animated rapidly even when the simulation is not running.
 * Add animation for the delivery box, assembler, duplicator, lock gate. When they consume a body, animate the body shrinking, moving towards the block, and lowering opacity until it vanishes. When they produce a body, animate the opposite.
 * Animate fragile blocks shattering - maybe split them in half across say a line at 30 degrees from vertical, then animate the halves moving apart and fading out from one tick to the next. Also use the same shatter animation for blocks broken by mining devices, fasteners that break, etc.
 * DEFER Interpolate movement inside a rune array while its contents are displayed and the array itself moved in the same tick: the nested previous world is matched by ID path, which works, but a resized array yields no interpolation source for that tick.

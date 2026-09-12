@@ -27,6 +27,8 @@ import {
   drawTile,
   setCircuitPortCharge,
 } from "./tile-renderer";
+import { watchWeldAnimation } from "../simulation/weld-animation";
+import { drawWeldSparks } from "./weld-sparks";
 
 
 const MAX_TILE_SIZE = 64;
@@ -98,6 +100,7 @@ export class CanvasRenderer {
   private readonly textBoxLayouts = new WeakMap<TextBox, TextBoxLayout>();
   private rejectedRegionUntil = 0;
   private readonly rejectedCells = new Map<number, number>();
+  private readonly weldAnimations: Map<number, number>;
 
   private cellSize = MAX_TILE_SIZE;
   private originX = 0;
@@ -168,6 +171,7 @@ export class CanvasRenderer {
     this.canvas = canvas;
     this.context = context;
     this.world = world;
+    this.weldAnimations = watchWeldAnimation(world);
     this.editableRegion = editableRegion;
     this.nestedView = nestedView;
     this.fitMargin = nestedView === null ? 0 : 1;
@@ -309,6 +313,7 @@ export class CanvasRenderer {
     if (
       !this.renderInvalidated &&
       !this.hasTimeDependentVisuals &&
+      this.weldAnimations.size === 0 &&
       this.renderedWorldRevision === this.world.revision &&
       this.renderedPreviousWorld === previousWorld &&
       this.renderedPreviousWorldRevision === previousWorldRevision &&
@@ -334,6 +339,12 @@ export class CanvasRenderer {
     this.drawTextBoxes();
     this.drawHighlightedTile(previousWorld, boundedProgress);
     this.drawEditRejection();
+    if (drawWeldSparks(
+      context, this.weldAnimations, this.world.width, this.world.height,
+      this.originX, this.originY, this.cellSize,
+    )) {
+      this.hasTimeDependentVisuals = true;
+    }
 
     this.renderInvalidated = false;
     this.renderedWorldRevision = this.world.revision;
