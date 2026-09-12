@@ -1,4 +1,5 @@
 import { expectDefined } from "../util/assert";
+import { recordRotationAnimation } from "./rotation-animation";
 import {
   Direction,
   directionX,
@@ -91,6 +92,12 @@ export class RotatorResolver {
       for (const index of proposal.selected) {
         this.selected[index] = 1;
       }
+      recordRotationAnimation(
+        this.world,
+        proposal.selected,
+        proposal.pivot,
+        proposal.quarterTurn,
+      );
       rotatedCellCount += this.world.rotateCells(
         this.selected,
         proposal.pivot,

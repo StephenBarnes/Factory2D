@@ -38,6 +38,8 @@ export class WorldRuntime {
   /** Cell index of the containing rune array inside `parent`, or -1 for the root. */
   parentIndex = -1;
   depth = 0;
+  /** Matching pre-step snapshot, resolved before any containing array moves. */
+  interpolationSource: World | undefined;
   /**
    * Global node base by cell for the circuit topology currently cached by CircuitResolver.
    * Allocated lazily only for worlds that participate in circuit resolution; -1 means the

@@ -1,5 +1,7 @@
 import { CircuitResolver } from "./circuit-resolver";
 import { MAX_RUNE_ARRAY_DEPTH } from "./rune-array";
+import { beginRotationAnimation, clearRotationAnimation, sealRotationAnimation } from "./rotation-animation";
+import { TileKind } from "./tile";
 import { WorldFeature } from "./world-features";
 import type { World } from "./world";
 import { WorldRuntime } from "./world-runtime";
@@ -28,9 +30,13 @@ export class Simulation {
   }
 
   step(interpolationSource?: World): number {
-    this.collectRuntimes();
+    for (const runtime of this.runtimes) {
+      clearRotationAnimation(runtime.world);
+    }
+    this.collectRuntimes(interpolationSource);
     let hasCircuit = false;
     for (const runtime of this.runtimes) {
+      beginRotationAnimation(runtime.world, runtime.interpolationSource);
       runtime.collectIntents();
       hasCircuit ||= runtime.world.hasFeature(WorldFeature.Circuit);
     }
@@ -45,24 +51,36 @@ export class Simulation {
       }
       movementCount += runtime.commitPhases(
         this.tick,
-        position === 0 ? interpolationSource : undefined,
+        runtime.interpolationSource,
       );
+    }
+    for (const runtime of this.runtimes) {
+      sealRotationAnimation(runtime.world);
     }
     this.tick += 1;
     return movementCount;
   }
 
   resetTo(snapshot: World): void {
+    for (const runtime of this.runtimes) {
+      clearRotationAnimation(runtime.world);
+    }
     this.world.copyFrom(snapshot);
     this.tick = 0;
   }
 
   /** Lists the root runtime followed by every nested world, parents before children. */
-  private collectRuntimes(): void {
+  private collectRuntimes(interpolationSource: World | undefined): void {
     this.runtimes.length = 0;
     this.rootRuntime.parent = null;
     this.rootRuntime.parentIndex = -1;
     this.rootRuntime.depth = 0;
+    this.rootRuntime.interpolationSource =
+      interpolationSource !== this.world &&
+      interpolationSource?.width === this.world.width &&
+      interpolationSource.height === this.world.height
+        ? interpolationSource
+        : undefined;
     this.runtimes.push(this.rootRuntime);
     for (let position = 0; position < this.runtimes.length; position += 1) {
       const runtime = this.runtimes[position];
@@ -87,6 +105,22 @@ export class Simulation {
         inner.parent = runtime;
         inner.parentIndex = index;
         inner.depth = runtime.depth + 1;
+        inner.interpolationSource = undefined;
+        const previousWorld = runtime.interpolationSource;
+        if (
+          previousWorld !== undefined &&
+          previousWorld.kindAtIndex(index) === TileKind.RuneArray &&
+          previousWorld.idAtIndex(index) === world.idAtIndex(index)
+        ) {
+          const previousInner = previousWorld.runeArrayWorldAtIndex(index);
+          if (
+            previousInner !== innerWorld &&
+            previousInner.width === innerWorld.width &&
+            previousInner.height === innerWorld.height
+          ) {
+            inner.interpolationSource = previousInner;
+          }
+        }
         this.runtimes.push(inner);
       }
     }

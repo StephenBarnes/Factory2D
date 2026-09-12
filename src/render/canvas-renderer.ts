@@ -19,6 +19,7 @@ import { expectDefined } from "../util/assert";
 import type { GridCell, GridEdge, GridPoint } from "./grid-drag";
 import { createBodyCell, populateBodyCell } from "./body-cells";
 import { tileAppearance } from "./appearance";
+import { RotationInterpolation, type RotationTransform } from "./rotation-interpolation";
 import {
   type BodyCell,
   createBodyPath,
@@ -148,6 +149,7 @@ export class CanvasRenderer {
   private renderedPreviousWorld: World | null = null;
   private renderedPreviousWorldRevision = -1;
   private readonly previousRotatorDirections = new Map<number, Direction>();
+  private readonly rotationInterpolation = new RotationInterpolation();
   private renderedProgress = -1;
   private renderedNestedPortCharges = -1;
   private hasTimeDependentVisuals = false;
@@ -1120,6 +1122,7 @@ export class CanvasRenderer {
 
 
   private drawTiles(previousWorld: World | null, progress: number, animationTime: number): void {
+    this.rotationInterpolation.prepare(this.world, previousWorld, progress);
     if (
       previousWorld !== this.renderedPreviousWorld ||
       (previousWorld?.revision ?? -1) !== this.renderedPreviousWorldRevision
@@ -1153,12 +1156,29 @@ export class CanvasRenderer {
       if (body === null) {
         continue;
       }
-      if (
-        body.maxX <= visibleLeft ||
-        body.minX >= visibleRight ||
-        body.maxY <= visibleTop ||
-        body.minY >= visibleBottom
-      ) {
+      const firstCell = expectDefined(body.cells[0], "first animated body cell");
+      const rotation = this.rotationInterpolation.at(firstCell.y * this.world.width + firstCell.x);
+      let minX = body.minX;
+      let minY = body.minY;
+      let maxX = body.maxX;
+      let maxY = body.maxY;
+      if (rotation !== null) {
+        // Cull the transformed bounds, not the possibly offscreen destination.
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+        const halfWidth = (maxX - minX) / 2;
+        const halfHeight = (maxY - minY) / 2;
+        const rotatedX = rotation.cosine * centerX - rotation.sine * centerY + rotation.x;
+        const rotatedY = rotation.sine * centerX + rotation.cosine * centerY + rotation.y;
+        const extentX = Math.abs(rotation.cosine) * halfWidth + Math.abs(rotation.sine) * halfHeight;
+        const extentY = Math.abs(rotation.sine) * halfWidth + Math.abs(rotation.cosine) * halfHeight;
+        minX = rotatedX - extentX;
+        maxX = rotatedX + extentX;
+        minY = rotatedY - extentY;
+        maxY = rotatedY + extentY;
+      }
+      if (maxX <= visibleLeft || minX >= visibleRight ||
+        maxY <= visibleTop || minY >= visibleBottom) {
         continue;
       }
       let offsetX = 0;
@@ -1181,7 +1201,8 @@ export class CanvasRenderer {
           );
           if (previousDirection !== undefined) {
             const direction = cell.componentState.direction;
-            let turn = ((direction - previousDirection + 6) % 4) - 2;
+            const bodyTurn = rotation?.quarterTurn ?? 0;
+            let turn = ((direction - previousDirection - bodyTurn + 6) % 4) - 2;
             // Batched opposite-side grips pass through the front, never the rear input.
             if (turn === -2 && previousDirection === ((cell.orientation + 3) & 3)) {
               turn = 2;
@@ -1224,8 +1245,7 @@ export class CanvasRenderer {
         }
         hasPistonTransition ||= cell.pistonTransition !== 0;
       }
-      if (previousWorld !== null && remainingProgress > 0 && !hasPistonTransition) {
-        const firstCell = expectDefined(body.cells[0], "first animated body cell");
+      if (rotation === null && previousWorld !== null && remainingProgress > 0 && !hasPistonTransition) {
         const tileId = this.world.idAt(firstCell.x, firstCell.y);
         if (previousWorld.idAt(firstCell.x, firstCell.y) !== tileId) {
           searchPreviousPosition:
@@ -1254,6 +1274,7 @@ export class CanvasRenderer {
 
       this.context.save();
       this.context.translate(this.originX + offsetX, this.originY + offsetY);
+      if (rotation !== null) this.applyRotationTransform(rotation);
       drawBody(
         this.context,
         0,
@@ -1287,7 +1308,7 @@ export class CanvasRenderer {
       let index = y * world.width + startX;
       for (let x = startX; x < endX; x += 1, index += 1) {
         const kind = world.kindAtIndex(index);
-        if (kind === TileKind.Empty) {
+        if (kind === TileKind.Empty || this.rotationInterpolation.at(index) !== null) {
           continue;
         }
 
@@ -1344,6 +1365,30 @@ export class CanvasRenderer {
       this.context.fillStyle = TILE_DEFINITIONS[kind].fill;
       this.context.fill(path);
     }
+    if (this.rotationInterpolation.active) {
+      for (const index of this.rotationInterpolation.indices) {
+        const rotation = this.rotationInterpolation.at(index);
+        if (rotation === null) throw new Error(`Missing rotation for animated cell ${index}`);
+        this.context.save();
+        this.context.translate(originX, originY);
+        this.applyRotationTransform(rotation);
+        this.context.fillStyle = TILE_DEFINITIONS[world.kindAtIndex(index)].fill;
+        this.context.fillRect(
+          (index % world.width) * cellSize,
+          Math.floor(index / world.width) * cellSize,
+          cellSize,
+          cellSize,
+        );
+        this.context.restore();
+      }
+    }
+  }
+
+  private applyRotationTransform(rotation: RotationTransform): void {
+    this.context.transform(
+      rotation.cosine, rotation.sine, -rotation.sine, rotation.cosine,
+      rotation.x * this.cellSize, rotation.y * this.cellSize,
+    );
   }
 
   private rebuildBodyCache(): void {
@@ -1782,8 +1827,9 @@ export class CanvasRenderer {
     const y = Math.floor(this.highlightedTileIndex / world.width);
     let offsetX = 0;
     let offsetY = 0;
+    const rotation = this.rotationInterpolation.at(this.highlightedTileIndex);
     // Match the one-cell motion interpolation used by tile bodies.
-    if (previousWorld !== null && progress < 1 && previousWorld.idAt(x, y) !== tileId) {
+    if (rotation === null && previousWorld !== null && progress < 1 && previousWorld.idAt(x, y) !== tileId) {
       searchPreviousPosition:
       for (let verticalMove = -1; verticalMove <= 1; verticalMove += 1) {
         for (let horizontalMove = -1; horizontalMove <= 1; horizontalMove += 1) {
@@ -1801,10 +1847,12 @@ export class CanvasRenderer {
         }
       }
     }
-    const left = this.originX + x * cellSize + offsetX;
-    const top = this.originY + y * cellSize + offsetY;
+    const left = x * cellSize + offsetX;
+    const top = y * cellSize + offsetY;
     const inset = Math.min(3, cellSize * 0.15);
     context.save();
+    context.translate(this.originX, this.originY);
+    if (rotation !== null) this.applyRotationTransform(rotation);
     context.strokeStyle = "#f1cc38";
     context.lineWidth = 3;
     context.strokeRect(left, top, cellSize, cellSize);
