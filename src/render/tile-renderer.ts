@@ -77,7 +77,7 @@ const BEVEL_RATIO = 0.05;
 const DECORATION_CELL_SIZE = 12;
 const BEVEL_CELL_SIZE = 24;
 
-const HIGHLIGHT_STYLE = "rgba(255, 255, 255, 0.25)";
+const HIGHLIGHT_STYLE = "rgba(255, 255, 255, 0.15)";
 const SHADE_STYLE = "rgba(0, 0, 0, 0.18)";
 
 /** Cells and vertices are keyed on a fixed grid stride; supports coordinates up to 4095. */
@@ -894,16 +894,30 @@ function drawDecoration(
         : orientation;
       context.save();
       context.translate(left + size / 2, top + size / 2);
-      context.rotate((gripDirection + rotatorTurnOffset) * Math.PI / 2);
       context.lineWidth = Math.max(1.5, size * 0.055);
       context.lineCap = "round";
       context.lineJoin = "round";
       context.beginPath();
       context.arc(0, 0, size * 0.13, 0, Math.PI * 2);
+      context.stroke();
+      context.save();
+      context.rotate((gripDirection + rotatorTurnOffset) * Math.PI / 2);
+      context.beginPath();
       context.moveTo(-size * 0.1, -size * 0.24);
       context.lineTo(0, -size * 0.34);
       context.lineTo(size * 0.1, -size * 0.24);
       context.stroke();
+      context.restore();
+      // Draw dots to indicate +1 rotates clockwise, -1 anticlockwise.
+      context.rotate(orientation * Math.PI / 2);
+      context.fillStyle = CIRCUIT_CHARGE_COLORS[-1];
+      context.beginPath();
+      drawDot(context, -size * 0.2, size * 0.25, size * 0.055);
+      context.fill();
+      context.fillStyle = CIRCUIT_CHARGE_COLORS[1];
+      context.beginPath();
+      drawDot(context, size * 0.2, size * 0.25, size * 0.055);
+      context.fill();
       context.restore();
       drawPortArrows(context, left, top, size, orientation,
         WeldSide.Down, WeldSide.None, circuitPortCharges);

@@ -264,8 +264,8 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 44,
       category: PaletteCategory.RawMaterials,
-      description: "Falls downward and can fall diagonally around obstacles.",
-      extendedDescription: ["Cannot be welded. Falls straight down first, then tries a downward diagonal around an obstacle. A furnace turns sand into glass after four active ticks."],
+      description: "Falls downward or diagonally downward. Cannot be welded.",
+      extendedDescription: ["Falls straight down first, then tries a downward diagonal around an obstacle determined by parity of tick number and coordinate. A furnace turns sand into glass in four ticks."],
     },
     affectedByGravity: true,
     slidesDiagonally: true,
@@ -770,8 +770,8 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 45,
       category: PaletteCategory.RawMaterials,
-      description: "Solid block baked from sand; invisible to sensor runes.",
-      extendedDescription: ["Still collides, falls, and welds like a solid block. A sensor facing glass reports 0 and does not see a block beyond it. Glass does not currently shatter when dropped."],
+      description: "Solid block baked from sand. Invisible to sensor runes.",
+      extendedDescription: ["Collides, falls, and welds like a solid block. A sensor facing glass reports 0."],
     },
     affectedByGravity: true,
     invisibleToSensor: true,
