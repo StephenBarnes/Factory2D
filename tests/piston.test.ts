@@ -67,6 +67,52 @@ describe("pistons", () => {
     expect(world.isWelded(2, 3, 2, 2)).toBe(true);
   });
 
+  it("extends a powered three-piston stack from top to bottom without deadlocking", () => {
+    const world = new World(6, 6);
+    for (let y = 3; y <= 5; y += 1) {
+      world.place(2, y, TileKind.Piston);
+      world.place(3, y, TileKind.FixedCharge);
+      world.setWeld(2, y, 3, y, true);
+    }
+    const simulation = new Simulation(world);
+
+    for (let tick = 1; tick <= 3; tick += 1) {
+      simulation.step();
+      for (let piston = 0; piston < 3; piston += 1) {
+        const extended = piston < tick;
+        const y = extended ? 4 + piston * 2 - tick : 3 + piston;
+        expect(world.kindAt(2, y)).toBe(extended ? TileKind.PistonBase : TileKind.Piston);
+        expect(world.kindAt(3, y)).toBe(TileKind.FixedCharge);
+        expect(world.isWelded(2, y, 3, y)).toBe(true);
+        if (extended) {
+          expect(world.kindAt(2, y - 1)).toBe(TileKind.PistonArm);
+          expect(world.isWelded(2, y, 2, y - 1)).toBe(true);
+        }
+      }
+    }
+  });
+
+  it("lifts a load with stacked pistons despite a blocked push against the active base", () => {
+    const world = new World(6, 6);
+    for (let y = 4; y <= 5; y += 1) {
+      world.place(2, y, TileKind.Piston);
+      world.place(3, y, TileKind.FixedCharge);
+      world.setWeld(2, y, 3, y, true);
+    }
+    const loadId = world.place(2, 3, TileKind.Stone);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+    expect(world.idAt(2, 2)).toBe(loadId);
+    expect(world.kindAt(2, 4)).toBe(TileKind.PistonBase);
+    expect(world.kindAt(2, 5)).toBe(TileKind.Piston);
+
+    simulation.step();
+    expect(world.idAt(2, 1)).toBe(loadId);
+    expect(world.kindAt(2, 3)).toBe(TileKind.PistonBase);
+    expect(world.kindAt(2, 5)).toBe(TileKind.PistonBase);
+  });
+
   it("lets a piston push a body after gravity moves it into the path that tick", () => {
     const world = new World(6, 5);
     const pistonId = world.place(1, 2, TileKind.Piston, Direction.Right);

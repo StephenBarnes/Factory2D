@@ -34,6 +34,8 @@ Each tick collects intents throughout the root/nested-board tree, resolves circu
 
 Dedicated `*-resolver.ts` files own machine intent collection and commits. General-purpose non-conveyor pushing remains future work; reuse existing dependency/conflict machinery rather than introducing order-dependent movement.
 
+Piston forward strokes temporarily anchor their base bodies; an already extended, positively charged piston is inactive and can be carried as a rigid body. Immovable or temporarily anchored bodies do not initiate push propagation: a blocked attempt to lift an active base must not jam that piston's independent head push. Powered stacks with room above consequently extend top to bottom over successive ticks, including under a movable load.
+
 `rotation-animation.ts` retains render-only accepted-turn records outside `World` state, keyed by carried stable tile IDs. `Simulation.step(previousWorld)` enables capture for matching root/nested snapshots and seals it after all commits, including production updates to the interpolation source. Subsequent ticks, edits, and reset invalidate the records; cloning and serialization never copy them. This does not alter rotator collision resolution or phase ordering.
 
 Raw materials include dirt, gold, silver, ruby, sapphire, emerald, diamond, amethyst, mithril, copper ore, copper, and wood. These use ordinary weldable, gravity-affected solid-block physics without magnetic or circuit behavior. Copper ore smelting requires adjacent wood; the existing sand/glass and iron recipes are unchanged.

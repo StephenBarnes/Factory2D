@@ -581,7 +581,13 @@ export class MotionWorkspace {
       root >= 0;
       root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
     ) {
-      if (expectDefined(this.bodyHeads[root], "piston body head") < 0) {
+      // A fixed base cannot transmit a translation into the load its own head
+      // is pushing. Queuing it would merge that valid push with a blocked one.
+      if (
+        expectDefined(this.bodyHeads[root], "piston body head") < 0 ||
+        this.bodyImmovable[root] === 1 ||
+        this.pistonAnchoredBodies[root] === 1
+      ) {
         continue;
       }
       const forceX = expectDefined(this.bodyForceX[root], "piston horizontal force");
@@ -594,9 +600,6 @@ export class MotionWorkspace {
       this.drivenBodies[root] = 1;
       this.movementQueue[queueLength] = root;
       queueLength += 1;
-      if (this.bodyImmovable[root] === 1 || this.pistonAnchoredBodies[root] === 1) {
-        this.blockMovementGroup(root);
-      }
     }
 
     let queueHead = 0;
