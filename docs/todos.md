@@ -37,6 +37,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * DEFER Add an electromagnet, and rework the current magnet block. Positive and negative charges make it switch polarity; opposite sides have opposite polarity. Both nonzero polarities stick to iron. Like sides repel, opposite sides attract, any any side is attracted to neutral magnetic blocks like iron. Maybe add static non-controllable magnets, which are also non-directional.
 * Block that destroys blocks moved onto its tile. For example, a 5x5 body falling onto one drill block should be cut in half. Once we have the flipper block, also allow flipping bodies onto this block, which destroys the blocks that overlap it. Unclear what behavior we should have when rotating bodies onto it; maybe count it as colliding / preventing rotation onto it.
 * DEFER Add a "box" component that has an internal grid of miniature components. Similar to the implemented rune array (reuse its nested `World` state, `WorldRuntime` tree, entering/leaving view, and nested board format), but instead of circuit signal ports, add holes where blocks can fall in/out or be pushed in/out. A miniature block that falls out through a hole becomes a full block on that side of the box; a full block that falls in becomes a miniature block. Similar to Factorio's warehouse mods, or Patrick's Parabox.
+* Add a magic link block. Whenever two link blocks are in the same row or column, they count as part of the same welded body for all physics/sim purposes. These allow creating single bodies that have holes in them through which things can fall.
 
 ## Blocks we could add, but probably shouldn't, rather build from existing tools
 
@@ -50,6 +51,7 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * Add a fragility flag to tile kinds, and set it to true for glass blocks. A fragile block with no welds that drops and then stops falling should be deleted (later animated with a shatter effect), unless it fell only one tile before stopping; would require storing additional data per fragile block. Most blocks won't be fragile so this is fine. Could create interesting puzzles like lowering blocks one tile at a time with pistons, or welding before dropping and then unwelding.
 * Modify the assembler to add reaction force: When it has a pending output, but no space to output, shift the assembler in its forwards direction, emitting the product out the back (at assembler's pre-movement position). Allow this motion to push other blocks that are in front of the assembler.
 * Modify the duplicator in the same way as assembler above - make it also attempt to push itself away from the output side, if it's trying to duplicate a single-tile body but there's something blocking the output. When duplicating multi-tile bodies, don't do this - require already empty space for the whole body.
+* Audit components that can move blocks for behavior when multiple are linked together. For pistons, we added dependency-ordered substeps to allow a tower of linked pistons to resolve in one tick. But rotators and maybe other components may need similar changes.
 
 # Performance
 
@@ -78,9 +80,9 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * Add various animations for clicking buttons, placing blocks, starting a puzzle, etc.
 * Implement undo and redo when editing.
 * Add support for mobile and touch screens.
-* Review general UI scaling on 4k monitors.
 * Allow mirroring components with some hotkey. Because we allow mirroring selections, and we'll add components like flippers. But this would currently break blocks without bilateral symmetry, like ROMs and selector runes.
 * DEFER Maybe support selections that are a union of rectangles, created by shift-LMB-drag.
+* Modify welding with the mouse. For example, if I have a 2x10 column, I want to be able to easily weld/unweld each 2x1 horizontal brick along the edge between horizontal neighbors, without also welding any vertical neighbors, by holding Ctrl key and dragging the mouse. Currently this is difficult because if the mouse is slightly horizontally off the center-line, it causes vertical neighbors to be welded. Basically introduce a dead zone in corners where 4 blocks meet; in those corners, make weld input cause no weld to occur. Also add a dead zone in the center of each tile. So the non-dead zone for a given weldable edge is close to the midpoint of that edge.
 
 ## Puzzle briefing screen
 

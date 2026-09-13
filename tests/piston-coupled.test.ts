@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { expectDefined } from "../src/util/assert";
+
 import { Simulation } from "../src/simulation/simulation";
 import { Direction, TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
@@ -54,7 +56,7 @@ function geometry(world: World) {
   });
 }
 
-describe("coupled piston extension", () => {
+describe("dependency-ordered piston strokes", () => {
   it("extends all three upward strokes in one tick while carrying their sources and identities", () => {
     const world = new World(4, 8);
     const stack = placeUpStack(world, 1, 5, 3);
@@ -87,22 +89,31 @@ describe("coupled piston extension", () => {
     expect(world.kindAt(0, 4)).toBe(TileKind.Empty);
   });
 
-  it("rejects a ceiling-blocked combined stroke without jamming an unrelated piston", () => {
+  it("extends the two distal strokes below a ceiling without jamming an unrelated piston", () => {
     const world = new World(10, 7);
     const stack = placeUpStack(world, 1, 4, 3);
+    world.setWeld(1, 4, 1, 5, true);
+    world.setWeld(1, 5, 1, 6, true);
     const ceilingId = world.place(1, 1, TileKind.Platform);
     const freeStack = placeUpStack(world, 7, 6, 1);
 
     new Simulation(world).step();
 
-    for (const { y, pistonId, sourceId } of stack) {
-      expect(world.tileAt(1, y)).toEqual({ kind: TileKind.Piston, id: pistonId });
-      expect(world.tileAt(2, y)).toEqual({ kind: TileKind.FixedCharge, id: sourceId });
-      expect(world.isWelded(1, y, 2, y)).toBe(true);
+    for (const [offset, { pistonId, sourceId }] of stack.entries()) {
+      const baseY = offset === 0 ? 3 : offset === 1 ? 5 : 6;
+      if (offset < 2) {
+        expect(world.kindAt(1, baseY)).toBe(TileKind.PistonBase);
+        expect(world.tileAt(1, baseY - 1)).toEqual({ kind: TileKind.PistonArm, id: pistonId });
+        expect(world.isWelded(1, baseY, 1, baseY - 1)).toBe(true);
+      } else {
+        expect(world.tileAt(1, baseY)).toEqual({ kind: TileKind.Piston, id: pistonId });
+      }
+      expect(world.tileAt(2, baseY)).toEqual({ kind: TileKind.FixedCharge, id: sourceId });
+      expect(world.isWelded(1, baseY, 2, baseY)).toBe(true);
     }
+    expect(world.isWelded(1, 6, 1, 5)).toBe(true);
+    expect(world.isWelded(1, 4, 1, 3)).toBe(true);
     expect(world.tileAt(1, 1)).toEqual({ kind: TileKind.Platform, id: ceilingId });
-    expect(world.kindAt(1, 2)).toBe(TileKind.Empty);
-    expect(world.kindAt(1, 3)).toBe(TileKind.Empty);
     expectExtendedUpStack(world, 7, freeStack);
   });
 
@@ -146,6 +157,177 @@ describe("coupled piston extension", () => {
       expect(world.isWelded(origin + 5 * sign, 2, origin + 6 * sign, 2)).toBe(true);
       expect(world.kindAt(origin + 7 * sign, 2)).toBe(TileKind.Empty);
     }
+  });
+
+  it("extends and retracts a head-welded five-piston tower in single ticks in mirrored and reversed placement orders", () => {
+    for (const direction of [Direction.Up, Direction.Right, Direction.Down, Direction.Left]) {
+      const snapshots: string[] = [];
+      for (const reversed of [false, true]) {
+        const vertical = direction === Direction.Up || direction === Direction.Down;
+        const world = new World(vertical ? 5 : 11, vertical ? 11 : 3);
+        const point = (distance: number, side = 0): [number, number] => vertical
+          ? [2 + side, direction === Direction.Up ? 10 - distance : distance]
+          : [direction === Direction.Right ? distance : 10 - distance, 2 - side];
+        const sourceDirection = vertical ? Direction.Left : Direction.Down;
+        const order = [0, 1, 2, 3, 4];
+        if (reversed) order.reverse();
+        const stack = new Map<number, { pistonId: number; inverterId: number; sourceId: number }>();
+        for (const offset of order) {
+          const pistonId = world.place(...point(offset), TileKind.Piston, direction);
+          const inverterId = world.place(...point(offset, 1), TileKind.Inverter, sourceDirection);
+          const sourceId = world.place(...point(offset, 2), TileKind.FixedCharge);
+          world.setWeld(...point(offset), ...point(offset, 1), true);
+          world.setWeld(...point(offset, 1), ...point(offset, 2), true);
+          // Gates observe old inputs: extend on this tick, retract on the next.
+          world.setCharge(...point(offset, 2), -1);
+          stack.set(offset, { pistonId, inverterId, sourceId });
+        }
+        const loadId = world.place(...point(5), TileKind.Stone);
+        for (let offset = 0; offset < 5; offset += 1) {
+          world.setWeld(...point(offset), ...point(offset + 1), true);
+        }
+        if (direction === Direction.Down) {
+          world.place(1, 0, TileKind.Platform);
+          world.setWeld(1, 0, 2, 0, true);
+        }
+        const before = geometry(world);
+        const simulation = new Simulation(world);
+
+        simulation.step();
+
+        for (const [offset, { pistonId, inverterId, sourceId }] of stack) {
+          const base = 2 * offset;
+          expect(world.kindAt(...point(base))).toBe(TileKind.PistonBase);
+          expect(world.orientationAt(...point(base))).toBe(direction);
+          expect(world.chargeAt(...point(base))).toBe(1);
+          expect(world.tileAt(...point(base + 1))).toEqual({ kind: TileKind.PistonArm, id: pistonId });
+          expect(world.tileAt(...point(base, 1))).toEqual({ kind: TileKind.Inverter, id: inverterId });
+          expect(world.tileAt(...point(base, 2))).toEqual({ kind: TileKind.FixedCharge, id: sourceId });
+          expect(world.isWelded(...point(base), ...point(base + 1))).toBe(true);
+          expect(world.isWelded(...point(base + 1), ...point(base + 2))).toBe(true);
+          expect(world.isWelded(...point(base), ...point(base, 1))).toBe(true);
+          expect(world.isWelded(...point(base, 1), ...point(base, 2))).toBe(true);
+        }
+        expect(world.tileAt(...point(10))).toEqual({ kind: TileKind.Stone, id: loadId });
+        snapshots.push(JSON.stringify(geometry(world).map(({ id: _id, ...cell }) => cell)));
+
+        simulation.step();
+
+        expect(geometry(world)).toEqual(before);
+        for (const offset of stack.keys()) {
+          expect(world.chargeAt(...point(offset))).toBe(-1);
+        }
+      }
+      // Placement changes allocated IDs, but not the resulting board geometry.
+      expect(snapshots[0]).toEqual(snapshots[1]);
+    }
+  });
+
+  it("retracts a distal head even when a blocked carried source prevents the remaining retractions", () => {
+    const world = new World(5, 7);
+    const stack = [2, 4, 6].map((y) => {
+      const baseId = world.place(1, y, TileKind.PistonBase, Direction.Up);
+      const armId = world.place(1, y - 1, TileKind.PistonArm, Direction.Up);
+      const inverterId = world.place(2, y, TileKind.Inverter, Direction.Left);
+      const sourceId = world.place(3, y, TileKind.FixedCharge);
+      world.setWeld(1, y, 1, y - 1, true);
+      world.setWeld(1, y, 2, y, true);
+      world.setWeld(2, y, 3, y, true);
+      world.setCharge(3, y, 1);
+      return { y, baseId, armId, inverterId, sourceId };
+    });
+    const loadId = world.place(1, 0, TileKind.Stone);
+    const blockerId = world.place(3, 3, TileKind.Platform);
+    for (const y of [1, 3, 5]) {
+      world.setWeld(1, y, 1, y - 1, true);
+    }
+
+    new Simulation(world).step();
+
+    expect(world.tileAt(1, 0)).toEqual({ kind: TileKind.Empty, id: 0 });
+    expect(world.tileAt(1, 1)).toEqual({ kind: TileKind.Stone, id: loadId });
+    expect(world.tileAt(1, 2)).toEqual({ kind: TileKind.Piston, id: expectDefined(stack[0], "distal piston").armId });
+    expect(world.isWelded(1, 2, 1, 1)).toBe(true);
+    for (const { y, baseId, armId, inverterId, sourceId } of stack) {
+      if (y !== 2) {
+        expect(world.tileAt(1, y)).toEqual({ kind: TileKind.PistonBase, id: baseId });
+        expect(world.tileAt(1, y - 1)).toEqual({ kind: TileKind.PistonArm, id: armId });
+        expect(world.isWelded(1, y, 1, y - 1)).toBe(true);
+        expect(world.isWelded(1, y - 1, 1, y - 2)).toBe(true);
+      }
+      expect(world.chargeAt(1, y)).toBe(-1);
+      expect(world.tileAt(2, y)).toEqual({ kind: TileKind.Inverter, id: inverterId });
+      expect(world.tileAt(3, y)).toEqual({ kind: TileKind.FixedCharge, id: sourceId });
+      expect(world.isWelded(1, y, 2, y)).toBe(true);
+      expect(world.isWelded(2, y, 3, y)).toBe(true);
+    }
+    expect(world.tileAt(3, 3)).toEqual({ kind: TileKind.Platform, id: blockerId });
+  });
+
+  it("extends and retracts parallel pistons welded to one beam without tearing its welds", () => {
+    const world = new World(7, 5);
+    for (const x of [2, 4]) {
+      const side = x === 2 ? -1 : 1;
+      world.place(x, 3, TileKind.Piston, Direction.Up);
+      world.place(x, 4, TileKind.Platform);
+      world.place(x + side, 3, TileKind.Inverter, side === -1 ? Direction.Right : Direction.Left);
+      world.place(x + 2 * side, 3, TileKind.FixedCharge);
+      world.setWeld(x, 3, x, 4, true);
+      world.setWeld(x, 3, x + side, 3, true);
+      world.setWeld(x + side, 3, x + 2 * side, 3, true);
+      world.setCharge(x + 2 * side, 3, -1);
+    }
+    for (let x = 2; x <= 4; x += 1) world.place(x, 2, TileKind.Stone);
+    world.setWeld(2, 2, 3, 2, true);
+    world.setWeld(3, 2, 4, 2, true);
+    world.setWeld(2, 3, 2, 2, true);
+    world.setWeld(4, 3, 4, 2, true);
+    const before = geometry(world);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+
+    for (const x of [2, 4]) {
+      expect(world.kindAt(x, 3)).toBe(TileKind.PistonBase);
+      expect(world.kindAt(x, 2)).toBe(TileKind.PistonArm);
+      expect(world.isWelded(x, 2, x, 1)).toBe(true);
+    }
+    expect(world.kindAt(3, 1)).toBe(TileKind.Stone);
+    expect(world.isWelded(2, 1, 3, 1)).toBe(true);
+    expect(world.isWelded(3, 1, 4, 1)).toBe(true);
+
+    simulation.step();
+
+    expect(geometry(world)).toEqual(before);
+  });
+
+  it("recoils the upper opposing piston before the lower piston pushes it, extending both in one tick", () => {
+    const world = new World(5, 6);
+    const upperSourceId = world.place(2, 3, TileKind.FixedCharge);
+    const upperId = world.place(2, 4, TileKind.Piston, Direction.Down);
+    const lowerId = world.place(2, 5, TileKind.Piston, Direction.Up);
+    const leftSourceId = world.place(1, 5, TileKind.FixedCharge);
+    const rightSourceId = world.place(3, 5, TileKind.FixedCharge);
+    world.setWeld(2, 3, 2, 4, true);
+    world.setWeld(1, 5, 2, 5, true);
+    world.setWeld(2, 5, 3, 5, true);
+
+    new Simulation(world).step();
+
+    expect(world.tileAt(2, 1)).toEqual({ kind: TileKind.FixedCharge, id: upperSourceId });
+    expect(world.kindAt(2, 2)).toBe(TileKind.PistonBase);
+    expect(world.orientationAt(2, 2)).toBe(Direction.Down);
+    expect(world.tileAt(2, 3)).toEqual({ kind: TileKind.PistonArm, id: upperId });
+    expect(world.tileAt(2, 4)).toEqual({ kind: TileKind.PistonArm, id: lowerId });
+    expect(world.kindAt(2, 5)).toBe(TileKind.PistonBase);
+    expect(world.orientationAt(2, 5)).toBe(Direction.Up);
+    expect(world.tileAt(1, 5)).toEqual({ kind: TileKind.FixedCharge, id: leftSourceId });
+    expect(world.tileAt(3, 5)).toEqual({ kind: TileKind.FixedCharge, id: rightSourceId });
+    expect(world.isWelded(2, 1, 2, 2)).toBe(true);
+    expect(world.isWelded(2, 2, 2, 3)).toBe(true);
+    expect(world.isWelded(2, 4, 2, 5)).toBe(true);
+    expect(world.isWelded(1, 5, 2, 5)).toBe(true);
+    expect(world.isWelded(2, 5, 3, 5)).toBe(true);
   });
 
   it("carries a positively charged extended piston rigidly without adding another stroke", () => {
@@ -248,7 +430,7 @@ describe("coupled piston extension", () => {
     }
   });
 
-  it("discovers in-board dependencies even when a summed push crosses the boundary", () => {
+  it("resolves boundary-blocked strokes by recoil without suppressing an independent opposing stroke", () => {
     for (const reflected of [false, true]) {
       const world = new World(10, 4);
       const x = (column: number) => reflected ? 9 - column : column;
@@ -271,8 +453,10 @@ describe("coupled piston extension", () => {
       expect(world.kindAt(x(6), 1)).toBe(TileKind.PistonBase);
       expect(world.idAt(x(5), 1)).toBe(pistonIds[0]);
       expect(world.idAt(x(7), 1)).toBe(pistonIds[1]);
-      expect(world.tileAt(x(9), 2)).toEqual({ kind: TileKind.Piston, id: opposingId });
-      expect(world.kindAt(x(8), 2)).toBe(TileKind.Empty);
+      expect(world.kindAt(x(9), 2)).toBe(TileKind.PistonBase);
+      expect(world.tileAt(x(8), 2)).toEqual({ kind: TileKind.PistonArm, id: opposingId });
+      expect(world.isWelded(x(9), 2, x(8), 2)).toBe(true);
+      expect(world.isWelded(x(9), 2, x(9), 1)).toBe(true);
     }
   });
 

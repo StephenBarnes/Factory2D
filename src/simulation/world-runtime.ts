@@ -4,6 +4,7 @@ import { DuplicatorResolver } from "./duplicator-resolver";
 import { DrillResolver } from "./drill-resolver";
 import { FurnaceResolver } from "./furnace-resolver";
 import { MotionWorkspace } from "./motion-workspace";
+import { PistonResolver } from "./piston-resolver";
 import { RotatorResolver } from "./rotator-resolver";
 import { WeldOperationResolver } from "./weld-operation-resolver";
 import { WeldedBodyIndex } from "./welded-body-index";
@@ -24,6 +25,7 @@ export class WorldRuntime {
   readonly furnaceResolver: FurnaceResolver;
   readonly drillResolver: DrillResolver;
   readonly motionWorkspace: MotionWorkspace;
+  readonly pistonResolver: PistonResolver;
   readonly rotatorResolver: RotatorResolver;
   readonly weldOperationResolver: WeldOperationResolver;
   readonly nextCharges: Int8Array;
@@ -61,6 +63,7 @@ export class WorldRuntime {
     this.furnaceResolver = new FurnaceResolver(world);
     this.drillResolver = new DrillResolver(world);
     this.motionWorkspace = new MotionWorkspace(world);
+    this.pistonResolver = new PistonResolver(world);
     this.rotatorResolver = new RotatorResolver(world);
     this.weldOperationResolver = new WeldOperationResolver(world);
     this.nextCharges = new Int8Array(world.cellCount);
@@ -128,7 +131,7 @@ export class WorldRuntime {
       movementCount += this.rotatorResolver.resolve();
     }
     if (this.world.hasFeature(WorldFeature.Piston)) {
-      movementCount += this.motionWorkspace.resolvePistons();
+      movementCount += this.pistonResolver.resolve();
     }
     return movementCount;
   }
