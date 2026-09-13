@@ -1,3 +1,4 @@
+import { isProcessingMachine, processingRecipeFor } from "../simulation/furnace";
 import {
   Direction,
   directionX,
@@ -24,6 +25,7 @@ export function createBodyCell(): BodyCell {
     circuitPortCharges: 0,
     componentState: null,
     nestedWorld: null,
+    processingProgress: 0,
     seamRight: false,
     seamDown: false,
   };
@@ -50,6 +52,26 @@ export function populateBodyCell(world: World, index: number, cell: BodyCell): v
   cell.outputCharge = cell.kind === TileKind.Sensor
     ? world.sensorOutputAtIndex(index)
     : networkCharge;
+  cell.processingProgress = 0;
+  if (isProcessingMachine(cell.kind)) {
+    cell.outputCharge = world.chargeAtPortIndex(index, oppositeDirection(cell.orientation));
+    const ticks = world.furnaceProgressAtIndex(index);
+    if (ticks === 0) {
+      // Processing clears its counter on completion; the active output lasts this tick.
+      cell.processingProgress = cell.outputCharge === 1 ? 1 : 0;
+    } else {
+      const targetX = x + directionX(cell.orientation);
+      const targetY = cell.y + directionY(cell.orientation);
+      if (targetX >= 0 && targetX < width && targetY >= 0 && targetY < world.height) {
+        const targetIndex = targetY * width + targetX;
+        if (world.idAtIndex(targetIndex) === world.furnaceTargetIdAtIndex(index)) {
+          const recipe = processingRecipeFor(cell.kind, world.kindAtIndex(targetIndex));
+          // Motion or another machine may have removed/replaced the processed target.
+          if (recipe !== undefined) cell.processingProgress = ticks / recipe.bakeTime;
+        }
+      }
+    }
+  }
   cell.circuitConnections = WeldSide.None;
   cell.circuitPortCharges = 0;
   if (cell.kind === TileKind.RuneArray) {

@@ -33,6 +33,8 @@ export interface BodyCell {
   componentState?: ConfigurableComponentSnapshot | null;
   /** Live inner board of a rune array, read only while drawing; never a snapshot. */
   nestedWorld?: World | null;
+  /** Committed processing fraction; zero hides the overlay, one marks completion. */
+  processingProgress?: number;
   /** The right neighbor belongs to the same body but this edge is not welded. */
   seamRight: boolean;
   /** The down neighbor belongs to the same body but this edge is not welded. */
@@ -200,6 +202,23 @@ function drawBodyCellDecoration(
     cell.pistonTransitionProgress ?? 1,
     cell.rotatorTurnOffset ?? 0,
   );
+  const processingProgress = cell.processingProgress ?? 0;
+  if (processingProgress > 0) {
+    context.save();
+    context.translate(
+      originX + (cell.x + 0.5) * cellSize,
+      originY + (cell.y + 0.5) * cellSize,
+    );
+    context.rotate(cell.orientation * Math.PI / 2);
+    context.fillStyle = "#17130f";
+    context.fillRect(-cellSize * 0.29, cellSize * 0.295, cellSize * 0.58, cellSize * 0.09);
+    context.fillStyle = cell.outputCharge === 1 ? "#f4c568" : "#968675";
+    context.fillRect(
+      -cellSize * 0.27, cellSize * 0.315,
+      cellSize * 0.54 * processingProgress, cellSize * 0.05,
+    );
+    context.restore();
+  }
 }
 
 const SINGLE_CELL: [BodyCell] = [
@@ -466,6 +485,9 @@ function drawDecoration(
       definition.decorationStyle === TileDecorationStyle.Lut ||
       definition.decorationStyle === TileDecorationStyle.Checker ||
       definition.decorationStyle === TileDecorationStyle.Rotator ||
+      definition.decorationStyle === TileDecorationStyle.Furnace ||
+      definition.decorationStyle === TileDecorationStyle.Drill ||
+      definition.decorationStyle === TileDecorationStyle.Grinder ||
       definition.decorationStyle === TileDecorationStyle.RuneArray;
     const hasOutputArrow =
       definition.decorationStyle === TileDecorationStyle.Rectifier ||
@@ -798,13 +820,20 @@ function drawDecoration(
       context.fillStyle = definition.decorationColor;
       context.fill();
       context.strokeStyle = "#424a55";
+      context.save();
+      context.clip();
+      if (outputCharge === 1) {
+        context.translate(0, ((animationTime % 300) / 300) * size * 0.13);
+      }
       context.lineWidth = Math.max(1, size * 0.035);
       context.beginPath();
-      context.moveTo(-size * 0.05, -size * 0.21);
-      context.lineTo(size * 0.08, -size * 0.13);
-      context.moveTo(-size * 0.1, -size * 0.08);
-      context.lineTo(size * 0.13, size * 0.01);
+      for (let groove = -3; groove <= 1; groove += 1) {
+        const y = groove * size * 0.13;
+        context.moveTo(-size * 0.2, y);
+        context.lineTo(size * 0.2, y + size * 0.2);
+      }
       context.stroke();
+      context.restore();
       context.restore();
       break;
     }
@@ -829,7 +858,8 @@ function drawDecoration(
         context.translate((roller === 0 ? -1 : 1) * size * 0.155, size * 0.025);
         context.fillStyle = definition.decorationColor;
         context.save();
-        context.rotate(roller * Math.PI / 8);
+        context.rotate(roller * Math.PI / 8 +
+          (outputCharge === 1 ? (roller === 0 ? 1 : -1) * animationTime / 250 : 0));
         for (let tooth = 0; tooth < 8; tooth += 1) {
           context.fillRect(-size * 0.035, -size * 0.15, size * 0.07, size * 0.065);
           context.rotate(Math.PI / 4);
@@ -865,6 +895,10 @@ function drawDecoration(
       context.lineWidth = Math.max(1.5, size * 0.055);
       context.stroke();
       context.fillStyle = outputCharge === 1 ? "#ff9f43" : "#5a3024";
+      context.save();
+      if (outputCharge === 1) {
+        context.scale(1 + 0.08 * Math.sin(animationTime / 83), 1 + 0.1 * Math.sin(animationTime / 61));
+      }
       context.beginPath();
       context.moveTo(0, -size * 0.22);
       context.bezierCurveTo(
@@ -884,6 +918,7 @@ function drawDecoration(
         -size * 0.22,
       );
       context.fill();
+      context.restore();
       context.restore();
       break;
     }

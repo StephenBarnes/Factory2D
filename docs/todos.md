@@ -99,10 +99,10 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 
 ## Animations
 
-* Add animations for processing blocks - furnace, drill, grinder. They should indicate on the block that they're baking/drilling/grinding with an overlay showing progress.
 * Add animation for the delivery box, assembler, duplicator, lock gate. When they consume a body, animate the body shrinking, moving towards the block, and lowering opacity until it vanishes. When they produce a body, animate the opposite.
 * Animate fragile blocks shattering - maybe split them in half across say a line at 30 degrees from vertical, then animate the halves moving apart and fading out from one tick to the next. Also use the same shatter animation for blocks broken by mining devices, fasteners that break, etc.
 * DEFER Interpolate movement inside a rune array while its contents are displayed and the array itself moved in the same tick: the nested previous world is matched by ID path, which works, but a resized array yields no interpolation source for that tick.
+* Add particles for when blocks are transformed by furnaces or grinders. Could reuse existing weld particles system. Maybe color the particles by the new block's main color. (For drills we'll use the fragile block shattering animation instead.)
 
 # Larger projects, DEFER to later or never, and break up into tasks:
 

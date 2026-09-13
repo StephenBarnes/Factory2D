@@ -1294,7 +1294,11 @@ export class CanvasRenderer {
       maxY <= visibleTop || minY >= visibleBottom) return;
 
     for (const cell of body.cells) {
-      if (cell.kind === TileKind.Conveyor && cell.outputCharge !== 0) {
+      if (
+        (cell.kind === TileKind.Conveyor && cell.outputCharge !== 0) ||
+        ((cell.kind === TileKind.Furnace || cell.kind === TileKind.Grinder ||
+          cell.kind === TileKind.Drill) && cell.outputCharge === 1)
+      ) {
         this.hasTimeDependentVisuals = true;
       }
       const index = cell.y * this.world.width + cell.x;
