@@ -1226,7 +1226,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 20,
     palette: {
       order: 35,
-      category: PaletteCategory.PuzzleTools,
+      category: PaletteCategory.CircuitComplex,
       description: "Outputs +1 sideways while the complete front and rear bodies match in kinds, orientations, and welds; ignores configuration and consumes nothing.",
       extendedDescription: ["Uses the same translation-only body comparison as a delivery box. Both neighbors must exist and neither body may be welded to the comparer. A mismatch outputs 0; matching does not consume either body."],
     },
