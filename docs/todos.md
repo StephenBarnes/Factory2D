@@ -43,10 +43,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Add a delay block variant that only steps forward if the input is +1 or -1, ignoring zeros. Like the current delay block, on every tick, it outputs the queued value; but we only shift the ring buffer forward and write a value when the back value is +1. Uncertain, seems similar to the queue block.
 * Figure out what components are necessary to build a version of the 2D ROM that exists in-world. Given an NxM block of ruby and sapphire blocks, what components are needed to read or duplicate the block at a specific coordinate? Maybe add a light-beam block, and a beam reader block; then the beam reader reads the block in the row in front of it which has the light beam on it. So we have two arms which move to position the intersection at the necessary 2D coordinate. Reading could be by duplicating the block, or comparing it to an adjacent body like the existing body comparer block; or emit a signal based on the block's color (ruby is red so -1, sapphire is blue so +1).
 
-## Modifying circuit component behaviors
-
-* Add a configuration checkbox in the ROM / lore rune which allows toggling horizontal and vertical wrapping separately. If the ROM's inputs imply a movement that would require wrapping, instead ignore that movement. (For example the current rectifier puzzle has a 5x4 ROM rune with inputs read in series; this causes inputs to loop the same test sequence. This doesn't cause problems currently but may later.)
-
 # UI
 
 * Add various animations for clicking buttons, placing blocks, starting a puzzle, etc.

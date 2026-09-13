@@ -25,7 +25,8 @@ export function copyComponentConfiguration(
     case "checker":
       return world.configureTernaryGrid(
         x, y, source.width, source.height, source.values,
-        source.type === "checker" && source.ignoreZeros,
+        source.type === "checker" ? { ignoreZeros: source.ignoreZeros } :
+          source.type === "rom" ? { wrapX: source.wrapX, wrapY: source.wrapY } : {},
       );
     case "array":
       return world.configureRuneArray(

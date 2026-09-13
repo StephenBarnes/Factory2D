@@ -1027,8 +1027,54 @@ describe("circuit networks", () => {
       width: 2,
       height: 2,
       cursor: 3,
+      wrapX: true, wrapY: true,
       values: [0, 1, -1, 1],
     });
+  });
+
+  it.each([
+    { name: "horizontal", width: 3, height: 2, wrapX: true, wrapY: false,
+      inputX: 0, inputY: 1, forward: 1, values: [0, 1, -1, 0, 1, -1] },
+    { name: "vertical", width: 2, height: 3, wrapX: false, wrapY: true,
+      inputX: 1, inputY: 2, forward: -1, values: [0, 0, 1, 1, -1, -1] },
+  ] as const)("allows $name carries but stops before wrapping the other axis", (testCase) => {
+    const world = new World(3, 3);
+    world.place(1, 0, TileKind.Conduit);
+    world.place(0, 1, TileKind.Conduit);
+    world.place(1, 1, TileKind.Rom);
+    world.place(2, 1, TileKind.Conduit);
+    world.place(1, 2, TileKind.Conduit);
+    world.setWeld(1, 0, 1, 1, true);
+    world.setWeld(0, 1, 1, 1, true);
+    world.setWeld(1, 1, 2, 1, true);
+    world.setWeld(1, 1, 1, 2, true);
+    world.configureTernaryGrid(
+      1, 1, testCase.width, testCase.height, testCase.values, testCase,
+    );
+    const simulation = new Simulation(world);
+    for (const sign of [1, -1] as const) {
+      const expected = sign === 1 ? [1, -1, 0, 1, -1, -1] : [1, 0, -1, 1, 0, 0];
+      for (const output of expected) {
+        world.setCharge(testCase.inputX, testCase.inputY, sign * testCase.forward as -1 | 1);
+        simulation.step();
+        expect(world.chargeAt(1, 0)).toBe(output);
+        expect(world.chargeAt(2, 1)).toBe(output);
+      }
+    }
+  });
+
+  it("ignores disabled edge crossings while still applying the other input horizontally first", () => {
+    const world = new World(1, 1);
+    world.place(0, 0, TileKind.Rom);
+    world.configureTernaryGrid(0, 0, 2, 2, [0, 1, -1, 0], { wrapX: false, wrapY: false });
+    expect(world.advanceRomAtIndex(0, -1, 1)).toBe(-1); // Block left, move down.
+    expect(world.advanceRomAtIndex(0, 1, 1)).toBe(0); // Move right, block down.
+    expect(world.advanceRomAtIndex(0, 1, -1)).toBe(1); // Block right, move up.
+    expect(world.advanceRomAtIndex(0, -1, -1)).toBe(0); // Move left, block up.
+    world.configureTernaryGrid(0, 0, 2, 2, [0, 1, -1, 0], { wrapY: false });
+    world.advanceRomAtIndex(0, 1, 0);
+    expect(world.advanceRomAtIndex(0, 1, -1)).toBe(0); // Horizontal carry, then vertical move.
+    expect(world.componentStateSnapshotAt(0, 0)).toMatchObject({ cursor: 0 });
   });
 
   it.each([
@@ -1055,6 +1101,7 @@ describe("circuit networks", () => {
     world.place(0, 0, TileKind.Rom);
     world.restoreComponentState(0, 0, {
       type: "rom", width: 2, height: 3, cursor: 2,
+      wrapX: true, wrapY: true,
       values: [1, 0, -1, 1, 0, -1],
     });
 
@@ -1065,6 +1112,7 @@ describe("circuit networks", () => {
       type: "rom",
       width: testCase.width, height: testCase.height,
       cursor: testCase.cursor, values: testCase.values,
+      wrapX: true, wrapY: true,
     });
     // The cursor follows its cell rather than selecting another value after a turn.
     expect(transformed.advanceRomAtIndex(0, 0, 0)).toBe(-1);
@@ -1073,6 +1121,7 @@ describe("circuit networks", () => {
     );
     expect(world.componentStateSnapshotAt(0, 0)).toEqual({
       type: "rom", width: 2, height: 3, cursor: 2,
+      wrapX: true, wrapY: true,
       values: [1, 0, -1, 1, 0, -1],
     });
   });
@@ -1202,6 +1251,7 @@ describe("circuit networks", () => {
           width: 3,
           height: 3,
           cursor: 4,
+          wrapX: true, wrapY: true,
           values: [0, 0, 0, 0, 0, 0, 0, 0, 0],
         });
         world.setCharge(inputX, inputY, charge);

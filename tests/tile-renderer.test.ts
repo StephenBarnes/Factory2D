@@ -530,6 +530,7 @@ describe("circuit rendering", () => {
               width: 1,
               height: 1,
               cursor: 0,
+              wrapX: true, wrapY: true,
               values: [0] as const,
             };
       const component: BodyCell = {
@@ -586,6 +587,7 @@ describe("circuit rendering", () => {
         width: 2,
         height: 1,
         cursor: 0,
+        wrapX: true, wrapY: true,
         values: [0, 1],
       },
       seamRight: false,

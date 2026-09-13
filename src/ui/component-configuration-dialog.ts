@@ -25,6 +25,8 @@ export type ComponentConfigurationSubmission =
       readonly height: number;
       readonly values: readonly Charge[];
       readonly ignoreZeros: boolean;
+      readonly wrapX: boolean;
+      readonly wrapY: boolean;
     }
   | {
       readonly type: "array";
@@ -46,6 +48,9 @@ export class ComponentConfigurationDialog {
   private readonly romWidth: HTMLInputElement;
   private readonly romHeight: HTMLInputElement;
   private readonly romGrid: HTMLElement;
+  private readonly romWrappingPanel: HTMLElement;
+  private readonly romWrapX: HTMLInputElement;
+  private readonly romWrapY: HTMLInputElement;
   private readonly checkerPanel: HTMLElement;
   private readonly checkerIgnoreZeros: HTMLInputElement;
   private readonly textPanel: HTMLElement;
@@ -90,6 +95,9 @@ export class ComponentConfigurationDialog {
     this.romWidth = requiredDescendant(dialog, "[data-component-rom-width]");
     this.romHeight = requiredDescendant(dialog, "[data-component-rom-height]");
     this.romGrid = requiredDescendant(dialog, "[data-component-rom-grid]");
+    this.romWrappingPanel = requiredDescendant(dialog, "[data-component-rom-wrapping-panel]");
+    this.romWrapX = requiredDescendant(dialog, "[data-component-rom-wrap-x]");
+    this.romWrapY = requiredDescendant(dialog, "[data-component-rom-wrap-y]");
     this.checkerPanel = requiredDescendant(dialog, "[data-component-checker-panel]");
     this.checkerIgnoreZeros = requiredDescendant(dialog, "[data-component-checker-ignore-zeros]");
     this.textPanel = requiredDescendant(dialog, "[data-component-text-panel]");
@@ -226,6 +234,11 @@ export class ComponentConfigurationDialog {
     this.checkerPanel.hidden = kind !== TileKind.Checker;
     this.checkerIgnoreZeros.disabled = kind !== TileKind.Checker || submit === null;
     this.checkerIgnoreZeros.checked = state.type === "checker" && state.ignoreZeros;
+    this.romWrappingPanel.hidden = kind !== TileKind.Rom;
+    this.romWrapX.disabled = kind !== TileKind.Rom || submit === null;
+    this.romWrapY.disabled = kind !== TileKind.Rom || submit === null;
+    this.romWrapX.checked = state.type !== "rom" || state.wrapX;
+    this.romWrapY.checked = state.type !== "rom" || state.wrapY;
     this.numericInput.disabled = configuration.type !== "number";
     this.romWidth.disabled = configuration.type !== "grid" || kind === TileKind.Lut;
     this.romHeight.disabled = configuration.type !== "grid" || kind === TileKind.Lut;
@@ -388,6 +401,8 @@ export class ComponentConfigurationDialog {
       submit({
         type: "grid", width, height, values: [...this.romValues],
         ignoreZeros: this.currentKind === TileKind.Checker && this.checkerIgnoreZeros.checked,
+        wrapX: this.currentKind !== TileKind.Rom || this.romWrapX.checked,
+        wrapY: this.currentKind !== TileKind.Rom || this.romWrapY.checked,
       });
     }
     this.close();

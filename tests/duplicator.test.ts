@@ -35,7 +35,7 @@ describe("duplicators", () => {
       const anchorX = inputSide === Direction.Left ? 5 : 3;
       world.place(anchorX, 5, TileKind.Platform);
       world.setWeld(4, 5, anchorX, 5, true);
-      world.configureTernaryGrid(4, 5, 2, 2, [-1, 0, 1, -1]);
+      world.configureTernaryGrid(4, 5, 2, 2, [-1, 0, 1, -1], { wrapX: false });
       world.advanceRomAtIndex(5 * world.width + 4, 1, 0);
       const sourceState = world.componentStateSnapshotAt(4, 5);
       const sourceId = world.idAt(4, 5);
@@ -50,6 +50,7 @@ describe("duplicators", () => {
       expect(world.idAt(4, 3)).not.toBe(sourceId);
       expect(world.componentStateSnapshotAt(4, 3)).toEqual({
         type: "rom", width: 2, height: 2, cursor: 3,
+        wrapX: false, wrapY: true,
         values: [1, -1, -1, 0],
       });
       expect(world.componentStateSnapshotAt(4, 5)).toEqual(sourceState);

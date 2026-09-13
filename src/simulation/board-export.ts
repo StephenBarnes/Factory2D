@@ -126,6 +126,8 @@ interface ExportedRom {
   readonly width: number;
   readonly height: number;
   readonly cursor: number;
+  readonly wrapX: boolean;
+  readonly wrapY: boolean;
   readonly values: readonly Charge[];
 }
 
@@ -711,6 +713,8 @@ function importBoardContents(
       "pending",
       "direction",
       "ignoreZeros",
+      "wrapX",
+      "wrapY",
     ]);
     const type = requireString(entry.type, `${componentLabel} type`);
     const fields = type === "assembler"
@@ -726,7 +730,7 @@ function importBoardContents(
             : type === "lut"
               ? ["x", "y", "type", "width", "height", "values"]
             : type === "rom"
-              ? ["x", "y", "type", "width", "height", "cursor", "values"]
+              ? ["x", "y", "type", "width", "height", "cursor", "wrapX", "wrapY", "values"]
               : type === "checker"
                 ? ["x", "y", "type", "width", "height", "cursor", "failed", "ignoreZeros", "values"]
                 : type === "monitor" || type === "grapher"
@@ -908,11 +912,18 @@ function importBoardContents(
           values: requireChargeArray(state.values, valueCount, `${componentLabel} values`),
         };
       } else {
+        const wrapX = state.wrapX === undefined ? true : state.wrapX;
+        const wrapY = state.wrapY === undefined ? true : state.wrapY;
+        if (typeof wrapX !== "boolean" || typeof wrapY !== "boolean") {
+          throw new Error(`${componentLabel} wrapping flags must be booleans`);
+        }
         snapshot = {
           type: "rom",
           width: componentWidth,
           height: componentHeight,
           cursor: requireInteger(state.cursor, `${componentLabel} cursor`, 0, valueCount - 1),
+          wrapX,
+          wrapY,
           values: requireChargeArray(state.values, valueCount, `${componentLabel} values`),
         };
       }

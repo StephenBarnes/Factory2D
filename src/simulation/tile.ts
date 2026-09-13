@@ -1348,7 +1348,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 29,
       category: PaletteCategory.CircuitComplex,
       description: "Read-only memory. Positive left/rear inputs move the 2D cursor away from their side; negative inputs reverse it. Outputs the selected value. Press E to configure.",
-      extendedDescription: ["With the rune pointing up, +1 on the left moves right and +1 at the rear moves up; -1 reverses each movement. Both inputs can move the cursor in one tick, horizontally first.", "Horizontal movement wraps into the next or previous row; vertical movement wraps into the next or previous column. Passing the final cell wraps around the whole memory. Front and right output the value after movement. E edits the grid."],
+      extendedDescription: ["With the rune pointing up, +1 on the left moves right and +1 at the rear moves up; -1 reverses each movement. Both inputs can move the cursor in one tick, horizontally first.", "By default, horizontal movement wraps into the next or previous row; vertical movement wraps into the next or previous column. Passing the final cell wraps around the whole memory. E edits the grid and toggles horizontal and vertical wrapping separately. A move is ignored if it or its carry would cross a disabled edge. Front and right output the value after movement."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,

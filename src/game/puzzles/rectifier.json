@@ -69,6 +69,7 @@
         "width": 5,
         "height": 4,
         "cursor": 0,
+        "wrapY": false,
         "values": [
           1,
           -1,
@@ -162,6 +163,7 @@
               "width": 5,
               "height": 4,
               "cursor": 0,
+              "wrapY": false,
               "values": [
                 1,
                 -1,

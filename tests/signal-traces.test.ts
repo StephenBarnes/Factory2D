@@ -293,6 +293,7 @@ describe("ROM graphers", () => {
       width: 2,
       height: 2,
       cursor: 0,
+      wrapX: true, wrapY: true,
       values: [1, -1, 0, 1],
     });
     world.configureSignalLabel(2, 0, "expected", "");

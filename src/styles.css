@@ -2728,7 +2728,7 @@ kbd {
 .rom-configuration-grid {
   width: fit-content;
   max-width: 100%;
-  margin: 18px auto 0;
+  margin: 18px auto;
   display: grid;
   grid-template-columns: repeat(var(--rom-width), minmax(22px, 32px));
   gap: 3px;

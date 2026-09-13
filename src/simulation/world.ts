@@ -399,7 +399,11 @@ export class World {
     width: number,
     height: number,
     values: readonly Charge[],
-    ignoreZeros = false,
+    { ignoreZeros = false, wrapX = true, wrapY = true }: {
+      readonly ignoreZeros?: boolean;
+      readonly wrapX?: boolean;
+      readonly wrapY?: boolean;
+    } = {},
   ): boolean {
     const index = this.indexOf(x, y);
     const state = this.requireComponentStateAtIndex(index);
@@ -435,8 +439,15 @@ export class World {
     if (ignoreZeros && values.includes(0)) {
       throw new RangeError("A checker that ignores zeros must expect only +1 and -1 values");
     }
+    if (
+      typeof wrapX !== "boolean" || typeof wrapY !== "boolean" ||
+      (state.type !== "rom" && (!wrapX || !wrapY))
+    ) {
+      throw new RangeError("Wrapping flags are boolean options for lore runes only");
+    }
     let changed = state.width !== width || state.height !== height ||
-      (state.type === "checker" && state.ignoreZeros !== ignoreZeros);
+      (state.type === "checker" && state.ignoreZeros !== ignoreZeros) ||
+      (state.type === "rom" && (state.wrapX !== wrapX || state.wrapY !== wrapY));
     if (!changed) {
       for (let valueIndex = 0; valueIndex < values.length; valueIndex += 1) {
         if (state.values[valueIndex] !== values[valueIndex]) {
@@ -457,6 +468,10 @@ export class World {
     if (state.type === "checker") {
       state.failed = false;
       state.ignoreZeros = ignoreZeros;
+    }
+    if (state.type === "rom") {
+      state.wrapX = wrapX;
+      state.wrapY = wrapY;
     }
     this.cells.charges[index] = 0;
     this.touchVisualRevision();
@@ -648,16 +663,29 @@ export class World {
       throw new Error(`Tile at index ${index} is not a ROM`);
     }
     const cellCount = state.values.length;
-    let nextCursor = (state.cursor + cursorDeltaX + cellCount) % cellCount;
+    const column = state.cursor % state.width;
+    const horizontalCursor = state.cursor + cursorDeltaX;
+    // Reject the entire horizontal move if its step or carry crosses a disabled edge.
+    const horizontalBlocked =
+      (!state.wrapX && (column + cursorDeltaX < 0 || column + cursorDeltaX >= state.width)) ||
+      (!state.wrapY && (horizontalCursor < 0 || horizontalCursor >= cellCount));
+    let nextCursor = horizontalBlocked
+      ? state.cursor
+      : (horizontalCursor + cellCount) % cellCount;
     if (cursorDeltaY !== 0) {
       const column = nextCursor % state.width;
       const row = (nextCursor - column) / state.width;
       const columnMajorCursor = column * state.height + row;
-      const nextColumnMajorCursor =
-        (columnMajorCursor + cursorDeltaY + cellCount) % cellCount;
-      const nextColumn = Math.floor(nextColumnMajorCursor / state.height);
-      const nextRow = nextColumnMajorCursor % state.height;
-      nextCursor = nextRow * state.width + nextColumn;
+      const verticalCursor = columnMajorCursor + cursorDeltaY;
+      const verticalBlocked =
+        (!state.wrapY && (row + cursorDeltaY < 0 || row + cursorDeltaY >= state.height)) ||
+        (!state.wrapX && (verticalCursor < 0 || verticalCursor >= cellCount));
+      if (!verticalBlocked) {
+        const nextColumnMajorCursor = (verticalCursor + cellCount) % cellCount;
+        const nextColumn = Math.floor(nextColumnMajorCursor / state.height);
+        const nextRow = nextColumnMajorCursor % state.height;
+        nextCursor = nextRow * state.width + nextColumn;
+      }
     }
     if (nextCursor !== state.cursor) {
       state.cursor = nextCursor;

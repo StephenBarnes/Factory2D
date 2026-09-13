@@ -157,7 +157,7 @@ describe("sequence checkers", () => {
 
   it("ignores gaps, retains progress through save/load, and latches success", () => {
     const { world, simulation } = createCheckerWorld([1, -1, 1]);
-    world.configureTernaryGrid(0, 1, 3, 1, [1, -1, 1], true);
+    world.configureTernaryGrid(0, 1, 3, 1, [1, -1, 1], { ignoreZeros: true });
     expect(drive(world, simulation, [0, 1, 0, 0])).toEqual([0, 0, 0, 0]);
     const restored = deserializeBoard(serializeBoard(world, simulation.tick)).world;
     expect(drive(restored, new Simulation(restored), [0, -1, 0, 1, 0, -1])).toEqual([
@@ -167,15 +167,15 @@ describe("sequence checkers", () => {
 
   it("still rejects an out-of-order nonzero input and rewinds when the mode changes", () => {
     const { world, simulation } = createCheckerWorld([1, -1]);
-    world.configureTernaryGrid(0, 1, 2, 1, [1, -1], true);
+    world.configureTernaryGrid(0, 1, 2, 1, [1, -1], { ignoreZeros: true });
     expect(drive(world, simulation, [1, 0, 1, 0, -1])).toEqual([0, 0, -1, -1, -1]);
-    world.configureTernaryGrid(0, 1, 2, 1, [1, -1], false);
+    world.configureTernaryGrid(0, 1, 2, 1, [1, -1], { ignoreZeros: false });
     expect(drive(world, simulation, [1, 0])).toEqual([0, -1]);
   });
 
   it("rejects expected zeros in pulse mode without changing the checker", () => {
     const { world, simulation } = createCheckerWorld([1, -1]);
-    expect(() => world.configureTernaryGrid(0, 1, 2, 1, [1, 0], true)).toThrow(RangeError);
+    expect(() => world.configureTernaryGrid(0, 1, 2, 1, [1, 0], { ignoreZeros: true })).toThrow(RangeError);
     expect(drive(world, simulation, [1, -1])).toEqual([0, 1]);
     const parsed = JSON.parse(serializeBoard(world, simulation.tick));
     parsed.components[0].ignoreZeros = true;

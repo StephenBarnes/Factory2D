@@ -161,6 +161,8 @@ export interface RomComponentState {
   width: number;
   height: number;
   cursor: number;
+  wrapX: boolean;
+  wrapY: boolean;
   values: Int8Array;
 }
 
@@ -271,6 +273,8 @@ export interface RomComponentSnapshot {
   readonly width: number;
   readonly height: number;
   readonly cursor: number;
+  readonly wrapX: boolean;
+  readonly wrapY: boolean;
   readonly values: readonly Charge[];
 }
 
@@ -381,6 +385,8 @@ export function createDefaultComponentState(
         width: DEFAULT_ROM_WIDTH,
         height: DEFAULT_ROM_HEIGHT,
         cursor: 0,
+        wrapX: true,
+        wrapY: true,
         values: new Int8Array(DEFAULT_ROM_WIDTH * DEFAULT_ROM_HEIGHT),
       };
     case TileKind.Lut:
@@ -450,6 +456,8 @@ export function cloneComponentState(
         width: state.width,
         height: state.height,
         cursor: state.cursor,
+        wrapX: state.wrapX,
+        wrapY: state.wrapY,
         values: state.values.slice(),
       };
     case "lut":
@@ -519,6 +527,8 @@ export function snapshotComponentState(
         width: state.width,
         height: state.height,
         cursor: state.cursor,
+        wrapX: state.wrapX,
+        wrapY: state.wrapY,
         values: Array.from(state.values) as Charge[],
       };
     case "lut":
@@ -593,6 +603,9 @@ export function validateComponentSnapshot(
       requireInteger(snapshot.width, "ROM width", MIN_ROM_DIMENSION, MAX_ROM_DIMENSION);
       requireInteger(snapshot.height, "ROM height", MIN_ROM_DIMENSION, MAX_ROM_DIMENSION);
       requireInteger(snapshot.cursor, "ROM cursor", 0, snapshot.width * snapshot.height - 1);
+      if (typeof snapshot.wrapX !== "boolean" || typeof snapshot.wrapY !== "boolean") {
+        throw new RangeError("ROM wrapping flags must be booleans");
+      }
       requireCharges(snapshot.values, snapshot.width * snapshot.height, "ROM values");
       break;
     case "lut":
@@ -687,6 +700,8 @@ export function stateFromSnapshot(
         width: snapshot.width,
         height: snapshot.height,
         cursor: snapshot.cursor,
+        wrapX: snapshot.wrapX,
+        wrapY: snapshot.wrapY,
         values: Int8Array.from(snapshot.values),
       };
     case "lut":
@@ -758,7 +773,11 @@ export function transformComponentSnapshot(
         cursor = destination;
       }
     });
-    return { type: "rom", width, height, cursor, values };
+    return {
+      type: "rom", width, height, cursor, values,
+      wrapX: swapAxes ? snapshot.wrapY : snapshot.wrapX,
+      wrapY: swapAxes ? snapshot.wrapX : snapshot.wrapY,
+    };
   }
   if (snapshot.type === "assembler") {
     return {

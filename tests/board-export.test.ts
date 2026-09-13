@@ -297,6 +297,8 @@ describe("board export", () => {
       width: 2,
       height: 2,
       cursor: 2,
+      wrapX: false,
+      wrapY: true,
       values: [0, 1, -1, 1],
     });
 
@@ -314,6 +316,8 @@ describe("board export", () => {
         width: 2,
         height: 2,
         cursor: 2,
+        wrapX: false,
+        wrapY: true,
         values: [0, 1, -1, 1],
       },
     ]);
@@ -335,6 +339,8 @@ describe("board export", () => {
       width: 2,
       height: 2,
       cursor: 2,
+      wrapX: false,
+      wrapY: true,
       values: [0, 1, -1, 1],
     });
 
