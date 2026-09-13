@@ -2105,11 +2105,28 @@ kbd {
   overflow-y: auto;
 }
 
+/* Keep corner inlays on the stationary frame; only the inner content scrolls. */
+.main-menu-dialog[open],
+.workshop-info-dialog[open],
+.component-configuration-dialog[open],
+.test-report-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.main-menu-dialog > form,
+.workshop-info-dialog > form,
+.component-configuration-dialog > form,
+.test-report-content {
+  min-height: 0;
+  overflow: auto;
+}
+
 .main-menu-dialog {
   width: min(520px, calc(100% - 32px));
   max-height: calc(100% - 32px);
   padding: 0;
-  overflow: auto;
+  overflow: hidden;
   border: 1px solid var(--bronze);
   border-radius: 2px;
   color: var(--text-body);
@@ -2124,6 +2141,7 @@ kbd {
 
 .main-menu-dialog form {
   display: grid;
+  grid-auto-rows: max-content;
 }
 
 .main-menu-dialog-status {
@@ -2160,7 +2178,7 @@ kbd {
 
 .settings-dialog-content {
   display: grid;
-  gap: 20px;
+  gap: 10px;
 }
 
 .settings-dialog-content > h2 {
@@ -2291,7 +2309,7 @@ kbd {
   width: min(560px, calc(100% - 32px));
   max-height: calc(100% - 32px);
   padding: 0;
-  overflow: auto;
+  overflow: hidden;
   border: 1px solid var(--bronze);
   border-radius: 2px;
   color: var(--text-body);
@@ -2305,6 +2323,7 @@ kbd {
 }
 .workshop-info-dialog form {
   display: grid;
+  grid-auto-rows: max-content;
 }
 
 
@@ -2573,7 +2592,7 @@ kbd {
   width: min(520px, calc(100% - 32px));
   max-height: calc(100% - 32px);
   padding: 0;
-  overflow: auto;
+  overflow: hidden;
   border: 1px solid var(--bronze);
   border-radius: 2px;
   color: var(--text-body);
@@ -2588,6 +2607,7 @@ kbd {
 
 .component-configuration-dialog form {
   display: grid;
+  grid-auto-rows: max-content;
 }
 
 .component-configuration-status {
@@ -2889,7 +2909,7 @@ kbd {
   width: min(520px, calc(100% - 32px));
   max-height: calc(100% - 32px);
   padding: 0;
-  overflow: auto;
+  overflow: hidden;
   border: 1px solid #74484b;
   border-radius: 2px;
   color: var(--text-body);
@@ -2929,7 +2949,7 @@ kbd {
   color: var(--emerald);
 }
 
-.test-report-dialog > p {
+.test-report-content > p {
   margin: 0 24px 20px;
   color: var(--text-mid);
   font-size: 0.86rem;
