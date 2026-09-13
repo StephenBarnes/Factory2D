@@ -626,8 +626,8 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 18,
       category: PaletteCategory.CircuitBasic,
-      description: "Copies the front tile's charge to three isolated outputs; front welds are non-conductive.",
-      extendedDescription: ["Reads the immediate front neighbor without needing a front circuit weld. Its other three sides output that previous-tick charge without joining the sensed network. Empty space reads 0."],
+      description: "Copies the first tile's charge ahead across empty space to three isolated outputs; front welds are non-conductive.",
+      extendedDescription: ["Looks straight ahead through empty space and reads the first block's near-side previous-tick charge, without needing a weld. Its other three sides output that charge without joining the sensed network. Any block stops the scan, including glass; non-circuit blocks and an empty line to the board edge read 0. At a rune array's edge-center port, sensing continues outside the array."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,

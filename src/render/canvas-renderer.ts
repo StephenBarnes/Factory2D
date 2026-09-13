@@ -1676,7 +1676,6 @@ export class CanvasRenderer {
         this.drawWeldOperationPreview(kind, orientation);
         break;
       case TileKind.Sensor:
-      case TileKind.ChargeSensor:
       case TileKind.Magnet:
       case TileKind.Piston:
       case TileKind.PistonBase:
@@ -1684,6 +1683,9 @@ export class CanvasRenderer {
       case TileKind.Grinder:
       case TileKind.Drill:
         this.drawSensorObservation(orientation);
+        break;
+      case TileKind.ChargeSensor:
+        this.drawSensorObservation(orientation, true);
         break;
       case TileKind.Rotator:
         this.drawRotatorReach(orientation);
@@ -1755,9 +1757,20 @@ export class CanvasRenderer {
     context.restore();
   }
 
-  private drawSensorObservation(orientation: Direction): void {
-    const x = this.hoverX + directionX(orientation);
-    const y = this.hoverY + directionY(orientation);
+  private drawSensorObservation(orientation: Direction, atDistance = false): void {
+    const dx = directionX(orientation);
+    const dy = directionY(orientation);
+    let x = this.hoverX + dx;
+    let y = this.hoverY + dy;
+    if (atDistance) {
+      while (
+        x >= 0 && x < this.world.width && y >= 0 && y < this.world.height &&
+        this.world.kindAt(x, y) === TileKind.Empty
+      ) {
+        x += dx;
+        y += dy;
+      }
+    }
     if (x < 0 || x >= this.world.width || y < 0 || y >= this.world.height) {
       return;
     }

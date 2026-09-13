@@ -279,6 +279,97 @@ describe("circuit networks", () => {
     },
   );
 
+  it.each([Direction.Up, Direction.Right, Direction.Down, Direction.Left])(
+    "senses the first distant tile's old charge in direction %s",
+    (orientation) => {
+      const world = new World(9, 9);
+      const dx = directionX(orientation);
+      const dy = directionY(orientation);
+      world.place(4, 4, TileKind.ChargeSensor, orientation);
+      world.place(4 - dx, 4 - dy, TileKind.Conduit);
+      world.setWeld(4, 4, 4 - dx, 4 - dy, true);
+      world.place(4 + dx * 3, 4 + dy * 3, TileKind.Conduit);
+      world.setCharge(4 + dx * 3, 4 + dy * 3, -1);
+      world.place(4 + dx * 4, 4 + dy * 4, TileKind.FixedCharge);
+      world.setCharge(4 + dx * 4, 4 + dy * 4, 1);
+      const runtime = new WorldRuntime(world);
+      const resolver = new CircuitResolver();
+
+      resolver.resolve(0, [runtime]);
+
+      expect(world.chargeAt(4 - dx, 4 - dy)).toBe(-1);
+      expect(world.chargeAt(4 + dx * 3, 4 + dy * 3)).toBe(0);
+      resolver.resolve(1, [runtime]);
+      expect(world.chargeAt(4 - dx, 4 - dy)).toBe(0);
+    },
+  );
+
+  it.each([TileKind.Stone, TileKind.Glass, TileKind.Conduit])(
+    "stops distance sensing at a neutral blocker of kind %s",
+    (blocker) => {
+      const world = new World(6, 1);
+      world.place(0, 0, TileKind.ChargeSensor, Direction.Right);
+      world.setCharge(0, 0, 1);
+      world.place(3, 0, blocker);
+      world.place(5, 0, TileKind.FixedCharge);
+      world.setCharge(5, 0, 1);
+
+      new Simulation(world).step();
+
+      expect(world.chargeAt(0, 0)).toBe(0);
+    },
+  );
+
+  it.each([
+    { orientation: Direction.Left, expected: -1 },
+    { orientation: Direction.Right, expected: 0 },
+  ] as const)("reads the distant near-side port, not a gate's stored output ($orientation)", ({
+    orientation, expected,
+  }) => {
+    const world = new World(5, 1);
+    world.place(0, 0, TileKind.ChargeSensor, Direction.Right);
+    world.place(4, 0, TileKind.Inverter, orientation);
+    world.setCharge(4, 0, -1);
+
+    new Simulation(world).step();
+
+    expect(world.chargeAt(0, 0)).toBe(expected);
+  });
+
+  it("reads neutral at the board edge without wrapping a horizontal scan into another row", () => {
+    const world = new World(5, 2);
+    world.place(2, 1, TileKind.ChargeSensor, Direction.Left);
+    world.setCharge(2, 1, 1);
+    world.place(4, 0, TileKind.Conduit);
+    world.setCharge(4, 0, -1);
+
+    new Simulation(world).step();
+
+    expect(world.chargeAt(2, 1)).toBe(0);
+  });
+
+  it("senses across empty gaps inside and outside nested array ports", () => {
+    const world = new World(5, 1);
+    world.place(0, 0, TileKind.Conduit);
+    world.setCharge(0, 0, -1);
+    world.place(4, 0, TileKind.RuneArray);
+    world.configureRuneArray(4, 0, 5, 1, "");
+    const inner = world.runeArrayWorldAt(4, 0);
+    inner.place(3, 0, TileKind.RuneArray);
+    inner.configureRuneArray(3, 0, 5, 1, "");
+    const deepest = inner.runeArrayWorldAt(3, 0);
+    deepest.place(3, 0, TileKind.ChargeSensor, Direction.Left);
+    deepest.place(4, 0, TileKind.Conduit);
+    deepest.setWeld(3, 0, 4, 0, true);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+
+    expect(deepest.chargeAt(4, 0)).toBe(-1);
+    simulation.step();
+    expect(deepest.chargeAt(4, 0)).toBe(0);
+  });
+
   it("senses a virtual array port without electrically joining it", () => {
     const world = new World(2, 1);
     world.place(0, 0, TileKind.FixedCharge);
