@@ -654,6 +654,28 @@ body:has(dialog[open]) .tool-cursor {
   letter-spacing: 0.13em;
 }
 
+.puzzle-briefing-difficulty {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  font-family: var(--font-mono);
+}
+
+.puzzle-briefing-difficulty > span {
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.puzzle-briefing-difficulty > strong {
+  color: var(--gold);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
 .puzzle-info-description {
   margin: 18px 0 0;
   color: var(--text-mid);

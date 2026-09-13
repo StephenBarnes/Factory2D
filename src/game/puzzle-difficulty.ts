@@ -1,10 +1,10 @@
 export const PUZZLE_DIFFICULTIES = {
-  tutorial: { label: "Tutorial puzzle", mark: "🎓" },
-  1: { label: "Easy — 1 of 5 stars", mark: "★" },
-  2: { label: "Medium — 2 of 5 stars", mark: "★★" },
-  3: { label: "Hard — 3 of 5 stars", mark: "★★★" },
-  4: { label: "Very Hard — 4 of 5 stars", mark: "★★★★" },
-  5: { label: "Expert — 5 of 5 stars", mark: "★★★★★" },
+  tutorial: { label: "Tutorial", mark: "🎓" },
+  1: { label: "Easy", mark: "★" },
+  2: { label: "Intermediate", mark: "★★" },
+  3: { label: "Difficult", mark: "★★★" },
+  4: { label: "Expert", mark: "★★★★" },
+  5: { label: "Masterwork", mark: "★★★★★" },
 } as const;
 
 export type PuzzleDifficulty = keyof typeof PUZZLE_DIFFICULTIES;

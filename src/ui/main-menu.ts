@@ -92,8 +92,10 @@ export function populatePuzzleMap(container: HTMLElement, options: MainMenuOptio
       const difficulty = document.createElement("span");
       difficulty.className = "puzzle-difficulty";
       difficulty.setAttribute("role", "img");
-      difficulty.setAttribute("aria-label", rating.label);
-      difficulty.title = rating.label;
+      difficulty.ariaLabel = puzzle.difficulty === "tutorial"
+        ? `${rating.label} puzzle`
+        : `${rating.label} — ${puzzle.difficulty} of 5 stars`;
+      difficulty.title = difficulty.ariaLabel;
       difficulty.textContent = rating.mark;
 
       const status = document.createElement("span");

@@ -1,3 +1,4 @@
+import { PUZZLE_DIFFICULTIES } from "../game/puzzle-difficulty";
 import type { SavedPuzzleSolution } from "../game/puzzle-solutions";
 import type { PuzzleDefinition } from "../game/puzzles";
 import { formatPuzzleScore } from "./puzzle-score-format";
@@ -23,6 +24,7 @@ function requiredDescendant<T extends HTMLElement>(root: HTMLElement, selector: 
 export class PuzzleInfoView {
   private readonly title: HTMLElement;
   private readonly description: HTMLElement;
+  private readonly difficulty: HTMLElement;
   private readonly goal: HTMLElement;
   private readonly solutionList: HTMLElement;
   private readonly emptySolutions: HTMLElement;
@@ -32,6 +34,7 @@ export class PuzzleInfoView {
   constructor(root: HTMLElement) {
     this.title = requiredDescendant(root, "#puzzle-info-title");
     this.description = requiredDescendant(root, "#puzzle-info-description");
+    this.difficulty = requiredDescendant(root, "#puzzle-briefing-difficulty");
     this.goal = requiredDescendant(root, "#puzzle-info-goal");
     this.solutionList = requiredDescendant(root, "#solution-list");
     this.emptySolutions = requiredDescendant(root, "#empty-solutions");
@@ -42,6 +45,12 @@ export class PuzzleInfoView {
   render(options: PuzzleInfoOptions): void {
     this.title.textContent = options.puzzle.name;
     this.description.textContent = options.puzzle.description;
+    const rating = PUZZLE_DIFFICULTIES[options.puzzle.difficulty];
+    this.difficulty.textContent = `${rating.mark} ${rating.label}`;
+    this.difficulty.ariaLabel = options.puzzle.difficulty === "tutorial"
+      ? `${rating.label} puzzle`
+      : `${rating.label} — ${options.puzzle.difficulty} of 5 stars`;
+    this.difficulty.title = this.difficulty.ariaLabel;
     this.goal.textContent = options.puzzle.goal;
 
     let bestCombinedScore = Number.POSITIVE_INFINITY;
