@@ -22,6 +22,7 @@ import { CellStorage } from "./cell-storage";
 import { isCharge, type Charge } from "./circuit";
 import { isProcessingMachine, processingRecipeFor } from "./furnace";
 import { PuzzleResult } from "./puzzle-result";
+import { recordProcessingAnimation } from "./processing-animation";
 import { validateTextBoxes, type TextBox } from "./text-box";
 import {
   requireRuneArrayDimension,
@@ -841,6 +842,7 @@ export class World {
       this.cells.orientations[targetIndex] = Direction.Up;
       this.cells.resetTransientState(targetIndex);
       this.clearDisallowedWeldsAtIndex(targetIndex);
+      recordProcessingAnimation(this, targetIndex, outputKind);
       changed = true;
       geometryChanged = true;
     }

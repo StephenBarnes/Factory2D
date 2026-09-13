@@ -31,6 +31,8 @@ import {
 } from "./tile-renderer";
 import { watchWeldAnimation, type WeldAnimation } from "../simulation/weld-animation";
 import { drawWeldSparks } from "./weld-sparks";
+import { watchProcessingAnimation, type ProcessingAnimation } from "../simulation/processing-animation";
+import { drawProcessingParticles } from "./processing-particles";
 
 
 const MAX_TILE_SIZE = 64;
@@ -108,6 +110,7 @@ export class CanvasRenderer {
   private rejectedRegionUntil = 0;
   private readonly rejectedCells = new Map<number, number>();
   private readonly weldAnimations: Map<number, WeldAnimation>;
+  private readonly processingAnimations: Map<number, ProcessingAnimation>;
 
   private cellSize = MAX_TILE_SIZE;
   private originX = 0;
@@ -179,6 +182,7 @@ export class CanvasRenderer {
     this.context = context;
     this.world = world;
     this.weldAnimations = watchWeldAnimation(world);
+    this.processingAnimations = watchProcessingAnimation(world);
     this.editableRegion = editableRegion;
     this.nestedView = nestedView;
     this.fitMargin = nestedView === null ? 0 : 1;
@@ -321,6 +325,7 @@ export class CanvasRenderer {
       !this.renderInvalidated &&
       !this.hasTimeDependentVisuals &&
       this.weldAnimations.size === 0 &&
+      this.processingAnimations.size === 0 &&
       this.renderedWorldRevision === this.world.revision &&
       this.renderedPreviousWorld === previousWorld &&
       this.renderedPreviousWorldRevision === previousWorldRevision &&
@@ -348,6 +353,12 @@ export class CanvasRenderer {
     this.drawEditRejection();
     if (drawWeldSparks(
       context, this.weldAnimations, this.world.width, this.world.height,
+      this.originX, this.originY, this.cellSize,
+    )) {
+      this.hasTimeDependentVisuals = true;
+    }
+    if (drawProcessingParticles(
+      context, this.processingAnimations, this.world.width, this.world.height,
       this.originX, this.originY, this.cellSize,
     )) {
       this.hasTimeDependentVisuals = true;
