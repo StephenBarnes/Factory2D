@@ -1,5 +1,6 @@
 import { expectDefined } from "../util/assert";
 import { recordRotationAnimation } from "./rotation-animation";
+import { recordShatterAnimation } from "./shatter-animation";
 import {
   Direction,
   directionX,
@@ -108,6 +109,7 @@ export class RotatorResolver {
           const destination = this.destinationFor(source, proposal.pivot, proposal.quarterTurn);
           if (this.world.kindAtIndex(destination) === TileKind.Fastener) {
             const x = destination % this.world.width;
+            recordShatterAnimation(this.world, destination);
             this.world.place(x, (destination - x) / this.world.width, TileKind.Empty);
           }
         }

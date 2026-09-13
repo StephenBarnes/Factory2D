@@ -34,6 +34,8 @@ import { watchWeldAnimation, type WeldAnimation } from "../simulation/weld-anima
 import { drawWeldSparks } from "./weld-sparks";
 import { watchProcessingAnimation, type ProcessingAnimation } from "../simulation/processing-animation";
 import { drawProcessingParticles } from "./processing-particles";
+import { watchShatterAnimation, type ShatterAnimation } from "../simulation/shatter-animation";
+import { drawShatterParticles } from "./shatter-particles";
 
 
 const MAX_TILE_SIZE = 64;
@@ -112,6 +114,7 @@ export class CanvasRenderer {
   private readonly rejectedCells = new Map<number, number>();
   private readonly weldAnimations: Map<number, WeldAnimation>;
   private readonly processingAnimations: Map<number, ProcessingAnimation>;
+  private readonly shatterAnimations: Map<number, ShatterAnimation>;
 
   private cellSize = MAX_TILE_SIZE;
   private originX = 0;
@@ -184,6 +187,7 @@ export class CanvasRenderer {
     this.world = world;
     this.weldAnimations = watchWeldAnimation(world);
     this.processingAnimations = watchProcessingAnimation(world);
+    this.shatterAnimations = watchShatterAnimation(world);
     this.editableRegion = editableRegion;
     this.nestedView = nestedView;
     this.fitMargin = nestedView === null ? 0 : 1;
@@ -329,6 +333,9 @@ export class CanvasRenderer {
       // Discard hidden bursts before frame invalidation so they neither redraw nor replay later.
       this.processingAnimations.clear();
     }
+    if (!animationsEnabled || this.cellSize < 6) {
+      this.shatterAnimations.clear();
+    }
     const boundedProgress = Math.max(0, Math.min(1, progress));
     const previousWorldRevision = previousWorld?.revision ?? -1;
     const nestedPortCharges = this.nestedPortChargeKey();
@@ -337,6 +344,7 @@ export class CanvasRenderer {
       !this.hasTimeDependentVisuals &&
       this.weldAnimations.size === 0 &&
       this.processingAnimations.size === 0 &&
+      this.shatterAnimations.size === 0 &&
       this.renderedWorldRevision === this.world.revision &&
       this.renderedPreviousWorld === previousWorld &&
       this.renderedPreviousWorldRevision === previousWorldRevision &&
@@ -355,6 +363,12 @@ export class CanvasRenderer {
     this.drawGrid();
     this.drawNestedPorts(animationTime);
     this.drawTiles(previousWorld, boundedProgress, animationTime);
+    if (drawShatterParticles(
+      context, this.shatterAnimations, this.world.width, this.world.height,
+      this.originX, this.originY, this.cellSize,
+    )) {
+      this.hasTimeDependentVisuals = true;
+    }
     this.drawEditableRegion();
     this.drawEditableRegionAuthoring();
     this.drawTileSelection(animationTime);

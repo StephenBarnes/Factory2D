@@ -53,7 +53,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 ## Animations
 
 * Add animation for the delivery box, assembler, duplicator, lock gate. When they consume a body, animate the body shrinking, moving towards the block, and lowering opacity until it vanishes. When they produce a body, animate the opposite.
-* Animate fragile blocks shattering - maybe split them in half across say a line at 30 degrees from vertical, then animate the halves moving apart and fading out from one tick to the next. Could ignore decorations and show only a rounded square with the block's background color. Use the same shatter animation for blocks broken by mining devices, and fasteners that break.
 
 # Content
 
