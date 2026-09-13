@@ -1663,8 +1663,8 @@ export class World {
 
   moveBodies(
     bodyRoots: Int32Array,
-    horizontalMoves: Int8Array,
-    verticalMoves: Int8Array,
+    horizontalMoves: Int16Array,
+    verticalMoves: Int16Array,
   ): number {
     if (
       bodyRoots.length !== this.cellCount ||
@@ -1683,9 +1683,6 @@ export class World {
       const root = expectDefined(bodyRoots[source], "moving body root");
       const moveX = expectDefined(horizontalMoves[root], "horizontal body movement");
       const moveY = expectDefined(verticalMoves[root], "vertical body movement");
-      if (moveX < -1 || moveX > 1 || moveY < -1 || moveY > 1) {
-        throw new RangeError(`Invalid body movement (${moveX}, ${moveY})`);
-      }
       if (moveX === 0 && moveY === 0) {
         continue;
       }

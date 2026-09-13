@@ -35,8 +35,8 @@ export class MotionWorkspace {
   private readonly gravityActivated: Uint8Array;
   private hasFloatingTiles = false;
   private readonly bodySlidesDiagonally: Uint8Array;
-  private readonly horizontalMoves: Int8Array;
-  private readonly verticalMoves: Int8Array;
+  private readonly horizontalMoves: Int16Array;
+  private readonly verticalMoves: Int16Array;
   private readonly gravityHorizontalMoves: Int8Array;
   private readonly gravityVerticalMoves: Int8Array;
   private readonly bodyForceX: Int32Array;
@@ -68,6 +68,14 @@ export class MotionWorkspace {
   private readonly pistonRecoilExtensions: Uint8Array;
   private readonly pistonTransitionActions: Int8Array;
   private readonly pistonTransitionHeadWelds: Uint8Array;
+  private readonly pistonQueue: Int32Array;
+  private readonly pistonQueued: Uint8Array;
+  private pistonQueueHead = 0;
+  private pistonQueueTail = 0;
+  private pistonQueueLength = 0;
+  private readonly pistonTargetHeads: Int32Array;
+  private readonly pistonNextTarget: Int32Array;
+  private readonly pistonDisplacements: Int16Array;
   private readonly breakingFastenerDestinations: number[] = [];
 
   constructor(world: World) {
@@ -80,15 +88,17 @@ export class MotionWorkspace {
     this.bodyImmovable = new Uint8Array(world.cellCount);
     this.gravityActivated = new Uint8Array(world.cellCount);
     this.bodySlidesDiagonally = new Uint8Array(world.cellCount);
-    this.horizontalMoves = new Int8Array(world.cellCount);
-    this.verticalMoves = new Int8Array(world.cellCount);
+    this.horizontalMoves = new Int16Array(world.cellCount);
+    this.verticalMoves = new Int16Array(world.cellCount);
     this.gravityHorizontalMoves = new Int8Array(world.cellCount);
     this.gravityVerticalMoves = new Int8Array(world.cellCount);
     this.bodyForceX = new Int32Array(world.cellCount);
     this.bodyForceY = new Int32Array(world.cellCount);
     this.drivenBodies = new Uint8Array(world.cellCount);
-    this.movementGroupRoots = new Int32Array(world.cellCount);
-    this.blockedMovementGroups = new Uint8Array(world.cellCount);
+    // Body nodes precede piston-intent nodes. Stationary shared bases do not
+    // couple otherwise independent strokes; moving bases do.
+    this.movementGroupRoots = new Int32Array(world.cellCount * 2);
+    this.blockedMovementGroups = new Uint8Array(world.cellCount * 2);
     this.movementQueue = new Int32Array(world.cellCount);
     this.jammedBodies = new Uint8Array(world.cellCount);
     this.destinationOwners = new Int32Array(world.cellCount);
@@ -112,6 +122,11 @@ export class MotionWorkspace {
     this.pistonRecoilExtensions = new Uint8Array(world.cellCount);
     this.pistonTransitionActions = new Int8Array(world.cellCount);
     this.pistonTransitionHeadWelds = new Uint8Array(world.cellCount);
+    this.pistonQueue = new Int32Array(world.cellCount * 2);
+    this.pistonQueued = new Uint8Array(world.cellCount * 2);
+    this.pistonTargetHeads = new Int32Array(world.cellCount);
+    this.pistonNextTarget = new Int32Array(world.cellCount);
+    this.pistonDisplacements = new Int16Array(world.cellCount * 4);
   }
 
   resolveOrdinaryMovements(tick: number): number {
@@ -131,6 +146,13 @@ export class MotionWorkspace {
   }
 
   resolvePistons(): number {
+    let active = this.world.firstFeatureIndex(WorldFeature.Piston);
+    while (active >= 0 && this.pistonActionAt(active) === 0) {
+      active = this.world.nextFeatureIndex(WorldFeature.Piston, active);
+    }
+    if (active < 0) {
+      return 0;
+    }
     this.collectPistonBodies();
     this.collectBodyMembers();
     this.collectPistonActions();
@@ -138,7 +160,7 @@ export class MotionWorkspace {
     // switch to base recoil before the complete piston intent set is resolved again.
     this.resolvePistonMovements();
     if (this.choosePistonRecoilExtensions()) {
-      this.rebuildPistonForces();
+      this.preparePistonConstraints();
       this.resolvePistonMovements();
     }
     this.validatePistonMovements();
@@ -283,12 +305,9 @@ export class MotionWorkspace {
     this.pistonArmIds.fill(0);
     this.pistonTargetRoots.fill(-1);
     this.pistonBaseRoots.fill(-1);
-    this.pistonCanPush.fill(0);
     this.pistonAnchoredBodies.fill(0);
     this.pistonVacatedOwners.fill(-1);
     this.pistonRecoilExtensions.fill(0);
-    this.bodyForceX.fill(0);
-    this.bodyForceY.fill(0);
     this.destinationOwners.fill(-1);
 
     for (
@@ -417,7 +436,7 @@ export class MotionWorkspace {
         this.pistonVacatedOwners[arm] = targetRoot;
       }
     }
-    this.rebuildPistonForces();
+    this.preparePistonConstraints();
   }
 
   private choosePistonRecoilExtensions(): boolean {
@@ -430,16 +449,9 @@ export class MotionWorkspace {
       if (expectDefined(this.pistonActions[base], "piston action") !== 1) {
         continue;
       }
-      const targetRoot = expectDefined(this.pistonTargetRoots[base], "piston target root");
-      if (targetRoot < 0) {
-        continue;
-      }
-      const orientation = this.world.orientationAtIndex(base);
       if (
-        expectDefined(this.horizontalMoves[targetRoot], "piston target horizontal movement") ===
-          directionX(orientation) &&
-        expectDefined(this.verticalMoves[targetRoot], "piston target vertical movement") ===
-          directionY(orientation)
+        this.pistonRecoilExtensions[base] === 1 ||
+        !this.isMovementGroupBlocked(this.world.cellCount + base)
       ) {
         continue;
       }
@@ -449,12 +461,12 @@ export class MotionWorkspace {
     return foundRecoil;
   }
 
-  private rebuildPistonForces(): void {
-    this.bodyForceX.fill(0);
-    this.bodyForceY.fill(0);
+  private preparePistonConstraints(): void {
     this.pistonCanPush.fill(0);
     this.pistonAnchoredBodies.fill(0);
     this.pistonVacatedOwners.fill(-1);
+    this.pistonTargetHeads.fill(-1);
+    this.pistonNextTarget.fill(-1);
 
     for (
       let base = this.world.firstFeatureIndex(WorldFeature.Piston);
@@ -463,34 +475,39 @@ export class MotionWorkspace {
     ) {
       const action = expectDefined(this.pistonActions[base], "piston action");
       if (action === 0) {
+        if (this.pistonActionAt(base) === 1) {
+          // A conflicting stroke must not be carried as though it had succeeded,
+          // nor may its temporarily split head weld be torn apart by another push.
+          const root = expectDefined(this.bodyRoots[base], "rejected piston base root");
+          this.pistonAnchoredBodies[root] = 1;
+          const orientation = this.world.orientationAtIndex(base);
+          if (this.world.hasWeldAtIndex(base, orientation)) {
+            const head = this.neighborIndex(base, orientation);
+            this.pistonAnchoredBodies[expectDefined(this.bodyRoots[head], "rejected piston head root")] = 1;
+          }
+        }
         continue;
       }
-      const orientation = this.world.orientationAtIndex(base);
       const baseRoot = expectDefined(this.pistonBaseRoots[base], "piston base root");
-      if (action === 1 && this.pistonRecoilExtensions[base] === 1) {
-        this.addBodyForce(baseRoot, oppositeDirection(orientation));
-        this.pistonCanPush[baseRoot] = 1;
-        continue;
-      }
-
-      this.pistonAnchoredBodies[baseRoot] = 1;
-      if (action === -1) {
-        const arm = this.neighborIndex(base, orientation);
-        const armRoot = expectDefined(this.bodyRoots[arm], "piston arm body");
-        this.pistonAnchoredBodies[armRoot] = 1;
-      }
-
       const targetRoot = expectDefined(this.pistonTargetRoots[base], "piston target root");
-      if (targetRoot < 0) {
-        continue;
-      }
-      const moveDirection = action === 1 ? orientation : oppositeDirection(orientation);
-      this.addBodyForce(targetRoot, moveDirection);
       if (action === 1) {
-        this.pistonCanPush[targetRoot] = 1;
+        if (this.pistonRecoilExtensions[base] === 1) {
+          this.pistonCanPush[baseRoot] = 1;
+          if (targetRoot >= 0) {
+            this.pistonNextTarget[base] = expectDefined(this.pistonTargetHeads[targetRoot], "recoil target head");
+            this.pistonTargetHeads[targetRoot] = base;
+          }
+        } else if (targetRoot >= 0) {
+          this.pistonCanPush[targetRoot] = 1;
+        }
       } else {
-        const arm = this.neighborIndex(base, orientation);
-        this.pistonVacatedOwners[arm] = targetRoot;
+        const arm = this.neighborIndex(base, this.world.orientationAtIndex(base));
+        const armRoot = expectDefined(this.bodyRoots[arm], "piston arm body");
+        this.pistonAnchoredBodies[baseRoot] = 1;
+        this.pistonAnchoredBodies[armRoot] = 1;
+        if (targetRoot >= 0) {
+          this.pistonVacatedOwners[arm] = targetRoot;
+        }
       }
     }
   }
@@ -505,23 +522,7 @@ export class MotionWorkspace {
       if (action === 0) {
         continue;
       }
-      const orientation = this.world.orientationAtIndex(base);
-      const recoils = action === 1 && this.pistonRecoilExtensions[base] === 1;
-      const movementRoot = recoils
-        ? expectDefined(this.pistonBaseRoots[base], "piston base root")
-        : expectDefined(this.pistonTargetRoots[base], "piston target root");
-      if (movementRoot < 0) {
-        continue;
-      }
-      const movementDirection = recoils || action === -1
-        ? oppositeDirection(orientation)
-        : orientation;
-      if (
-        expectDefined(this.horizontalMoves[movementRoot], "piston horizontal movement") !==
-          directionX(movementDirection) ||
-        expectDefined(this.verticalMoves[movementRoot], "piston vertical movement") !==
-          directionY(movementDirection)
-      ) {
+      if (this.isMovementGroupBlocked(this.world.cellCount + base)) {
         this.pistonActions[base] = 0;
       }
     }
@@ -539,14 +540,12 @@ export class MotionWorkspace {
       if (action === 0) {
         continue;
       }
-      const transitionBase = action === 1 && this.pistonRecoilExtensions[base] === 1
-        ? this.neighborIndex(
-            base,
-            oppositeDirection(this.world.orientationAtIndex(base)),
-          )
-        : base;
-      if (transitionBase < 0) {
-        throw new Error(`Piston recoil at index ${base} leaves the world`);
+      const root = expectDefined(this.pistonBaseRoots[base], "piston transition base root");
+      const transitionBase = base +
+        expectDefined(this.horizontalMoves[root], "piston base horizontal movement") +
+        expectDefined(this.verticalMoves[root], "piston base vertical movement") * this.world.width;
+      if (transitionBase < 0 || transitionBase >= this.world.cellCount) {
+        throw new Error(`Piston transition at index ${base} leaves the world`);
       }
       if (this.pistonTransitionActions[transitionBase] !== 0) {
         throw new Error(`Piston transitions conflict at index ${transitionBase}`);
@@ -565,7 +564,11 @@ export class MotionWorkspace {
     this.drivenBodies.fill(0);
     this.movementGroupRoots.fill(-1);
     this.blockedMovementGroups.fill(0);
-    let queueLength = 0;
+    this.pistonQueued.fill(0);
+    this.pistonDisplacements.fill(0);
+    this.pistonQueueHead = 0;
+    this.pistonQueueTail = 0;
+    this.pistonQueueLength = 0;
 
     for (
       let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
@@ -577,123 +580,68 @@ export class MotionWorkspace {
       }
     }
     for (
-      let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
-      root >= 0;
-      root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+      let base = this.world.firstFeatureIndex(WorldFeature.Piston);
+      base >= 0;
+      base = this.world.nextFeatureIndex(WorldFeature.Piston, base)
     ) {
-      // A fixed base cannot transmit a translation into the load its own head
-      // is pushing. Queuing it would merge that valid push with a blocked one.
-      if (
-        expectDefined(this.bodyHeads[root], "piston body head") < 0 ||
-        this.bodyImmovable[root] === 1 ||
-        this.pistonAnchoredBodies[root] === 1
-      ) {
-        continue;
-      }
-      const forceX = expectDefined(this.bodyForceX[root], "piston horizontal force");
-      const forceY = expectDefined(this.bodyForceY[root], "piston vertical force");
-      if ((forceX === 0) === (forceY === 0)) {
-        continue;
-      }
-      this.horizontalMoves[root] = forceX < 0 ? -1 : forceX > 0 ? 1 : 0;
-      this.verticalMoves[root] = forceY < 0 ? -1 : forceY > 0 ? 1 : 0;
-      this.drivenBodies[root] = 1;
-      this.movementQueue[queueLength] = root;
-      queueLength += 1;
-    }
-
-    let queueHead = 0;
-    while (queueHead < queueLength) {
-      const root = expectDefined(this.movementQueue[queueHead], "piston movement queue entry");
-      queueHead += 1;
-      const moveX = expectDefined(this.horizontalMoves[root], "piston horizontal movement");
-      const moveY = expectDefined(this.verticalMoves[root], "piston vertical movement");
-      for (
-        let member = expectDefined(this.bodyHeads[root], "piston body head");
-        member >= 0;
-        member = expectDefined(this.nextBodyMember[member], "next piston body member")
-      ) {
-        const x = member % this.world.width;
-        const y = (member - x) / this.world.width;
-        const destinationX = x + moveX;
-        const destinationY = y + moveY;
-        if (
-          destinationX < 0 ||
-          destinationX >= this.world.width ||
-          destinationY < 0 ||
-          destinationY >= this.world.height
-        ) {
-          this.blockMovementGroup(root);
-          continue;
+      if (this.pistonActions[base] !== 0) {
+        const intent = this.world.cellCount + base;
+        this.movementGroupRoots[intent] = intent;
+        const orientation = this.world.orientationAtIndex(base);
+        const direction = this.pistonRecoilExtensions[base] === 1 ? oppositeDirection(orientation) : orientation;
+        if (direction === Direction.Right || direction === Direction.Down) {
+          this.queuePistonConstraint(intent);
         }
-        const destination = destinationY * this.world.width + destinationX;
-        const blocker = expectDefined(this.bodyRoots[destination], "piston movement blocker");
-        if (
-          blocker < 0 ||
-          blocker === root ||
-          expectDefined(this.pistonVacatedOwners[destination], "piston vacancy owner") === root
-        ) {
-          continue;
-        }
-        if (
-          this.pistonCanPush[root] === 0 ||
-          this.bodyImmovable[blocker] === 1 ||
-          this.pistonAnchoredBodies[blocker] === 1
-        ) {
-          this.blockMovementGroup(root);
-          continue;
-        }
-        if (this.drivenBodies[blocker] === 0) {
-          this.drivenBodies[blocker] = 1;
-          this.pistonCanPush[blocker] = 1;
-          this.horizontalMoves[blocker] = moveX;
-          this.verticalMoves[blocker] = moveY;
-          this.movementQueue[queueLength] = blocker;
-          queueLength += 1;
-          this.unionMovementGroups(root, blocker);
-          continue;
-        }
-        if (
-          this.horizontalMoves[blocker] !== moveX ||
-          this.verticalMoves[blocker] !== moveY
-        ) {
-          this.blockMovementGroup(root);
-          this.blockMovementGroup(blocker);
-          continue;
-        }
-        this.unionMovementGroups(root, blocker);
       }
     }
-
-    this.destinationOwners.fill(-1);
+    // Seed ordinary stacks from their driving end to avoid revisiting every
+    // earlier stroke as each additional cell of inherited motion arrives.
+    // This changes work order, never acceptance: all constraints still settle.
     for (
-      let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
-      root >= 0;
-      root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+      let base = this.world.lastFeatureIndex(WorldFeature.Piston);
+      base >= 0;
+      base = this.world.previousFeatureIndex(WorldFeature.Piston, base)
     ) {
-      if (this.drivenBodies[root] === 0 || this.isMovementGroupBlocked(root)) {
+      if (this.pistonActions[base] === 0) {
         continue;
       }
-      const moveX = expectDefined(this.horizontalMoves[root], "piston horizontal movement");
-      const moveY = expectDefined(this.verticalMoves[root], "piston vertical movement");
-      for (
-        let member = expectDefined(this.bodyHeads[root], "piston body head");
-        member >= 0;
-        member = expectDefined(this.nextBodyMember[member], "next piston body member")
-      ) {
-        const destination = member + moveX + moveY * this.world.width;
-        const owner = expectDefined(this.destinationOwners[destination], "piston destination owner");
-        if (
-          owner >= 0 &&
-          this.findMovementGroup(owner) !== this.findMovementGroup(root)
-        ) {
-          this.blockMovementGroup(root);
-          this.blockMovementGroup(owner);
-        } else {
-          this.destinationOwners[destination] = root;
+      const orientation = this.world.orientationAtIndex(base);
+      const direction = this.pistonRecoilExtensions[base] === 1 ? oppositeDirection(orientation) : orientation;
+      if (direction === Direction.Up || direction === Direction.Left) {
+        this.queuePistonConstraint(this.world.cellCount + base);
+      }
+    }
+
+    // Displacement demands grow monotonically along compatible axes. Revisit
+    // only affected bodies and strokes; a cycle reaches a board bound and jams.
+    while (this.pistonQueueLength > 0) {
+      const node = expectDefined(this.pistonQueue[this.pistonQueueHead], "piston constraint queue entry");
+      this.pistonQueueHead = (this.pistonQueueHead + 1) % this.pistonQueue.length;
+      this.pistonQueueLength -= 1;
+      this.pistonQueued[node] = 0;
+      if (node >= this.world.cellCount) {
+        this.propagatePistonStroke(node - this.world.cellCount);
+      } else {
+        for (let direction: Direction = Direction.Up; direction <= Direction.Left; direction += 1) {
+          const distance = expectDefined(this.pistonDisplacements[node * 4 + direction], "piston directional displacement");
+          if (distance === 0) {
+            continue;
+          }
+          for (
+            let member = expectDefined(this.bodyHeads[node], "piston moving body head");
+            member >= 0;
+            member = expectDefined(this.nextBodyMember[member], "next piston moving member")
+          ) {
+            this.pushPistonPath(member, distance * directionX(direction), distance * directionY(direction),
+              node, node, this.pistonCanPush[node] === 1);
+          }
         }
       }
     }
+
+    this.validatePistonHeadConstraints();
+    this.reservePistonSweeps();
+    this.validatePistonDestinations();
     for (
       let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
       root >= 0;
@@ -704,6 +652,320 @@ export class MotionWorkspace {
         this.verticalMoves[root] = 0;
       }
     }
+  }
+
+  private queuePistonConstraint(node: number): void {
+    if (this.pistonQueued[node] === 1) {
+      return;
+    }
+    this.pistonQueued[node] = 1;
+    this.pistonQueue[this.pistonQueueTail] = node;
+    this.pistonQueueTail = (this.pistonQueueTail + 1) % this.pistonQueue.length;
+    this.pistonQueueLength += 1;
+  }
+
+  private requestPistonDisplacement(
+    root: number,
+    moveX: number,
+    moveY: number,
+    intent: number,
+    canPush: boolean,
+  ): void {
+    if (moveX === 0 && moveY === 0) {
+      return;
+    }
+    // Fixed bodies do not transmit a rejected translation to unrelated heads.
+    if (this.bodyImmovable[root] === 1 || this.pistonAnchoredBodies[root] === 1) {
+      this.blockMovementGroup(intent);
+      return;
+    }
+    this.unionMovementGroups(intent, root);
+    if (Math.abs(moveX) >= this.world.width || Math.abs(moveY) >= this.world.height) {
+      this.blockMovementGroup(root);
+      // Bound cyclic demands while still discovering every in-board dependency.
+      moveX = Math.sign(moveX) * Math.min(Math.abs(moveX), this.world.width - 1);
+      moveY = Math.sign(moveY) * Math.min(Math.abs(moveY), this.world.height - 1);
+    }
+    let changed = canPush && this.pistonCanPush[root] === 0;
+    let directions = 0;
+    for (let direction: Direction = Direction.Up; direction <= Direction.Left; direction += 1) {
+      const slot = root * 4 + direction;
+      const previous = expectDefined(this.pistonDisplacements[slot], "previous directional piston demand");
+      const requested = moveX * directionX(direction) + moveY * directionY(direction);
+      if (requested > previous) {
+        this.pistonDisplacements[slot] = requested;
+        changed = true;
+      }
+      if (this.pistonDisplacements[slot] !== 0) {
+        directions += 1;
+      }
+    }
+    // Keep every conflicting directional demand for dependency discovery.
+    // Retaining only the first would let queue order choose which neighbors jam.
+    if (directions > 1) {
+      this.blockMovementGroup(root);
+    }
+    if (canPush) {
+      this.pistonCanPush[root] = 1;
+    }
+    if (!changed) {
+      return;
+    }
+    this.horizontalMoves[root] = expectDefined(this.pistonDisplacements[root * 4 + Direction.Right], "right piston demand") -
+      expectDefined(this.pistonDisplacements[root * 4 + Direction.Left], "left piston demand");
+    this.verticalMoves[root] = expectDefined(this.pistonDisplacements[root * 4 + Direction.Down], "down piston demand") -
+      expectDefined(this.pistonDisplacements[root * 4 + Direction.Up], "up piston demand");
+    this.drivenBodies[root] = 1;
+    this.queuePistonConstraint(root);
+    for (
+      let member = expectDefined(this.bodyHeads[root], "displaced piston body head");
+      member >= 0;
+      member = expectDefined(this.nextBodyMember[member], "next displaced piston member")
+    ) {
+      if (this.pistonActions[member] !== 0) {
+        this.queuePistonConstraint(this.world.cellCount + member);
+      }
+    }
+    for (
+      let base = expectDefined(this.pistonTargetHeads[root], "recoil dependency head");
+      base >= 0;
+      base = expectDefined(this.pistonNextTarget[base], "next recoil dependency")
+    ) {
+      this.queuePistonConstraint(this.world.cellCount + base);
+    }
+  }
+
+  private propagatePistonStroke(base: number): void {
+    const intent = this.world.cellCount + base;
+    const root = expectDefined(this.pistonBaseRoots[base], "piston stroke base root");
+    const target = expectDefined(this.pistonTargetRoots[base], "piston stroke target root");
+    const orientation = this.world.orientationAtIndex(base);
+    const stepX = directionX(orientation);
+    const stepY = directionY(orientation);
+    if (this.drivenBodies[root] === 1) {
+      this.unionMovementGroups(intent, root);
+    }
+    if (this.pistonActions[base] === -1) {
+      if (target >= 0) {
+        this.requestPistonDisplacement(target, -stepX, -stepY, intent, false);
+      }
+      return;
+    }
+    const recoils = this.pistonRecoilExtensions[base] === 1;
+    if (recoils) {
+      this.requestPistonDisplacement(root, -stepX, -stepY, intent, true);
+      if (target >= 0 && this.drivenBodies[target] === 1) {
+        this.unionMovementGroups(intent, target);
+        for (let direction: Direction = Direction.Up; direction <= Direction.Left; direction += 1) {
+          const distance = expectDefined(this.pistonDisplacements[target * 4 + direction], "recoil brace displacement");
+          if (distance > 0) {
+            this.requestPistonDisplacement(root,
+              distance * directionX(direction) - stepX,
+              distance * directionY(direction) - stepY, intent, true);
+          }
+        }
+      }
+    } else {
+      this.propagatePistonHead(base, root, target, stepX, stepY);
+    }
+    for (let direction: Direction = Direction.Up; direction <= Direction.Left; direction += 1) {
+      const distance = expectDefined(this.pistonDisplacements[root * 4 + direction], "carried piston displacement");
+      if (distance > 0) {
+        this.propagatePistonHead(base, root, target,
+          distance * directionX(direction) + stepX,
+          distance * directionY(direction) + stepY);
+      }
+    }
+  }
+
+  private propagatePistonHead(base: number, root: number, target: number, headX: number, headY: number): void {
+    const intent = this.world.cellCount + base;
+    if (this.pistonHeadWelds[base] === 1 && target >= 0) {
+      this.requestPistonDisplacement(target, headX, headY, intent, true);
+    }
+    this.pushPistonPath(base, headX, headY, root, intent, true);
+  }
+
+  private pushPistonPath(
+    source: number,
+    moveX: number,
+    moveY: number,
+    root: number,
+    intent: number,
+    canPush: boolean,
+  ): void {
+    const x = source % this.world.width;
+    const y = (source - x) / this.world.width;
+    if (moveX !== 0 && moveY !== 0) {
+      this.blockMovementGroup(intent);
+      return;
+    }
+    const stepX = Math.sign(moveX);
+    const stepY = Math.sign(moveY);
+    const distance = Math.abs(moveX) + Math.abs(moveY);
+    const clearance = stepX < 0 ? x : stepX > 0 ? this.world.width - 1 - x
+      : stepY < 0 ? y : this.world.height - 1 - y;
+    if (distance > clearance) {
+      this.blockMovementGroup(intent);
+    }
+    const stride = stepX + stepY * this.world.width;
+    for (let step = 1; step <= Math.min(distance, clearance); step += 1) {
+      const cell = source + step * stride;
+      const blocker = expectDefined(this.bodyRoots[cell], "piston swept blocker");
+      if (blocker < 0 || blocker === root || this.pistonVacatedOwners[cell] === root) {
+        continue;
+      }
+      if (!canPush) {
+        this.blockMovementGroup(intent);
+      } else {
+        const required = distance - step + 1;
+        this.requestPistonDisplacement(blocker, required * stepX, required * stepY, intent, true);
+      }
+      // The nearest solid body must clear the rest of this ray. Its own
+      // constraint propagation handles bodies farther ahead without rescanning.
+      return;
+    }
+  }
+
+  private validatePistonHeadConstraints(): void {
+    for (
+      let base = this.world.firstFeatureIndex(WorldFeature.Piston);
+      base >= 0;
+      base = this.world.nextFeatureIndex(WorldFeature.Piston, base)
+    ) {
+      const action = expectDefined(this.pistonActions[base], "piston head constraint action");
+      const target = expectDefined(this.pistonTargetRoots[base], "piston head constraint target");
+      if (action === 0 || target < 0 || this.pistonHeadWelds[base] === 0) {
+        continue;
+      }
+      const root = expectDefined(this.pistonBaseRoots[base], "piston head constraint base");
+      const orientation = this.world.orientationAtIndex(base);
+      if (
+        this.horizontalMoves[target] !== expectDefined(this.horizontalMoves[root], "piston base horizontal displacement") + action * directionX(orientation) ||
+        this.verticalMoves[target] !== expectDefined(this.verticalMoves[root], "piston base vertical displacement") + action * directionY(orientation)
+      ) {
+        if (this.drivenBodies[target] === 1) {
+          this.unionMovementGroups(this.world.cellCount + base, target);
+        }
+        this.blockMovementGroup(this.world.cellCount + base);
+      }
+    }
+  }
+
+  private reservePistonPath(source: number, moveX: number, moveY: number, owner: number): void {
+    const stride = Math.sign(moveX) + Math.sign(moveY) * this.world.width;
+    const distance = Math.abs(moveX) + Math.abs(moveY);
+    for (let step = 0; step <= distance; step += 1) {
+      const cell = source + step * stride;
+      const previous = expectDefined(this.destinationOwners[cell], "piston swept cell owner");
+      if (previous >= 0 && this.findMovementGroup(previous) !== this.findMovementGroup(owner)) {
+        this.blockMovementGroup(previous);
+        this.blockMovementGroup(owner);
+      } else {
+        this.destinationOwners[cell] = owner;
+      }
+    }
+  }
+
+  private reservePistonSweeps(): void {
+    this.destinationOwners.fill(-1);
+    // Freeze eligibility before recording any collision. Every member of a
+    // proposal must still claim its path after an earlier member hits a rival.
+    // The constraint queue is empty, so its flags can hold this phase's snapshot.
+    this.pistonQueued.fill(0);
+    for (
+      let cell = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      cell >= 0;
+      cell = this.world.nextFeatureIndex(WorldFeature.Occupied, cell)
+    ) {
+      const root = expectDefined(this.bodyRoots[cell], "piston sweep eligibility root");
+      if (this.drivenBodies[root] === 1 && !this.isMovementGroupBlocked(root)) {
+        this.pistonQueued[root] = 1;
+      }
+      const intent = this.world.cellCount + cell;
+      if (this.pistonActions[cell] === 1 && !this.isMovementGroupBlocked(intent)) {
+        this.pistonQueued[intent] = 1;
+      }
+    }
+    for (
+      let cell = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      cell >= 0;
+      cell = this.world.nextFeatureIndex(WorldFeature.Occupied, cell)
+    ) {
+      const root = expectDefined(this.bodyRoots[cell], "piston sweep body root");
+      if (this.pistonQueued[root] === 1) {
+        this.reservePistonPath(
+          cell,
+          expectDefined(this.horizontalMoves[root], "piston sweep horizontal displacement"),
+          expectDefined(this.verticalMoves[root], "piston sweep vertical displacement"),
+          root,
+        );
+      }
+      const intent = this.world.cellCount + cell;
+      if (this.pistonQueued[intent] === 1) {
+        const orientation = this.world.orientationAtIndex(cell);
+        this.reservePistonPath(
+          cell,
+          expectDefined(this.horizontalMoves[root], "piston head sweep horizontal displacement") + directionX(orientation),
+          expectDefined(this.verticalMoves[root], "piston head sweep vertical displacement") + directionY(orientation),
+          intent,
+        );
+      }
+    }
+  }
+
+  private validatePistonDestinations(): void {
+    let changed: boolean;
+    do {
+      changed = false;
+      this.destinationOwners.fill(-1);
+      for (
+        let cell = this.world.firstFeatureIndex(WorldFeature.Occupied);
+        cell >= 0;
+        cell = this.world.nextFeatureIndex(WorldFeature.Occupied, cell)
+      ) {
+        if (this.world.kindAtIndex(cell) === TileKind.PistonArm) {
+          const base = this.neighborIndex(cell, oppositeDirection(this.world.orientationAtIndex(cell)));
+          if (base >= 0 && this.pistonActions[base] === -1 &&
+              !this.isMovementGroupBlocked(this.world.cellCount + base)) {
+            continue;
+          }
+        }
+        const root = expectDefined(this.bodyRoots[cell], "piston final body root");
+        const destination = this.isMovementGroupBlocked(root) ? cell : cell +
+          expectDefined(this.horizontalMoves[root], "piston final horizontal displacement") +
+          expectDefined(this.verticalMoves[root], "piston final vertical displacement") * this.world.width;
+        changed = this.claimPistonDestination(destination, root) || changed;
+      }
+      for (
+        let base = this.world.firstFeatureIndex(WorldFeature.Piston);
+        base >= 0;
+        base = this.world.nextFeatureIndex(WorldFeature.Piston, base)
+      ) {
+        const intent = this.world.cellCount + base;
+        if (this.pistonActions[base] !== 1 || this.isMovementGroupBlocked(intent)) {
+          continue;
+        }
+        const root = expectDefined(this.pistonBaseRoots[base], "piston final base root");
+        const orientation = this.world.orientationAtIndex(base);
+        const destination = base +
+          expectDefined(this.horizontalMoves[root], "piston final base horizontal displacement") + directionX(orientation) +
+          (expectDefined(this.verticalMoves[root], "piston final base vertical displacement") + directionY(orientation)) * this.world.width;
+        changed = this.claimPistonDestination(destination, intent) || changed;
+      }
+    } while (changed);
+  }
+
+  private claimPistonDestination(cell: number, owner: number): boolean {
+    const previous = expectDefined(this.destinationOwners[cell], "piston final cell owner");
+    if (previous < 0) {
+      this.destinationOwners[cell] = owner;
+      return false;
+    }
+    const changed = !this.isMovementGroupBlocked(previous) || !this.isMovementGroupBlocked(owner);
+    this.blockMovementGroup(previous);
+    this.blockMovementGroup(owner);
+    return changed;
   }
 
 

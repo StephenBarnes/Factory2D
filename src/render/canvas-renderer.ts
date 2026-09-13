@@ -20,6 +20,7 @@ import type { GridCell, GridEdge, GridPoint } from "./grid-drag";
 import { createBodyCell, populateBodyCell } from "./body-cells";
 import { tileAppearance } from "./appearance";
 import { RotationInterpolation, type RotationTransform } from "./rotation-interpolation";
+import { TranslationInterpolation } from "./translation-interpolation";
 import {
   type BodyCell,
   createBodyPath,
@@ -42,7 +43,6 @@ const EDIT_REJECTION_DURATION_MS = 700;
 const EDIT_REJECTION_DASH_PATTERN: readonly number[] = [];
 /** Below this screen-space size, procedural details cost more than they communicate. */
 const LOW_DETAIL_CELL_SIZE = 6;
-const LOW_DETAIL_MOTION_BUCKETS = 9;
 // Measure and draw at a normal font size: subpixel fonts have inconsistent browser baselines.
 const TEXT_BOX_FONT_SCALE = 100;
 const TEXT_BOX_FONT = '20px Georgia, "Times New Roman", serif';
@@ -75,6 +75,12 @@ interface CachedBody extends CachedBodyGeometry {
   readonly maxX: number;
   /** Exclusive grid bound. */
   readonly maxY: number;
+}
+
+interface CachedMotionBodies {
+  revision: number;
+  rotationRevision: number;
+  bodies: readonly CachedBody[];
 }
 export interface GridRegionScreenBounds {
   readonly left: number;
@@ -134,10 +140,9 @@ export class CanvasRenderer {
   private selectionBodyStack = new Int32Array(0);
   private selectionCellIndices = new Int32Array(0);
   private readonly selectionBodyCells: BodyCell[] = [];
-  /** Paths are grouped by tile kind and one of the nine adjacent-step animation offsets. */
-  private readonly lowDetailPaths: Array<Path2D | undefined> = new Array(
-    TILE_KINDS.length * LOW_DETAIL_MOTION_BUCKETS,
-  );
+  /** Low-detail cells already carry interpolated positions, so only kind needs batching. */
+  private readonly lowDetailPaths: Array<Path2D | undefined> = new Array(TILE_KINDS.length);
+  private readonly motionBodies = new WeakMap<CachedBody, CachedMotionBodies>();
   private hoverX = -1;
   private hoverY = -1;
   private hoverEdge: GridEdge | null = null;
@@ -153,6 +158,7 @@ export class CanvasRenderer {
   private renderedPreviousWorldRevision = -1;
   private readonly previousRotatorDirections = new Map<number, Direction>();
   private readonly rotationInterpolation = new RotationInterpolation();
+  private readonly translationInterpolation = new TranslationInterpolation();
   private renderedProgress = -1;
   private renderedNestedPortCharges = -1;
   private hasTimeDependentVisuals = false;
@@ -1133,6 +1139,7 @@ export class CanvasRenderer {
 
 
   private drawTiles(previousWorld: World | null, progress: number, animationTime: number): void {
+    this.translationInterpolation.prepare(this.world, previousWorld);
     this.rotationInterpolation.prepare(this.world, previousWorld, progress);
     if (
       previousWorld !== this.renderedPreviousWorld ||
@@ -1158,241 +1165,243 @@ export class CanvasRenderer {
     }
 
     this.rebuildBodyCache();
+    const animated = previousWorld !== null && progress < 1;
+    for (const body of this.cachedBodies) {
+      if (body === null) continue;
+      if (!animated) {
+        this.drawAnimatedBody(body, 1, animationTime);
+      } else {
+        const groups = this.movingBodies(body);
+        if (groups.length === 1) {
+          this.drawAnimatedBody(body, progress, animationTime);
+        } else {
+          // At the collapsed endpoint head and housing overlap. All slab fills
+          // must precede the artwork so a later housing cannot erase its head.
+          for (const movingBody of groups) {
+            this.drawAnimatedBody(movingBody, progress, animationTime, "slab");
+          }
+          for (const movingBody of groups) {
+            this.drawAnimatedBody(movingBody, progress, animationTime, "decoration");
+          }
+        }
+      }
+    }
+  }
 
+  /** Deforming assemblies split only where their rigid motion transforms differ. */
+  private movingBodies(body: CachedBody): readonly CachedBody[] {
+    const motion = this.translationInterpolation;
+    const cached = this.motionBodies.get(body);
+    if (cached?.revision === motion.revision &&
+      cached.rotationRevision === this.rotationInterpolation.revision) return cached.bodies;
+    const firstCell = expectDefined(body.cells[0], "first motion group cell");
+    const firstKey = this.motionGroupAt(firstCell.y * this.world.width + firstCell.x);
+    let uniform = true;
+    for (let i = 1; i < body.cells.length; i += 1) {
+      const cell = expectDefined(body.cells[i], "motion group cell");
+      if (this.motionGroupAt(cell.y * this.world.width + cell.x) !== firstKey) {
+        uniform = false;
+        break;
+      }
+    }
+    if (uniform && cached?.bodies.length === 1 && cached.bodies[0] === body) {
+      cached.revision = motion.revision;
+      cached.rotationRevision = this.rotationInterpolation.revision;
+      return cached.bodies;
+    }
+    const bodies: CachedBody[] = [];
+    if (uniform) {
+      bodies.push(body);
+    } else {
+      const groups = new Map<number, BodyCell[]>();
+      for (const cell of body.cells) {
+        const key = this.motionGroupAt(cell.y * this.world.width + cell.x);
+        const group = groups.get(key);
+        if (group === undefined) groups.set(key, [cell]);
+        else group.push(cell);
+      }
+      for (const cells of groups.values()) {
+        let minX = this.world.width;
+        let minY = this.world.height;
+        let maxX = 0;
+        let maxY = 0;
+        for (const cell of cells) {
+          minX = Math.min(minX, cell.x);
+          minY = Math.min(minY, cell.y);
+          maxX = Math.max(maxX, cell.x + 1);
+          maxY = Math.max(maxY, cell.y + 1);
+        }
+        bodies.push({
+          cells,
+          path: createBodyPath(0, 0, this.cellSize, cells, cells.length),
+          minX, minY, maxX, maxY,
+        });
+      }
+    }
+    if (cached === undefined) {
+      this.motionBodies.set(body, {
+        revision: motion.revision, rotationRevision: this.rotationInterpolation.revision, bodies,
+      });
+    } else {
+      cached.revision = motion.revision;
+      cached.rotationRevision = this.rotationInterpolation.revision;
+      cached.bodies = bodies;
+    }
+    return bodies;
+  }
+
+  private motionGroupAt(index: number): number {
+    const rotationGroup = this.rotationInterpolation.groupAt(index);
+    if (rotationGroup > 0) return -rotationGroup;
+    const motion = this.translationInterpolation;
+    return (motion.yAt(index) + this.world.height) * (this.world.width * 2 + 1) +
+      motion.xAt(index) + this.world.width;
+  }
+
+  private drawAnimatedBody(
+    body: CachedBody,
+    progress: number,
+    animationTime: number,
+    phase: "all" | "slab" | "decoration" = "all",
+  ): void {
+    const firstCell = expectDefined(body.cells[0], "first animated body cell");
+    const firstIndex = firstCell.y * this.world.width + firstCell.x;
+    const rotation = this.rotationInterpolation.at(firstIndex);
+    const remainingProgress = 1 - progress;
+    const motion = this.translationInterpolation;
+    const offsetX = rotation === null ? motion.xAt(firstIndex) * remainingProgress : 0;
+    const offsetY = rotation === null ? motion.yAt(firstIndex) * remainingProgress : 0;
+    let minX = body.minX + offsetX;
+    let minY = body.minY + offsetY;
+    let maxX = body.maxX + offsetX;
+    let maxY = body.maxY + offsetY;
+    if (rotation !== null) {
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+      const halfWidth = (maxX - minX) / 2;
+      const halfHeight = (maxY - minY) / 2;
+      const rotatedX = rotation.cosine * centerX - rotation.sine * centerY + rotation.x;
+      const rotatedY = rotation.sine * centerX + rotation.cosine * centerY + rotation.y;
+      const extentX = Math.abs(rotation.cosine) * halfWidth + Math.abs(rotation.sine) * halfHeight;
+      const extentY = Math.abs(rotation.sine) * halfWidth + Math.abs(rotation.cosine) * halfHeight;
+      minX = rotatedX - extentX;
+      maxX = rotatedX + extentX;
+      minY = rotatedY - extentY;
+      maxY = rotatedY + extentY;
+    }
     const visibleLeft = -this.originX / this.cellSize - 1;
     const visibleTop = -this.originY / this.cellSize - 1;
     const visibleRight = (this.viewportWidth - this.originX) / this.cellSize + 1;
     const visibleBottom = (this.viewportHeight - this.originY) / this.cellSize + 1;
-    for (const body of this.cachedBodies) {
-      if (body === null) {
-        continue;
-      }
-      const firstCell = expectDefined(body.cells[0], "first animated body cell");
-      const rotation = this.rotationInterpolation.at(firstCell.y * this.world.width + firstCell.x);
-      let minX = body.minX;
-      let minY = body.minY;
-      let maxX = body.maxX;
-      let maxY = body.maxY;
-      if (rotation !== null) {
-        // Cull the transformed bounds, not the possibly offscreen destination.
-        const centerX = (minX + maxX) / 2;
-        const centerY = (minY + maxY) / 2;
-        const halfWidth = (maxX - minX) / 2;
-        const halfHeight = (maxY - minY) / 2;
-        const rotatedX = rotation.cosine * centerX - rotation.sine * centerY + rotation.x;
-        const rotatedY = rotation.sine * centerX + rotation.cosine * centerY + rotation.y;
-        const extentX = Math.abs(rotation.cosine) * halfWidth + Math.abs(rotation.sine) * halfHeight;
-        const extentY = Math.abs(rotation.sine) * halfWidth + Math.abs(rotation.cosine) * halfHeight;
-        minX = rotatedX - extentX;
-        maxX = rotatedX + extentX;
-        minY = rotatedY - extentY;
-        maxY = rotatedY + extentY;
-      }
-      if (maxX <= visibleLeft || minX >= visibleRight ||
-        maxY <= visibleTop || minY >= visibleBottom) {
-        continue;
-      }
-      let offsetX = 0;
-      let offsetY = 0;
-      const remainingProgress = 1 - progress;
-      let hasPistonTransition = false;
-      for (const cell of body.cells) {
-        if (cell.kind === TileKind.Conveyor && cell.outputCharge !== 0) {
-          this.hasTimeDependentVisuals = true;
-        }
-        cell.pistonTransition = 0;
-        cell.pistonTransitionProgress = 1;
-        cell.rotatorTurnOffset = 0;
-        if (previousWorld === null || remainingProgress <= 0) {
-          continue;
-        }
-        if (cell.componentState?.type === "rotator") {
-          const previousDirection = this.previousRotatorDirections.get(
-            this.world.idAt(cell.x, cell.y),
-          );
-          if (previousDirection !== undefined) {
-            const direction = cell.componentState.direction;
-            const bodyTurn = rotation?.quarterTurn ?? 0;
-            let turn = ((direction - previousDirection - bodyTurn + 6) % 4) - 2;
-            // Batched opposite-side grips pass through the front, never the rear input.
-            if (turn === -2 && previousDirection === ((cell.orientation + 3) & 3)) {
-              turn = 2;
-            }
-            cell.rotatorTurnOffset = -turn * remainingProgress;
-          }
-        }
-        const stepX = directionX(cell.orientation);
-        const stepY = directionY(cell.orientation);
-        const rearX = cell.x - stepX;
-        const rearY = cell.y - stepY;
-        const frontX = cell.x + stepX;
-        const frontY = cell.y + stepY;
-        const rearIsInside = rearX >= 0 && rearX < this.world.width &&
-          rearY >= 0 && rearY < this.world.height;
-        const frontIsInside = frontX >= 0 && frontX < this.world.width &&
-          frontY >= 0 && frontY < this.world.height;
-        if (
-          cell.kind === TileKind.PistonArm &&
-          rearIsInside &&
-          previousWorld.kindAt(rearX, rearY) === TileKind.Piston &&
-          previousWorld.idAt(rearX, rearY) === this.world.idAt(cell.x, cell.y)
-        ) {
-          cell.pistonTransition = 1;
-          cell.pistonTransitionProgress = progress;
-        } else if (
-          cell.kind === TileKind.PistonBase &&
-          previousWorld.kindAt(cell.x, cell.y) === TileKind.Piston
-        ) {
-          cell.pistonTransition = 1;
-          cell.pistonTransitionProgress = progress;
-        } else if (
-          cell.kind === TileKind.Piston &&
-          frontIsInside &&
-          previousWorld.kindAt(frontX, frontY) === TileKind.PistonArm &&
-          previousWorld.idAt(frontX, frontY) === this.world.idAt(cell.x, cell.y)
-        ) {
-          cell.pistonTransition = -1;
-          cell.pistonTransitionProgress = progress;
-        }
-        hasPistonTransition ||= cell.pistonTransition !== 0;
-      }
-      if (rotation === null && previousWorld !== null && remainingProgress > 0 && !hasPistonTransition) {
-        const tileId = this.world.idAt(firstCell.x, firstCell.y);
-        if (previousWorld.idAt(firstCell.x, firstCell.y) !== tileId) {
-          searchPreviousPosition:
-          for (let verticalMove = -1; verticalMove <= 1; verticalMove += 1) {
-            for (let horizontalMove = -1; horizontalMove <= 1; horizontalMove += 1) {
-              if (horizontalMove === 0 && verticalMove === 0) {
-                continue;
-              }
-              const previousX = firstCell.x - horizontalMove;
-              const previousY = firstCell.y - verticalMove;
-              if (
-                previousX >= 0 &&
-                previousX < this.world.width &&
-                previousY >= 0 &&
-                previousY < this.world.height &&
-                previousWorld.idAt(previousX, previousY) === tileId
-              ) {
-                offsetX = -horizontalMove * this.cellSize * remainingProgress;
-                offsetY = -verticalMove * this.cellSize * remainingProgress;
-                break searchPreviousPosition;
-              }
-            }
-          }
-        }
-      }
+    if (maxX <= visibleLeft || minX >= visibleRight ||
+      maxY <= visibleTop || minY >= visibleBottom) return;
 
-      this.context.save();
-      this.context.translate(this.originX + offsetX, this.originY + offsetY);
-      if (rotation !== null) this.applyRotationTransform(rotation);
-      drawBody(
-        this.context,
-        0,
-        0,
-        this.cellSize,
-        body.cells,
-        body.cells.length,
-        body.path,
-        animationTime,
-      );
-      this.context.restore();
+    for (const cell of body.cells) {
+      if (cell.kind === TileKind.Conveyor && cell.outputCharge !== 0) {
+        this.hasTimeDependentVisuals = true;
+      }
+      const index = cell.y * this.world.width + cell.x;
+      cell.pistonTransition = remainingProgress > 0 ? motion.transitionAt(index) : 0;
+      cell.pistonTransitionProgress = progress;
+      cell.rotatorTurnOffset = 0;
+      if (remainingProgress > 0 && cell.componentState?.type === "rotator") {
+        const previousDirection = this.previousRotatorDirections.get(this.world.idAtIndex(index));
+        if (previousDirection !== undefined) {
+          const direction = cell.componentState.direction;
+          const bodyTurn = rotation?.quarterTurn ?? 0;
+          let turn = ((direction - previousDirection - bodyTurn + 6) % 4) - 2;
+          // Batched opposite-side grips pass through the front, never the rear input.
+          if (turn === -2 && previousDirection === ((cell.orientation + 3) & 3)) turn = 2;
+          cell.rotatorTurnOffset = -turn * remainingProgress;
+        }
+      }
     }
+    this.context.save();
+    this.context.translate(
+      this.originX + offsetX * this.cellSize,
+      this.originY + offsetY * this.cellSize,
+    );
+    if (rotation !== null) this.applyRotationTransform(rotation);
+    drawBody(
+      this.context, 0, 0, this.cellSize, body.cells, body.cells.length,
+      body.path, animationTime, phase,
+    );
+    this.context.restore();
   }
 
   private drawLowDetailTiles(previousWorld: World | null, progress: number): void {
     const { cellSize, originX, originY, world } = this;
-    const remainingProgress = 1 - progress;
+    const remainingProgress = previousWorld === null ? 0 : 1 - progress;
     const startX = Math.max(0, Math.floor(-originX / cellSize) - 1);
     const startY = Math.max(0, Math.floor(-originY / cellSize) - 1);
-    const endX = Math.min(
-      world.width,
-      Math.ceil((this.viewportWidth - originX) / cellSize) + 1,
-    );
-    const endY = Math.min(
-      world.height,
-      Math.ceil((this.viewportHeight - originY) / cellSize) + 1,
-    );
+    const endX = Math.min(world.width, Math.ceil((this.viewportWidth - originX) / cellSize) + 1);
+    const endY = Math.min(world.height, Math.ceil((this.viewportHeight - originY) / cellSize) + 1);
     this.lowDetailPaths.fill(undefined);
 
     for (let y = startY; y < endY; y += 1) {
       let index = y * world.width + startX;
       for (let x = startX; x < endX; x += 1, index += 1) {
-        const kind = world.kindAtIndex(index);
-        if (kind === TileKind.Empty || this.rotationInterpolation.at(index) !== null) {
-          continue;
-        }
-
-        let motionBucket = 4;
-        if (previousWorld !== null && remainingProgress > 0) {
-          const tileId = world.idAt(x, y);
-          if (previousWorld.idAt(x, y) !== tileId) {
-            searchPreviousPosition:
-            for (let verticalMove = -1; verticalMove <= 1; verticalMove += 1) {
-              for (let horizontalMove = -1; horizontalMove <= 1; horizontalMove += 1) {
-                if (horizontalMove === 0 && verticalMove === 0) {
-                  continue;
-                }
-                const previousX = x - horizontalMove;
-                const previousY = y - verticalMove;
-                if (
-                  previousX >= 0 &&
-                  previousX < world.width &&
-                  previousY >= 0 &&
-                  previousY < world.height &&
-                  previousWorld.idAt(previousX, previousY) === tileId
-                ) {
-                  motionBucket = (verticalMove + 1) * 3 + horizontalMove + 1;
-                  break searchPreviousPosition;
-                }
-              }
-            }
-          }
-        }
-
-        const pathIndex = kind * LOW_DETAIL_MOTION_BUCKETS + motionBucket;
-        let path = this.lowDetailPaths[pathIndex];
-        if (path === undefined) {
-          path = new Path2D();
-          this.lowDetailPaths[pathIndex] = path;
-        }
-        const horizontalMove = motionBucket % 3 - 1;
-        const verticalMove = Math.floor(motionBucket / 3) - 1;
-        path.rect(
-          originX + (x - horizontalMove * remainingProgress) * cellSize,
-          originY + (y - verticalMove * remainingProgress) * cellSize,
-          cellSize,
-          cellSize,
-        );
+        this.appendLowDetailCell(index, remainingProgress);
       }
     }
-
-    for (let index = 0; index < this.lowDetailPaths.length; index += 1) {
-      const path = this.lowDetailPaths[index];
-      if (path === undefined) {
-        continue;
+    if (remainingProgress > 0) {
+      // A destination outside the viewport can still be passing through it this frame.
+      for (const index of this.translationInterpolation.movingIndices) {
+        const x = index % world.width;
+        const y = Math.floor(index / world.width);
+        if (x < startX || x >= endX || y < startY || y >= endY) {
+          this.appendLowDetailCell(index, remainingProgress);
+        }
       }
-      const kind = Math.floor(index / LOW_DETAIL_MOTION_BUCKETS) as TileKind;
-      this.context.fillStyle = TILE_DEFINITIONS[kind].fill;
+    }
+    for (let kind = 0; kind < this.lowDetailPaths.length; kind += 1) {
+      const path = this.lowDetailPaths[kind];
+      if (path === undefined) continue;
+      this.context.fillStyle = TILE_DEFINITIONS[kind as TileKind].fill;
       this.context.fill(path);
     }
     if (this.rotationInterpolation.active) {
       for (const index of this.rotationInterpolation.indices) {
         const rotation = this.rotationInterpolation.at(index);
         if (rotation === null) throw new Error(`Missing rotation for animated cell ${index}`);
+        const orientation = world.orientationAtIndex(index);
+        const headOffset = this.translationInterpolation.transitionAt(index) === -1 ? remainingProgress : 0;
         this.context.save();
         this.context.translate(originX, originY);
         this.applyRotationTransform(rotation);
         this.context.fillStyle = TILE_DEFINITIONS[world.kindAtIndex(index)].fill;
         this.context.fillRect(
-          (index % world.width) * cellSize,
-          Math.floor(index / world.width) * cellSize,
-          cellSize,
-          cellSize,
+          (index % world.width + directionX(orientation) * headOffset) * cellSize,
+          (Math.floor(index / world.width) + directionY(orientation) * headOffset) * cellSize,
+          cellSize, cellSize,
         );
         this.context.restore();
       }
     }
+  }
+
+  private appendLowDetailCell(index: number, remainingProgress: number): void {
+    const kind = this.world.kindAtIndex(index);
+    if (kind === TileKind.Empty || this.rotationInterpolation.at(index) !== null) return;
+    const motion = this.translationInterpolation;
+    let dx = motion.xAt(index);
+    let dy = motion.yAt(index);
+    if (motion.transitionAt(index) === -1) {
+      const orientation = this.world.orientationAtIndex(index);
+      dx += directionX(orientation);
+      dy += directionY(orientation);
+    }
+    const left = this.originX + (index % this.world.width + dx * remainingProgress) * this.cellSize;
+    const top = this.originY +
+      (Math.floor(index / this.world.width) + dy * remainingProgress) * this.cellSize;
+    if (left + this.cellSize < 0 || left > this.viewportWidth ||
+      top + this.cellSize < 0 || top > this.viewportHeight) return;
+    let path = this.lowDetailPaths[kind];
+    if (path === undefined) {
+      path = new Path2D();
+      this.lowDetailPaths[kind] = path;
+    }
+    path.rect(left, top, this.cellSize, this.cellSize);
   }
 
   private applyRotationTransform(rotation: RotationTransform): void {
@@ -1839,24 +1848,17 @@ export class CanvasRenderer {
     let offsetX = 0;
     let offsetY = 0;
     const rotation = this.rotationInterpolation.at(this.highlightedTileIndex);
-    // Match the one-cell motion interpolation used by tile bodies.
-    if (rotation === null && previousWorld !== null && progress < 1 && previousWorld.idAt(x, y) !== tileId) {
-      searchPreviousPosition:
-      for (let verticalMove = -1; verticalMove <= 1; verticalMove += 1) {
-        for (let horizontalMove = -1; horizontalMove <= 1; horizontalMove += 1) {
-          const previousX = x - horizontalMove;
-          const previousY = y - verticalMove;
-          if (
-            previousX >= 0 && previousX < previousWorld.width &&
-            previousY >= 0 && previousY < previousWorld.height &&
-            previousWorld.idAt(previousX, previousY) === tileId
-          ) {
-            offsetX = -horizontalMove * cellSize * (1 - progress);
-            offsetY = -verticalMove * cellSize * (1 - progress);
-            break searchPreviousPosition;
-          }
-        }
+    if (previousWorld !== null && progress < 1) {
+      const motion = this.translationInterpolation;
+      let dx = rotation === null ? motion.xAt(this.highlightedTileIndex) : 0;
+      let dy = rotation === null ? motion.yAt(this.highlightedTileIndex) : 0;
+      if (motion.transitionAt(this.highlightedTileIndex) === -1) {
+        const orientation = world.orientationAtIndex(this.highlightedTileIndex);
+        dx += directionX(orientation);
+        dy += directionY(orientation);
       }
+      offsetX = dx * cellSize * (1 - progress);
+      offsetY = dy * cellSize * (1 - progress);
     }
     const left = x * cellSize + offsetX;
     const top = y * cellSize + offsetY;

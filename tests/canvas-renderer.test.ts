@@ -3,8 +3,9 @@ import { afterEach, describe, expect, it, type Mock, vi } from "vitest";
 import { TileSelectionState } from "../src/game/tile-selection";
 import { CanvasRenderer } from "../src/render/canvas-renderer";
 import { CIRCUIT_CHARGE_COLORS } from "../src/simulation/circuit";
+import { Simulation } from "../src/simulation/simulation";
 import { World } from "../src/simulation/world";
-import { TileKind } from "../src/simulation/tile";
+import { TILE_DEFINITIONS, TileKind } from "../src/simulation/tile";
 
 interface FakeCanvas {
   readonly canvas: HTMLCanvasElement;
@@ -105,6 +106,39 @@ function createRecordingCanvas(width: number, height: number): RecordingCanvas {
     getBoundingClientRect: () => ({ left: 0, top: 0 }),
   } as unknown as HTMLCanvasElement;
   return { canvas, context, filledPaths, fillStyles, clip };
+}
+
+interface PaintedRectangle extends PathRectangle {
+  readonly fill: string;
+}
+
+function createMotionCanvas(width: number, height: number): RecordingCanvas & {
+  readonly rectangles: PaintedRectangle[];
+} {
+  const recording = createRecordingCanvas(width, height);
+  const rectangles: PaintedRectangle[] = [];
+  let translateX = 0;
+  let translateY = 0;
+  const stack: Array<readonly [number, number]> = [];
+  vi.mocked(recording.context.save).mockImplementation(() => {
+    stack.push([translateX, translateY]);
+  });
+  vi.mocked(recording.context.restore).mockImplementation(() => {
+    const saved = stack.pop();
+    if (saved === undefined) throw new Error("Unbalanced canvas restore");
+    [translateX, translateY] = saved;
+  });
+  vi.mocked(recording.context.translate).mockImplementation((x, y) => {
+    translateX += x;
+    translateY += y;
+  });
+  vi.mocked(recording.context.fillRect).mockImplementation((x, y, rectWidth, rectHeight) => {
+    rectangles.push({
+      x: x + translateX, y: y + translateY, width: rectWidth, height: rectHeight,
+      fill: recording.context.fillStyle as string,
+    });
+  });
+  return { ...recording, rectangles };
 }
 
 afterEach(() => {
@@ -303,5 +337,80 @@ describe("CanvasRenderer scalable tile rendering", () => {
     renderer.render(null, 1, 16);
 
     expect(context.clearRect).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("CanvasRenderer coupled piston interpolation", () => {
+  it("moves each head, carried housing, welded charge, and welded load by its own stroke sum", () => {
+    vi.stubGlobal("window", { devicePixelRatio: 1 });
+    vi.stubGlobal("Path2D", RecordingPath2D);
+    const world = new World(6, 8);
+    for (let y = 5; y <= 7; y += 1) {
+      world.place(2, y, TileKind.Piston);
+      world.place(3, y, TileKind.FixedCharge);
+      world.setWeld(2, y, 3, y, true);
+      if (y > 5) world.setWeld(2, y, 2, y - 1, true);
+    }
+    world.place(2, 4, TileKind.Stone);
+    world.setWeld(2, 5, 2, 4, true);
+    const previous = world.clone();
+    const { canvas, rectangles } = createMotionCanvas(240, 320);
+    const renderer = new CanvasRenderer(canvas, world);
+    const cellSize = 40;
+    const positions = () => ({
+      heads: rectangles.filter(rect => rect.fill === "#d1aa6b" && rect.width === cellSize * 0.5)
+        .map(rect => rect.y).sort((a, b) => a - b),
+      bases: rectangles.filter(rect => rect.fill === TILE_DEFINITIONS[TileKind.PistonBase].fill &&
+        rect.width === cellSize).map(rect => rect.y).sort((a, b) => a - b),
+      charges: rectangles.filter(rect => rect.fill === TILE_DEFINITIONS[TileKind.FixedCharge].fill &&
+        rect.width === cellSize).map(rect => rect.y).sort((a, b) => a - b),
+      loads: rectangles.filter(rect => rect.fill === TILE_DEFINITIONS[TileKind.Stone].fill &&
+        rect.width === cellSize).map(rect => rect.y),
+    });
+    renderer.render();
+    const initial = positions();
+    new Simulation(world).step();
+    let animatedPathCount = 0;
+    for (const progress of [0, 0.5, 1]) {
+      rectangles.length = 0;
+      renderer.render(previous, progress);
+      const painted = positions();
+      const displacements = { heads: [3, 2, 1], bases: [2, 1, 0], charges: [2, 1, 0], loads: [3] };
+      for (const key of ["heads", "bases", "charges", "loads"] as const) {
+        expect(painted[key]).toHaveLength(displacements[key].length);
+        for (let index = 0; index < displacements[key].length; index += 1) {
+          expect(painted[key][index]).toBeCloseTo(
+            initial[key][index]! - displacements[key][index]! * progress * cellSize,
+          );
+        }
+      }
+      if (progress === 0) animatedPathCount = pathConstructionCount;
+      else expect(pathConstructionCount).toBe(animatedPathCount);
+    }
+  });
+
+  it.each([4, 20])("draws long translations crossing the viewport at %i-pixel detail", cellSize => {
+    vi.stubGlobal("window", { devicePixelRatio: 1 });
+    vi.stubGlobal("Path2D", RecordingPath2D);
+    const world = new World(200, 1);
+    world.place(50, 0, TileKind.Stone);
+    const previous = world.clone();
+    const horizontal = new Int16Array(world.cellCount);
+    horizontal[0] = 100;
+    world.moveBodies(new Int32Array(world.cellCount), horizontal, new Int16Array(world.cellCount));
+    const { canvas, rectangles, filledPaths } = createMotionCanvas(100, 40);
+    const renderer = new CanvasRenderer(canvas, world);
+    renderer.fitBoardToViewport();
+    renderer.zoomAtClientPoint(25, 20, -Math.log(cellSize / 0.5) / 0.0015);
+
+    renderer.render(previous, 0.01);
+
+    const cells = cellSize < 6
+      ? filledPaths.flatMap(path => path.rectangles)
+      : rectangles.filter(rect => rect.fill === TILE_DEFINITIONS[TileKind.Stone].fill &&
+        Math.abs(rect.width - cellSize) < 1e-8);
+    expect(cells).toHaveLength(1);
+    expect(cells[0]?.x).toBeCloseTo(25 + cellSize);
+    expect(cells[0]?.width).toBeCloseTo(cellSize);
   });
 });

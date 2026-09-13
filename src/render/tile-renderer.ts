@@ -119,6 +119,7 @@ export function drawBody(
   cellCount: number = cells.length,
   path: Path2D | undefined = undefined,
   animationTime = 0,
+  phase: "all" | "slab" | "decoration" = "all",
 ): void {
   if (cellCount === 0) {
     return;
@@ -128,40 +129,28 @@ export function drawBody(
 
   context.save();
   context.clip(bodyPath);
-  for (let i = 0; i < cellCount; i += 1) {
-    const cell = expectDefined(cells[i], "body cell");
-    context.fillStyle = TILE_DEFINITIONS[cell.kind].fill;
-    context.fillRect(
-      originX + cell.x * cellSize,
-      originY + cell.y * cellSize,
-      cellSize,
-      cellSize,
-    );
-  }
-  if (cellSize >= DECORATION_CELL_SIZE) {
+  if (phase !== "decoration") {
     for (let i = 0; i < cellCount; i += 1) {
       const cell = expectDefined(cells[i], "body cell");
-      drawDecoration(
-        context,
+      context.fillStyle = TILE_DEFINITIONS[cell.kind].fill;
+      context.fillRect(
         originX + cell.x * cellSize,
         originY + cell.y * cellSize,
         cellSize,
-        TILE_DEFINITIONS[cell.kind],
-        cell.orientation,
-        cell.outputCharge,
-        cell.circuitConnections,
-        cell.circuitPortCharges,
-        cell.componentState ?? null,
-        cell.nestedWorld ?? null,
-        animationTime,
-        cell.pistonTransition ?? 0,
-        cell.pistonTransitionProgress ?? 1,
-        cell.rotatorTurnOffset ?? 0,
+        cellSize,
       );
     }
   }
+  if (phase !== "slab" && cellSize >= DECORATION_CELL_SIZE) {
+    for (let i = 0; i < cellCount; i += 1) {
+      const cell = expectDefined(cells[i], "body cell");
+      if (cell.pistonTransition !== -1) {
+        drawBodyCellDecoration(context, originX, originY, cellSize, cell, animationTime);
+      }
+    }
+  }
 
-  if (tileAppearance.bevels && cellSize >= BEVEL_CELL_SIZE) {
+  if (phase !== "decoration" && tileAppearance.bevels && cellSize >= BEVEL_CELL_SIZE) {
     const bevel = Math.max(1.5, cellSize * BEVEL_RATIO);
     context.lineWidth = bevel * 2;
     context.translate(bevel - 0.2, bevel - 0.2); // Ad-hoc manually tuned -0.2 to reduce corner artifacts
@@ -173,7 +162,44 @@ export function drawBody(
   }
 
   context.restore();
+  if (phase !== "slab" && cellSize >= DECORATION_CELL_SIZE) {
+    // A retracting head can lie beyond its housing slab while a welded load
+    // moves in a separate motion group. Do not clip it to the final housing.
+    for (let i = 0; i < cellCount; i += 1) {
+      const cell = expectDefined(cells[i], "body cell");
+      if (cell.pistonTransition === -1) {
+        drawBodyCellDecoration(context, originX, originY, cellSize, cell, animationTime);
+      }
+    }
+  }
 
+}
+
+function drawBodyCellDecoration(
+  context: CanvasRenderingContext2D,
+  originX: number,
+  originY: number,
+  cellSize: number,
+  cell: BodyCell,
+  animationTime: number,
+): void {
+  drawDecoration(
+    context,
+    originX + cell.x * cellSize,
+    originY + cell.y * cellSize,
+    cellSize,
+    TILE_DEFINITIONS[cell.kind],
+    cell.orientation,
+    cell.outputCharge,
+    cell.circuitConnections,
+    cell.circuitPortCharges,
+    cell.componentState ?? null,
+    cell.nestedWorld ?? null,
+    animationTime,
+    cell.pistonTransition ?? 0,
+    cell.pistonTransitionProgress ?? 1,
+    cell.rotatorTurnOffset ?? 0,
+  );
 }
 
 const SINGLE_CELL: [BodyCell] = [
@@ -1698,10 +1724,7 @@ function drawDecoration(
       const isBase = definition.decorationStyle === TileDecorationStyle.PistonBase;
       const headOffset = isCombined && pistonTransition === -1
         ? -size * (1 - pistonTransitionProgress)
-        : definition.decorationStyle === TileDecorationStyle.PistonArm &&
-            pistonTransition === 1
-          ? size * (1 - pistonTransitionProgress)
-          : 0;
+        : 0;
       if (isCombined || isBase) {
         context.fillStyle = "#3a3028";
         context.fillRect(-size * 0.3, -size * 0.02, size * 0.6, size * 0.32);
@@ -1721,10 +1744,11 @@ function drawDecoration(
         context.moveTo(0, size * 0.03);
         context.lineTo(0, -size * 0.2 + headOffset);
       } else {
-        // The arm cell is one tile ahead of the base. Keep the shaft's rear
-        // endpoint at the base anchor until the moving head has cleared it.
-        context.moveTo(0, Math.min(size * 0.43 + headOffset, size * 1.03));
-        context.lineTo(0, -size * 0.25 + headOffset);
+        // The arm slab follows the head. Its shaft ends at the moving base
+        // anchor until there is room for the full shaft ahead of that base.
+        const extension = pistonTransition === 1 ? pistonTransitionProgress : 1;
+        context.moveTo(0, size * Math.min(0.43, 0.03 + extension));
+        context.lineTo(0, -size * 0.25);
       }
       context.stroke();
       if (!isBase) {
