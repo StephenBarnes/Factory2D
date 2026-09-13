@@ -11,6 +11,7 @@ import {
   flipDirectionVertically,
   isTileKind,
   orientationForKind,
+  TILE_DEFINITIONS,
   TileKind,
 } from "./tile";
 import type { World } from "./world";
@@ -104,12 +105,13 @@ const RUNE_ARRAY_CONFIGURATION: RuneArrayComponentConfiguration = Object.freeze(
 
 /**
  * Whether a tile kind carries sparse per-identity component state. Every configurable
- * component does; assemblers do too, for their pending output queue, without offering
+ * component does; assemblers, rotators, and fragile tiles also keep runtime state without
  * any player-editable configuration.
  */
 export function hasComponentState(kind: TileKind): boolean {
   return kind === TileKind.Assembler ||
     kind === TileKind.Rotator ||
+    TILE_DEFINITIONS[kind].fragile === true ||
     componentConfigurationForKind(kind) !== null;
 }
 
@@ -236,9 +238,16 @@ export interface RotatorComponentState {
   direction: Direction;
 }
 
+/** Consecutive gravity falls, saturated at two cells (a long fall). */
+export interface FragileComponentState {
+  readonly type: "fragile";
+  fallDistance: number;
+}
+
 export type ConfigurableComponentState =
   | AssemblerComponentState
   | RotatorComponentState
+  | FragileComponentState
   | DelayComponentState
   | DiscardComponentState
   | CounterComponentState
@@ -328,9 +337,15 @@ export interface RotatorComponentSnapshot {
   readonly direction: Direction;
 }
 
+export interface FragileComponentSnapshot {
+  readonly type: "fragile";
+  readonly fallDistance: number;
+}
+
 export type ConfigurableComponentSnapshot =
   | AssemblerComponentSnapshot
   | RotatorComponentSnapshot
+  | FragileComponentSnapshot
   | DelayComponentSnapshot
   | DiscardComponentSnapshot
   | CounterComponentSnapshot
@@ -342,7 +357,7 @@ export type ConfigurableComponentSnapshot =
   | RuneArrayComponentSnapshot;
 
 /**
- * Creates the initial state for a configurable tile. Rune arrays need an inner board, which
+ * Creates the initial sparse component state. Rune arrays need an inner board, which
  * `createWorld` supplies so this module never constructs worlds itself.
  */
 export function createDefaultComponentState(
@@ -418,7 +433,9 @@ export function createDefaultComponentState(
         world: createWorld(DEFAULT_RUNE_ARRAY_DIMENSION, DEFAULT_RUNE_ARRAY_DIMENSION),
       };
     default:
-      return null;
+      return TILE_DEFINITIONS[kind].fragile === true
+        ? { type: "fragile", fallDistance: 0 }
+        : null;
   }
 }
 
@@ -435,6 +452,8 @@ export function cloneComponentState(
       };
     case "rotator":
       return { type: "rotator", direction: state.direction };
+    case "fragile":
+      return { type: "fragile", fallDistance: state.fallDistance };
     case "delay":
       return {
         type: "delay",
@@ -506,6 +525,8 @@ export function snapshotComponentState(
     }
     case "rotator":
       return { type: "rotator", direction: state.direction };
+    case "fragile":
+      return { type: "fragile", fallDistance: state.fallDistance };
     case "delay":
       return {
         type: "delay",
@@ -580,6 +601,9 @@ export function validateComponentSnapshot(
       break;
     case "rotator":
       requireInteger(snapshot.direction, "Rotator direction", Direction.Up, Direction.Left);
+      break;
+    case "fragile":
+      requireInteger(snapshot.fallDistance, "Fragile fall distance", 0, 2);
       break;
     case "delay":
       requireInteger(snapshot.length, "Delay length", MIN_DELAY_LENGTH, MAX_DELAY_LENGTH);
@@ -679,6 +703,8 @@ export function stateFromSnapshot(
       };
     case "rotator":
       return { type: "rotator", direction: snapshot.direction };
+    case "fragile":
+      return { type: "fragile", fallDistance: snapshot.fallDistance };
     case "delay":
       return {
         type: "delay",
@@ -841,6 +867,7 @@ export function componentStateMatchesKind(
     (state.type === "delay" && kind === TileKind.Delay) ||
     (state.type === "discard" && kind === TileKind.Discard) ||
     (state.type === "rotator" && kind === TileKind.Rotator) ||
+    (state.type === "fragile" && TILE_DEFINITIONS[kind].fragile === true) ||
     (state.type === "counter" && kind === TileKind.Counter) ||
     (state.type === "rom" && kind === TileKind.Rom) ||
     (state.type === "lut" && kind === TileKind.Lut) ||

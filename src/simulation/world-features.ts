@@ -27,7 +27,8 @@ export const enum WorldFeature {
   WeldedBodyObserver = 15,
   Drill = 16,
   Fastener = 17,
-  Count = 18,
+  Fragile = 18,
+  Count = 19,
 }
 
 const FEATURE_MASKS = new Uint32Array(
@@ -86,6 +87,9 @@ for (const kind of TILE_KINDS) {
   }
   if (kind === TileKind.Fastener) {
     mask |= 1 << WorldFeature.Fastener;
+  }
+  if (definition.fragile === true) {
+    mask |= 1 << WorldFeature.Fragile;
   }
   if (definition.affectedByGravity) {
     mask |= 1 << WorldFeature.Gravity;

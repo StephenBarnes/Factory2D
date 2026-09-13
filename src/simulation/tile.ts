@@ -169,6 +169,8 @@ export interface TileDefinition {
   readonly invisibleToSensor?: boolean;
   /** Immune to destructive tools such as drills; omitted means destructible. */
   readonly indestructible?: boolean;
+  /** Unwelded tiles break when a gravity fall longer than one cell stops. */
+  readonly fragile?: boolean;
   readonly weldableSides: WeldSide;
   readonly excludesFacingWeld: boolean;
   readonly usesOrientation: boolean;
@@ -800,10 +802,11 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 45,
       category: PaletteCategory.RawMaterials,
       description: "Solid block baked from sand. Invisible to sensor runes.",
-      extendedDescription: ["Collides, falls, and welds like a solid block. An occupancy sensor facing glass reports 0; charge sensors look through it."],
+      extendedDescription: ["Collides, falls, and welds like a solid block. Without welds, shatters when it stops after falling more than one cell. One-cell drops are safe; welding protects it and clears its fall history.", "An occupancy sensor facing glass reports 0; charge sensors look through it."],
     },
     affectedByGravity: true,
     invisibleToSensor: true,
+    fragile: true,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,

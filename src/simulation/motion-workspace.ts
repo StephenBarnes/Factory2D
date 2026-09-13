@@ -57,6 +57,7 @@ export class MotionWorkspace {
   private readonly nextMagneticConstraint: Int32Array;
   private magneticConstraintCount = 0;
   private readonly breakingFastenerDestinations: number[] = [];
+  private readonly breakingFragileDestinations: number[] = [];
 
   constructor(world: World) {
     this.world = world;
@@ -98,12 +99,14 @@ export class MotionWorkspace {
     this.collectBodyMembers();
     this.chooseMovements();
     this.collectBreakingFasteners();
+    this.collectFragileLandings();
     const movementCount = this.world.moveBodies(
       this.bodyRoots,
       this.horizontalMoves,
       this.verticalMoves,
     );
     this.breakMovedFasteners();
+    this.breakLandedFragileTiles();
     return movementCount;
   }
 
@@ -131,6 +134,34 @@ export class MotionWorkspace {
     for (const index of this.breakingFastenerDestinations) {
       if (this.world.kindAtIndex(index) !== TileKind.Fastener) {
         throw new Error(`Moved fastener missing at index ${index}`);
+      }
+      const x = index % this.world.width;
+      this.world.place(x, (index - x) / this.world.width, TileKind.Empty);
+    }
+  }
+
+  private collectFragileLandings(): void {
+    this.breakingFragileDestinations.length = 0;
+    for (
+      let index = this.world.firstFeatureIndex(WorldFeature.Fragile);
+      index >= 0;
+      index = this.world.nextFeatureIndex(WorldFeature.Fragile, index)
+    ) {
+      const root = expectDefined(this.bodyRoots[index], "fragile body root");
+      const moveX = expectDefined(this.horizontalMoves[root], "fragile horizontal movement");
+      const moveY = expectDefined(this.verticalMoves[root], "fragile vertical movement");
+      const falling = moveY === 1 && this.drivenBodies[root] === 0;
+      if (this.world.advanceFragileFallAtIndex(index, falling)) {
+        this.breakingFragileDestinations.push(index + moveX + moveY * this.world.width);
+      }
+    }
+  }
+
+  private breakLandedFragileTiles(): void {
+    // Keep landing cells solid until every body has resolved and committed its movement.
+    for (const index of this.breakingFragileDestinations) {
+      if (TILE_DEFINITIONS[this.world.kindAtIndex(index)].fragile !== true) {
+        throw new Error(`Landed fragile tile missing at index ${index}`);
       }
       const x = index % this.world.width;
       this.world.place(x, (index - x) / this.world.width, TileKind.Empty);

@@ -1,4 +1,5 @@
 import {
+  componentStateMatchesKind,
   hasComponentState,
   LUT_DIMENSION,
   MAX_ASSEMBLER_OUTPUTS,
@@ -180,6 +181,13 @@ interface ExportedRotator {
   readonly direction: string;
 }
 
+interface ExportedFragile {
+  readonly x: number;
+  readonly y: number;
+  readonly type: "fragile";
+  readonly fallDistance: number;
+}
+
 /** Rune array whose inner board nests the same contents format without tick or result. */
 interface ExportedRuneArray {
   readonly x: number;
@@ -193,6 +201,7 @@ interface ExportedRuneArray {
 type ExportedComponent =
   | ExportedAssembler
   | ExportedRotator
+  | ExportedFragile
   | ExportedDelay
   | ExportedDiscard
   | ExportedCounter
@@ -381,6 +390,10 @@ function exportBoardContents(world: World): ExportedBoardContents {
             ...(componentState.category === "" ? {} : { category: componentState.category }),
             ...(componentState.order === 0 ? {} : { order: componentState.order }),
           });
+        } else if (componentState.type === "fragile") {
+          if (componentState.fallDistance !== 0) {
+            components.push({ x, y, ...componentState });
+          }
         } else {
           components.push({ x, y, ...componentState });
         }
@@ -712,6 +725,7 @@ function importBoardContents(
       "board",
       "pending",
       "direction",
+      "fallDistance",
       "ignoreZeros",
       "wrapX",
       "wrapY",
@@ -719,6 +733,8 @@ function importBoardContents(
     const type = requireString(entry.type, `${componentLabel} type`);
     const fields = type === "assembler"
       ? ["x", "y", "type", "pending"]
+      : type === "fragile"
+        ? ["x", "y", "type", "fallDistance"]
       : type === "rotator"
         ? ["x", "y", "type", "direction"]
         : type === "discard"
@@ -782,6 +798,11 @@ function importBoardContents(
         throw new Error(`${componentLabel} has unknown direction "${directionName}"`);
       }
       snapshot = { type: "rotator", direction };
+    } else if (type === "fragile") {
+      snapshot = {
+        type,
+        fallDistance: requireInteger(state.fallDistance, `${componentLabel} fallDistance`, 0, 2),
+      };
     } else if (type === "delay") {
       const length = requireInteger(
         state.length,
@@ -928,20 +949,7 @@ function importBoardContents(
         };
       }
     }
-    if (
-      !hasComponentState(kind) ||
-      (snapshot.type === "assembler" && kind !== TileKind.Assembler) ||
-      (snapshot.type === "rotator" && kind !== TileKind.Rotator) ||
-      (snapshot.type === "delay" && kind !== TileKind.Delay) ||
-      (snapshot.type === "discard" && kind !== TileKind.Discard) ||
-      (snapshot.type === "counter" && kind !== TileKind.Counter) ||
-      (snapshot.type === "rom" && kind !== TileKind.Rom) ||
-      (snapshot.type === "lut" && kind !== TileKind.Lut) ||
-      (snapshot.type === "checker" && kind !== TileKind.Checker) ||
-      (snapshot.type === "monitor" && kind !== TileKind.Monitor) ||
-      (snapshot.type === "grapher" && kind !== TileKind.Grapher) ||
-      (snapshot.type === "array" && kind !== TileKind.RuneArray)
-    ) {
+    if (!componentStateMatchesKind(snapshot, kind)) {
       throw new Error(`${componentLabel} does not match the tile at (${x}, ${y})`);
     }
     componentStatesByCell[cellIndex] = snapshot;
@@ -949,7 +957,8 @@ function importBoardContents(
   }
   for (let cellIndex = 0; cellIndex < kinds.length; cellIndex += 1) {
     const kind = expectDefined(kinds[cellIndex], `tile kind at index ${cellIndex}`) as TileKind;
-    if (hasComponentState(kind) && componentStateAtCell[cellIndex] !== 1) {
+    if (hasComponentState(kind) && TILE_DEFINITIONS[kind].fragile !== true &&
+        componentStateAtCell[cellIndex] !== 1) {
       const x = cellIndex % width;
       const y = (cellIndex - x) / width;
       throw new Error(`Configurable component at (${x}, ${y}) is missing state`);

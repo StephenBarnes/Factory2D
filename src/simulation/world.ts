@@ -347,6 +347,26 @@ export class World {
     return snapshotComponentState(this.requireComponentStateAtIndex(index));
   }
 
+  /** Advances unwelded gravity history; callers defer destruction until movement commits. */
+  advanceFragileFallAtIndex(index: number, falling: boolean): boolean {
+    const state = this.requireComponentStateAtIndex(index);
+    if (state.type !== "fragile") {
+      throw new Error(`Tile at index ${index} is not fragile`);
+    }
+    const welded =
+      this.hasWeldAtIndex(index, Direction.Up) ||
+      this.hasWeldAtIndex(index, Direction.Right) ||
+      this.hasWeldAtIndex(index, Direction.Down) ||
+      this.hasWeldAtIndex(index, Direction.Left);
+    const breaks = !welded && !falling && state.fallDistance > 1;
+    const distance = welded || !falling ? 0 : Math.min(2, state.fallDistance + 1);
+    if (state.fallDistance !== distance) {
+      state.fallDistance = distance;
+      this.touchVisualRevision();
+    }
+    return breaks;
+  }
+
   configureNumericComponent(x: number, y: number, value: number): boolean {
     const index = this.indexOf(x, y);
     const state = this.requireComponentStateAtIndex(index);
@@ -869,6 +889,14 @@ export class World {
       this.replaceKindAtIndex(targetIndex, outputKind);
       this.cells.orientations[targetIndex] = Direction.Up;
       this.cells.resetTransientState(targetIndex);
+      const state = createDefaultComponentState(
+        outputKind,
+        Direction.Up,
+        (width, height) => new World(width, height),
+      );
+      if (state !== null) {
+        this.componentStates.set(targetId, state);
+      }
       this.clearDisallowedWeldsAtIndex(targetIndex);
       recordProcessingAnimation(this, targetIndex, outputKind);
       changed = true;
