@@ -359,7 +359,6 @@ body:has(dialog[open]) .tool-cursor {
 .solutions-panel::after,
 .tile-inspector::after,
 .main-menu-dialog::after,
-.workshop-info-dialog::after,
 .component-configuration-dialog::after,
 .workshop-header::after,
 .test-report-dialog::after {

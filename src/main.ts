@@ -2086,7 +2086,7 @@ copySceneButton.addEventListener("click", () => {
 
 downloadImageButton.addEventListener("click", () => {
   exportMenu.close();
-  surface.renderer.render(surface.previousWorld, 1, performance.now(), theme.isLight);
+  surface.renderer.render(surface.previousWorld, 1, performance.now(), theme.isLight, animationToggle.checked);
   surface.renderer.cropRenderedBoard().toBlob((blob) => {
     if (blob === null) {
       throw new Error("Could not encode the grid image as PNG");
@@ -2486,6 +2486,7 @@ function frame(currentTime: number): void {
     animationProgress,
     currentTime,
     theme.isLight,
+    animationToggle.checked,
   );
   positionSelectionActions();
   requestAnimationFrame(frame);

@@ -25,6 +25,7 @@ import { TranslationInterpolation } from "./translation-interpolation";
 import {
   type BodyCell,
   createBodyPath,
+  DECORATION_CELL_SIZE,
   drawBody,
   drawTile,
   setCircuitPortCharge,
@@ -308,7 +309,13 @@ export class CanvasRenderer {
     this.renderInvalidated = true;
   }
 
-  render(previousWorld: World | null = null, progress = 1, animationTime = 0, lightMode = false): void {
+  render(
+    previousWorld: World | null = null,
+    progress = 1,
+    animationTime = 0,
+    lightMode = false,
+    animationsEnabled = true,
+  ): void {
     if (this.renderedBevels !== tileAppearance.bevels) {
       this.renderedBevels = tileAppearance.bevels;
       this.renderInvalidated = true;
@@ -318,6 +325,10 @@ export class CanvasRenderer {
       this.renderInvalidated = true;
     }
     this.resizeBackingStore();
+    if (!animationsEnabled || this.cellSize < DECORATION_CELL_SIZE) {
+      // Discard hidden bursts before frame invalidation so they neither redraw nor replay later.
+      this.processingAnimations.clear();
+    }
     const boundedProgress = Math.max(0, Math.min(1, progress));
     const previousWorldRevision = previousWorld?.revision ?? -1;
     const nestedPortCharges = this.nestedPortChargeKey();

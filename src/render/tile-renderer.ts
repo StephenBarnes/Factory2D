@@ -76,7 +76,7 @@ const INSET_RATIO = 0.05;
 const BEVEL_RATIO = 0.05;
 
 /** Logical pixels: supersampling must not change which details are visible. */
-const DECORATION_CELL_SIZE = 12;
+export const DECORATION_CELL_SIZE = 12;
 const BEVEL_CELL_SIZE = 24;
 
 const HIGHLIGHT_STYLE = "rgba(255, 255, 255, 0.15)";
