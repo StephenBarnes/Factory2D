@@ -18,3 +18,6 @@ Ideas:
 * Given rotator blocks and various circuit blocks, carry stone blocks from a low starting position to a high delivery block, by rotating them repeatedly.
 * Puzzle: build a lock gate that allows through only bodies matching a specific shape.
 * Puzzle: build a gantry that grabs bodies and moves them over a wall.
+* Crossing a gap by building a flying machine. (Uncertain if this is even possible, unless we allow components that trivialize it, like horizontal sliders.)
+* Kaizen-style puzzles: Given dispensers (duplicators with buttons) providing any number of welded 2x2 and 3x4 iron blocks, assemble iron helmets, which are some complex shape made of iron blocks. The player must decide how to drill and weld/unweld blocks to make up the helmet shape, and implement that in machinery.
+* Slider block puzzles, like Rush Hour: Given some complex arrangement of welded pieces, each with a slider block preventing horizontal or vertical movement, build a device that will untangle them and extract one gem in the center.

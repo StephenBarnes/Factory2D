@@ -162,7 +162,10 @@ export class PistonResolver {
     // Pulls collect only weld closure. Pushes additionally collect contact chains.
     for (let cursor = 0; cursor < stroke.cells.length; cursor += 1) {
       const cell = expectDefined(stroke.cells[cursor], "piston proposal cell");
-      if (TILE_DEFINITIONS[this.world.kindAtIndex(cell)].immovable ||
+      const definition = TILE_DEFINITIONS[this.world.kindAtIndex(cell)];
+      if (definition.immovable ||
+          (definition.slidesAlongOrientation &&
+            (this.world.orientationAtIndex(cell) & 1) !== (direction & 1)) ||
           (!recoil && cell === base) || (recoil && cell === arm)) {
         return false;
       }

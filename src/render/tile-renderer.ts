@@ -693,6 +693,32 @@ function drawDecoration(
       context.lineTo(left + size * 0.65, top + size * 0.8);
       context.stroke();
       break;
+    case TileDecorationStyle.Slider:
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.lineWidth = Math.max(1.5, size * 0.045);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.beginPath();
+      context.moveTo(-size * 0.23, -size * 0.32);
+      context.lineTo(-size * 0.23, size * 0.32);
+      context.moveTo(size * 0.23, -size * 0.32);
+      context.lineTo(size * 0.23, size * 0.32);
+      context.stroke();
+      context.fillStyle = "#293e3c";
+      context.fillRect(-size * 0.29, -size * 0.1, size * 0.58, size * 0.2);
+      context.strokeRect(-size * 0.29, -size * 0.1, size * 0.58, size * 0.2);
+      context.beginPath();
+      context.moveTo(-size * 0.08, -size * 0.23);
+      context.lineTo(0, -size * 0.32);
+      context.lineTo(size * 0.08, -size * 0.23);
+      context.moveTo(-size * 0.08, size * 0.23);
+      context.lineTo(0, size * 0.32);
+      context.lineTo(size * 0.08, size * 0.23);
+      context.stroke();
+      context.restore();
+      break;
     case TileDecorationStyle.Fastener:
       context.lineWidth = Math.max(1, size * 0.035);
       context.lineJoin = "miter";

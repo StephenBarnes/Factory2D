@@ -61,6 +61,7 @@ export const enum TileKind {
   Discard = 59,
   Lut = 60,
   Fastener = 61,
+  Slider = 62,
 }
 
 export const enum Direction {
@@ -131,6 +132,7 @@ export const enum TileDecorationStyle {
   Discard = 48,
   Lut = 49,
   Fastener = 50,
+  Slider = 51,
 }
 
 export const enum PaletteCategory {
@@ -161,6 +163,8 @@ export interface TileDefinition {
   readonly affectedByGravity: boolean;
   /** Anchors the whole welded body against all motion; omitted means movable. */
   readonly immovable?: boolean;
+  /** Restricts translation to the facing axis, in either direction; rotation remains allowed. */
+  readonly slidesAlongOrientation?: boolean;
   /** Hidden from occupancy sensors and transparent to charge-sensor rays; omitted means detectable. */
   readonly invisibleToSensor?: boolean;
   /** Immune to destructive tools such as drills; omitted means destructible. */
@@ -354,6 +358,31 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#66594a",
     decorationStyle: TileDecorationStyle.Fastener,
     decorationColor: "#e3c693",
+  },
+  [TileKind.Slider]: {
+    name: "Slider",
+    boardCode: "~",
+    defaultPrice: 8,
+    palette: {
+      order: 65,
+      category: PaletteCategory.Motion,
+      description: "Restricts its welded body to movement along the marked axis.",
+      extendedDescription: ["Moves in either direction along its rails, never across them. Vertical sliders can fall; horizontal sliders hold their welded body aloft, even under falling weight.", "Every welded slider adds its constraint: perpendicular sliders prevent all translation. Pistons and conveyors must obey the same rails.", "Rotate to change the permitted axis. Rotators can turn the body freely, subject to their usual collisions; the rails turn with it."],
+    },
+    affectedByGravity: true,
+    slidesAlongOrientation: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.None,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#536c69",
+    decorationStyle: TileDecorationStyle.Slider,
+    decorationColor: "#c5e2ce",
   },
   [TileKind.Magnet]: {
     name: "Lodestone",

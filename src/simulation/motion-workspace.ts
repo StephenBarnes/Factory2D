@@ -29,7 +29,8 @@ export class MotionWorkspace {
   private readonly bodyHeads: Int32Array;
   private readonly nextBodyMember: Int32Array;
   private readonly bodyFalls: Uint8Array;
-  private readonly bodyImmovable: Uint8Array;
+  /** Bit 0 blocks horizontal translation; bit 1 blocks vertical translation. */
+  private readonly bodyBlockedAxes: Uint8Array;
   private readonly gravityActivated: Uint8Array;
   private hasFloatingTiles = false;
   private readonly bodySlidesDiagonally: Uint8Array;
@@ -64,7 +65,7 @@ export class MotionWorkspace {
     this.bodyHeads = new Int32Array(world.cellCount);
     this.nextBodyMember = new Int32Array(world.cellCount);
     this.bodyFalls = new Uint8Array(world.cellCount);
-    this.bodyImmovable = new Uint8Array(world.cellCount);
+    this.bodyBlockedAxes = new Uint8Array(world.cellCount);
     this.gravityActivated = new Uint8Array(world.cellCount);
     this.bodySlidesDiagonally = new Uint8Array(world.cellCount);
     this.horizontalMoves = new Int16Array(world.cellCount);
@@ -272,7 +273,7 @@ export class MotionWorkspace {
   private collectBodyMembers(): void {
     this.bodyHeads.fill(-1);
     this.bodyFalls.fill(1);
-    this.bodyImmovable.fill(0);
+    this.bodyBlockedAxes.fill(0);
     this.hasFloatingTiles = false;
     this.bodySlidesDiagonally.fill(1);
     for (
@@ -293,7 +294,12 @@ export class MotionWorkspace {
         this.bodyFalls[root] = 0;
       }
       if (definition.immovable) {
-        this.bodyImmovable[root] = 1;
+        this.bodyBlockedAxes[root] = 3;
+      }
+      if (definition.slidesAlongOrientation) {
+        this.bodyBlockedAxes[root] =
+          expectDefined(this.bodyBlockedAxes[root], "body blocked axes") |
+          (1 << (this.world.orientationAtIndex(index) & 1));
       }
       if (!definition.affectedByGravity && !definition.immovable) {
         this.hasFloatingTiles = true;
@@ -302,6 +308,11 @@ export class MotionWorkspace {
         this.bodySlidesDiagonally[root] = 0;
       }
     }
+  }
+
+  private blocksTranslation(root: number, moveX: number, moveY: number): boolean {
+    const axes = expectDefined(this.bodyBlockedAxes[root], "body blocked axes");
+    return (moveX !== 0 && (axes & 1) !== 0) || (moveY !== 0 && (axes & 2) !== 0);
   }
 
   private restoreWeldedBodiesAfterGravity(): void {
@@ -435,7 +446,7 @@ export class MotionWorkspace {
       this.drivenBodies[root] = 1;
       this.movementQueue[queueLength] = root;
       queueLength += 1;
-      if (this.bodyImmovable[root] === 1) {
+      if (this.blocksTranslation(root, moveX, moveY)) {
         this.blockMovementGroup(root);
       }
     }
@@ -481,7 +492,7 @@ export class MotionWorkspace {
           this.verticalMoves[otherBody] = moveY;
           this.movementQueue[queueLength] = otherBody;
           queueLength += 1;
-          if (this.bodyImmovable[otherBody] === 1) {
+          if (this.blocksTranslation(otherBody, moveX, moveY)) {
             this.blockMovementGroup(otherBody);
           }
           this.unionMovementGroups(root, otherBody);
@@ -529,7 +540,7 @@ export class MotionWorkspace {
           this.blockMovementGroup(root);
           continue;
         }
-        if (this.bodyImmovable[blocker] === 1) {
+        if (this.blocksTranslation(blocker, moveX, moveY)) {
           this.blockMovementGroup(root);
           continue;
         }
@@ -667,7 +678,7 @@ export class MotionWorkspace {
       ) {
         continue;
       }
-      if (this.bodyImmovable[root] === 1) {
+      if (this.blocksTranslation(root, 0, 1)) {
         this.jammedBodies[root] = 1;
         continue;
       }
