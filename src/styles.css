@@ -489,7 +489,7 @@ body:has(dialog[open]) .tool-cursor {
   min-height: 52px;
   padding: 9px 24px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.5fr) minmax(0, 0.6fr);
   align-items: center;
   gap: 9px;
   transition: border-color 120ms ease, background-color 120ms ease, transform 120ms ease;
@@ -526,7 +526,7 @@ body:has(dialog[open]) .tool-cursor {
   font-size: 0.9rem;
   letter-spacing: 0.02em;
   white-space: nowrap;
-  text-align: right;
+  text-align: center;
 }
 
 .puzzle-details small {
@@ -537,7 +537,6 @@ body:has(dialog[open]) .tool-cursor {
 }
 
 .puzzle-status {
-  grid-column: 1 / -1;
   color: var(--gold);
   font-family: var(--font-mono);
   font-size: 0.8rem;
@@ -682,6 +681,7 @@ body:has(dialog[open]) .tool-cursor {
   font-family: var(--font-display);
   font-size: 1rem;
   line-height: 1.65;
+  text-align: justify;
 }
 
 .puzzle-goal {
@@ -2336,6 +2336,7 @@ kbd {
   font-family: var(--font-display);
   font-size: 1rem;
   line-height: 1.55;
+  text-align: justify;
 }
 .workshop-properties {
   padding: 24px;

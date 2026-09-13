@@ -209,7 +209,7 @@ test("selection shortcuts use occupied bounds and grid clicks unselect", async (
   await page.keyboard.press("Control+A");
   const selectionActions = page.locator("#selection-actions");
   await expect(selectionActions).toBeVisible();
-  await expect(page.getByRole("button", { name: "Flip selection vertically" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Flip vertically" })).toBeVisible();
 
   const outsideOccupiedBounds = await boardCellCenter(page, 19, 0);
   await page.mouse.click(outsideOccupiedBounds.x, outsideOccupiedBounds.y);
@@ -399,7 +399,7 @@ test("workshop identity exposes information and live puzzle metrics", async ({ p
   await expect(footprint).toHaveText("0×0");
   await expect(page.locator("#screen-description")).toHaveCount(0);
 
-  await header.getByRole("button", { name: "Workshop information" }).click();
+  await header.getByRole("button", { name: "Puzzle information" }).click();
   const dialog = page.locator("#workshop-info-dialog");
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("heading", { name: "First Shift" })).toBeVisible();

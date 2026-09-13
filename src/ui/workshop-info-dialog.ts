@@ -3,7 +3,11 @@ import type {
   SandboxPuzzleProperties,
 } from "../game/sandbox-puzzle-authoring";
 import { PUZZLE_GROUPS } from "../game/puzzle-groups";
-import { parsePuzzleDifficulty, PUZZLE_DIFFICULTIES } from "../game/puzzle-difficulty";
+import {
+  parsePuzzleDifficulty,
+  PUZZLE_DIFFICULTIES,
+  type PuzzleDifficulty,
+} from "../game/puzzle-difficulty";
 import {
   DEFAULT_PUZZLE_CYCLE_LIMIT,
   MAX_PUZZLE_CYCLE_LIMIT,
@@ -20,6 +24,7 @@ import { PALETTE_CATEGORIES } from "./component-palette";
 export interface WorkshopInformation {
   readonly name: string;
   readonly description: string;
+  readonly difficulty: PuzzleDifficulty;
   readonly goal: string | null;
 }
 
@@ -35,6 +40,7 @@ export class WorkshopInfoDialog {
   private readonly propertiesContent: HTMLElement;
   private readonly title: HTMLElement;
   private readonly description: HTMLElement;
+  private readonly difficulty: HTMLElement;
   private readonly goalPanel: HTMLElement;
   private readonly goal: HTMLElement;
   private readonly idInput: HTMLInputElement;
@@ -59,6 +65,7 @@ export class WorkshopInfoDialog {
     this.propertiesContent = requiredDescendant(dialog, "[data-workshop-properties]");
     this.title = requiredDescendant(dialog, "[data-workshop-info-title]");
     this.description = requiredDescendant(dialog, "[data-workshop-info-description]");
+    this.difficulty = requiredDescendant(dialog, "[data-workshop-info-difficulty]");
     this.goalPanel = requiredDescendant(dialog, "[data-workshop-info-goal-panel]");
     this.goal = requiredDescendant(dialog, "[data-workshop-info-goal]");
     this.idInput = requiredDescendant(dialog, "[data-workshop-properties-id]");
@@ -108,13 +115,19 @@ export class WorkshopInfoDialog {
 
   show(information: WorkshopInformation): void {
     this.saveProperties = null;
-    this.status.textContent = "WORKSHOP INFORMATION";
+    this.status.textContent = "PUZZLE INFORMATION";
     this.staticContent.hidden = false;
     this.propertiesContent.hidden = true;
     this.saveButton.hidden = true;
     this.closeButton.textContent = "CLOSE";
     this.title.textContent = information.name;
     this.description.textContent = information.description;
+    const rating = PUZZLE_DIFFICULTIES[information.difficulty];
+    this.difficulty.textContent = `${rating.mark} ${rating.label}`;
+    this.difficulty.ariaLabel = information.difficulty === "tutorial"
+      ? `${rating.label} puzzle`
+      : `${rating.label} — ${information.difficulty} of 5 stars`;
+    this.difficulty.title = this.difficulty.ariaLabel;
     this.goalPanel.hidden = information.goal === null;
     this.goal.textContent = information.goal ?? "";
     this.dialog.showModal();
@@ -292,7 +305,7 @@ export class WorkshopInfoDialog {
 function requiredDescendant<T extends HTMLElement>(root: HTMLElement, selector: string): T {
   const element = root.querySelector<T>(selector);
   if (element === null) {
-    throw new Error(`Missing required workshop information element ${selector}`);
+    throw new Error(`Missing required puzzle workshop information element ${selector}`);
   }
   return element;
 }

@@ -2,7 +2,7 @@ export const PUZZLE_DIFFICULTIES = {
   tutorial: { label: "Tutorial", mark: "🎓" },
   1: { label: "Easy", mark: "★" },
   2: { label: "Intermediate", mark: "★★" },
-  3: { label: "Difficult", mark: "★★★" },
+  3: { label: "Hard", mark: "★★★" },
   4: { label: "Expert", mark: "★★★★" },
   5: { label: "Masterwork", mark: "★★★★★" },
 } as const;

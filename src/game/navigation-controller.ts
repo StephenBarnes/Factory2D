@@ -191,14 +191,15 @@ export class NavigationController {
       const puzzle = puzzleById(screen.puzzleId);
       const solution = this.solutions.byId(screen.solutionId);
       sessionChanged = this.sessions.activateSolution(solution, puzzle);
-      this.elements.menuButton.textContent = "← PUZZLE";
+      this.elements.menuButton.textContent = "← BRIEFING";
       this.elements.screenTitle.textContent = puzzle.name.toUpperCase();
-      this.elements.workshopInfoButton.setAttribute("aria-label", "Workshop information");
-      this.elements.workshopInfoButton.title = "Workshop information";
+      this.elements.workshopInfoButton.setAttribute("aria-label", "Puzzle information");
+      this.elements.workshopInfoButton.title = "Puzzle information";
       this.elements.workshopInfoButton.onclick = () => {
         this.workshopInfoDialog.show({
           name: puzzle.name,
           description: puzzle.description,
+          difficulty: puzzle.difficulty,
           goal: puzzle.goal,
         });
       };
