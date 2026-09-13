@@ -1,20 +1,24 @@
 {
   "format": "factory2d-puzzle",
   "version": 5,
-  "width": 24,
-  "height": 14,
+  "width": 15,
+  "height": 3,
   "id": "rectifier",
   "group": "runelore",
-  "order": 3,
+  "order": 4,
   "name": "Rectifier",
   "difficulty": 2,
-  "description": "The input rune feeds a signal into your workshop. Emit +1 whenever the input is +1 and 0 otherwise. Take as many ticks as you need: the sequence checker starts comparing at your first nonzero output, and the signal panel shows the input, your output, and the expected output side by side.",
-  "goal": "Rectify the input signal",
+  "description": "Use simple components to build a \"rectifier\" that converts red -1 signals to zero while leaving zero and blue +1 signals unchanged. The signals panel shows the input and your output as well as the expected sequence. The solution is tested using a sequence checker block which starts comparing at your first nonzero output. There are multiple test cases; all test inputs are guaranteed to begin with a +1 value.",
+  "goal": "Emit +1 whenever the input is +1, and 0 otherwise.",
   "cycleLimit": 200,
   "components": [
     {
       "code": "C",
       "price": 1
+    },
+    {
+      "code": "I",
+      "price": 3
     },
     {
       "code": "+",
@@ -23,71 +27,47 @@
     {
       "code": "*",
       "price": 3
-    },
-    {
-      "code": "I",
-      "price": 3
-    },
-    {
-      "code": "W",
-      "price": 2
     }
   ],
   "editableRegions": [
     {
-      "x": 8,
-      "y": 5,
-      "width": 6,
-      "height": 6
+      "x": 4,
+      "y": 0,
+      "width": 7,
+      "height": 3
     }
   ],
   "initialBoard": {
     "format": "factory2d-board",
     "version": 15,
-    "width": 24,
-    "height": 14,
+    "width": 15,
+    "height": 3,
     "tick": 0,
     "result": "in-progress",
     "grid": [
-      "========================",
-      "=......................=",
-      "=......................=",
-      "=......................=",
-      "=......................=",
-      "=......................=",
-      "=......................=",
-      "=......................=",
-      "=......................=",
-      "=.1UCCmC......mCEV.....=",
-      "========......==g=======",
-      "=.......======.........=",
-      "=......................=",
-      "========================"
+      "====.......====",
+      "1UmC.......CmEV",
+      "====.......==g="
     ],
     "orientations": [
       {
-        "x": 3,
-        "y": 9,
+        "x": 1,
+        "y": 1,
         "direction": "right"
       },
       {
-        "x": 16,
-        "y": 9,
+        "x": 13,
+        "y": 1,
         "direction": "right"
-      },
-      {
-        "x": 16,
-        "y": 10,
-        "direction": "up"
       }
     ],
     "components": [
       {
-        "x": 3,
-        "y": 9,
+        "x": 1,
+        "y": 1,
         "type": "rom",
-        "width": 9,
-        "height": 3,
+        "width": 5,
+        "height": 4,
         "cursor": 0,
         "values": [
           1,
@@ -109,40 +89,27 @@
           0,
           -1,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0
         ]
       },
       {
-        "x": 6,
-        "y": 9,
+        "x": 2,
+        "y": 1,
         "type": "monitor",
         "label": "INPUT"
       },
       {
-        "x": 14,
-        "y": 9,
+        "x": 12,
+        "y": 1,
         "type": "monitor",
         "label": "OUTPUT"
       },
       {
-        "x": 16,
-        "y": 10,
-        "type": "grapher",
-        "label": "EXPECTED"
-      },
-      {
-        "x": 16,
-        "y": 9,
+        "x": 13,
+        "y": 1,
         "type": "checker",
-        "width": 9,
-        "height": 3,
+        "width": 5,
+        "height": 4,
         "cursor": 0,
         "failed": false,
         "values": [
@@ -165,32 +132,20 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0
         ]
+      },
+      {
+        "x": 13,
+        "y": 2,
+        "type": "grapher",
+        "label": "EXPECTED"
       }
     ],
     "welds": [
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "..-----.......--+.......",
-      "........................",
-      "........................",
-      "........................",
-      "........................"
+      "+++|.......+++|",
+      "+++|.......+++|",
+      "---........---."
     ]
   },
   "testCases": [
@@ -201,14 +156,14 @@
         "initialBoard": {
           "components": [
             {
-              "x": 3,
-              "y": 9,
+              "x": 1,
+              "y": 1,
               "type": "rom",
-              "width": 9,
-              "height": 3,
+              "width": 5,
+              "height": 4,
               "cursor": 0,
               "values": [
-                -1,
+                1,
                 -1,
                 -1,
                 1,
@@ -219,74 +174,60 @@
                 0,
                 1,
                 -1,
-                1,
-                -1,
-                0,
-                1,
                 1,
                 -1,
                 0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
+                1,
+                1,
+                -1,
                 0,
                 0,
                 0
               ]
             },
             {
-              "x": 6,
-              "y": 9,
-              "type": "monitor",
-              "label": "INPUT"
-            },
-            {
-              "x": 14,
-              "y": 9,
-              "type": "monitor",
-              "label": "OUTPUT"
-            },
-            {
-              "x": 16,
-              "y": 10,
+              "x": 13,
+              "y": 2,
               "type": "grapher",
               "label": "EXPECTED"
             },
             {
-              "x": 16,
-              "y": 9,
+              "x": 2,
+              "y": 1,
+              "type": "monitor",
+              "label": "INPUT"
+            },
+            {
+              "x": 12,
+              "y": 1,
+              "type": "monitor",
+              "label": "OUTPUT"
+            },
+            {
+              "x": 13,
+              "y": 1,
               "type": "checker",
-              "width": 9,
-              "height": 3,
+              "width": 5,
+              "height": 4,
               "cursor": 0,
               "failed": false,
               "values": [
                 1,
-                1,
-                1,
-                0,
                 0,
                 0,
                 1,
-                0,
-                1,
-                0,
-                0,
                 1,
                 1,
                 0,
                 0,
                 0,
+                1,
+                0,
+                1,
                 0,
                 0,
-                0,
-                0,
-                0,
-                0,
-                0,
+                1,
+                1,
                 0,
                 0,
                 0,
