@@ -28,7 +28,7 @@ import { WorkshopSurfaceController } from "./game/workshop-surface-controller";
 import { copyComponentConfiguration } from "./game/component-configuration-copy";
 import type { SelectionPreviewCell } from "./game/tile-selection";
 
-import { visitCrossedGridEdges } from "./render/grid-drag";
+import { visitWeldEdgesOnGridSegment } from "./render/grid-drag";
 import type { GridCell, GridEdge, GridPoint } from "./render/grid-drag";
 import { drawTile } from "./render/tile-renderer";
 import { componentConfigurationForKind } from "./simulation/configurable-components";
@@ -1279,7 +1279,7 @@ function editWeldSegment(
   if (surface.selection.active) commitTileSelection();
 
   let changed = false;
-  visitCrossedGridEdges(from, to, surface.world.width, surface.world.height, (x1, y1, x2, y2) => {
+  visitWeldEdgesOnGridSegment(from, to, surface.world.width, surface.world.height, (x1, y1, x2, y2) => {
     changed = setEditableWeld(x1, y1, x2, y2, erase) || changed;
   });
   if (endpointEdge !== null) {

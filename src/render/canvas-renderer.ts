@@ -17,6 +17,7 @@ import type { TextBox } from "../simulation/text-box";
 import { WorldFeature } from "../simulation/world-features";
 import { expectDefined } from "../util/assert";
 import type { GridCell, GridEdge, GridPoint } from "./grid-drag";
+import { WELD_HIT_RADIUS } from "./grid-drag";
 import { createBodyCell, populateBodyCell } from "./body-cells";
 import { tileAppearance } from "./appearance";
 import { RotationInterpolation, type RotationTransform } from "./rotation-interpolation";
@@ -552,35 +553,31 @@ export class CanvasRenderer {
   }
 
   edgeFromGridPoint(point: GridPoint): GridEdge | null {
-    const localX = point.x * this.cellSize;
-    const localY = point.y * this.cellSize;
-    const boardWidth = this.world.width * this.cellSize;
-    const boardHeight = this.world.height * this.cellSize;
-    if (localX < 0 || localX > boardWidth || localY < 0 || localY > boardHeight) {
+    if (point.x < 0 || point.x > this.world.width || point.y < 0 || point.y > this.world.height) {
       return null;
     }
 
     const verticalLine = Math.round(point.x);
     const horizontalLine = Math.round(point.y);
-    const verticalDistance = Math.abs(localX - verticalLine * this.cellSize);
-    const horizontalDistance = Math.abs(localY - horizontalLine * this.cellSize);
-    const selectionRadius = this.cellSize / 4;
+    const verticalDistance = Math.abs(point.x - verticalLine);
+    const horizontalDistance = Math.abs(point.y - horizontalLine);
 
     if (
       verticalLine > 0 &&
       verticalLine < this.world.width &&
-      verticalDistance <= selectionRadius &&
-      verticalDistance <= horizontalDistance
+      verticalDistance <= WELD_HIT_RADIUS &&
+      Math.abs(point.y - Math.floor(point.y) - 0.5) <= WELD_HIT_RADIUS
     ) {
-      const y = Math.min(Math.floor(point.y), this.world.height - 1);
+      const y = Math.floor(point.y);
       return { x1: verticalLine - 1, y1: y, x2: verticalLine, y2: y };
     }
     if (
       horizontalLine > 0 &&
       horizontalLine < this.world.height &&
-      horizontalDistance <= selectionRadius
+      horizontalDistance <= WELD_HIT_RADIUS &&
+      Math.abs(point.x - Math.floor(point.x) - 0.5) <= WELD_HIT_RADIUS
     ) {
-      const x = Math.min(Math.floor(point.x), this.world.width - 1);
+      const x = Math.floor(point.x);
       return { x1: x, y1: horizontalLine - 1, x2: x, y2: horizontalLine };
     }
     return null;

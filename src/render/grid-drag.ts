@@ -65,7 +65,10 @@ export function cellsOnGridSegment(
   };
 }
 
-export function visitCrossedGridEdges(
+// Grid-space half-size of the square target centered on each weldable edge.
+export const WELD_HIT_RADIUS = 0.3;
+
+export function visitWeldEdgesOnGridSegment(
   from: GridPoint,
   to: GridPoint,
   width: number,
@@ -73,73 +76,60 @@ export function visitCrossedGridEdges(
   visit: EdgeVisitor,
 ): void {
   const segment = clipToGrid(from, to, width, height);
-  if (segment === null) {
-    return;
-  }
+  if (segment === null) return;
 
-  const deltaX = segment.toX - segment.fromX;
-  const deltaY = segment.toY - segment.fromY;
-  if (deltaX === 0 && Number.isInteger(segment.fromX)) {
-    const line = segment.fromX;
-    if (line > 0 && line < width) {
-      const firstRow = Math.max(0, Math.floor(Math.min(segment.fromY, segment.toY)));
-      const lastRow = Math.min(
-        height - 1,
-        Math.ceil(Math.max(segment.fromY, segment.toY)) - 1,
-      );
-      for (let row = firstRow; row <= lastRow; row += 1) {
-        visit(line - 1, row, line, row);
-      }
+  visitWeldStrips(
+    segment.fromX, segment.fromY, segment.toX, segment.toY,
+    width, height, false, visit,
+  );
+  visitWeldStrips(
+    segment.fromY, segment.fromX, segment.toY, segment.toX,
+    height, width, true, visit,
+  );
+}
+
+/** Clip to each edge's normal band, then visit midpoint targets along that band. */
+function visitWeldStrips(
+  fromNormal: number,
+  fromAlong: number,
+  toNormal: number,
+  toAlong: number,
+  normalSize: number,
+  alongSize: number,
+  horizontal: boolean,
+  visit: EdgeVisitor,
+): void {
+  const deltaNormal = toNormal - fromNormal;
+  const deltaAlong = toAlong - fromAlong;
+  const first = Math.max(1, Math.ceil(Math.min(fromNormal, toNormal) - WELD_HIT_RADIUS));
+  const last = Math.min(normalSize - 1, Math.floor(Math.max(fromNormal, toNormal) + WELD_HIT_RADIUS));
+  const step = deltaNormal < 0 ? -1 : 1;
+  for (let line = step > 0 ? first : last; line >= first && line <= last; line += step) {
+    let start = 0;
+    let end = 1;
+    if (deltaNormal !== 0) {
+      const enter = (line - WELD_HIT_RADIUS - fromNormal) / deltaNormal;
+      const leave = (line + WELD_HIT_RADIUS - fromNormal) / deltaNormal;
+      start = Math.max(0, Math.min(enter, leave));
+      end = Math.min(1, Math.max(enter, leave));
+      if (start > end) continue;
     }
-    return;
-  }
-
-  if (deltaY === 0 && Number.isInteger(segment.fromY)) {
-    const line = segment.fromY;
-    if (line > 0 && line < height) {
-      const firstColumn = Math.max(0, Math.floor(Math.min(segment.fromX, segment.toX)));
-      const lastColumn = Math.min(
-        width - 1,
-        Math.ceil(Math.max(segment.fromX, segment.toX)) - 1,
-      );
-      for (let column = firstColumn; column <= lastColumn; column += 1) {
-        visit(column, line - 1, column, line);
-      }
-    }
-    return;
-  }
-
-  if (deltaX !== 0) {
-    const firstLine = deltaX > 0 ? Math.floor(segment.fromX) + 1 : Math.ceil(segment.fromX) - 1;
-    const lastLine = deltaX > 0 ? Math.ceil(segment.toX) - 1 : Math.floor(segment.toX) + 1;
-    const step = deltaX > 0 ? 1 : -1;
-    for (let x = firstLine; deltaX > 0 ? x <= lastLine : x >= lastLine; x += step) {
-      if (x <= 0 || x >= width) {
-        continue;
-      }
-      const progress = (x - segment.fromX) / deltaX;
-      const y = segment.fromY + deltaY * progress;
-      if (y >= 0 && y < height) {
-        const row = Math.floor(y);
-        visit(x - 1, row, x, row);
-      }
-    }
-  }
-
-  if (deltaY !== 0) {
-    const firstLine = deltaY > 0 ? Math.floor(segment.fromY) + 1 : Math.ceil(segment.fromY) - 1;
-    const lastLine = deltaY > 0 ? Math.ceil(segment.toY) - 1 : Math.floor(segment.toY) + 1;
-    const step = deltaY > 0 ? 1 : -1;
-    for (let y = firstLine; deltaY > 0 ? y <= lastLine : y >= lastLine; y += step) {
-      if (y <= 0 || y >= height) {
-        continue;
-      }
-      const progress = (y - segment.fromY) / deltaY;
-      const x = segment.fromX + deltaX * progress;
-      if (x >= 0 && x < width) {
-        const column = Math.floor(x);
-        visit(column, y - 1, column, y);
-      }
+    const alongStart = fromAlong + deltaAlong * start;
+    const alongEnd = fromAlong + deltaAlong * end;
+    const firstCell = Math.max(
+      0, Math.ceil(Math.min(alongStart, alongEnd) - 0.5 - WELD_HIT_RADIUS),
+    );
+    const lastCell = Math.min(
+      alongSize - 1, Math.floor(Math.max(alongStart, alongEnd) - 0.5 + WELD_HIT_RADIUS),
+    );
+    const alongStep = deltaAlong < 0 ? -1 : 1;
+    for (
+      let cell = alongStep > 0 ? firstCell : lastCell;
+      cell >= firstCell && cell <= lastCell;
+      cell += alongStep
+    ) {
+      if (horizontal) visit(cell, line - 1, cell, line);
+      else visit(line - 1, cell, line, cell);
     }
   }
 }

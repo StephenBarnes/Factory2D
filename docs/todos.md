@@ -81,7 +81,6 @@ Tasks that are not actionable yet due to prerequisites, or are lower priority, a
 * Add support for mobile and touch screens.
 * Allow mirroring components with some hotkey. Because we allow mirroring selections, and we'll add components like flippers. But this would currently break blocks without bilateral symmetry, like ROMs and selector runes.
 * DEFER Maybe support selections that are a union of rectangles, created by shift-LMB-drag.
-* Modify welding with the mouse. For example, if I have a 2x10 column, I want to be able to easily weld/unweld each 2x1 horizontal brick along the edge between horizontal neighbors, without also welding any vertical neighbors, by holding Ctrl key and dragging the mouse. Currently this is difficult because if the mouse is slightly horizontally off the center-line, it causes vertical neighbors to be welded. Basically introduce a dead zone in corners where 4 blocks meet; in those corners, make weld input cause no weld to occur. Also add a dead zone in the center of each tile. So the non-dead zone for a given weldable edge is close to the midpoint of that edge.
 
 ## Puzzle briefing screen
 
