@@ -216,8 +216,6 @@ export class CircuitResolver {
 
   private driveSources(runtime: WorldRuntime, tick: number): void {
     const world = runtime.world;
-    const successfulWeldOperations = runtime.weldOperationResolver.successfulOperationIndices;
-    const deliveryAbsorptionTargets = runtime.deliveryResolver.absorptionTargetIndices;
     for (
       let index = world.firstFeatureIndex(WorldFeature.CircuitSource);
       index >= 0;
@@ -250,7 +248,7 @@ export class CircuitResolver {
           kind === TileKind.LaserSplitter || kind === TileKind.Assembler) {
         const outputCharge = (kind === TileKind.Assembler
           ? runtime.assemblerResolver.willEmit(index)
-          : successfulWeldOperations[index] === 1) ? 1 : 0;
+          : runtime.weldOperationResolver.successfulOperationIndices[index] === 1) ? 1 : 0;
         runtime.nextIsolatedOutputCharges[index] = outputCharge;
         const orientation = world.orientationAtIndex(index);
         this.driveOutputs(
@@ -271,7 +269,7 @@ export class CircuitResolver {
         outputCharge = world.sensorOutputAtIndex(index);
       } else if (kind === TileKind.Delivery) {
         outputCharge = expectDefined(
-          deliveryAbsorptionTargets[index],
+          runtime.deliveryResolver.absorptionTargetIndices[index],
           "delivery absorption target",
         ) >= 0 ? 1 : 0;
       } else if (kind === TileKind.Comparer) {

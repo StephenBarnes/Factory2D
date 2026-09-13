@@ -418,3 +418,31 @@ Implemented the connected-body caching task from `todos.md`.
 | `WeldedBodyIndex.collect()` | 6.1 / 6.3 ms | below timer resolution |
 
 These results cover unchanged geometry, not moving factories; geometry-changing ticks still rebuild topology. The remaining motion passes still inspect bodies each tick.
+
+# Update 7
+
+Implemented lazy per-world resolver allocation from the motion/runtime memory priority.
+
+## Changes
+
+- `WorldRuntime` allocates each machine resolver, its shared observer `WeldedBodyIndex`, and `MotionWorkspace` on first use rather than at construction.
+- Existing feature-gated phases still check the live world each tick, including after earlier production commits. Components added after empty ticks or reset can activate their resolver without constructing a new simulation.
+- Resolvers remain cached once used; removing their components or resetting does not release their buffers. This preserves reuse without allocation churn.
+- Circuit source collection no longer accesses delivery and weld-operation scratch unconditionally; unrelated circuits do not allocate those resolvers.
+- Circuit output buffers remain eager. Magnetic buffers inside an activated `MotionWorkspace` and inactive-session eviction remain separate future work.
+
+## Verification
+
+- `npm test`: 57 files, 914 tests passed, including a new regression for adding powered pistons after empty ticks and repeating after reset.
+- `npm run build` passed.
+- Browser smoke check exercised an initially empty simulation, then added a falling stone, a powered piston lifting a welded load, and a rune array whose initially empty inner board later received a falling stone.
+- Headless Chromium through Vite, 400×300 boards: counted distinct typed-array backing buffers reachable from `Simulation`, excluding `World` storage. These figures measure runtime backing storage, not total browser memory or JS object overhead.
+
+| Board after one tick | Before | After |
+|---|---:|---:|
+| Empty | 33.67 MiB | 0.92 MiB |
+| One platform | 33.67 MiB | 0.92 MiB |
+| One stone | 33.67 MiB | 11.33 MiB |
+| One conduit | 34.13 MiB | 11.79 MiB |
+
+Immediately after construction, all four scenarios use 0.92 MiB instead of 33.67 MiB. Motion and circuit allocations occur on their first relevant tick; this defers their initialization cost rather than eliminating it. No tick-throughput improvement is claimed.

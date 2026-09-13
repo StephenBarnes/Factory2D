@@ -12,22 +12,23 @@ import type { World } from "./world";
 import { WorldFeature } from "./world-features";
 
 /**
- * Every per-world resolver and scratch buffer needed to tick one board. The root board
- * and each rune array's inner board own one runtime; the circuit solver spans all of them,
+ * Per-world resolvers are allocated on first use and retained for this board's lifetime.
+ * Feature checks must happen at each phase, not construction: edits and earlier commits
+ * can introduce new machinery. The circuit solver spans the root and all inner boards,
  * so the tree position fields are refreshed by the simulation before every tick.
  */
 export class WorldRuntime {
   readonly world: World;
-  readonly weldedBodies: WeldedBodyIndex;
-  readonly assemblerResolver: AssemblerResolver;
-  readonly deliveryResolver: DeliveryResolver;
-  readonly duplicatorResolver: DuplicatorResolver;
-  readonly furnaceResolver: FurnaceResolver;
-  readonly drillResolver: DrillResolver;
-  readonly motionWorkspace: MotionWorkspace;
-  readonly pistonResolver: PistonResolver;
-  readonly rotatorResolver: RotatorResolver;
-  readonly weldOperationResolver: WeldOperationResolver;
+  private weldedBodiesValue: WeldedBodyIndex | undefined;
+  private assemblerResolverValue: AssemblerResolver | undefined;
+  private deliveryResolverValue: DeliveryResolver | undefined;
+  private duplicatorResolverValue: DuplicatorResolver | undefined;
+  private furnaceResolverValue: FurnaceResolver | undefined;
+  private drillResolverValue: DrillResolver | undefined;
+  private motionWorkspaceValue: MotionWorkspace | undefined;
+  private pistonResolverValue: PistonResolver | undefined;
+  private rotatorResolverValue: RotatorResolver | undefined;
+  private weldOperationResolverValue: WeldOperationResolver | undefined;
   readonly nextCharges: Int8Array;
   readonly nextCrossingVerticalCharges: Int8Array;
   readonly nextIsolatedOutputCharges: Int8Array;
@@ -56,21 +57,51 @@ export class WorldRuntime {
   private collectedDrills = false;
   constructor(world: World) {
     this.world = world;
-    this.weldedBodies = new WeldedBodyIndex(world);
-    this.assemblerResolver = new AssemblerResolver(world, this.weldedBodies);
-    this.deliveryResolver = new DeliveryResolver(world, this.weldedBodies);
-    this.duplicatorResolver = new DuplicatorResolver(world, this.weldedBodies);
-    this.furnaceResolver = new FurnaceResolver(world);
-    this.drillResolver = new DrillResolver(world);
-    this.motionWorkspace = new MotionWorkspace(world);
-    this.pistonResolver = new PistonResolver(world);
-    this.rotatorResolver = new RotatorResolver(world);
-    this.weldOperationResolver = new WeldOperationResolver(world);
     this.nextCharges = new Int8Array(world.cellCount);
     this.nextCrossingVerticalCharges = new Int8Array(world.cellCount);
     this.nextIsolatedOutputCharges = new Int8Array(world.cellCount);
     this.nextPortCharges = new Int8Array(world.cellCount * 4);
     this.furnaceDisabled = new Uint8Array(world.cellCount);
+  }
+
+  get weldedBodies(): WeldedBodyIndex {
+    return this.weldedBodiesValue ??= new WeldedBodyIndex(this.world);
+  }
+
+  get assemblerResolver(): AssemblerResolver {
+    return this.assemblerResolverValue ??= new AssemblerResolver(this.world, this.weldedBodies);
+  }
+
+  get deliveryResolver(): DeliveryResolver {
+    return this.deliveryResolverValue ??= new DeliveryResolver(this.world, this.weldedBodies);
+  }
+
+  get duplicatorResolver(): DuplicatorResolver {
+    return this.duplicatorResolverValue ??= new DuplicatorResolver(this.world, this.weldedBodies);
+  }
+
+  get furnaceResolver(): FurnaceResolver {
+    return this.furnaceResolverValue ??= new FurnaceResolver(this.world);
+  }
+
+  get drillResolver(): DrillResolver {
+    return this.drillResolverValue ??= new DrillResolver(this.world);
+  }
+
+  get motionWorkspace(): MotionWorkspace {
+    return this.motionWorkspaceValue ??= new MotionWorkspace(this.world);
+  }
+
+  get pistonResolver(): PistonResolver {
+    return this.pistonResolverValue ??= new PistonResolver(this.world);
+  }
+
+  get rotatorResolver(): RotatorResolver {
+    return this.rotatorResolverValue ??= new RotatorResolver(this.world);
+  }
+
+  get weldOperationResolver(): WeldOperationResolver {
+    return this.weldOperationResolverValue ??= new WeldOperationResolver(this.world);
   }
 
   /** Observes start-of-tick state and collects every intent that precedes circuit resolution. */

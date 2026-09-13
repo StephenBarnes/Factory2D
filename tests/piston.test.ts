@@ -30,6 +30,27 @@ function placeNegativelyPoweredFixedBase(world: World, x: number, y: number): vo
 }
 
 describe("pistons", () => {
+  it("activates machinery added after empty ticks and reuses it after reset", () => {
+    const world = new World(5, 6);
+    const empty = world.clone();
+    const simulation = new Simulation(world);
+
+    for (let run = 0; run < 2; run += 1) {
+      simulation.step();
+      placePoweredFixedPiston(world, 2, 3);
+      const loadId = world.place(2, 2, TileKind.Stone);
+      world.setWeld(2, 3, 2, 2, true);
+
+      simulation.step();
+
+      expect(world.kindAt(2, 3)).toBe(TileKind.PistonBase);
+      expect(world.kindAt(2, 2)).toBe(TileKind.PistonArm);
+      expect(world.idAt(2, 1)).toBe(loadId);
+      expect(world.isWelded(2, 2, 2, 1)).toBe(true);
+      simulation.resetTo(empty);
+    }
+  });
+
   it("extends its welded head while leaving the other base welds in place", () => {
     const world = new World(5, 6);
     placePoweredFixedPiston(world, 2, 3);
