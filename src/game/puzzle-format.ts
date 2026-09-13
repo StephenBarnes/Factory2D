@@ -12,6 +12,7 @@ import { PuzzleResult } from "../simulation/puzzle-result";
 import { TILE_DEFINITIONS, TILE_KINDS, TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
 import { WorldFeature } from "../simulation/world-features";
+import { parsePuzzleDifficulty, type PuzzleDifficulty } from "./puzzle-difficulty";
 
 export const PUZZLE_FORMAT = "factory2d-puzzle";
 export const PUZZLE_VERSION = 5;
@@ -34,7 +35,7 @@ const PUZZLE_FIELDS = [
   "initialBoard",
   "testCases",
 ] as const;
-const OPTIONAL_PUZZLE_FIELDS = ["cycleLimit"] as const;
+const OPTIONAL_PUZZLE_FIELDS = ["cycleLimit", "difficulty"] as const;
 const BOARD_FIELDS = [
   "format",
   "version",
@@ -91,6 +92,7 @@ export interface ParsedPuzzleFile {
   readonly groupId: string;
   readonly order: number;
   readonly name: string;
+  readonly difficulty: PuzzleDifficulty;
   readonly cycleLimit: number;
   readonly description: string;
   readonly goal: string;
@@ -161,6 +163,7 @@ function parsePuzzleFileValue(value: unknown, requireVictory: boolean): ParsedPu
   }
   const order = requireFiniteNumber(puzzle.order, "Puzzle order");
   const name = requireNonEmptyString(puzzle.name, "Puzzle name");
+  const difficulty = parsePuzzleDifficulty(puzzle.difficulty === undefined ? 1 : puzzle.difficulty);
   const description = requireNonEmptyString(puzzle.description, "Puzzle description");
   const goal = requireNonEmptyString(puzzle.goal, "Puzzle goal");
   const cycleLimit = parseCycleLimit(puzzle.cycleLimit, "Puzzle cycleLimit");
@@ -192,6 +195,7 @@ function parsePuzzleFileValue(value: unknown, requireVictory: boolean): ParsedPu
     groupId,
     order,
     name,
+    difficulty,
     cycleLimit,
     description,
     goal,

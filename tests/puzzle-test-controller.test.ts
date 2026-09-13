@@ -22,6 +22,7 @@ function puzzleWith(testCases: readonly PuzzleTestCaseDefinition[]): PuzzleDefin
     groupId: "basics",
     order: 0,
     name: "Controller Test",
+    difficulty: 1,
     cycleLimit: 20,
     description: "Controller test puzzle",
     goal: "Trigger victory",

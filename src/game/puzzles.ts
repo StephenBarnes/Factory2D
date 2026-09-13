@@ -8,6 +8,7 @@ import type { PuzzleComponents } from "./puzzle-components";
 import { TileKind } from "../simulation/tile";
 import { World } from "../simulation/world";
 import { expectDefined } from "../util/assert";
+import type { PuzzleDifficulty } from "./puzzle-difficulty";
 
 export type PuzzleId = string;
 
@@ -23,6 +24,7 @@ export interface PuzzleDefinition {
   readonly groupId: string;
   readonly order: number;
   readonly name: string;
+  readonly difficulty: PuzzleDifficulty;
   readonly cycleLimit: number;
   readonly description: string;
   readonly goal: string;
@@ -144,6 +146,7 @@ export function loadPuzzleDefinitions(
     groupId: parsed.groupId,
     order: parsed.order,
     name: parsed.name,
+    difficulty: parsed.difficulty,
     cycleLimit: parsed.cycleLimit,
     description: parsed.description,
     goal: parsed.goal,

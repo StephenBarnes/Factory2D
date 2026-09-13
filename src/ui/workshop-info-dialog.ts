@@ -3,6 +3,7 @@ import type {
   SandboxPuzzleProperties,
 } from "../game/sandbox-puzzle-authoring";
 import { PUZZLE_GROUPS } from "../game/puzzle-groups";
+import { parsePuzzleDifficulty, PUZZLE_DIFFICULTIES } from "../game/puzzle-difficulty";
 import {
   DEFAULT_PUZZLE_CYCLE_LIMIT,
   MAX_PUZZLE_CYCLE_LIMIT,
@@ -39,6 +40,7 @@ export class WorkshopInfoDialog {
   private readonly idInput: HTMLInputElement;
   private readonly groupSelect: HTMLSelectElement;
   private readonly orderInput: HTMLInputElement;
+  private readonly difficultySelect: HTMLSelectElement;
   private readonly nameInput: HTMLInputElement;
   private readonly descriptionInput: HTMLTextAreaElement;
   private readonly goalInput: HTMLInputElement;
@@ -62,6 +64,7 @@ export class WorkshopInfoDialog {
     this.idInput = requiredDescendant(dialog, "[data-workshop-properties-id]");
     this.groupSelect = requiredDescendant(dialog, "[data-workshop-properties-group]");
     this.orderInput = requiredDescendant(dialog, "[data-workshop-properties-order]");
+    this.difficultySelect = requiredDescendant(dialog, "[data-workshop-properties-difficulty]");
     this.nameInput = requiredDescendant(dialog, "[data-workshop-properties-name]");
     this.descriptionInput = requiredDescendant(dialog, "[data-workshop-properties-description]");
     this.goalInput = requiredDescendant(dialog, "[data-workshop-properties-goal]");
@@ -85,6 +88,13 @@ export class WorkshopInfoDialog {
       option.value = group.id;
       option.textContent = group.name;
       this.groupSelect.append(option);
+    }
+    for (const value of ["tutorial", 1, 2, 3, 4, 5] as const) {
+      const rating = PUZZLE_DIFFICULTIES[value];
+      const option = document.createElement("option");
+      option.value = String(value);
+      option.textContent = `${rating.mark} ${rating.label}`;
+      this.difficultySelect.append(option);
     }
     this.buildComponentControls(
       requiredDescendant(dialog, "[data-workshop-properties-components]"),
@@ -123,6 +133,7 @@ export class WorkshopInfoDialog {
     this.idInput.value = properties.id;
     this.groupSelect.value = properties.groupId;
     this.orderInput.valueAsNumber = properties.order;
+    this.difficultySelect.value = String(properties.difficulty);
     this.nameInput.value = properties.name;
     this.descriptionInput.value = properties.description;
     this.goalInput.value = properties.goal;
@@ -263,6 +274,9 @@ export class WorkshopInfoDialog {
       id: this.idInput.value,
       groupId: this.groupSelect.value,
       order: this.orderInput.valueAsNumber,
+      difficulty: parsePuzzleDifficulty(
+        this.difficultySelect.value === "tutorial" ? "tutorial" : Number(this.difficultySelect.value),
+      ),
       name: this.nameInput.value,
       description: this.descriptionInput.value,
       goal: this.goalInput.value,

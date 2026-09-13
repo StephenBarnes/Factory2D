@@ -31,6 +31,7 @@ import {
 import type { World } from "../simulation/world";
 import type { TextBox } from "../simulation/text-box";
 import { expectDefined } from "../util/assert";
+import { parsePuzzleDifficulty, type PuzzleDifficulty } from "./puzzle-difficulty";
 
 export interface SandboxPuzzleComponentProperty {
   readonly kind: TileKind;
@@ -45,6 +46,7 @@ export interface SandboxPuzzleProperties {
   readonly groupId: string;
   readonly order: number;
   readonly name: string;
+  readonly difficulty: PuzzleDifficulty;
   readonly description: string;
   readonly goal: string;
   readonly cycleLimit: number | null;
@@ -62,6 +64,7 @@ interface PuzzleMetadata {
   id: string;
   groupId: string;
   order: number;
+  difficulty: PuzzleDifficulty;
   goal: string;
   cycleLimit: number | null;
 }
@@ -147,6 +150,7 @@ export class SandboxPuzzleAuthoringState {
         id: "untitled-puzzle",
         groupId: "basics",
         order: 0,
+        difficulty: 1,
         goal: "TODO: Describe the victory condition.",
         cycleLimit: null,
       },
@@ -189,6 +193,7 @@ export class SandboxPuzzleAuthoringState {
         id: parsed.id,
         groupId: parsed.groupId,
         order: parsed.order,
+        difficulty: parsed.difficulty,
         goal: parsed.goal,
         cycleLimit: source.cycleLimit === undefined ? null : parsed.cycleLimit,
       },
@@ -297,6 +302,7 @@ export class SandboxPuzzleAuthoringState {
       groupId: this.metadata.groupId,
       order: this.metadata.order,
       name: this.nameValue,
+      difficulty: this.metadata.difficulty,
       description: this.descriptionValue,
       goal: this.metadata.goal,
       cycleLimit: this.metadata.cycleLimit,
@@ -321,6 +327,7 @@ export class SandboxPuzzleAuthoringState {
       throw new Error("Puzzle order must be a finite number");
     }
     const name = requireNonEmptyText(properties.name, "Puzzle name");
+    const difficulty = parsePuzzleDifficulty(properties.difficulty);
     const description = requireNonEmptyText(properties.description, "Puzzle description");
     const goal = requireNonEmptyText(properties.goal, "Puzzle goal");
     if (
@@ -383,6 +390,7 @@ export class SandboxPuzzleAuthoringState {
     this.metadata.id = id;
     this.metadata.groupId = properties.groupId;
     this.metadata.order = properties.order;
+    this.metadata.difficulty = difficulty;
     this.metadata.goal = goal;
     this.metadata.cycleLimit = properties.cycleLimit;
     this.nameValue = name;
@@ -407,6 +415,7 @@ export class SandboxPuzzleAuthoringState {
       groupId: this.metadata.groupId,
       order: this.metadata.order,
       name: this.nameValue,
+      difficulty: this.metadata.difficulty,
       description: this.descriptionValue,
       goal: this.metadata.goal,
       cycleLimit: this.metadata.cycleLimit,

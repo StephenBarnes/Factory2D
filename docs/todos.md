@@ -45,7 +45,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 # UI
 
-* In the main menu, add markings on puzzles to denote difficulty - a graduation cap 🎓 for tutorial puzzles, and 1-3 stars ★ for easy, medium, and hard puzzles. Add mouseover text explaining what the icons mean.
 * Add various animations for clicking buttons, placing blocks, starting a puzzle, etc.
 * Implement undo and redo when editing in the sandbox and puzzle solutions.
 * Add support for mobile and touch screens.

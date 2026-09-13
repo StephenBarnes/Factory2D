@@ -7,6 +7,7 @@
   "group": "basics",
   "order": 0,
   "name": "First Shift",
+  "difficulty": "tutorial",
   "description": "Tutorial puzzle teaching block placement",
   "goal": "Drop one stone block into the delivery box",
   "cycleLimit": 10,

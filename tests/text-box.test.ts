@@ -120,6 +120,7 @@ describe("board text boxes", () => {
     const additional = { ...box, text: "Extra case" };
     const source = serializePuzzleTemplate(world, new GridRegion([]), {
       id: "labels", groupId: "basics", order: 0, name: "Labels",
+      difficulty: 1,
       description: "Labeled board", goal: "Read the instructions", cycleLimit: null,
       components: [{ kind: TileKind.Stone, price: 1 }],
       testCases: [{ id: "extra", name: "Extra", overrides: { initialBoard: { textBoxes: [additional] } } }],

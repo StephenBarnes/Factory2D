@@ -5,6 +5,7 @@ import {
   type PuzzleId,
 } from "../game/puzzles";
 import { PUZZLE_GROUPS } from "../game/puzzle-groups";
+import { PUZZLE_DIFFICULTIES } from "../game/puzzle-difficulty";
 
 export interface MainMenuOptions {
   readonly puzzles: readonly PuzzleDefinition[];
@@ -87,6 +88,14 @@ export function populatePuzzleMap(container: HTMLElement, options: MainMenuOptio
       name.className = "puzzle-name";
       name.textContent = puzzle.name;
 
+      const rating = PUZZLE_DIFFICULTIES[puzzle.difficulty];
+      const difficulty = document.createElement("span");
+      difficulty.className = "puzzle-difficulty";
+      difficulty.setAttribute("role", "img");
+      difficulty.setAttribute("aria-label", rating.label);
+      difficulty.title = rating.label;
+      difficulty.textContent = rating.mark;
+
       const status = document.createElement("span");
       status.className = "puzzle-status";
       status.textContent = completed
@@ -95,7 +104,7 @@ export function populatePuzzleMap(container: HTMLElement, options: MainMenuOptio
           ? "◆ AVAILABLE"
           : "🔒 LOCKED";
 
-      button.append(name, status);
+      button.append(name, difficulty, status);
       if (puzzleUnlocked) {
         button.addEventListener("click", () => options.onSelectPuzzle(puzzle.id));
       }

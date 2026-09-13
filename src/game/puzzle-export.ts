@@ -4,6 +4,7 @@ import { serializeBoard } from "../simulation/board-export";
 import { TILE_DEFINITIONS, type TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
 import type { TextBox } from "../simulation/text-box";
+import type { PuzzleDifficulty } from "./puzzle-difficulty";
 
 interface PuzzleTemplateComponent {
   readonly code: string;
@@ -16,6 +17,7 @@ export interface PuzzleExportMetadata {
   readonly groupId: string;
   readonly order: number;
   readonly name: string;
+  readonly difficulty: PuzzleDifficulty;
   readonly description: string;
   readonly goal: string;
   readonly cycleLimit: number | null;
@@ -47,6 +49,7 @@ function placeholderMetadata(): PuzzleExportMetadata {
     groupId: "basics",
     order: 0,
     name: "Untitled Puzzle",
+    difficulty: 1,
     description: "TODO: Describe the puzzle setup.",
     goal: "TODO: Describe the victory condition.",
     cycleLimit: null,
@@ -75,6 +78,7 @@ export function serializePuzzleTemplate(
     group: metadata.groupId,
     order: metadata.order,
     name: metadata.name,
+    difficulty: metadata.difficulty,
     description: metadata.description,
     goal: metadata.goal,
     ...(metadata.cycleLimit === null ? {} : { cycleLimit: metadata.cycleLimit }),

@@ -23,6 +23,7 @@ function progressionPuzzle(id: string, order: number): PuzzleDefinition {
     groupId: "basics",
     order,
     name: id,
+    difficulty: 1,
     cycleLimit: 10,
     description: id,
     goal: id,

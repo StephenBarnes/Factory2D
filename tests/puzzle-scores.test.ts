@@ -17,6 +17,7 @@ function scoringPuzzle(): PuzzleDefinition {
     groupId: "basics",
     order: 0,
     name: "Score Test",
+    difficulty: 1,
     cycleLimit: 20,
     description: "Score calculation test",
     goal: "Calculate scores",
