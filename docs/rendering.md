@@ -31,7 +31,9 @@ Floatstone uses a blue slab with a pale suspended diamond above two horizontal l
 
 Sliders use a green-grey slab with two pale rails, a dark central carriage, and opposing arrows along the permitted axis. The shared glyph rotates with the tile on the board, palette, and previews.
 
-Fasteners use a bronze-grey slab with a pale forged fastening pin: a broad slotted hexagonal head, tapered shaft, dark thread cuts, and a gilded edge highlight. The non-directional glyph is shared by the board, palette, and previews. Fasteners hold their welded body against its own gravity until successful conveyor, piston, or rotator movement breaks them; blocked machinery attempts and gravity-driven downward pushes leave them intact.
+Thrusters use a copper-brown slab with a pointed pale housing, flared rear nozzle, and orange exhaust. The shared glyph rotates toward the thrust direction on the board, palette, and previews; ordinary stable-ID interpolation animates movement.
+
+Fasteners use a bronze-grey slab with a pale forged fastening pin: a broad slotted hexagonal head, tapered shaft, dark thread cuts, and a gilded edge highlight. The non-directional glyph is shared by the board, palette, and previews. Fasteners hold their welded body against its own gravity until successful conveyor, thruster, piston, or rotator movement breaks them; blocked machinery attempts and gravity-driven downward pushes leave them intact.
 
 Platforms use forest green; ROMs and graphers use jade/teal. Delay, counter, monitor, and array fills use sapphire/indigo, while fixed-charge/spark sources and sequence checkers use gold/amber. Channels and crossings retain neutral slate so wiring stays quieter than active components. These colors come from the shared tile metadata and are identical in both UI themes.
 

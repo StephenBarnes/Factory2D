@@ -28,7 +28,8 @@ export const enum WorldFeature {
   Drill = 16,
   Fastener = 17,
   Fragile = 18,
-  Count = 19,
+  Thruster = 19,
+  Count = 20,
 }
 
 const FEATURE_MASKS = new Uint32Array(
@@ -99,6 +100,9 @@ for (const kind of TILE_KINDS) {
   }
   if (kind === TileKind.Conveyor) {
     mask |= 1 << WorldFeature.Conveyor;
+  }
+  if (kind === TileKind.Thruster) {
+    mask |= 1 << WorldFeature.Thruster;
   }
   if (kind === TileKind.RuneArray) {
     mask |= 1 << WorldFeature.RuneArray;

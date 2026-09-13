@@ -155,7 +155,8 @@ export class WorldRuntime {
     if (this.collectedDrills) {
       this.drillResolver.commit();
     }
-    let movementCount = this.world.hasFeature(WorldFeature.Gravity)
+    let movementCount = this.world.hasFeature(WorldFeature.Gravity) ||
+      this.world.hasFeature(WorldFeature.Thruster)
       ? this.motionWorkspace.resolveOrdinaryMovements(tick)
       : 0;
     if (this.world.hasFeature(WorldFeature.Rotator)) {

@@ -19,7 +19,7 @@ import { WorldFeature } from "./world-features";
 
 /**
  * Owns the reusable scratch storage and ordered topology transitions used by
- * gravity and conveyor movement resolution.
+ * gravity, conveyor, and thruster movement resolution.
  */
 export class MotionWorkspace {
   readonly world: World;
@@ -379,9 +379,8 @@ export class MotionWorkspace {
   }
 
   /**
-   * Gravity resolves before lower-priority conveyor movement. A conveyor can
-   * move a supported body, but cannot redirect a falling body or claim its
-   * destination.
+   * Gravity resolves before lower-priority conveyor and thruster movement.
+   * Driving forces cannot redirect a falling body or claim its destination.
    */
   private chooseMovements(): void {
     this.horizontalMoves.fill(0);
@@ -390,11 +389,11 @@ export class MotionWorkspace {
     this.chooseGravityMovements();
     this.resolveDestinationConflicts();
     this.restoreWeldedBodiesAfterGravity();
-    this.collectConveyorForces();
+    this.collectDrivingForces();
     this.resolveDrivenMovements();
   }
 
-  private collectConveyorForces(): void {
+  private collectDrivingForces(): void {
     this.bodyForceX.fill(0);
     this.bodyForceY.fill(0);
     for (
@@ -426,6 +425,16 @@ export class MotionWorkspace {
         this.addBodyForce(neighborRoot, forceDirection);
         this.addBodyForce(conveyorRoot, oppositeDirection(forceDirection));
       }
+    }
+    for (
+      let index = this.world.firstFeatureIndex(WorldFeature.Thruster);
+      index >= 0;
+      index = this.world.nextFeatureIndex(WorldFeature.Thruster, index)
+    ) {
+      this.addBodyForce(
+        expectDefined(this.bodyRoots[index], "thruster body root"),
+        this.world.orientationAtIndex(index),
+      );
     }
   }
 

@@ -693,6 +693,41 @@ function drawDecoration(
       context.lineTo(left + size * 0.65, top + size * 0.8);
       context.stroke();
       break;
+    case TileDecorationStyle.Thruster:
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.lineWidth = Math.max(1, size * 0.035);
+      context.lineJoin = "round";
+      context.strokeStyle = "#392d2a";
+      // Pointed bronze housing and a flared rear nozzle.
+      context.beginPath();
+      context.moveTo(0, -size * 0.34);
+      context.lineTo(size * 0.18, -size * 0.08);
+      context.lineTo(size * 0.12, size * 0.1);
+      context.lineTo(size * 0.23, size * 0.18);
+      context.lineTo(-size * 0.23, size * 0.18);
+      context.lineTo(-size * 0.12, size * 0.1);
+      context.lineTo(-size * 0.18, -size * 0.08);
+      context.closePath();
+      context.fill();
+      context.stroke();
+      context.fillStyle = "#ee9553";
+      context.beginPath();
+      context.moveTo(-size * 0.12, size * 0.22);
+      context.lineTo(0, size * 0.39);
+      context.lineTo(size * 0.12, size * 0.22);
+      context.closePath();
+      context.fill();
+      context.fillStyle = "#fff1ba";
+      context.beginPath();
+      context.moveTo(-size * 0.055, size * 0.22);
+      context.lineTo(0, size * 0.31);
+      context.lineTo(size * 0.055, size * 0.22);
+      context.closePath();
+      context.fill();
+      context.restore();
+      break;
     case TileDecorationStyle.Slider:
       context.save();
       context.translate(left + size / 2, top + size / 2);

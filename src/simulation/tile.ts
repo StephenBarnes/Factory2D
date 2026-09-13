@@ -62,6 +62,7 @@ export const enum TileKind {
   Lut = 60,
   Fastener = 61,
   Slider = 62,
+  Thruster = 63,
 }
 
 export const enum Direction {
@@ -133,6 +134,7 @@ export const enum TileDecorationStyle {
   Lut = 49,
   Fastener = 50,
   Slider = 51,
+  Thruster = 52,
 }
 
 export const enum PaletteCategory {
@@ -345,7 +347,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 64,
       category: PaletteCategory.Motion,
       description: "Holds its welded body aloft until machinery moves it and breaks the fastener.",
-      extendedDescription: ["Prevents its entire welded body from falling on its own. Needs no charge and can be welded on every side.", "A successful conveyor move, piston push or pull, or rotator turn destroys the fastener and its welds after moving the body. Blocked machinery attempts do not break it.", "An independent falling body can push it downward if the whole chain has room; gravity-driven movement does not break it. Welding it to a platform still anchors the body."],
+      extendedDescription: ["Prevents its entire welded body from falling on its own. Needs no charge and can be welded on every side.", "A successful conveyor or thruster move, piston push or pull, or rotator turn destroys the fastener and its welds after moving the body. Blocked machinery attempts do not break it.", "An independent falling body can push it downward if the whole chain has room; gravity-driven movement does not break it. Welding it to a platform still anchors the body."],
     },
     affectedByGravity: false,
     slidesDiagonally: false,
@@ -385,6 +387,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#536c69",
     decorationStyle: TileDecorationStyle.Slider,
     decorationColor: "#c5e2ce",
+  },
+  [TileKind.Thruster]: {
+    name: "Thruster",
+    boardCode: "^",
+    defaultPrice: 20,
+    palette: {
+      order: 66,
+      category: PaletteCategory.Motion,
+      description: "Holds its welded body aloft and drives it forward, pushing obstacles.",
+      extendedDescription: ["Always applies forward thrust without charge. Moves its welded body one cell per tick and pushes movable contact chains; platforms, boundaries, and transverse sliders block the whole move.", "Thrust combines with other thrusters and conveyor forces on the same body. Opposing forces cancel; incompatible moves by separate bodies jam. Gravity takes priority, so it cannot redirect falling bodies or enter their destinations."],
+    },
+    affectedByGravity: false,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.None,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#795448",
+    decorationStyle: TileDecorationStyle.Thruster,
+    decorationColor: "#ffe0a3",
   },
   [TileKind.Magnet]: {
     name: "Lodestone",
