@@ -551,7 +551,7 @@ export class CircuitResolver {
     return runtime.parent !== null && isVirtualPort(world, index, direction);
   }
 
-  /** Read the first occupied forward cell, continuing through enclosing edge-center ports. */
+  /** Read the first detectable forward cell, continuing through enclosing edge-center ports. */
   private sensorObservedCharge(
     runtime: WorldRuntime,
     index: number,
@@ -561,7 +561,11 @@ export class CircuitResolver {
       const world = runtime.world;
       const neighbor = neighborIndex(world, index, direction);
       if (neighbor >= 0) {
-        if (world.kindAtIndex(neighbor) !== TileKind.Empty) {
+        const neighborKind = world.kindAtIndex(neighbor);
+        if (
+          neighborKind !== TileKind.Empty &&
+          !TILE_DEFINITIONS[neighborKind].invisibleToSensor
+        ) {
           return world.chargeAtPortIndex(neighbor, oppositeDirection(direction));
         }
         index = neighbor;

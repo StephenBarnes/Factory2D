@@ -304,7 +304,29 @@ describe("circuit networks", () => {
     },
   );
 
-  it.each([TileKind.Stone, TileKind.Glass, TileKind.Conduit])(
+  it("senses through glass and gaps, but stops at opaque tiles and reads neutral beyond glass", () => {
+    const world = new World(8, 1);
+    world.place(0, 0, TileKind.ChargeSensor, Direction.Right);
+    world.place(1, 0, TileKind.Glass);
+    world.place(3, 0, TileKind.Glass);
+    world.place(6, 0, TileKind.FixedCharge);
+    world.setCharge(6, 0, 1);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+    expect(world.chargeAt(0, 0)).toBe(1);
+
+    world.place(4, 0, TileKind.Stone);
+    simulation.step();
+    expect(world.chargeAt(0, 0)).toBe(0);
+
+    world.place(4, 0, TileKind.Empty);
+    world.place(6, 0, TileKind.Glass);
+    simulation.step();
+    expect(world.chargeAt(0, 0)).toBe(0);
+  });
+
+  it.each([TileKind.Stone, TileKind.Conduit])(
     "stops distance sensing at a neutral blocker of kind %s",
     (blocker) => {
       const world = new World(6, 1);
@@ -348,16 +370,19 @@ describe("circuit networks", () => {
     expect(world.chargeAt(2, 1)).toBe(0);
   });
 
-  it("senses across empty gaps inside and outside nested array ports", () => {
+  it("senses across glass and empty gaps inside and outside nested array ports", () => {
     const world = new World(5, 1);
     world.place(0, 0, TileKind.Conduit);
     world.setCharge(0, 0, -1);
+    world.place(2, 0, TileKind.Glass);
     world.place(4, 0, TileKind.RuneArray);
     world.configureRuneArray(4, 0, 5, 1, "");
     const inner = world.runeArrayWorldAt(4, 0);
+    inner.place(0, 0, TileKind.Glass);
     inner.place(3, 0, TileKind.RuneArray);
     inner.configureRuneArray(3, 0, 5, 1, "");
     const deepest = inner.runeArrayWorldAt(3, 0);
+    deepest.place(1, 0, TileKind.Glass);
     deepest.place(3, 0, TileKind.ChargeSensor, Direction.Left);
     deepest.place(4, 0, TileKind.Conduit);
     deepest.setWeld(3, 0, 4, 0, true);

@@ -161,7 +161,7 @@ export interface TileDefinition {
   readonly affectedByGravity: boolean;
   /** Anchors the whole welded body against all motion; omitted means movable. */
   readonly immovable?: boolean;
-  /** Opts a solid tile out of occupancy sensing; omitted means detectable. */
+  /** Hidden from occupancy sensors and transparent to charge-sensor rays; omitted means detectable. */
   readonly invisibleToSensor?: boolean;
   /** Immune to destructive tools such as drills; omitted means destructible. */
   readonly indestructible?: boolean;
@@ -435,7 +435,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 10,
       category: PaletteCategory.CircuitBasic,
       description: "Emits +1 when its pointed neighbor is occupied, except by glass.",
-      extendedDescription: ["Checks only the cell immediately ahead and outputs 0 when it is empty or glass. Glass is invisible, not transparent: the sensor does not look through it. The other three sides share the output."],
+      extendedDescription: ["Checks only the cell immediately ahead and outputs 0 when it is empty or glass. The other three sides share the output."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -626,8 +626,8 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 18,
       category: PaletteCategory.CircuitBasic,
-      description: "Copies the first tile's charge ahead across empty space to three isolated outputs; front welds are non-conductive.",
-      extendedDescription: ["Looks straight ahead through empty space and reads the first block's near-side previous-tick charge, without needing a weld. Its other three sides output that charge without joining the sensed network. Any block stops the scan, including glass; non-circuit blocks and an empty line to the board edge read 0. At a rune array's edge-center port, sensing continues outside the array."],
+      description: "Copies the charge of the tile side ahead to three isolated outputs.",
+      extendedDescription: ["Looks straight ahead through empty space and glass, and reads the first block's near-side previous-tick charge. Its other three sides output that charge. Any block stops the scan, except glass; non-circuit blocks and an empty line to the board edge read 0. At a rune array's edge-center port, sensing continues outside the array."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -771,7 +771,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 45,
       category: PaletteCategory.RawMaterials,
       description: "Solid block baked from sand. Invisible to sensor runes.",
-      extendedDescription: ["Collides, falls, and welds like a solid block. A sensor facing glass reports 0."],
+      extendedDescription: ["Collides, falls, and welds like a solid block. An occupancy sensor facing glass reports 0; charge sensors look through it."],
     },
     affectedByGravity: true,
     invisibleToSensor: true,

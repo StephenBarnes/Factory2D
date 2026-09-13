@@ -1763,15 +1763,17 @@ export class CanvasRenderer {
     let x = this.hoverX + dx;
     let y = this.hoverY + dy;
     if (atDistance) {
-      while (
-        x >= 0 && x < this.world.width && y >= 0 && y < this.world.height &&
-        this.world.kindAt(x, y) === TileKind.Empty
-      ) {
+      while (x >= 0 && x < this.world.width && y >= 0 && y < this.world.height) {
+        const tileKind = this.world.kindAt(x, y);
+        if (tileKind !== TileKind.Empty && !TILE_DEFINITIONS[tileKind].invisibleToSensor) {
+          break;
+        }
         x += dx;
         y += dy;
       }
     }
-    if (x < 0 || x >= this.world.width || y < 0 || y >= this.world.height) {
+    const hasTarget = x >= 0 && x < this.world.width && y >= 0 && y < this.world.height;
+    if (!hasTarget && !atDistance) {
       return;
     }
     const { context, cellSize } = this;
@@ -1780,13 +1782,27 @@ export class CanvasRenderer {
     context.lineWidth = Math.max(2, cellSize * 0.04);
     context.globalAlpha = 0.8;
     context.beginPath();
-    context.arc(
-      this.originX + (x + 0.5) * cellSize,
-      this.originY + (y + 0.5) * cellSize,
-      cellSize * 0.43,
-      0,
-      Math.PI * 2,
-    );
+    if (hasTarget) {
+      context.arc(
+        this.originX + (x + 0.5) * cellSize,
+        this.originY + (y + 0.5) * cellSize,
+        cellSize * 0.43,
+        0,
+        Math.PI * 2,
+      );
+    }
+    if (atDistance) {
+      // An out-of-bounds cell's near edge is exactly the board boundary.
+      const targetInset = hasTarget ? 0.43 : 0.5;
+      context.moveTo(
+        this.originX + (this.hoverX + 0.5 + dx * 0.5) * cellSize,
+        this.originY + (this.hoverY + 0.5 + dy * 0.5) * cellSize,
+      );
+      context.lineTo(
+        this.originX + (x + 0.5 - dx * targetInset) * cellSize,
+        this.originY + (y + 0.5 - dy * targetInset) * cellSize,
+      );
+    }
     context.stroke();
     context.restore();
   }
