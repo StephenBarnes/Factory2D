@@ -344,6 +344,19 @@ export class CircuitResolver {
         }
         continue;
       }
+      if (kind === TileKind.ForceProjector) {
+        const rear = oppositeDirection(orientation);
+        if (this.hasConnectedNeighbor(runtime, index, rear)) {
+          const charge = this.neighborPortCharge(runtime, index, rear);
+          if (charge !== 0) {
+            runtime.motionWorkspace.collectProjectedForce(
+              index,
+              charge === 1 ? orientation : rear,
+            );
+          }
+        }
+        continue;
+      }
       if (kind === TileKind.ControlledThruster) {
         let thrustDirection: Direction | undefined;
         for (let side = Direction.Up; side <= Direction.Left; side += 1) {

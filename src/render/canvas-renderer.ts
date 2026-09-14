@@ -1724,6 +1724,9 @@ export class CanvasRenderer {
       case TileKind.ChargeSensor:
         this.drawSensorObservation(orientation, true);
         break;
+      case TileKind.ForceProjector:
+        this.drawSensorObservation(orientation, true, false);
+        break;
       case TileKind.LevitationProjector:
         this.drawLevitationBeam(orientation);
         break;
@@ -1819,7 +1822,11 @@ export class CanvasRenderer {
     context.restore();
   }
 
-  private drawSensorObservation(orientation: Direction, atDistance = false): void {
+  private drawSensorObservation(
+    orientation: Direction,
+    atDistance = false,
+    skipInvisible = true,
+  ): void {
     const dx = directionX(orientation);
     const dy = directionY(orientation);
     let x = this.hoverX + dx;
@@ -1827,7 +1834,8 @@ export class CanvasRenderer {
     if (atDistance) {
       while (x >= 0 && x < this.world.width && y >= 0 && y < this.world.height) {
         const tileKind = this.world.kindAt(x, y);
-        if (tileKind !== TileKind.Empty && !TILE_DEFINITIONS[tileKind].invisibleToSensor) {
+        if (tileKind !== TileKind.Empty &&
+            (!skipInvisible || !TILE_DEFINITIONS[tileKind].invisibleToSensor)) {
           break;
         }
         x += dx;

@@ -66,6 +66,7 @@ export const enum TileKind {
   ControlledThruster = 64,
   MovementSensor = 65,
   LevitationProjector = 66,
+  ForceProjector = 67,
 }
 
 export const enum Direction {
@@ -141,6 +142,7 @@ export const enum TileDecorationStyle {
   ControlledThruster = 53,
   MovementSensor = 54,
   LevitationProjector = 55,
+  ForceProjector = 56,
 }
 
 export const enum PaletteCategory {
@@ -368,6 +370,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#416c80",
     decorationStyle: TileDecorationStyle.LevitationProjector,
     decorationColor: "#bdeeff",
+  },
+  [TileKind.ForceProjector]: {
+    name: "Force Projector",
+    boardCode: "&",
+    defaultPrice: 25,
+    palette: {
+      order: 70,
+      category: PaletteCategory.Motion,
+      description: "Pushes the first block ahead on rear +1, or pulls it on rear -1.",
+      extendedDescription: ["The isolated rear input reads the previous tick's charge: +1 pushes the first occupied cell ahead away from the projector; -1 pulls it toward the projector. Zero or a disconnected input applies no force. Has no circuit output.", "Looks through empty space only, stopping at any block, including glass and fixed terrain, or this board's boundary. A target in the projector's own welded body blocks the ray without receiving force. Beams do not cross rune-array boundaries.", "Force combines with conveyors and thrusters, moving the target's welded body and pushing movable contact chains under their ordinary slider, collision, and jam rules. Gravity takes priority: it cannot lift gravity-affected bodies unless floatstone or levitation holds them aloft. Successful driven movement breaks carried fasteners.", "The projector falls normally and can be welded on every side. Applying force causes no recoil and does not suppress gravity. Targets are observed before production; removed or replacement tiles do not inherit a pending command."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Down,
+    circuitInputPorts: WeldSide.Down,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#805f45",
+    decorationStyle: TileDecorationStyle.ForceProjector,
+    decorationColor: "#ffe0a3",
   },
   [TileKind.Fastener]: {
     name: "Fastener",

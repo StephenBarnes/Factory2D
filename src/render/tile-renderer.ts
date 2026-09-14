@@ -725,6 +725,42 @@ function drawDecoration(
       context.stroke();
       context.restore();
       break;
+    case TileDecorationStyle.ForceProjector:
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.lineWidth = Math.max(1, size * 0.04);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      // A remote square target and opposite arrows above a rear emitter housing.
+      context.strokeRect(-size * 0.075, -size * 0.36, size * 0.15, size * 0.15);
+      context.fillStyle = "#392d2a";
+      context.beginPath();
+      context.moveTo(-size * 0.26, size * 0.06);
+      context.lineTo(size * 0.26, size * 0.06);
+      context.lineTo(size * 0.18, size * 0.21);
+      context.lineTo(-size * 0.18, size * 0.21);
+      context.closePath();
+      context.fill();
+      context.stroke();
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[1];
+      context.beginPath();
+      context.moveTo(-size * 0.2, size * 0.01);
+      context.lineTo(-size * 0.2, -size * 0.3);
+      context.moveTo(-size * 0.27, -size * 0.22);
+      context.lineTo(-size * 0.2, -size * 0.3);
+      context.lineTo(-size * 0.13, -size * 0.22);
+      context.stroke();
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[-1];
+      context.beginPath();
+      context.moveTo(size * 0.2, -size * 0.3);
+      context.lineTo(size * 0.2, size * 0.01);
+      context.moveTo(size * 0.13, -size * 0.07);
+      context.lineTo(size * 0.2, size * 0.01);
+      context.lineTo(size * 0.27, -size * 0.07);
+      context.stroke();
+      context.restore();
+      break;
     case TileDecorationStyle.Thruster:
       context.save();
       context.translate(left + size / 2, top + size / 2);

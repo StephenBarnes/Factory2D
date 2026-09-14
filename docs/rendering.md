@@ -39,6 +39,8 @@ Thrusters use a copper-brown slab with a pointed pale housing, flared rear nozzl
 
 Controlled thrusters share the copper-brown slab, with four outward-pointing pale housings around an orange diamond. The non-directional glyph is shared by board, palette, and previews; each isolated input trace shows its own neighbor's charge without linking the four networks.
 
+Force projectors use a copper-brown slab with a dark rear emitter, a separate forward square target, and blue push/red pull arrows. The shared glyph rotates with the rear input trace on the board, palette, and previews. Hover/placement overlays draw a line to the first occupied forward cell and circle it, including glass or the projector's own body; empty rays end at the local board boundary.
+
 Fasteners use a bronze-grey slab with a pale forged fastening pin: a broad slotted hexagonal head, tapered shaft, dark thread cuts, and a gilded edge highlight. The non-directional glyph is shared by the board, palette, and previews. Fasteners hold their welded body against its own gravity until successful conveyor, thruster, piston, or rotator movement breaks them; blocked machinery attempts and gravity-driven downward pushes leave them intact.
 
 Platforms use forest green; ROMs and graphers use jade/teal. Delay, counter, monitor, and array fills use sapphire/indigo, while fixed-charge/spark sources and sequence checkers use gold/amber. Channels and crossings retain neutral slate so wiring stays quieter than active components. These colors come from the shared tile metadata and are identical in both UI themes.

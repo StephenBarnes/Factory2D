@@ -63,6 +63,15 @@ export class MotionWorkspace {
   private readonly breakingFragileDestinations: number[] = [];
   /** Start-of-tick commands keyed by identity so production cannot inherit a removed tile's thrust. */
   private controlledThrust: Map<number, Direction> | undefined;
+  /** Reused start-of-tick ray claims; only the active prefix applies this tick. */
+  private readonly projectedForces: {
+    source: number;
+    sourceId: number;
+    target: number;
+    targetId: number;
+    direction: Direction;
+  }[] = [];
+  private projectedForceCount = 0;
 
   constructor(world: World) {
     this.world = world;
@@ -93,13 +102,36 @@ export class MotionWorkspace {
     this.blockedBodyQueue = new Int32Array(world.cellCount);
   }
 
-  clearControlledThrust(): void {
+  clearCircuitForces(): void {
     this.controlledThrust?.clear();
+    this.projectedForceCount = 0;
   }
 
   collectControlledThrust(index: number, direction: Direction): void {
     const commands = this.controlledThrust ??= new Map<number, Direction>();
     commands.set(this.world.idAtIndex(index), direction);
+  }
+
+  collectProjectedForce(index: number, direction: Direction): void {
+    const facing = this.world.orientationAtIndex(index);
+    let target = this.neighborIndex(index, facing);
+    while (target >= 0 && this.world.kindAtIndex(target) === TileKind.Empty) {
+      target = this.neighborIndex(target, facing);
+    }
+    if (target < 0) {
+      return;
+    }
+    let claim = this.projectedForces[this.projectedForceCount];
+    if (claim === undefined) {
+      claim = { source: index, sourceId: 0, target, targetId: 0, direction };
+      this.projectedForces.push(claim);
+    }
+    claim.source = index;
+    claim.sourceId = this.world.idAtIndex(index);
+    claim.target = target;
+    claim.targetId = this.world.idAtIndex(target);
+    claim.direction = direction;
+    this.projectedForceCount += 1;
   }
 
   resolveOrdinaryMovements(tick: number): number {
@@ -478,6 +510,21 @@ export class MotionWorkspace {
         : this.world.orientationAtIndex(index);
       if (direction !== undefined) {
         this.addBodyForce(expectDefined(this.bodyRoots[index], "thruster body root"), direction);
+      }
+    }
+    for (let i = 0; i < this.projectedForceCount; i += 1) {
+      const claim = expectDefined(this.projectedForces[i], "projected force claim");
+      if (
+        this.world.idAtIndex(claim.source) !== claim.sourceId ||
+        this.world.kindAtIndex(claim.source) !== TileKind.ForceProjector ||
+        this.world.idAtIndex(claim.target) !== claim.targetId
+      ) {
+        continue;
+      }
+      const sourceRoot = expectDefined(this.bodyRoots[claim.source], "force projector body root");
+      const targetRoot = expectDefined(this.bodyRoots[claim.target], "projected force target root");
+      if (sourceRoot !== targetRoot) {
+        this.addBodyForce(targetRoot, claim.direction);
       }
     }
   }
