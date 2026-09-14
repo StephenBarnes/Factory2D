@@ -278,6 +278,46 @@ describe("world editing", () => {
 });
 
 describe("directional magnets", () => {
+  it("rebuilds magnetic contacts after late placement, rotation, removal, and reset", () => {
+    const world = new World(8, 5);
+    world.place(2, 2, TileKind.Iron);
+    world.place(2, 3, TileKind.Platform);
+    world.setWeld(2, 2, 2, 3, true);
+    const thrusterId = world.place(4, 2, TileKind.Thruster, Direction.Right);
+    world.place(3, 2, TileKind.Stone);
+    world.setWeld(3, 2, 4, 2, true);
+    const nonMagnetic = world.clone();
+    const simulation = new Simulation(world);
+
+    expect(simulation.step()).toBe(2);
+    expect(world.idAt(5, 2)).toBe(thrusterId);
+
+    simulation.resetTo(nonMagnetic);
+    world.place(3, 2, TileKind.Magnet, Direction.Left);
+    world.setWeld(3, 2, 4, 2, true);
+    const magnetic = world.clone();
+    expect(simulation.step()).toBe(0);
+    expect(world.idAt(4, 2)).toBe(thrusterId);
+
+    // Losing the last contact must release the body even while a magnet remains.
+    world.place(3, 2, TileKind.Magnet, Direction.Up);
+    expect(simulation.step()).toBe(2);
+    expect(world.idAt(5, 2)).toBe(thrusterId);
+
+    simulation.resetTo(magnetic);
+    expect(simulation.step()).toBe(0);
+    expect(world.idAt(4, 2)).toBe(thrusterId);
+
+    world.place(3, 2, TileKind.Stone);
+    world.setWeld(3, 2, 4, 2, true);
+    expect(simulation.step()).toBe(2);
+    expect(world.idAt(5, 2)).toBe(thrusterId);
+
+    simulation.resetTo(nonMagnetic);
+    expect(simulation.step()).toBe(2);
+    expect(world.idAt(5, 2)).toBe(thrusterId);
+  });
+
   it("stores orientation through snapshots and movement", () => {
     const world = new World(2, 3);
     const magnetId = world.place(0, 0, TileKind.Magnet, Direction.Right);

@@ -446,3 +446,30 @@ Implemented lazy per-world resolver allocation from the motion/runtime memory pr
 | One conduit | 34.13 MiB | 11.79 MiB |
 
 Immediately after construction, all four scenarios use 0.92 MiB instead of 33.67 MiB. Motion and circuit allocations occur on their first relevant tick; this defers their initialization cost rather than eliminating it. No tick-throughput improvement is claimed.
+
+# Update 8
+
+Implemented lazy magnetic scratch allocation inside `MotionWorkspace`, continuing the motion/runtime memory priority.
+
+## Changes
+
+- Allocate the four magnetic contact buffers only when a magnet first attracts a distinct welded body. Non-magnetic boards and magnets without contacts allocate none of them.
+- Retain allocated storage across edits and reset. Reset the active contact count each ordinary-motion pass and clear contact heads only when its first contact is recorded; contact-free ticks never traverse stale buffers.
+- Added a behavioral regression covering late magnetic activation, rotation away from a target, removal of the last magnet, and resets with/without magnetic contacts.
+
+## Verification
+
+- `npm run build` passed.
+- `npm test`: 61 files, 969 tests passed.
+- Headless Chromium through Vite, 400×300 boards after one tick: counted distinct typed-array backing buffers reachable from `Simulation`, excluding `World` storage, using the same method before/after. These are runtime backing-storage measurements, not total browser memory.
+
+| Board | Before | After |
+|---|---:|---:|
+| Empty | 960,000 bytes | 960,000 bytes |
+| One stone | 11,880,000 bytes | 9,240,000 bytes |
+| One conduit | 12,360,008 bytes | 9,720,008 bytes |
+| One magnet without a target | 11,880,000 bytes | 9,240,000 bytes |
+
+This saves 22 bytes per cell, or **2.52 MiB per 400×300 runtime**, until the first magnetic contact. Magnetic factories still require the same buffers once activated; no tick-throughput improvement is claimed.
+
+The browser smoke scenario also exercised a thruster-driven body before magnets existed, late-added attraction to fixed iron, rotation away, restored contact after reset, last-magnet removal, and reset to a non-magnetic snapshot. Motion matched each state, and allocated backing storage stayed constant after first contact.

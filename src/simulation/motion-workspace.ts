@@ -52,10 +52,12 @@ export class MotionWorkspace {
   private readonly dependencyDependents: Int32Array;
   private readonly nextDependency: Int32Array;
   private readonly blockedBodyQueue: Int32Array;
-  private readonly magneticConstraintHeads: Int32Array;
-  private readonly magneticConstraintOtherBodies: Int32Array;
-  private readonly magneticConstraintIsVertical: Uint8Array;
-  private readonly nextMagneticConstraint: Int32Array;
+  private magneticConstraints: {
+    readonly heads: Int32Array;
+    readonly otherBodies: Int32Array;
+    readonly isVertical: Uint8Array;
+    readonly next: Int32Array;
+  } | undefined;
   private magneticConstraintCount = 0;
   private readonly breakingFastenerDestinations: number[] = [];
   private readonly breakingFragileDestinations: number[] = [];
@@ -89,10 +91,6 @@ export class MotionWorkspace {
     this.dependencyDependents = new Int32Array(world.cellCount);
     this.nextDependency = new Int32Array(world.cellCount);
     this.blockedBodyQueue = new Int32Array(world.cellCount);
-    this.magneticConstraintHeads = new Int32Array(world.cellCount);
-    this.magneticConstraintOtherBodies = new Int32Array(world.cellCount * 2);
-    this.magneticConstraintIsVertical = new Uint8Array(world.cellCount * 2);
-    this.nextMagneticConstraint = new Int32Array(world.cellCount * 2);
   }
 
   clearControlledThrust(): void {
@@ -237,7 +235,6 @@ export class MotionWorkspace {
    * contact axis so tangential movement can slide without moving the target.
    */
   private connectMagneticallyAttractedBodies(): void {
-    this.magneticConstraintHeads.fill(-1);
     this.magneticConstraintCount = 0;
     for (
       let magnet = this.world.firstFeatureIndex(WorldFeature.Magnet);
@@ -304,15 +301,25 @@ export class MotionWorkspace {
     otherBody: number,
     isVertical: boolean,
   ): void {
+    const constraints = this.magneticConstraints ??= {
+      heads: new Int32Array(this.world.cellCount),
+      otherBodies: new Int32Array(this.world.cellCount * 2),
+      isVertical: new Uint8Array(this.world.cellCount * 2),
+      next: new Int32Array(this.world.cellCount * 2),
+    };
+    // Retain storage across ticks/reset, but expose only this tick's contacts.
+    if (this.magneticConstraintCount === 0) {
+      constraints.heads.fill(-1);
+    }
     const constraint = this.magneticConstraintCount;
     this.magneticConstraintCount += 1;
-    this.magneticConstraintOtherBodies[constraint] = otherBody;
-    this.magneticConstraintIsVertical[constraint] = isVertical ? 1 : 0;
-    this.nextMagneticConstraint[constraint] = expectDefined(
-      this.magneticConstraintHeads[body],
+    constraints.otherBodies[constraint] = otherBody;
+    constraints.isVertical[constraint] = isVertical ? 1 : 0;
+    constraints.next[constraint] = expectDefined(
+      constraints.heads[body],
       "magnetic constraint head",
     );
-    this.magneticConstraintHeads[body] = constraint;
+    constraints.heads[body] = constraint;
   }
 
   private collectBodyMembers(): void {
@@ -462,6 +469,9 @@ export class MotionWorkspace {
     this.drivenBodies.fill(0);
     this.movementGroupRoots.fill(-1);
     this.blockedMovementGroups.fill(0);
+    const magnetic = this.magneticConstraintCount === 0
+      ? undefined
+      : expectDefined(this.magneticConstraints, "active magnetic constraints");
     let queueLength = 0;
 
     for (
@@ -514,19 +524,18 @@ export class MotionWorkspace {
       const moveX = expectDefined(this.horizontalMoves[root], "horizontal driven movement");
       const moveY = expectDefined(this.verticalMoves[root], "vertical driven movement");
       for (
-        let constraint = expectDefined(
-          this.magneticConstraintHeads[root],
-          "magnetic constraint head",
-        );
-        constraint >= 0;
+        let constraint = magnetic === undefined
+          ? -1
+          : expectDefined(magnetic.heads[root], "magnetic constraint head");
+        magnetic !== undefined && constraint >= 0;
         constraint = expectDefined(
-          this.nextMagneticConstraint[constraint],
+          magnetic.next[constraint],
           "next magnetic constraint",
         )
       ) {
         const isVertical =
           expectDefined(
-            this.magneticConstraintIsVertical[constraint],
+            magnetic.isVertical[constraint],
             "magnetic constraint axis",
           ) === 1;
         if (isVertical ? moveY === 0 : moveX === 0) {
@@ -534,7 +543,7 @@ export class MotionWorkspace {
         }
 
         const otherBody = expectDefined(
-          this.magneticConstraintOtherBodies[constraint],
+          magnetic.otherBodies[constraint],
           "magnetically constrained body",
         );
         if (this.drivenBodies[otherBody] === 0) {
