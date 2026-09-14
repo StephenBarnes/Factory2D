@@ -39,10 +39,9 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 # UI
 
-* Add various animations for clicking buttons, placing blocks, starting a puzzle, etc.
 * Implement undo and redo when editing in the sandbox and puzzle solutions.
-* Add support for mobile and touch screens.
-* Allow mirroring components with some hotkey. Depends on the other change to store blocks' mirroring alongside rotation.
+* Allow mirroring components with some hotkey. (Rotation currently uses WASD, Q picks blocks, E configures. Could use E when not over a block, or R.) Depends on the other change to store blocks' mirroring alongside rotation.
+* Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
 
 # Visuals
 

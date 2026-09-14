@@ -1,0 +1,60 @@
+/* Keep UI motion independent of the simulation's movement interpolation setting. */
+@media (prefers-reduced-motion: no-preference) {
+  button:not(:disabled) {
+    transition:
+      scale 100ms ease-out,
+      transform 120ms ease-out,
+      border-color 120ms ease-out,
+      background-color 120ms ease-out,
+      color 120ms ease-out;
+  }
+
+  button:active:not(:disabled):not([aria-disabled="true"]) {
+    scale: 0.97;
+    transition-duration: 50ms;
+  }
+
+  /* Opacity alone keeps board coordinates and fixed-position overlays stable. */
+  :is(.main-menu-screen, .sandbox-info-screen, .puzzle-info-screen, .game-screen):not([hidden]) {
+    animation: screen-enter 180ms ease-out;
+  }
+
+  dialog[open] {
+    animation: dialog-enter 160ms ease-out;
+  }
+
+  dialog[open]::backdrop {
+    animation: screen-enter 160ms ease-out;
+  }
+}
+
+@keyframes screen-enter {
+  from { opacity: 0.6; }
+  to { opacity: 1; }
+}
+
+@keyframes dialog-enter {
+  from {
+    opacity: 0.6;
+    translate: 0 6px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Also suppress the existing hover lifts and saved-snippet pulse. */
+  button:not(:disabled) {
+    transition: none;
+  }
+
+  :is(.sandbox-node, .puzzle-node, .palette-item):hover:not(:disabled) {
+    transform: none;
+  }
+
+  .snippet-card-new {
+    animation: none;
+  }
+}

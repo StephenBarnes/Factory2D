@@ -1,4 +1,5 @@
 import "./styles.css";
+import "./ui/motion.css";
 import { PuzzlePriceFeedback } from "./ui/puzzle-price-feedback";
 import type {
   DevelopmentDiagnosticSnapshot,

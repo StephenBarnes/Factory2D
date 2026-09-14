@@ -32,6 +32,7 @@ Accepted sandbox edits copy the current world to baseline. Puzzle edits transfer
 
 ## Workshop editing contracts
 
+* `src/ui/motion.css` provides brief button press feedback and entrance animations when screens become visible or dialogs open. Screen fades leave board geometry unchanged, and navigation/dialog actions remain immediate. These DOM effects are independent of simulation interpolation; the browser's reduced-motion preference disables them and existing button hover lifts/saved-snippet pulses.
 * `component-palette.ts` derives categories, visible-order shortcuts, and availability from tile metadata and the puzzle catalog. Sandbox palettes stay complete/unpriced even though new authored puzzle catalogs start disabled. Suggested authoring prices come from `TileDefinition.defaultPrice`; enabled saved/imported prices are explicit. Empty puzzle catalogs are valid and select the weld tool.
 * Puzzle price edits show a signed popup above the total, using circuit blue for increases and red for decreases. Changes accumulate while the 1.4-second hold/fade is active; net-zero changes hide it. Workshop entry resets feedback, and simulation changes do not produce price deltas.
 * The palette sidebar's right-edge separator supports pointer dragging, Left/Right adjustments, Home/End limits, and double-click reset. Width is retained across in-app navigation, not reloads, and bounded to preserve board space. Narrow palettes shrink component icons and move the workshop title below its buttons.
