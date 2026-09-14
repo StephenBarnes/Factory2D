@@ -19,7 +19,10 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 	* As a follow-up, modify rendering for some components to match this - e.g. the indicator dots on selector runes and rotators.
 * Modify the assembler to add reaction force: When it has a pending output, but no space to output, shift the assembler in its forwards direction, emitting the product out the back (at assembler's pre-movement position). Allow this motion to push other blocks that are in front of the assembler.
 * Modify the duplicator in the same way as assembler above - make it also attempt to push itself away from the output side, if it's trying to duplicate a single-tile body but there's something blocking the output. When duplicating multi-tile bodies, don't do this - require already empty space for the whole body.
-* Audit components that can move blocks for behavior when multiple are linked together. For pistons, we added dependency-ordered substeps to allow a tower of linked pistons to resolve in one tick. But rotators and maybe other components may need similar changes.
+* Check whether we can make some pushing components stronger than gravity. Namely thrusters and force projectors. Currently a thruster pointing upwards, with a stone block above it (not welded), oscillates up and down in place. A force projector trying to push something upwards is overpowered by gravity. Can we make both of these overpower gravity reliably?
+* Modify the levitation projector to make its beam not extend fully to the end of the grid, but rather to the end of the grid or to another levitation projector facing in the opposite direction. So if a box has levitation projectors pointing inwards on the left and right sides, the levitation applies only to things inside the box, rather than everything horizontally in line with the box.
+* Modify the levitation projector to take a circuit input on the back side. Disable it on inputs of -1.
+* There's some unexpected behavior in the scene in `./temp/conveyor-projector-bug.json`. A stone block is acted on by a levitation projector, force projector (pushing it upward), and conveyor belt (pushing it left). The block cannot move up because the conveyor is in the way. The block should move left, but doesn't. Removing levitation projector or force projector causes it to move left correctly.
 
 # Performance
 
@@ -36,6 +39,7 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Add a delay block, but instead of advancing 1 space per tick, it advances when an additional input is +1. Maybe also allow -1 to scroll back. Uncertain, this seems similar to the queue block.
 * Add a delay block variant that only steps forward if the input is +1 or -1, ignoring zeros. Like the current delay block, on every tick, it outputs the queued value; but we only shift the ring buffer forward and write a value when the back value is +1. Uncertain, seems similar to the queue block.
 * Figure out what components are necessary to build a version of the 2D ROM that exists in-world. Given an NxM block of ruby and sapphire blocks, what components are needed to read or duplicate the block at a specific coordinate? Maybe add a light-beam block, and a beam reader block; then the beam reader reads the block in the row in front of it which has the light beam on it. So we have two arms which move to position the intersection at the necessary 2D coordinate. Reading could be by duplicating the block, or comparing it to an adjacent body like the existing body comparer block; or emit a signal based on the block's color (ruby is red so -1, sapphire is blue so +1).
+* Add a delay gate. Like a combiner with only the back input. Looks like conduit/channel with ball and socket. This functionality is already covered by the combiner, but we want a separate gate because we want to give different prices for delay vs combiner in some puzzles.
 
 # UI
 
@@ -44,6 +48,8 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
 
 # Visuals
+
+* Add a visible back input to the force projector block, similar to the inputs on gates.
 
 ## Animations
 

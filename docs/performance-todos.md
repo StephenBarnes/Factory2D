@@ -503,3 +503,27 @@ Immediately after construction, all four scenarios use zero runtime backing byte
 This saves **960,000 bytes (0.92 MiB) per 400×300 non-circuit runtime**. Circuit boards allocate the same buffers on their first circuit tick; no throughput improvement is claimed.
 
 The browser smoke scenario verified late source propagation, neutral charges after empty reset, powered reset, nested circuit activation/removal/re-add/reset, retained buffer identity, and late furnace activation with disable/reset followed by successful glass production.
+
+# Update 10
+
+Implemented contact-free gravity-to-drive topology reuse, continuing the motion CPU and runtime-memory priorities.
+
+## Changes
+
+- `MotionWorkspace` skips gravity-to-welded remapping and the second body-member/property collection when there are no magnetic contacts between distinct welded bodies. Gravity already used the same welded bodies, and geometry does not change before driven-motion resolution.
+- The two gravity-transfer buffers now allocate with magnetic contact scratch on first contact, rather than on every ordinary-motion runtime. Active magnetic contacts retain the existing remapping and property rebuild, including levitation beams.
+- Contact-free ticks skip this work even after earlier magnetic activation; allocated buffers remain cached across removal/reset.
+
+## Verification
+
+- `npm run build` passed; Vite reported its bundle-size warning.
+- Focused ordinary-motion suites: **8 files, 115 tests passed**, including the existing late magnetic placement, rotation, removal, and reset regression.
+- Browser smoke exercised ordinary thrust, late magnetic restraint, removal, reset to magnetic state, and reset to nonmagnetic state.
+- Same-session headless Chromium through Vite, 400×300 boards, 15 warmup ticks and 60 measured ticks per scenario:
+
+| Stationary board | Before median / p95 | After median / p95 |
+|---|---:|---:|
+| One stone on the bottom row | 0.4 / 0.5 ms | 0.2 / 0.3 ms |
+| Fully welded stone board | 25.0 / 38.7 ms | 18.7 / 20.7 ms |
+
+Both scenarios' distinct typed-array backing storage reachable from `Simulation`, excluding `World`, fell from **8,280,000 to 8,040,000 bytes**. This saves **240,000 bytes (0.23 MiB)** until the first magnetic contact. These measurements cover stationary nonmagnetic boards, not moving or magnetic factories; total browser memory is not measured.

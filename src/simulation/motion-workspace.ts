@@ -37,8 +37,6 @@ export class MotionWorkspace {
   private readonly bodySlidesDiagonally: Uint8Array;
   private readonly horizontalMoves: Int16Array;
   private readonly verticalMoves: Int16Array;
-  private readonly gravityHorizontalMoves: Int8Array;
-  private readonly gravityVerticalMoves: Int8Array;
   private readonly bodyForceX: Int32Array;
   private readonly bodyForceY: Int32Array;
   private readonly drivenBodies: Uint8Array;
@@ -57,6 +55,8 @@ export class MotionWorkspace {
     readonly otherBodies: Int32Array;
     readonly isVertical: Uint8Array;
     readonly next: Int32Array;
+    readonly gravityHorizontalMoves: Int8Array;
+    readonly gravityVerticalMoves: Int8Array;
   } | undefined;
   private magneticConstraintCount = 0;
   private readonly breakingFastenerDestinations: number[] = [];
@@ -85,8 +85,6 @@ export class MotionWorkspace {
     this.bodySlidesDiagonally = new Uint8Array(world.cellCount);
     this.horizontalMoves = new Int16Array(world.cellCount);
     this.verticalMoves = new Int16Array(world.cellCount);
-    this.gravityHorizontalMoves = new Int8Array(world.cellCount);
-    this.gravityVerticalMoves = new Int8Array(world.cellCount);
     this.bodyForceX = new Int32Array(world.cellCount);
     this.bodyForceY = new Int32Array(world.cellCount);
     this.drivenBodies = new Uint8Array(world.cellCount);
@@ -338,6 +336,8 @@ export class MotionWorkspace {
       otherBodies: new Int32Array(this.world.cellCount * 2),
       isVertical: new Uint8Array(this.world.cellCount * 2),
       next: new Int32Array(this.world.cellCount * 2),
+      gravityHorizontalMoves: new Int8Array(this.world.cellCount),
+      gravityVerticalMoves: new Int8Array(this.world.cellCount),
     };
     // Retain storage across ticks/reset, but expose only this tick's contacts.
     if (this.magneticConstraintCount === 0) {
@@ -424,8 +424,17 @@ export class MotionWorkspace {
   }
 
   private restoreWeldedBodiesAfterGravity(): void {
-    this.gravityHorizontalMoves.fill(0);
-    this.gravityVerticalMoves.fill(0);
+    // Without magnetic grouping, gravity already used the welded drive bodies.
+    // No geometry or body properties change before driven movement begins.
+    if (this.magneticConstraintCount === 0) {
+      return;
+    }
+    const { gravityHorizontalMoves, gravityVerticalMoves } = expectDefined(
+      this.magneticConstraints,
+      "active magnetic constraints",
+    );
+    gravityHorizontalMoves.fill(0);
+    gravityVerticalMoves.fill(0);
     for (
       let index = this.world.firstFeatureIndex(WorldFeature.Occupied);
       index >= 0;
@@ -436,19 +445,19 @@ export class MotionWorkspace {
         continue;
       }
       const gravityRoot = expectDefined(this.bodyRoots[index], "gravity body root");
-      this.gravityHorizontalMoves[weldedRoot] = expectDefined(
+      gravityHorizontalMoves[weldedRoot] = expectDefined(
         this.horizontalMoves[gravityRoot],
         "horizontal gravity movement",
       );
-      this.gravityVerticalMoves[weldedRoot] = expectDefined(
+      gravityVerticalMoves[weldedRoot] = expectDefined(
         this.verticalMoves[gravityRoot],
         "vertical gravity movement",
       );
     }
 
     this.bodyRoots.set(this.weldedBodyRoots);
-    this.horizontalMoves.set(this.gravityHorizontalMoves);
-    this.verticalMoves.set(this.gravityVerticalMoves);
+    this.horizontalMoves.set(gravityHorizontalMoves);
+    this.verticalMoves.set(gravityVerticalMoves);
     this.collectBodyMembers();
   }
 
