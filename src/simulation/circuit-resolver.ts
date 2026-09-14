@@ -333,6 +333,26 @@ export class CircuitResolver {
         }
         continue;
       }
+      if (kind === TileKind.ControlledThruster) {
+        let thrustDirection: Direction | undefined;
+        for (let side = Direction.Up; side <= Direction.Left; side += 1) {
+          if (
+            !this.hasConnectedNeighbor(runtime, index, side) ||
+            this.neighborPortCharge(runtime, index, side) !== 1
+          ) {
+            continue;
+          }
+          if (thrustDirection !== undefined) {
+            thrustDirection = undefined;
+            break;
+          }
+          thrustDirection = side;
+        }
+        if (thrustDirection !== undefined) {
+          runtime.motionWorkspace.collectControlledThrust(index, thrustDirection);
+        }
+        continue;
+      }
       const inputSides = orientedSides(definition.circuitInputPorts, orientation);
       let inputSum = 0;
       let inputProduct = 1;

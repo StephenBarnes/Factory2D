@@ -63,6 +63,7 @@ export const enum TileKind {
   Fastener = 61,
   Slider = 62,
   Thruster = 63,
+  ControlledThruster = 64,
 }
 
 export const enum Direction {
@@ -135,6 +136,7 @@ export const enum TileDecorationStyle {
   Fastener = 50,
   Slider = 51,
   Thruster = 52,
+  ControlledThruster = 53,
 }
 
 export const enum PaletteCategory {
@@ -410,6 +412,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     attractionRange: 0,
     fill: "#795448",
     decorationStyle: TileDecorationStyle.Thruster,
+    decorationColor: "#ffe0a3",
+  },
+  [TileKind.ControlledThruster]: {
+    name: "Controlled Thruster",
+    boardCode: "!",
+    defaultPrice: 25,
+    palette: {
+      order: 67,
+      category: PaletteCategory.Motion,
+      description: "Holds its welded body aloft and thrusts toward a +1 input.",
+      extendedDescription: ["Four isolated input ports read the previous tick's charges. Exactly one +1 input applies thrust toward that side; 0 and -1 are ignored. Two or more +1 inputs jam this thruster, producing no force.", "Holds its welded body aloft even while idle. Needs welded circuit connections, but never passes charge between its inputs. No rotation is needed: each side always controls movement toward itself.", "Shares ordinary thruster pushing, force sums, slider restrictions, gravity priority, and collision rules. A jammed input does not anchor the body against other machinery."],
+    },
+    affectedByGravity: false,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.All,
+    circuitInputPorts: WeldSide.All,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#795448",
+    decorationStyle: TileDecorationStyle.ControlledThruster,
     decorationColor: "#ffe0a3",
   },
   [TileKind.Magnet]: {

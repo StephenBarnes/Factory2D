@@ -59,6 +59,8 @@ export class MotionWorkspace {
   private magneticConstraintCount = 0;
   private readonly breakingFastenerDestinations: number[] = [];
   private readonly breakingFragileDestinations: number[] = [];
+  /** Start-of-tick commands keyed by identity so production cannot inherit a removed tile's thrust. */
+  private controlledThrust: Map<number, Direction> | undefined;
 
   constructor(world: World) {
     this.world = world;
@@ -91,6 +93,15 @@ export class MotionWorkspace {
     this.magneticConstraintOtherBodies = new Int32Array(world.cellCount * 2);
     this.magneticConstraintIsVertical = new Uint8Array(world.cellCount * 2);
     this.nextMagneticConstraint = new Int32Array(world.cellCount * 2);
+  }
+
+  clearControlledThrust(): void {
+    this.controlledThrust?.clear();
+  }
+
+  collectControlledThrust(index: number, direction: Direction): void {
+    const commands = this.controlledThrust ??= new Map<number, Direction>();
+    commands.set(this.world.idAtIndex(index), direction);
   }
 
   resolveOrdinaryMovements(tick: number): number {
@@ -431,10 +442,12 @@ export class MotionWorkspace {
       index >= 0;
       index = this.world.nextFeatureIndex(WorldFeature.Thruster, index)
     ) {
-      this.addBodyForce(
-        expectDefined(this.bodyRoots[index], "thruster body root"),
-        this.world.orientationAtIndex(index),
-      );
+      const direction = this.world.kindAtIndex(index) === TileKind.ControlledThruster
+        ? this.controlledThrust?.get(this.world.idAtIndex(index))
+        : this.world.orientationAtIndex(index);
+      if (direction !== undefined) {
+        this.addBodyForce(expectDefined(this.bodyRoots[index], "thruster body root"), direction);
+      }
     }
   }
 

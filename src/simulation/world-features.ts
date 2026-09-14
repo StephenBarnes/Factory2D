@@ -101,7 +101,7 @@ for (const kind of TILE_KINDS) {
   if (kind === TileKind.Conveyor) {
     mask |= 1 << WorldFeature.Conveyor;
   }
-  if (kind === TileKind.Thruster) {
+  if (kind === TileKind.Thruster || kind === TileKind.ControlledThruster) {
     mask |= 1 << WorldFeature.Thruster;
   }
   if (kind === TileKind.RuneArray) {

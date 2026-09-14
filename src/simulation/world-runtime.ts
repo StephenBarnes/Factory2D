@@ -107,6 +107,7 @@ export class WorldRuntime {
   /** Observes start-of-tick state and collects every intent that precedes circuit resolution. */
   collectIntents(): void {
     const world = this.world;
+    this.motionWorkspaceValue?.clearControlledThrust();
     this.collectedDuplicators = world.hasFeature(WorldFeature.Duplicator);
     this.collectedWeldOperators = world.hasFeature(WorldFeature.WeldOperator);
     this.collectedDeliveries = world.hasFeature(WorldFeature.Delivery);

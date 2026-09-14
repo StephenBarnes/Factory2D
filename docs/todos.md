@@ -14,7 +14,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Block that disables gravity for all bodies in a straight line from its forward side. (Useful alongside hole-punchers and flippers, for example.)
 * Hole-puncher block that destroys any blocks moved onto its tile cell. For example, a 5x5 body falling onto one drill block should be cut in half. Once we have the flipper block, also allow flipping bodies onto this block, which destroys the blocks that overlap it. Unclear what behavior we should have when rotating bodies onto it; maybe count it as colliding / preventing rotation onto it, or find all tiles that would intersect the hole-punch's center when rotated through it.
 * Add a magic link block. Whenever two link blocks are in the same row or column, they count as part of the same welded body for all physics/sim purposes. These allow creating single bodies that have holes in them through which things can fall.
-* Add a circuit-controlled directional variant of the thruster block: have an input port on each side, and produce thrust in any direction where it receives +1 charge on that side. Multiple conflicting inputs jam.
 
 # New component behaviors
 

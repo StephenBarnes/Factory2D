@@ -728,6 +728,36 @@ function drawDecoration(
       context.fill();
       context.restore();
       break;
+    case TileDecorationStyle.ControlledThruster:
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.lineWidth = Math.max(1, size * 0.035);
+      context.lineJoin = "round";
+      context.strokeStyle = "#392d2a";
+      // Four outward-pointing housings leave the outer input traces unobstructed.
+      for (let side = 0; side < 4; side += 1) {
+        context.beginPath();
+        context.moveTo(0, -size * 0.31);
+        context.lineTo(size * 0.095, -size * 0.16);
+        context.lineTo(size * 0.065, -size * 0.07);
+        context.lineTo(-size * 0.065, -size * 0.07);
+        context.lineTo(-size * 0.095, -size * 0.16);
+        context.closePath();
+        context.fill();
+        context.stroke();
+        context.rotate(Math.PI / 2);
+      }
+      context.fillStyle = "#ee9553";
+      context.beginPath();
+      context.moveTo(0, -size * 0.1);
+      context.lineTo(size * 0.1, 0);
+      context.lineTo(0, size * 0.1);
+      context.lineTo(-size * 0.1, 0);
+      context.closePath();
+      context.fill();
+      context.stroke();
+      context.restore();
+      break;
     case TileDecorationStyle.Slider:
       context.save();
       context.translate(left + size / 2, top + size / 2);
