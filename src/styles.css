@@ -350,7 +350,6 @@ body:has(dialog[open]) .tool-cursor {
 .puzzle-node:hover:not(:disabled) {
   border-color: var(--gold);
   background-color: var(--node-hover-bg);
-  transform: translateY(-1px);
 }
 
 /* Stepped corner inlays, adapted from temp/artdeco.txt without extra markup. */
@@ -493,7 +492,7 @@ body:has(dialog[open]) .tool-cursor {
   grid-template-columns: minmax(0, 1fr) minmax(0, 0.5fr) minmax(0, 0.6fr);
   align-items: center;
   gap: 9px;
-  transition: border-color 120ms ease, background-color 120ms ease, transform 120ms ease;
+  transition: border-color 120ms ease, background-color 120ms ease;
 }
 
 .puzzle-group[data-state="unlocked"],
