@@ -113,6 +113,11 @@ export class CircuitResolver {
     let nodeCount = 0;
     for (const runtime of runtimes) {
       let nodes = runtime.circuitNodes;
+      if (!runtime.world.hasFeature(WorldFeature.Circuit)) {
+        // Keep previously allocated storage, but never expose old node numbers.
+        nodes?.fill(-1);
+        continue;
+      }
       if (nodes === null) {
         nodes = new Int32Array(runtime.world.cellCount);
         runtime.circuitNodes = nodes;
@@ -493,6 +498,9 @@ export class CircuitResolver {
 
   private commitCharges(runtime: WorldRuntime): void {
     const world = runtime.world;
+    if (!world.hasFeature(WorldFeature.Circuit)) {
+      return;
+    }
     for (
       let index = world.firstFeatureIndex(WorldFeature.Circuit);
       index >= 0;

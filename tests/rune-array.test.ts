@@ -112,6 +112,39 @@ describe("rune arrays", () => {
     expect(tall.world.chargeAtPort(1, 0, Direction.Down)).toBe(0);
   });
 
+  it("activates an empty inner circuit and disconnects it after removal and reset", () => {
+    const { world, inner, simulation } = createPassthroughWorld();
+    const emptyInner = world.clone();
+    simulation.step();
+    expect(world.chargeAt(2, 0)).toBe(0);
+
+    fillConduitRow(inner, 0);
+    simulation.step();
+    expect(world.chargeAt(2, 0)).toBe(1);
+    expect(inner.chargeAt(1, 0)).toBe(1);
+
+    for (let x = 0; x < inner.width; x += 1) {
+      inner.place(x, 0, TileKind.Empty);
+    }
+    simulation.step();
+    expect(world.chargeAt(2, 0)).toBe(0);
+    expect(world.chargeAtPort(1, 0, Direction.Right)).toBe(0);
+
+    fillConduitRow(inner, 0);
+    simulation.step();
+    expect(world.chargeAt(2, 0)).toBe(1);
+
+    simulation.resetTo(emptyInner);
+    simulation.step();
+    expect(world.chargeAt(2, 0)).toBe(0);
+
+    const resetInner = world.runeArrayWorldAt(1, 0);
+    fillConduitRow(resetInner, 0);
+    simulation.step();
+    expect(world.chargeAt(2, 0)).toBe(1);
+    expect(resetInner.chargeAt(1, 0)).toBe(1);
+  });
+
   it("rebuilds cached circuit topology after replacing an inner world", () => {
     const { world, inner, simulation } = createPassthroughWorld();
     fillConduitRow(inner, 0);

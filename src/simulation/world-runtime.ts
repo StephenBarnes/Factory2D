@@ -31,12 +31,11 @@ export class WorldRuntime {
   private rotatorResolverValue: RotatorResolver | undefined;
   private weldOperationResolverValue: WeldOperationResolver | undefined;
   private movementSensorObserver: MovementSensorObserver | undefined;
-  readonly nextCharges: Int8Array;
-  readonly nextCrossingVerticalCharges: Int8Array;
-  readonly nextIsolatedOutputCharges: Int8Array;
-  /** Four resolved side charges per cell for arrays and independent sensor outputs. */
-  readonly nextPortCharges: Int8Array;
-  readonly furnaceDisabled: Uint8Array;
+  private nextChargesValue: Int8Array | undefined;
+  private nextCrossingVerticalChargesValue: Int8Array | undefined;
+  private nextIsolatedOutputChargesValue: Int8Array | undefined;
+  private nextPortChargesValue: Int8Array | undefined;
+  private furnaceDisabledValue: Uint8Array | undefined;
 
   /** Runtime owning the rune array that contains this world, or null for the root. */
   parent: WorldRuntime | null = null;
@@ -59,11 +58,27 @@ export class WorldRuntime {
   private collectedDrills = false;
   constructor(world: World) {
     this.world = world;
-    this.nextCharges = new Int8Array(world.cellCount);
-    this.nextCrossingVerticalCharges = new Int8Array(world.cellCount);
-    this.nextIsolatedOutputCharges = new Int8Array(world.cellCount);
-    this.nextPortCharges = new Int8Array(world.cellCount * 4);
-    this.furnaceDisabled = new Uint8Array(world.cellCount);
+  }
+
+  get nextCharges(): Int8Array {
+    return this.nextChargesValue ??= new Int8Array(this.world.cellCount);
+  }
+
+  get nextCrossingVerticalCharges(): Int8Array {
+    return this.nextCrossingVerticalChargesValue ??= new Int8Array(this.world.cellCount);
+  }
+
+  get nextIsolatedOutputCharges(): Int8Array {
+    return this.nextIsolatedOutputChargesValue ??= new Int8Array(this.world.cellCount);
+  }
+
+  /** Four resolved side charges per cell for arrays and independent sensor outputs. */
+  get nextPortCharges(): Int8Array {
+    return this.nextPortChargesValue ??= new Int8Array(this.world.cellCount * 4);
+  }
+
+  get furnaceDisabled(): Uint8Array {
+    return this.furnaceDisabledValue ??= new Uint8Array(this.world.cellCount);
   }
 
   get weldedBodies(): WeldedBodyIndex {

@@ -473,3 +473,33 @@ Implemented lazy magnetic scratch allocation inside `MotionWorkspace`, continuin
 This saves 22 bytes per cell, or **2.52 MiB per 400×300 runtime**, until the first magnetic contact. Magnetic factories still require the same buffers once activated; no tick-throughput improvement is claimed.
 
 The browser smoke scenario also exercised a thruster-driven body before magnets existed, late-added attraction to fixed iron, rotation away, restored contact after reset, last-magnet removal, and reset to a non-magnetic snapshot. Motion matched each state, and allocated backing storage stayed constant after first contact.
+
+# Update 9
+
+Implemented lazy circuit output/control buffers, continuing the runtime memory priority.
+
+## Changes
+
+- `WorldRuntime` allocates charge, crossing, isolated-output, side-port, and furnace-disable buffers on first use, following the existing lazy resolver pattern.
+- Circuit resolution skips charge commits and node-lookup allocation for worlds without circuit cells, even when another board in the same rune-array tree has active circuits.
+- Buffers remain cached across removal/reset. Topology rebuilds clear retained node lookups for worlds whose last circuit was removed.
+- Replaced a private topology-call-count test with observable charge propagation across late activation, disconnection, and resets. Added a nested-array activation/removal/reset regression.
+
+## Verification
+
+- `npm run build` passed; Vite reported its bundle-size warning.
+- Focused circuit, rune-array, furnace, assembler, duplicator, and movement-sensor suites: **6 files, 388 tests passed**.
+- Headless Chromium through Vite, 400×300 boards: distinct typed-array backing storage reachable from `Simulation`, excluding `World`. These are runtime buffer measurements, not total browser memory.
+
+| Board after one tick | Before | After |
+|---|---:|---:|
+| Empty | 960,000 bytes | 0 bytes |
+| One platform | 960,000 bytes | 0 bytes |
+| One stone | 9,240,000 bytes | 8,280,000 bytes |
+| One conduit | 9,720,008 bytes | 9,720,008 bytes |
+
+Immediately after construction, all four scenarios use zero runtime backing bytes instead of 960,000. An empty 5×5 inner board's directly owned circuit buffers and node lookup fell from 300 bytes to zero, despite its containing array participating in the outer circuit.
+
+This saves **960,000 bytes (0.92 MiB) per 400×300 non-circuit runtime**. Circuit boards allocate the same buffers on their first circuit tick; no throughput improvement is claimed.
+
+The browser smoke scenario verified late source propagation, neutral charges after empty reset, powered reset, nested circuit activation/removal/re-add/reset, retained buffer identity, and late furnace activation with disable/reset followed by successful glass production.

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { expectDefined } from "../src/util/assert";
 
 import { CircuitResolver } from "../src/simulation/circuit-resolver";
@@ -54,32 +54,32 @@ describe("circuit networks", () => {
     expect(world.chargeAt(3, 1)).toBe(0);
   });
 
-  it("allocates compact nodes and caches topology until geometry changes", () => {
-    const world = new World(4, 1);
+  it("activates circuits after empty ticks and reuses the runtime across resets", () => {
+    const world = new World(3, 1);
+    const empty = world.clone();
+    const simulation = new Simulation(world);
+    simulation.step();
+
     world.place(0, 0, TileKind.FixedCharge);
     world.place(1, 0, TileKind.Conduit);
-    world.place(2, 0, TileKind.WireCrossing);
-    world.place(3, 0, TileKind.Inverter);
     world.setWeld(0, 0, 1, 0, true);
-    const runtime = new WorldRuntime(world);
-    const resolver = new CircuitResolver();
-    const internals = resolver as unknown as {
-      readonly nodeCount: number;
-      rebuildTopology(runtimes: readonly WorldRuntime[]): void;
-    };
-    const rebuildTopology = vi.spyOn(internals, "rebuildTopology");
-
-    resolver.resolve(0, [runtime]);
-
-    expect(internals.nodeCount).toBe(4);
-    expect(rebuildTopology).toHaveBeenCalledTimes(1);
-
-    resolver.resolve(1, [runtime]);
-    expect(rebuildTopology).toHaveBeenCalledTimes(1);
+    const powered = world.clone();
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(1);
 
     world.setWeld(0, 0, 1, 0, false);
-    resolver.resolve(2, [runtime]);
-    expect(rebuildTopology).toHaveBeenCalledTimes(2);
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(0);
+
+    simulation.resetTo(empty);
+    simulation.step();
+    world.place(1, 0, TileKind.Conduit);
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(0);
+
+    simulation.resetTo(powered);
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(1);
   });
 
   it("drives a welded circuit with +1 constantly", () => {
