@@ -65,6 +65,7 @@ export const enum TileKind {
   Thruster = 63,
   ControlledThruster = 64,
   MovementSensor = 65,
+  LevitationProjector = 66,
 }
 
 export const enum Direction {
@@ -139,6 +140,7 @@ export const enum TileDecorationStyle {
   Thruster = 52,
   ControlledThruster = 53,
   MovementSensor = 54,
+  LevitationProjector = 55,
 }
 
 export const enum PaletteCategory {
@@ -341,6 +343,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     attractionRange: 0,
     fill: "#476d83",
     decorationStyle: TileDecorationStyle.Floatstone,
+    decorationColor: "#bdeeff",
+  },
+  [TileKind.LevitationProjector]: {
+    name: "Levitation Projector",
+    boardCode: "%",
+    defaultPrice: 20,
+    palette: {
+      order: 69,
+      category: PaletteCategory.Motion,
+      description: "Disables gravity for every body crossed by its forward beam.",
+      extendedDescription: ["Always projects through blocks and gaps to this board's boundary, starting one cell ahead. Touching any tile with the beam holds its entire welded body aloft; no charge is needed.", "Affected bodies can still be moved by machinery or pushed down by independent falling weight. Platforms and sliders retain their movement restrictions. Leaving the beam restores gravity on the next tick.", "The projector itself falls normally unless supported or its body intersects a levitation beam. Beams do not cross rune-array boundaries."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.None,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#416c80",
+    decorationStyle: TileDecorationStyle.LevitationProjector,
     decorationColor: "#bdeeff",
   },
   [TileKind.Fastener]: {

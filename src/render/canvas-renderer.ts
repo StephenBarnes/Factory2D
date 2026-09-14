@@ -1724,10 +1724,35 @@ export class CanvasRenderer {
       case TileKind.ChargeSensor:
         this.drawSensorObservation(orientation, true);
         break;
+      case TileKind.LevitationProjector:
+        this.drawLevitationBeam(orientation);
+        break;
       case TileKind.Rotator:
         this.drawRotatorReach(orientation);
         break;
     }
+  }
+
+  private drawLevitationBeam(orientation: Direction): void {
+    const dx = directionX(orientation);
+    const dy = directionY(orientation);
+    const startX = this.hoverX + 0.5 + dx / 2;
+    const startY = this.hoverY + 0.5 + dy / 2;
+    const endX = dx === 0 ? startX : dx > 0 ? this.world.width : 0;
+    const endY = dy === 0 ? startY : dy > 0 ? this.world.height : 0;
+    const { context, cellSize } = this;
+    context.save();
+    context.strokeStyle = "#bdeeff";
+    context.globalAlpha = 0.18;
+    context.lineWidth = cellSize * 0.8;
+    context.beginPath();
+    context.moveTo(this.originX + startX * cellSize, this.originY + startY * cellSize);
+    context.lineTo(this.originX + endX * cellSize, this.originY + endY * cellSize);
+    context.stroke();
+    context.globalAlpha = 0.8;
+    context.lineWidth = Math.max(1, cellSize * 0.035);
+    context.stroke();
+    context.restore();
   }
 
   private drawWeldOperationPreview(kind: TileKind, orientation: Direction): void {

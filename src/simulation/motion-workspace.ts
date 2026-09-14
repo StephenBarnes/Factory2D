@@ -360,6 +360,30 @@ export class MotionWorkspace {
         this.bodySlidesDiagonally[root] = 0;
       }
     }
+    this.applyLevitationBeams();
+  }
+
+  private applyLevitationBeams(): void {
+    for (
+      let projector = this.world.firstFeatureIndex(WorldFeature.LevitationProjector);
+      projector >= 0;
+      projector = this.world.nextFeatureIndex(WorldFeature.LevitationProjector, projector)
+    ) {
+      const direction = this.world.orientationAtIndex(projector);
+      for (
+        let target = this.neighborIndex(projector, direction);
+        target >= 0;
+        target = this.neighborIndex(target, direction)
+      ) {
+        const root = expectDefined(this.bodyRoots[target], "levitation target body root");
+        if (root < 0) {
+          continue;
+        }
+        // Reapply to both magnetic gravity groups and restored welded drive groups.
+        this.bodyFalls[root] = 0;
+        this.hasFloatingTiles = true;
+      }
+    }
   }
 
   private blocksTranslation(root: number, moveX: number, moveY: number): boolean {

@@ -695,6 +695,36 @@ function drawDecoration(
       context.lineTo(left + size * 0.65, top + size * 0.8);
       context.stroke();
       break;
+    case TileDecorationStyle.LevitationProjector:
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.lineWidth = Math.max(1.5, size * 0.045);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      // A suspended crystal above a projecting dish; the arrow marks the beam.
+      context.beginPath();
+      context.moveTo(0, -size * 0.2);
+      context.lineTo(size * 0.12, -size * 0.06);
+      context.lineTo(0, size * 0.08);
+      context.lineTo(-size * 0.12, -size * 0.06);
+      context.closePath();
+      context.fill();
+      context.beginPath();
+      context.moveTo(-size * 0.26, size * 0.08);
+      context.lineTo(-size * 0.17, size * 0.23);
+      context.lineTo(size * 0.17, size * 0.23);
+      context.lineTo(size * 0.26, size * 0.08);
+      context.moveTo(-size * 0.16, size * 0.33);
+      context.lineTo(size * 0.16, size * 0.33);
+      context.moveTo(0, -size * 0.25);
+      context.lineTo(0, -size * 0.4);
+      context.moveTo(-size * 0.07, -size * 0.33);
+      context.lineTo(0, -size * 0.4);
+      context.lineTo(size * 0.07, -size * 0.33);
+      context.stroke();
+      context.restore();
+      break;
     case TileDecorationStyle.Thruster:
       context.save();
       context.translate(left + size / 2, top + size / 2);
