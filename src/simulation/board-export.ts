@@ -188,6 +188,15 @@ interface ExportedFragile {
   readonly fallDistance: number;
 }
 
+interface ExportedMovementSensor {
+  readonly x: number;
+  readonly y: number;
+  readonly type: "movement-sensor";
+  readonly motionX: Charge;
+  readonly motionY: Charge;
+  readonly ports: readonly [Charge, Charge, Charge, Charge];
+}
+
 /** Rune array whose inner board nests the same contents format without tick or result. */
 interface ExportedRuneArray {
   readonly x: number;
@@ -202,6 +211,7 @@ type ExportedComponent =
   | ExportedAssembler
   | ExportedRotator
   | ExportedFragile
+  | ExportedMovementSensor
   | ExportedDelay
   | ExportedDiscard
   | ExportedCounter
@@ -317,7 +327,7 @@ function exportBoardContents(world: World): ExportedBoardContents {
         if (horizontal !== 0 || vertical !== 0) {
           crossingCharges.push({ x, y, horizontal, vertical });
         }
-      } else if (kind !== TileKind.RuneArray) {
+      } else if (kind !== TileKind.RuneArray && kind !== TileKind.MovementSensor) {
         const charge = world.chargeAt(x, y);
         if (charge !== 0) {
           charges.push({ x, y, charge });
@@ -392,6 +402,11 @@ function exportBoardContents(world: World): ExportedBoardContents {
           });
         } else if (componentState.type === "fragile") {
           if (componentState.fallDistance !== 0) {
+            components.push({ x, y, ...componentState });
+          }
+        } else if (componentState.type === "movement-sensor") {
+          if (componentState.motionX !== 0 || componentState.motionY !== 0 ||
+              componentState.ports.some((charge) => charge !== 0)) {
             components.push({ x, y, ...componentState });
           }
         } else {
@@ -612,6 +627,9 @@ function importBoardContents(
     if (kind === TileKind.WireCrossing) {
       throw new Error(`Charge ${index} targets a wire crossing`);
     }
+    if (kind === TileKind.MovementSensor) {
+      throw new Error(`Charge ${index} targets a movement sensor`);
+    }
     if (hasCharge[cellIndex] === 1) {
       throw new Error(`Charge ${index} duplicates cell (${x}, ${y})`);
     }
@@ -729,12 +747,16 @@ function importBoardContents(
       "ignoreZeros",
       "wrapX",
       "wrapY",
+      "motionX",
+      "motionY",
     ]);
     const type = requireString(entry.type, `${componentLabel} type`);
     const fields = type === "assembler"
       ? ["x", "y", "type", "pending"]
       : type === "fragile"
         ? ["x", "y", "type", "fallDistance"]
+      : type === "movement-sensor"
+        ? ["x", "y", "type", "motionX", "motionY", "ports"]
       : type === "rotator"
         ? ["x", "y", "type", "direction"]
         : type === "discard"
@@ -802,6 +824,14 @@ function importBoardContents(
       snapshot = {
         type,
         fallDistance: requireInteger(state.fallDistance, `${componentLabel} fallDistance`, 0, 2),
+      };
+    } else if (type === "movement-sensor") {
+      snapshot = {
+        type,
+        motionX: requireInteger(state.motionX, `${componentLabel} motionX`, -1, 1) as Charge,
+        motionY: requireInteger(state.motionY, `${componentLabel} motionY`, -1, 1) as Charge,
+        ports: requireChargeArray(state.ports, 4, `${componentLabel} ports`) as
+          readonly [Charge, Charge, Charge, Charge],
       };
     } else if (type === "delay") {
       const length = requireInteger(
@@ -958,6 +988,7 @@ function importBoardContents(
   for (let cellIndex = 0; cellIndex < kinds.length; cellIndex += 1) {
     const kind = expectDefined(kinds[cellIndex], `tile kind at index ${cellIndex}`) as TileKind;
     if (hasComponentState(kind) && TILE_DEFINITIONS[kind].fragile !== true &&
+        kind !== TileKind.MovementSensor &&
         componentStateAtCell[cellIndex] !== 1) {
       const x = cellIndex % width;
       const y = (cellIndex - x) / width;

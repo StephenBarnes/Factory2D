@@ -16,6 +16,7 @@ import {
   type AssemblerComponentState,
   type ConfigurableComponentSnapshot,
   type ConfigurableComponentState,
+  type MovementSensorComponentState,
   type RuneArrayComponentState,
 } from "./configurable-components";
 import { CellStorage } from "./cell-storage";
@@ -172,6 +173,9 @@ export class World {
     if (this.cells.kinds[index] === TileKind.RuneArray) {
       throw new Error("Rune array charges must be read from a circuit port");
     }
+    if (this.cells.kinds[index] === TileKind.MovementSensor) {
+      throw new Error("Movement sensor charges must be read from a circuit port");
+    }
     return this.cells.charges[index] as Charge;
   }
 
@@ -197,6 +201,9 @@ export class World {
     }
     if (kind === TileKind.RuneArray && charge !== 0) {
       throw new Error("Rune array charges must specify a side port");
+    }
+    if (kind === TileKind.MovementSensor && charge !== 0) {
+      throw new Error("Movement sensor charges must specify a side port");
     }
     if (
       this.cells.charges[index] !== charge ||
@@ -243,8 +250,8 @@ export class World {
 
   /**
    * Commits resolved circuit charges. `portCharges` holds four charges per cell in
-   * direction order and is applied only to rune arrays, whose side networks are stored
-   * on their component state instead of the shared per-cell charge.
+   * direction order and is applied to rune arrays and movement sensors, whose side
+   * outputs are stored on their component state instead of the shared per-cell charge.
    */
   applyCircuitCharges(
     charges: Int8Array,
@@ -268,12 +275,14 @@ export class World {
       index = this.nextFeatureIndex(WorldFeature.Circuit, index)
     ) {
       const kind = this.cells.kinds[index] as TileKind;
-      if (kind === TileKind.RuneArray) {
-        const state = this.requireRuneArrayStateAtIndex(index);
+      if (kind === TileKind.RuneArray || kind === TileKind.MovementSensor) {
+        const state = kind === TileKind.RuneArray
+          ? this.requireRuneArrayStateAtIndex(index)
+          : this.movementSensorStateAtIndex(index);
         for (let side = 0; side < 4; side += 1) {
-          const portCharge = expectDefined(portCharges[index * 4 + side], "rune array port charge");
+          const portCharge = expectDefined(portCharges[index * 4 + side], "component port charge");
           if (!isCharge(portCharge)) {
-            throw new RangeError(`Invalid rune array port charge ${portCharge}`);
+            throw new RangeError(`Invalid component port charge ${portCharge}`);
           }
           if (state.ports[side] !== portCharge) {
             state.ports[side] = portCharge;
@@ -301,7 +310,8 @@ export class World {
       }
       if (
         charge !== 0 &&
-        (TILE_DEFINITIONS[kind].circuitPorts === 0 || kind === TileKind.RuneArray)
+        (TILE_DEFINITIONS[kind].circuitPorts === 0 ||
+          kind === TileKind.RuneArray || kind === TileKind.MovementSensor)
       ) {
         throw new Error(`Tile at index ${index} cannot hold a shared charge`);
       }
@@ -345,6 +355,19 @@ export class World {
       return null;
     }
     return snapshotComponentState(this.requireComponentStateAtIndex(index));
+  }
+
+  /** Mutable motion history and committed ports; callers must not retain it across edits. */
+  movementSensorStateAtIndex(index: number): MovementSensorComponentState {
+    this.assertIndex(index);
+    if (this.cells.kinds[index] !== TileKind.MovementSensor) {
+      throw new Error(`Tile at index ${index} is not a movement sensor`);
+    }
+    const state = this.requireComponentStateAtIndex(index);
+    if (state.type !== "movement-sensor") {
+      throw new Error(`Movement sensor at index ${index} has mismatched component state`);
+    }
+    return state;
   }
 
   /** Advances unwelded gravity history; callers defer destruction until movement commits. */
@@ -1567,6 +1590,9 @@ export class World {
     if (kind === TileKind.RuneArray) {
       return this.requireRuneArrayStateAtIndex(index).ports[direction] as Charge;
     }
+    if (kind === TileKind.MovementSensor) {
+      return this.movementSensorStateAtIndex(index).ports[direction];
+    }
     const definition = TILE_DEFINITIONS[kind];
     const inputSides = orientedSides(
       definition.circuitInputPorts,
@@ -2033,7 +2059,8 @@ export class World {
           } else {
             result.setCrossingCharges(destination.x, destination.y, horizontal, vertical);
           }
-        } else if (kind !== TileKind.RuneArray && this.cells.charges[index] !== 0) {
+        } else if (kind !== TileKind.RuneArray && kind !== TileKind.MovementSensor &&
+            this.cells.charges[index] !== 0) {
           result.setCharge(destination.x, destination.y, this.cells.charges[index] as Charge);
         }
         if (this.cells.isolatedOutputCharges[index] !== 0) {
@@ -2113,7 +2140,8 @@ export class World {
             source.cells.charges[index] as Charge,
             source.cells.crossingVerticalCharges[index] as Charge,
           );
-        } else if (kind !== TileKind.RuneArray && source.cells.charges[index] !== 0) {
+        } else if (kind !== TileKind.RuneArray && kind !== TileKind.MovementSensor &&
+            source.cells.charges[index] !== 0) {
           this.setCharge(targetX, targetY, source.cells.charges[index] as Charge);
         }
         if (source.cells.isolatedOutputCharges[index] !== 0) {

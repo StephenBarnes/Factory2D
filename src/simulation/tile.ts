@@ -64,6 +64,7 @@ export const enum TileKind {
   Slider = 62,
   Thruster = 63,
   ControlledThruster = 64,
+  MovementSensor = 65,
 }
 
 export const enum Direction {
@@ -137,6 +138,7 @@ export const enum TileDecorationStyle {
   Slider = 51,
   Thruster = 52,
   ControlledThruster = 53,
+  MovementSensor = 54,
 }
 
 export const enum PaletteCategory {
@@ -726,6 +728,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationStyle: TileDecorationStyle.ChargeSensor,
     decorationColor: "#ead3ff",
   },
+  [TileKind.MovementSensor]: {
+    name: "Movement Sensor Rune",
+    boardCode: "M",
+    defaultPrice: 10,
+    palette: {
+      order: 23,
+      category: PaletteCategory.CircuitBasic,
+      description: "Reports the previous tick's net movement through four isolated outputs.",
+      extendedDescription: ["Each axis outputs +1 toward the previous tick's net cell displacement and -1 on the opposite side. Diagonal movement activates both axes; an unchanged axis outputs 0. Stationary sensors output 0 on every side.", "Measures the net displacement across all movement phases, not intermediate moves or distance traveled. The first tick and newly produced sensors have no prior movement to report.", "Can fall and be welded on all four sides. No rotation is needed. Inside a rune array, it measures movement within that board; moving the containing array alone does not trigger it."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.All,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.All,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#68428c",
+    decorationStyle: TileDecorationStyle.MovementSensor,
+    decorationColor: "#e2d2ff",
+  },
   [TileKind.Selector]: {
     name: "Discernment Rune",
     boardCode: "T",
@@ -827,7 +853,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "W",
     defaultPrice: 4,
     palette: {
-      order: 23,
+      order: 68,
       category: PaletteCategory.CircuitBasic,
       description: "Keeps horizontal and vertical conduits separate.",
       extendedDescription: ["Opposite sides share charge, but perpendicular sides never connect electrically. Mechanical welds still join the crossing to its neighbors as a rigid body."],

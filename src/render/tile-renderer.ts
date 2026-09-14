@@ -522,9 +522,11 @@ function drawDecoration(
           ? WeldSide.All
           : WeldSide.None)) as WeldSide,
       hasComponentDisplay ? 0.39 : 0.26,
-      definition.decorationStyle === TileDecorationStyle.Lut
-        ? orientedSides(WeldSide.Up | WeldSide.Right, orientation)
-        : hasOutputArrow ? orientedSides(WeldSide.Up, orientation) : WeldSide.None,
+      definition.decorationStyle === TileDecorationStyle.MovementSensor
+        ? WeldSide.All
+        : definition.decorationStyle === TileDecorationStyle.Lut
+          ? orientedSides(WeldSide.Up | WeldSide.Right, orientation)
+          : hasOutputArrow ? orientedSides(WeldSide.Up, orientation) : WeldSide.None,
     );
   }
   context.fillStyle = definition.decorationColor;
@@ -1319,6 +1321,26 @@ function drawDecoration(
       context.restore();
       break;
     }
+    case TileDecorationStyle.MovementSensor:
+      context.lineWidth = Math.max(1.5, size * 0.05);
+      context.lineJoin = "round";
+      context.beginPath();
+      context.moveTo(left + size * 0.5, top + size * 0.3);
+      context.lineTo(left + size * 0.72, top + size * 0.5);
+      context.lineTo(left + size * 0.5, top + size * 0.7);
+      context.lineTo(left + size * 0.28, top + size * 0.5);
+      context.closePath();
+      context.stroke();
+      context.beginPath();
+      context.moveTo(left + size * 0.5, top + size * 0.42);
+      context.lineTo(left + size * 0.58, top + size * 0.5);
+      context.lineTo(left + size * 0.5, top + size * 0.58);
+      context.lineTo(left + size * 0.42, top + size * 0.5);
+      context.closePath();
+      context.fill();
+      drawPortArrows(context, left, top, size, Direction.Up,
+        WeldSide.None, WeldSide.All, circuitPortCharges);
+      break;
     case TileDecorationStyle.Inverter: {
       context.save();
       context.translate(left + size / 2, top + size / 2);

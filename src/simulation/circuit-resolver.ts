@@ -222,6 +222,17 @@ export class CircuitResolver {
       index = world.nextFeatureIndex(WorldFeature.CircuitSource, index)
     ) {
       const kind = world.kindAtIndex(index);
+      if (kind === TileKind.MovementSensor) {
+        const state = world.movementSensorStateAtIndex(index);
+        for (let side = Direction.Up; side <= Direction.Left; side += 1) {
+          const outputCharge = chargeFromSum(
+            directionX(side) * state.motionX + directionY(side) * state.motionY,
+          );
+          runtime.nextPortCharges[index * 4 + side] = outputCharge;
+          this.driveOutputs(runtime, index, 1 << side, outputCharge, false);
+        }
+        continue;
+      }
       if (isProcessingMachine(kind)) {
         const orientation = world.orientationAtIndex(index);
         const leftSide = ((orientation + Direction.Left) & 3) as Direction;

@@ -4,6 +4,7 @@ import { DuplicatorResolver } from "./duplicator-resolver";
 import { DrillResolver } from "./drill-resolver";
 import { FurnaceResolver } from "./furnace-resolver";
 import { MotionWorkspace } from "./motion-workspace";
+import { MovementSensorObserver } from "./movement-sensor";
 import { PistonResolver } from "./piston-resolver";
 import { RotatorResolver } from "./rotator-resolver";
 import { WeldOperationResolver } from "./weld-operation-resolver";
@@ -29,10 +30,11 @@ export class WorldRuntime {
   private pistonResolverValue: PistonResolver | undefined;
   private rotatorResolverValue: RotatorResolver | undefined;
   private weldOperationResolverValue: WeldOperationResolver | undefined;
+  private movementSensorObserver: MovementSensorObserver | undefined;
   readonly nextCharges: Int8Array;
   readonly nextCrossingVerticalCharges: Int8Array;
   readonly nextIsolatedOutputCharges: Int8Array;
-  /** Four resolved side charges per cell, used only by rune array cells. */
+  /** Four resolved side charges per cell for arrays and independent sensor outputs. */
   readonly nextPortCharges: Int8Array;
   readonly furnaceDisabled: Uint8Array;
 
@@ -108,6 +110,10 @@ export class WorldRuntime {
   collectIntents(): void {
     const world = this.world;
     this.motionWorkspaceValue?.clearControlledThrust();
+    if (world.hasFeature(WorldFeature.MovementSensor)) {
+      this.movementSensorObserver ??= new MovementSensorObserver(world);
+    }
+    this.movementSensorObserver?.collect();
     this.collectedDuplicators = world.hasFeature(WorldFeature.Duplicator);
     this.collectedWeldOperators = world.hasFeature(WorldFeature.WeldOperator);
     this.collectedDeliveries = world.hasFeature(WorldFeature.Delivery);
@@ -166,6 +172,7 @@ export class WorldRuntime {
     if (this.world.hasFeature(WorldFeature.Piston)) {
       movementCount += this.pistonResolver.resolve();
     }
+    this.movementSensorObserver?.commit();
     return movementCount;
   }
 }

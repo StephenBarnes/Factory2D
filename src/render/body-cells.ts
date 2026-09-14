@@ -87,10 +87,13 @@ export function populateBodyCell(world: World, index: number, cell: BodyCell): v
   );
   for (let value = Direction.Up; value <= Direction.Left; value += 1) {
     const direction = value as Direction;
-    if (!world.hasCircuitConnectionAtIndex(index, direction)) {
+    const connected = world.hasCircuitConnectionAtIndex(index, direction);
+    if (!connected && cell.kind !== TileKind.MovementSensor) {
       continue;
     }
-    cell.circuitConnections |= 1 << direction;
+    if (connected) {
+      cell.circuitConnections |= 1 << direction;
+    }
     const portCharge = (inputPorts & (1 << direction)) !== 0
       ? world.chargeAtPortIndex(
         index + directionX(direction) + directionY(direction) * width,

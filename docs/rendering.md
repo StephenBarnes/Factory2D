@@ -15,6 +15,8 @@ Circuit traces follow actual welded circuit connections and each port's resolved
 
 Sensor glyphs share an angular eye with a charge-colored diamond or lightning-bolt pupil; their fills are purple. Three-input arithmetic transforms use teal/blue fills. Fixed sources use three charge-colored bolts, inverters use Hagalaz, rectifiers use Thurisaz, and victory stones use Jera. Directional glyphs rotate with their ports; the subtractor's rear plus marks the positive input.
 
+Movement sensors use a purple angular eye with a pale diamond pupil and four independently charge-colored outward arrows. The non-directional glyph is shared by the board, palette, and placement previews. Arrow colors remain visible on unwelded outputs; connected traces stop at their corresponding arrow rather than joining in the center.
+
 Charge-sensor hover and placement overlays circle the first detectable forward cell in the displayed board, skipping empty space and invisible tiles (glass). A line runs from the sensor's front edge to the target circle, or to the grid boundary without a circle when no target is visible. Occupancy sensors retain their immediate-cell marker. Targets beyond an enclosing array's boundary are outside the displayed board and are not circled.
 
 The discernment rune marks its left input blue (+1 rear control) and right input red (-1 rear control), offset toward the rear to clear circuit traces. These markers rotate with the tile. The rectifier's Thurisaz thorn points toward its output port.

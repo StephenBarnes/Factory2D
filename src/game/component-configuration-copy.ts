@@ -35,6 +35,7 @@ export function copyComponentConfiguration(
     case "assembler":
     case "rotator":
     case "fragile":
+    case "movement-sensor":
       throw new Error(`${source.type} has no player-editable configuration`);
   }
 }

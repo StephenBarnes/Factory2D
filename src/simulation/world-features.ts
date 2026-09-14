@@ -29,7 +29,8 @@ export const enum WorldFeature {
   Fastener = 17,
   Fragile = 18,
   Thruster = 19,
-  Count = 20,
+  MovementSensor = 20,
+  Count = 21,
 }
 
 const FEATURE_MASKS = new Uint32Array(
@@ -49,6 +50,7 @@ for (const kind of TILE_KINDS) {
     kind === TileKind.FixedCharge ||
     kind === TileKind.Spark ||
     kind === TileKind.Sensor ||
+    kind === TileKind.MovementSensor ||
     kind === TileKind.Delivery ||
     kind === TileKind.Comparer ||
     kind === TileKind.Assembler ||
@@ -106,6 +108,9 @@ for (const kind of TILE_KINDS) {
   }
   if (kind === TileKind.RuneArray) {
     mask |= 1 << WorldFeature.RuneArray;
+  }
+  if (kind === TileKind.MovementSensor) {
+    mask |= 1 << WorldFeature.MovementSensor;
   }
   if (kind === TileKind.Rotator) {
     mask |= 1 << WorldFeature.Rotator | 1 << WorldFeature.WeldedBodyObserver;

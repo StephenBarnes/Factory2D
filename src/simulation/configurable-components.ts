@@ -105,12 +105,13 @@ const RUNE_ARRAY_CONFIGURATION: RuneArrayComponentConfiguration = Object.freeze(
 
 /**
  * Whether a tile kind carries sparse per-identity component state. Every configurable
- * component does; assemblers, rotators, and fragile tiles also keep runtime state without
- * any player-editable configuration.
+ * component does; assemblers, rotators, movement sensors, and fragile tiles also keep
+ * runtime state without any player-editable configuration.
  */
 export function hasComponentState(kind: TileKind): boolean {
   return kind === TileKind.Assembler ||
     kind === TileKind.Rotator ||
+    kind === TileKind.MovementSensor ||
     TILE_DEFINITIONS[kind].fragile === true ||
     componentConfigurationForKind(kind) !== null;
 }
@@ -244,10 +245,19 @@ export interface FragileComponentState {
   fallDistance: number;
 }
 
+/** Previous-tick signed displacement and the last committed, isolated side outputs. */
+export interface MovementSensorComponentState {
+  readonly type: "movement-sensor";
+  motionX: Charge;
+  motionY: Charge;
+  ports: [Charge, Charge, Charge, Charge];
+}
+
 export type ConfigurableComponentState =
   | AssemblerComponentState
   | RotatorComponentState
   | FragileComponentState
+  | MovementSensorComponentState
   | DelayComponentState
   | DiscardComponentState
   | CounterComponentState
@@ -342,10 +352,18 @@ export interface FragileComponentSnapshot {
   readonly fallDistance: number;
 }
 
+export interface MovementSensorComponentSnapshot {
+  readonly type: "movement-sensor";
+  readonly motionX: Charge;
+  readonly motionY: Charge;
+  readonly ports: readonly [Charge, Charge, Charge, Charge];
+}
+
 export type ConfigurableComponentSnapshot =
   | AssemblerComponentSnapshot
   | RotatorComponentSnapshot
   | FragileComponentSnapshot
+  | MovementSensorComponentSnapshot
   | DelayComponentSnapshot
   | DiscardComponentSnapshot
   | CounterComponentSnapshot
@@ -375,6 +393,8 @@ export function createDefaultComponentState(
       };
     case TileKind.Rotator:
       return { type: "rotator", direction: orientation };
+    case TileKind.MovementSensor:
+      return { type: "movement-sensor", motionX: 0, motionY: 0, ports: [0, 0, 0, 0] };
     case TileKind.Delay:
       return {
         type: "delay",
@@ -454,6 +474,8 @@ export function cloneComponentState(
       return { type: "rotator", direction: state.direction };
     case "fragile":
       return { type: "fragile", fallDistance: state.fallDistance };
+    case "movement-sensor":
+      return { type: state.type, motionX: state.motionX, motionY: state.motionY, ports: [...state.ports] };
     case "delay":
       return {
         type: "delay",
@@ -527,6 +549,8 @@ export function snapshotComponentState(
       return { type: "rotator", direction: state.direction };
     case "fragile":
       return { type: "fragile", fallDistance: state.fallDistance };
+    case "movement-sensor":
+      return { type: state.type, motionX: state.motionX, motionY: state.motionY, ports: [...state.ports] };
     case "delay":
       return {
         type: "delay",
@@ -604,6 +628,15 @@ export function validateComponentSnapshot(
       break;
     case "fragile":
       requireInteger(snapshot.fallDistance, "Fragile fall distance", 0, 2);
+      break;
+    case "movement-sensor":
+      if (!isCharge(snapshot.motionX) || !isCharge(snapshot.motionY)) {
+        throw new RangeError("Movement sensor motion must contain ternary charges");
+      }
+      if (!Array.isArray(snapshot.ports)) {
+        throw new RangeError("Movement sensor ports must be an array");
+      }
+      requireCharges(snapshot.ports, 4, "Movement sensor ports");
       break;
     case "delay":
       requireInteger(snapshot.length, "Delay length", MIN_DELAY_LENGTH, MAX_DELAY_LENGTH);
@@ -705,6 +738,13 @@ export function stateFromSnapshot(
       return { type: "rotator", direction: snapshot.direction };
     case "fragile":
       return { type: "fragile", fallDistance: snapshot.fallDistance };
+    case "movement-sensor":
+      return {
+        type: snapshot.type,
+        motionX: snapshot.motionX,
+        motionY: snapshot.motionY,
+        ports: [...snapshot.ports],
+      };
     case "delay":
       return {
         type: "delay",
@@ -765,6 +805,7 @@ export function stateFromSnapshot(
  * component snapshot. Rune arrays rotate their inner board and side ports with the tile
  * so gravity inside always stays downward, assemblers rotate pending output orientations,
  * and ROMs transform their value grid and cursor. Checkers and lookup tables keep value order.
+ * Movement sensors transform both pending motion and committed side outputs.
  */
 export function transformComponentSnapshot(
   snapshot: ConfigurableComponentSnapshot,
@@ -775,6 +816,23 @@ export function transformComponentSnapshot(
   const turns = ((quarterTurns % 4) + 4) % 4;
   if (turns === 0 && !flippedHorizontally && !flippedVertically) {
     return snapshot;
+  }
+  if (snapshot.type === "movement-sensor") {
+    let motionX = flippedHorizontally ? -snapshot.motionX : snapshot.motionX;
+    let motionY = flippedVertically ? -snapshot.motionY : snapshot.motionY;
+    for (let turn = 0; turn < turns; turn += 1) {
+      const rotatedX = -motionY;
+      motionY = motionX;
+      motionX = rotatedX;
+    }
+    return {
+      type: snapshot.type,
+      motionX: (motionX || 0) as Charge,
+      motionY: (motionY || 0) as Charge,
+      ports: transformRuneArrayPorts(
+        snapshot.ports, turns, flippedHorizontally, flippedVertically,
+      ) as [Charge, Charge, Charge, Charge],
+    };
   }
   if (snapshot.type === "rom") {
     const swapAxes = (turns & 1) === 1;
@@ -868,6 +926,7 @@ export function componentStateMatchesKind(
     (state.type === "discard" && kind === TileKind.Discard) ||
     (state.type === "rotator" && kind === TileKind.Rotator) ||
     (state.type === "fragile" && TILE_DEFINITIONS[kind].fragile === true) ||
+    (state.type === "movement-sensor" && kind === TileKind.MovementSensor) ||
     (state.type === "counter" && kind === TileKind.Counter) ||
     (state.type === "rom" && kind === TileKind.Rom) ||
     (state.type === "lut" && kind === TileKind.Lut) ||

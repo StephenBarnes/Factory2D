@@ -32,7 +32,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 ## New circuit components
 
-* Add a sensor that detects when the sensor's own tile moves, and outputs +1 on that side, -1 on the opposite side.
 * Add a "rune engine" component that's like a programmable gate array. Take 2 inputs and produce 2 outputs. The block should be configurable to determine the I/O relation from some possible set. Details TBD. Could include an internal latch for feedback, like the PGA in Shenzhen IO. Visualize the engine block as a variation on the existing "rune array" component, but with a specific pattern of pre-set runes inside it, which cannot be modified except by toggling them between some specific states on click e.g. conduit vs stone block, or rotating by 90-degree increments.
 * Add a stack block with push/pop to store data up to some max size. One input for value to push - always push if it's +1 or -1, but ignore zero. One input to trigger a push on +1, pop on -1. One output for popped value. One input to rotate it forwards or backwards on +1 or -1.
 * Add a queue block, similar to the stack block.
