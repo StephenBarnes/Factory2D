@@ -1302,7 +1302,7 @@ function drawDecoration(
     case TileDecorationStyle.Conduit:
       context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
       context.beginPath();
-      drawDot(context, left + size / 2, top + size / 2, Math.max(2, size * 0.13));
+      drawDot(context, left + size / 2, top + size / 2, Math.max(2, size * 0.11));
       context.fill();
       break;
     case TileDecorationStyle.FixedCharge: {
@@ -1460,27 +1460,22 @@ function drawDecoration(
       context.save();
       context.translate(left + size / 2, top + size / 2);
       context.rotate(orientation * Math.PI / 2);
-      context.lineWidth = Math.max(1.5, size * 0.055);
+      context.lineWidth = Math.max(2, size * 0.12);
       context.lineCap = "round";
-      // Rear socket and separate front ball keep the two networks visibly isolated.
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
+      context.beginPath();
+      context.arc(0, 0, size * 0.22, Math.PI - 0.5, 0.5);
+      context.stroke();
       context.strokeStyle = CIRCUIT_CHARGE_COLORS[
         circuitPortCharge(circuitPortCharges, ((orientation + 2) & 3) as Direction)
       ];
+      context.fillStyle = context.strokeStyle;
       context.beginPath();
       context.moveTo(0, size * 0.26);
-      context.lineTo(0, size * 0.17);
+      context.lineTo(0, size * 0);
       context.stroke();
       context.beginPath();
-      context.arc(0, 0, size * 0.17, 0, Math.PI);
-      context.stroke();
-      context.strokeStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
-      context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
-      context.beginPath();
-      context.moveTo(0, -size * 0.26);
-      context.lineTo(0, -size * 0.1);
-      context.stroke();
-      context.beginPath();
-      drawDot(context, 0, -size * 0.03, size * 0.07);
+      drawDot(context, 0, 0, Math.max(1, size * 0.1));
       context.fill();
       context.restore();
       break;

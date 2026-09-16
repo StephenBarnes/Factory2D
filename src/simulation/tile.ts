@@ -573,8 +573,8 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 71,
       category: PaletteCategory.CircuitBasic,
-      description: "Copies the isolated rear input to the front one tick later.",
-      extendedDescription: ["Passes -1, 0, and +1 unchanged with ordinary one-tick gate timing. A disconnected rear input produces 0; the sides have no circuit ports, but can be welded mechanically.", "Unlike the configurable Delay Rune, this gate has no queue or settings. Puzzle authors can price it separately from the Combiner Rune."],
+      description: "Passes rear input to front output, one tick later. Use for delays and forcing direction.",
+      extendedDescription: ["Passes -1, 0, and +1 unchanged with ordinary one-tick gate timing. A disconnected rear input produces 0. Has no side ports.", "Equivalent to a combiner rune with one input wired, or a delay rune with delay set to 1."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,
