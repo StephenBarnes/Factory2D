@@ -563,3 +563,22 @@ Compacted gravity-destination scratch, continuing the motion/runtime memory prio
 - Direct typed-array scratch owned by that `MotionWorkspace` measured **7,560,000 bytes**. The destination table uses **120,000 bytes**, versus **480,000 bytes** for the previous 32-bit owner representation.
 
 This saves **360,000 bytes (0.34 MiB)** per activated 400×300 motion workspace. This is buffer storage, not total browser memory; no tick-throughput improvement is claimed.
+
+# Update 13
+
+Implemented lazy powered-motion gravity-topology backup allocation, continuing the motion/runtime memory priority.
+
+## Changes
+
+- `MotionWorkspace` allocates the powered reservation's gravity-root backup only when magnetic contacts require switching between gravity groups and welded drive bodies.
+- Contact-free powered ticks neither allocate nor access the backup. After first use it remains cached across contact removal/reset and is refreshed before every magnetic reservation probe.
+- Existing magnetic lifecycle coverage already exercises late contact activation, rotation away, removal, and resets with a thruster-driven body; no additional permanent test was needed.
+
+## Verification
+
+- Focused simulation, thruster, and force-projector suites: **3 files, 60 tests passed**.
+- `npm run build` passed; Vite reported its bundle-size warning.
+- Same-session headless Chromium through Vite, 400×300 board with a rightward thruster and welded stone load beside fixed iron: distinct typed-array backing storage reachable from `MotionWorkspace`, excluding `World`, fell from **8,880,000 to 8,400,000 bytes** after the first powered tick.
+- Browser smoke verified ordinary thrust, late magnetic restraint, contact removal by rotation, magnetic reset, last-magnet removal, and nonmagnetic reset. The backup was absent before magnetic contact, allocated **480,000 bytes** on first contact, and retained the same buffer afterward.
+
+This defers **480,000 bytes (0.46 MiB)** per 400×300 powered-motion runtime until magnetic contacts require the backup. This measures runtime buffer storage, not total browser memory; no throughput improvement is claimed.

@@ -75,7 +75,7 @@ export class MotionWorkspace {
   private projectedForceCount = 0;
   /** Lazy scratch for reserving powered push chains before gravity groups move. */
   private poweredMotion: {
-    readonly gravityRoots: Int32Array;
+    gravityRoots: Int32Array | undefined;
     readonly sources: Uint8Array;
     readonly bodies: Uint8Array;
     readonly destinations: Int32Array;
@@ -528,14 +528,15 @@ export class MotionWorkspace {
       return false;
     }
     const powered = this.poweredMotion ??= {
-      gravityRoots: new Int32Array(this.world.cellCount),
+      gravityRoots: undefined,
       sources: new Uint8Array(this.world.cellCount),
       bodies: new Uint8Array(this.world.cellCount),
       destinations: new Int32Array(this.world.cellCount),
     };
     powered.destinations.fill(-1);
     if (this.magneticConstraintCount > 0) {
-      powered.gravityRoots.set(this.bodyRoots);
+      const gravityRoots = powered.gravityRoots ??= new Int32Array(this.world.cellCount);
+      gravityRoots.set(this.bodyRoots);
       this.bodyRoots.set(this.weldedBodyRoots);
       this.collectBodyMembers();
     }
@@ -557,7 +558,7 @@ export class MotionWorkspace {
       }
     }
     if (this.magneticConstraintCount > 0) {
-      this.bodyRoots.set(powered.gravityRoots);
+      this.bodyRoots.set(expectDefined(powered.gravityRoots, "powered magnetic gravity roots"));
       this.collectBodyMembers();
     }
     for (
