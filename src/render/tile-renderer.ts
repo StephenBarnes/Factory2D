@@ -486,6 +486,7 @@ function drawDecoration(
       definition.decorationStyle === TileDecorationStyle.Checker ||
       definition.decorationStyle === TileDecorationStyle.Rotator ||
       definition.decorationStyle === TileDecorationStyle.ForceProjector ||
+      definition.decorationStyle === TileDecorationStyle.LevitationProjector ||
       definition.decorationStyle === TileDecorationStyle.Furnace ||
       definition.decorationStyle === TileDecorationStyle.Drill ||
       definition.decorationStyle === TileDecorationStyle.Grinder ||
@@ -716,8 +717,6 @@ function drawDecoration(
       context.lineTo(-size * 0.17, size * 0.23);
       context.lineTo(size * 0.17, size * 0.23);
       context.lineTo(size * 0.26, size * 0.08);
-      context.moveTo(-size * 0.16, size * 0.33);
-      context.lineTo(size * 0.16, size * 0.33);
       context.moveTo(0, -size * 0.25);
       context.lineTo(0, -size * 0.4);
       context.moveTo(-size * 0.07, -size * 0.33);
@@ -725,6 +724,8 @@ function drawDecoration(
       context.lineTo(size * 0.07, -size * 0.33);
       context.stroke();
       context.restore();
+      drawPortArrows(context, left, top, size, orientation,
+        WeldSide.Down, WeldSide.None, circuitPortCharges);
       break;
     case TileDecorationStyle.ForceProjector:
       context.save();

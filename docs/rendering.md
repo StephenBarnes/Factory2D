@@ -31,7 +31,7 @@ Grinders use paired toothed crushing rollers beneath an open intake, with pale a
 
 Floatstone uses a blue slab with a pale suspended diamond above two horizontal levitation lines, shared by the board, palette, and previews.
 
-Levitation projectors use a blue slab with a pale suspended crystal, projecting dish, and forward arrow. The shared glyph rotates with the beam on the board, palette, and previews. Hover/placement overlays draw a translucent one-cell-wide strip and bright centerline from the front face to the front face of the first oppositely facing levitation projector, or the local board boundary. Other tiles and projector orientations do not stop the overlay, matching simulation.
+Levitation projectors use a blue slab with a pale suspended crystal, projecting dish, and forward arrow. A charge-colored inward caret marks the isolated rear circuit input; connected traces stop at the marker. The shared glyph rotates with the beam on the board, palette, and previews. Hover/placement overlays show the potential beam extent: a translucent one-cell-wide strip and bright centerline from the front face to the front face of the first oppositely facing levitation projector, or the local board boundary. Other tiles and projector orientations do not stop the overlay.
 
 Sliders use a green-grey slab with two pale rails, a dark central carriage, and opposing arrows along the permitted axis. The shared glyph rotates with the tile on the board, palette, and previews.
 

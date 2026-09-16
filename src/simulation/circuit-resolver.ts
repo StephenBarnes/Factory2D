@@ -349,6 +349,16 @@ export class CircuitResolver {
         }
         continue;
       }
+      if (kind === TileKind.LevitationProjector) {
+        const rear = oppositeDirection(orientation);
+        if (
+          this.hasConnectedNeighbor(runtime, index, rear) &&
+          this.neighborPortCharge(runtime, index, rear) === -1
+        ) {
+          runtime.motionWorkspace.disableLevitation(index);
+        }
+        continue;
+      }
       if (kind === TileKind.ForceProjector) {
         const rear = oppositeDirection(orientation);
         if (this.hasConnectedNeighbor(runtime, index, rear)) {

@@ -63,6 +63,7 @@ export class MotionWorkspace {
   private readonly breakingFragileDestinations: number[] = [];
   /** Start-of-tick commands keyed by identity so production cannot inherit a removed tile's thrust. */
   private controlledThrust: Map<number, Direction> | undefined;
+  private disabledLevitation: Set<number> | undefined;
   /** Reused start-of-tick ray claims; only the active prefix applies this tick. */
   private readonly projectedForces: {
     source: number;
@@ -100,14 +101,20 @@ export class MotionWorkspace {
     this.blockedBodyQueue = new Int32Array(world.cellCount);
   }
 
-  clearCircuitForces(): void {
+  clearCircuitCommands(): void {
     this.controlledThrust?.clear();
+    this.disabledLevitation?.clear();
     this.projectedForceCount = 0;
   }
 
   collectControlledThrust(index: number, direction: Direction): void {
     const commands = this.controlledThrust ??= new Map<number, Direction>();
     commands.set(this.world.idAtIndex(index), direction);
+  }
+
+  disableLevitation(index: number): void {
+    const commands = this.disabledLevitation ??= new Set<number>();
+    commands.add(this.world.idAtIndex(index));
   }
 
   collectProjectedForce(index: number, direction: Direction): void {
@@ -401,6 +408,9 @@ export class MotionWorkspace {
       projector >= 0;
       projector = this.world.nextFeatureIndex(WorldFeature.LevitationProjector, projector)
     ) {
+      if (this.disabledLevitation?.has(this.world.idAtIndex(projector))) {
+        continue;
+      }
       const direction = this.world.orientationAtIndex(projector);
       const opposingDirection = oppositeDirection(direction);
       for (

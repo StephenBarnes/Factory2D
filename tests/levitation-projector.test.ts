@@ -12,6 +12,48 @@ function braceProjector(world: World, x: number, y: number, direction: Direction
 }
 
 describe("levitation projector", () => {
+  it("reads the previous rear charge and re-enables after the negative input clears", () => {
+    const world = new World(7, 7);
+    braceProjector(world, 3, 1, Direction.Down);
+    world.place(3, 0, TileKind.Conduit);
+    world.setWeld(3, 0, 3, 1, true);
+    const target = world.place(3, 3, TileKind.Stone);
+    const simulation = new Simulation(world);
+
+    world.setCharge(3, 0, -1);
+    simulation.step();
+    expect(world.idAt(3, 4)).toBe(target);
+    simulation.step();
+    expect(world.idAt(3, 4)).toBe(target);
+    world.setCharge(3, 0, 1);
+    simulation.step();
+    expect(world.idAt(3, 4)).toBe(target);
+
+    world.setCharge(3, 0, -1);
+    world.setWeld(3, 0, 3, 1, false);
+    simulation.step();
+    expect(world.idAt(3, 4)).toBe(target);
+  });
+
+  it("reads rear disable signals through virtual array ports", () => {
+    const world = new World(4, 1);
+    world.place(0, 0, TileKind.FixedCharge);
+    world.setCharge(0, 0, 1);
+    world.place(1, 0, TileKind.Inverter, Direction.Right);
+    world.place(2, 0, TileKind.RuneArray);
+    world.setWeld(0, 0, 1, 0, true);
+    world.setWeld(1, 0, 2, 0, true);
+    const inner = world.runeArrayWorldAt(2, 0);
+    braceProjector(inner, 0, 2, Direction.Right);
+    const target = inner.place(3, 2, TileKind.Stone);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+    expect(inner.idAt(3, 2)).toBe(target);
+    simulation.step();
+    expect(inner.idAt(3, 3)).toBe(target);
+  });
+
   it.each([Direction.Up, Direction.Right, Direction.Down, Direction.Left])(
     "projects through gaps and multiple bodies only in direction %i after scene round-trip",
     (direction) => {

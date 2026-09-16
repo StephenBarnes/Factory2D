@@ -20,7 +20,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Modify the assembler to add reaction force: When it has a pending output, but no space to output, shift the assembler in its forwards direction, emitting the product out the back (at assembler's pre-movement position). Allow this motion to push other blocks that are in front of the assembler.
 * Modify the duplicator in the same way as assembler above - make it also attempt to push itself away from the output side, if it's trying to duplicate a single-tile body but there's something blocking the output. When duplicating multi-tile bodies, don't do this - require already empty space for the whole body.
 * Check whether we can make some pushing components stronger than gravity. Namely thrusters and force projectors. Currently a thruster pointing upwards, with a stone block above it (not welded), oscillates up and down in place. A force projector trying to push something upwards is overpowered by gravity. Can we make both of these overpower gravity reliably?
-* Modify the levitation projector to take a circuit input on the back side. Disable it on inputs of -1.
 * There's some unexpected behavior in the scene in `./temp/conveyor-projector-bug.json`. A stone block is acted on by a levitation projector, force projector (pushing it upward), and conveyor belt (pushing it left). The block cannot move up because the conveyor is in the way. The block should move left, but doesn't. Removing levitation projector or force projector causes it to move left correctly.
 
 # Performance

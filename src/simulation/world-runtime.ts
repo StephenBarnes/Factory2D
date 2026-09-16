@@ -124,7 +124,7 @@ export class WorldRuntime {
   /** Observes start-of-tick state and collects every intent that precedes circuit resolution. */
   collectIntents(): void {
     const world = this.world;
-    this.motionWorkspaceValue?.clearCircuitForces();
+    this.motionWorkspaceValue?.clearCircuitCommands();
     if (world.hasFeature(WorldFeature.MovementSensor)) {
       this.movementSensorObserver ??= new MovementSensorObserver(world);
     }
