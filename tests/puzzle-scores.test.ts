@@ -46,6 +46,7 @@ describe("puzzle scores", () => {
       price: 10,
       footprintWidth: 4,
       footprintHeight: 3,
+      footprintBounds: { x: 1, y: 1, width: 4, height: 3 },
     });
 
     expect(computePuzzleScores(puzzle, solution, 8)).toEqual({
@@ -78,6 +79,7 @@ describe("puzzle scores", () => {
       price: 10 + 7 + 10 + 3,
       footprintWidth: 1,
       footprintHeight: 1,
+      footprintBounds: { x: 1, y: 1, width: 1, height: 1 },
     });
   });
 
@@ -86,6 +88,7 @@ describe("puzzle scores", () => {
       price: 0,
       footprintWidth: 0,
       footprintHeight: 0,
+      footprintBounds: null,
     });
 
     expect(computePuzzleScores(scoringPuzzle(), new World(6, 5), 2)).toEqual({

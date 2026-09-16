@@ -55,6 +55,7 @@ describe("workshop session controller", () => {
     sessions.activateSolution(solution, puzzle);
     expect(computePuzzleDesignMetrics(puzzle, sessions.active.baseline)).toEqual({
       price: 14, footprintWidth: 2, footprintHeight: 1,
+      footprintBounds: { x: 1, y: 1, width: 2, height: 1 },
     });
 
     sessions.active.world.place(1, 1, TileKind.Empty);
@@ -62,6 +63,7 @@ describe("workshop session controller", () => {
     sessions.saveEditedBaseline();
     expect(computePuzzleDesignMetrics(puzzle, sessions.active.baseline)).toEqual({
       price: 11, footprintWidth: 1, footprintHeight: 1,
+      footprintBounds: { x: 2, y: 1, width: 1, height: 1 },
     });
     for (const testCase of puzzle.testCases) {
       const runtime = createPuzzleTestCaseWorld(testCase, puzzle.editableRegion, sessions.active.baseline);
