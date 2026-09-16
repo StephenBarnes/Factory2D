@@ -14,7 +14,6 @@ Ideas:
 * Puzzle: given N circuit inputs, output the most common one among them. As a variant, give them one signal with +1 and -1 over different ticks, and they must output the modal value / sign of the sum.
 * Look at other puzzle games (The Witness, various Zachtronics games, Roody:2d) for inspiration. Add any components necessary to allow implementing similar puzzles in our game. For example, we could make Witness-style mazes by letting the player place only conduits, and they have to link a fixed charge to the victory block; but how could we implement other constraints from Witness's puzzles?
 * Various straightforward mechanical manipulation puzzles, e.g. given stone blocks, weld them into 1x2 bodies, or 2x2, or one of each tetromino, or shapes made of different block types in specific configurations. Could add various constraints, e.g. use lock gate pattern to enforce creating some intermediate, then unwelding that and reassembling into a different shape.
-* Add a tutorial puzzle where the player can place victory blocks and inverters. Provide them with a -1 signal. This teaches how the in-world puzzle infrastructure works.
 * Given rotator blocks and various circuit blocks, carry stone blocks from a low starting position to a high delivery block, by rotating them repeatedly.
 * Puzzle: build a lock gate that allows through only bodies matching a specific shape.
 * Puzzle: build a gantry that grabs bodies and moves them over a wall.
