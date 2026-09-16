@@ -582,3 +582,21 @@ Implemented lazy powered-motion gravity-topology backup allocation, continuing t
 - Browser smoke verified ordinary thrust, late magnetic restraint, contact removal by rotation, magnetic reset, last-magnet removal, and nonmagnetic reset. The backup was absent before magnetic contact, allocated **480,000 bytes** on first contact, and retained the same buffer afterward.
 
 This defers **480,000 bytes (0.46 MiB)** per 400×300 powered-motion runtime until magnetic contacts require the backup. This measures runtime buffer storage, not total browser memory; no throughput improvement is claimed.
+
+# Update 14
+
+Compacted ordinary-motion displacement scratch, continuing the motion/runtime memory priority.
+
+## Changes
+
+- `MotionWorkspace` stores horizontal and vertical movements in signed byte arrays instead of 16-bit arrays. Gravity, diagonal sand, conveyor, and powered movement resolve to at most one cell per axis.
+- `World.moveBodies` accepts both widths without converting or copying the supplied buffers. Piston buffers and support for wider translations remain unchanged; body indices and summed forces retain their existing widths.
+
+## Verification
+
+- Focused simulation, conveyor, thruster, force-projector, piston, and renderer suites: **6 files, 114 tests passed**.
+- `npm run build` passed; Vite reported its bundle-size warning.
+- Headless Chromium through Vite exercised gravity on a 400×300 board and three consecutive thruster ticks in each of the four directions. A separate 300-cell translation verified that `World.moveBodies` still accepts wider displacements.
+- The two ordinary-motion displacement buffers measured **240,000 bytes** together on a 400×300 board, versus **480,000 bytes** required by their previous 16-bit representation.
+
+This saves **240,000 bytes (0.23 MiB)** per activated 400×300 motion workspace. These figures cover the two displacement buffers, not total browser memory; no throughput improvement is claimed.

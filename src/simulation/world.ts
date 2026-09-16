@@ -1747,8 +1747,8 @@ export class World {
 
   moveBodies(
     bodyRoots: Int32Array,
-    horizontalMoves: Int16Array,
-    verticalMoves: Int16Array,
+    horizontalMoves: Int8Array | Int16Array,
+    verticalMoves: Int8Array | Int16Array,
   ): number {
     if (
       bodyRoots.length !== this.cellCount ||

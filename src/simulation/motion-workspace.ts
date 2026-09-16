@@ -35,8 +35,9 @@ export class MotionWorkspace {
   private gravityActivated: Uint8Array | undefined;
   private hasFloatingTiles = false;
   private readonly bodySlidesDiagonally: Uint8Array;
-  private readonly horizontalMoves: Int16Array;
-  private readonly verticalMoves: Int16Array;
+  /** Ordinary motion is at most one cell per axis, unlike machinery's net travel. */
+  private readonly horizontalMoves: Int8Array;
+  private readonly verticalMoves: Int8Array;
   private readonly bodyForceX: Int32Array;
   private readonly bodyForceY: Int32Array;
   private readonly drivenBodies: Uint8Array;
@@ -91,8 +92,8 @@ export class MotionWorkspace {
     this.bodyFalls = new Uint8Array(world.cellCount);
     this.bodyBlockedAxes = new Uint8Array(world.cellCount);
     this.bodySlidesDiagonally = new Uint8Array(world.cellCount);
-    this.horizontalMoves = new Int16Array(world.cellCount);
-    this.verticalMoves = new Int16Array(world.cellCount);
+    this.horizontalMoves = new Int8Array(world.cellCount);
+    this.verticalMoves = new Int8Array(world.cellCount);
     this.bodyForceX = new Int32Array(world.cellCount);
     this.bodyForceY = new Int32Array(world.cellCount);
     this.drivenBodies = new Uint8Array(world.cellCount);
