@@ -485,6 +485,7 @@ function drawDecoration(
       definition.decorationStyle === TileDecorationStyle.Lut ||
       definition.decorationStyle === TileDecorationStyle.Checker ||
       definition.decorationStyle === TileDecorationStyle.Rotator ||
+      definition.decorationStyle === TileDecorationStyle.ForceProjector ||
       definition.decorationStyle === TileDecorationStyle.Furnace ||
       definition.decorationStyle === TileDecorationStyle.Drill ||
       definition.decorationStyle === TileDecorationStyle.Grinder ||
@@ -760,6 +761,8 @@ function drawDecoration(
       context.lineTo(size * 0.27, -size * 0.07);
       context.stroke();
       context.restore();
+      drawPortArrows(context, left, top, size, orientation,
+        WeldSide.Down, WeldSide.None, circuitPortCharges);
       break;
     case TileDecorationStyle.Thruster:
       context.save();

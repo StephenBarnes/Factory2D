@@ -48,8 +48,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 # Visuals
 
-* Add a visible back input to the force projector block, similar to the inputs on gates.
-
 ## Animations
 
 * Add animation for the delivery box, assembler, duplicator, lock gate. When they consume a body, animate the body shrinking, moving towards the block, and lowering opacity until it vanishes. When they produce a body, animate the opposite.
