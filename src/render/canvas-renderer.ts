@@ -1741,8 +1741,23 @@ export class CanvasRenderer {
     const dy = directionY(orientation);
     const startX = this.hoverX + 0.5 + dx / 2;
     const startY = this.hoverY + 0.5 + dy / 2;
-    const endX = dx === 0 ? startX : dx > 0 ? this.world.width : 0;
-    const endY = dy === 0 ? startY : dy > 0 ? this.world.height : 0;
+    let endX = dx === 0 ? startX : dx > 0 ? this.world.width : 0;
+    let endY = dy === 0 ? startY : dy > 0 ? this.world.height : 0;
+    const opposingDirection = oppositeDirection(orientation);
+    for (
+      let x = this.hoverX + dx, y = this.hoverY + dy;
+      x >= 0 && x < this.world.width && y >= 0 && y < this.world.height;
+      x += dx, y += dy
+    ) {
+      if (
+        this.world.kindAt(x, y) === TileKind.LevitationProjector &&
+        this.world.orientationAt(x, y) === opposingDirection
+      ) {
+        endX = x + 0.5 - dx / 2;
+        endY = y + 0.5 - dy / 2;
+        break;
+      }
+    }
     const { context, cellSize } = this;
     context.save();
     context.strokeStyle = "#bdeeff";

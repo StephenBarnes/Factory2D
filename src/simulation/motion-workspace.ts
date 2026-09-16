@@ -402,11 +402,18 @@ export class MotionWorkspace {
       projector = this.world.nextFeatureIndex(WorldFeature.LevitationProjector, projector)
     ) {
       const direction = this.world.orientationAtIndex(projector);
+      const opposingDirection = oppositeDirection(direction);
       for (
         let target = this.neighborIndex(projector, direction);
         target >= 0;
         target = this.neighborIndex(target, direction)
       ) {
+        if (
+          this.world.kindAtIndex(target) === TileKind.LevitationProjector &&
+          this.world.orientationAtIndex(target) === opposingDirection
+        ) {
+          break;
+        }
         const root = expectDefined(this.bodyRoots[target], "levitation target body root");
         if (root < 0) {
           continue;

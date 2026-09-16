@@ -30,6 +30,52 @@ describe("levitation projector", () => {
     },
   );
 
+  it("confines levitation between facing projectors and extends again after removal", () => {
+    const world = new World(11, 6);
+    braceProjector(world, 2, 2, Direction.Right);
+    braceProjector(world, 7, 2, Direction.Left);
+    const inside = world.place(5, 2, TileKind.Stone);
+    const left = world.place(0, 2, TileKind.Stone);
+    const right = world.place(10, 2, TileKind.Stone);
+    const simulation = new Simulation(world);
+    simulation.step();
+    expect(world.idAt(5, 2)).toBe(inside);
+    expect(world.idAt(0, 3)).toBe(left);
+    expect(world.idAt(10, 3)).toBe(right);
+
+    world.place(7, 2, TileKind.Empty);
+    const releasedRayTarget = world.place(9, 2, TileKind.Iron);
+    simulation.step();
+    expect(world.idAt(9, 2)).toBe(releasedRayTarget);
+    expect(world.idAt(5, 2)).toBe(inside);
+  });
+
+  it("bounds vertical beams without levitating their facing endpoints", () => {
+    const world = new World(7, 12);
+    const upper = world.place(3, 2, TileKind.LevitationProjector, Direction.Down);
+    const lower = world.place(3, 8, TileKind.LevitationProjector, Direction.Up);
+    const inside = world.place(3, 5, TileKind.Stone);
+    const above = world.place(3, 0, TileKind.Stone);
+    const below = world.place(3, 10, TileKind.Stone);
+    new Simulation(world).step();
+    expect(world.idAt(3, 3)).toBe(upper);
+    expect(world.idAt(3, 9)).toBe(lower);
+    expect(world.idAt(3, 5)).toBe(inside);
+    expect(world.idAt(3, 1)).toBe(above);
+    expect(world.idAt(3, 11)).toBe(below);
+  });
+
+  it("passes through same-facing and perpendicular projectors", () => {
+    const world = new World(11, 6);
+    braceProjector(world, 0, 2, Direction.Right);
+    braceProjector(world, 3, 2, Direction.Right);
+    braceProjector(world, 6, 2, Direction.Up);
+    braceProjector(world, 8, 2, Direction.Down);
+    const target = world.place(10, 2, TileKind.Stone);
+    new Simulation(world).step();
+    expect(world.idAt(10, 2)).toBe(target);
+  });
+
   it("holds the whole welded body and releases it when the projector is removed", () => {
     const world = new World(7, 6);
     braceProjector(world, 0, 2, Direction.Right);
