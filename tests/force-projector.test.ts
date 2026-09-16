@@ -6,6 +6,50 @@ import { Direction, TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
 
 describe("force projectors", () => {
+  it("lets a conveyor slide levitated stone sideways when projected lift hits a braced ceiling", () => {
+    const world = new World(6, 7);
+    for (let x = 0; x < 6; x += 1) {
+      world.place(x, 0, TileKind.Stone);
+      world.place(x, 1, x === 5 ? TileKind.FixedCharge : TileKind.Conveyor);
+      world.setCharge(x, 1, 1);
+      world.setWeld(x, 0, x, 1, true);
+      if (x > 0) {
+        world.setWeld(x - 1, 0, x, 0, true);
+        world.setWeld(x - 1, 1, x, 1, true);
+      }
+    }
+    const stone = world.place(2, 2, TileKind.Stone);
+    world.place(2, 4, TileKind.ForceProjector, Direction.Up);
+    world.place(2, 5, TileKind.FixedCharge);
+    world.place(2, 6, TileKind.LevitationProjector, Direction.Up);
+    world.setCharge(2, 5, 1);
+    world.setWeld(2, 4, 2, 5, true);
+    world.setWeld(2, 5, 2, 6, true);
+
+    new Simulation(world).step();
+
+    expect(world.idAt(1, 2)).toBe(stone);
+    expect(world.kindAt(2, 2)).toBe(TileKind.Empty);
+    expect(world.kindAt(2, 1)).toBe(TileKind.Conveyor);
+  });
+
+  it("discards a blocked horizontal push chain without cancelling vertical thrust", () => {
+    const world = new World(7, 6);
+    const target = world.place(2, 3, TileKind.Thruster, Direction.Up);
+    world.place(0, 4, TileKind.Platform);
+    const pushed = world.place(3, 3, TileKind.Floatstone);
+    world.place(4, 3, TileKind.Platform);
+    world.place(0, 3, TileKind.FixedCharge);
+    world.setCharge(0, 3, 1);
+    world.place(1, 3, TileKind.ForceProjector, Direction.Right);
+    world.setWeld(0, 3, 1, 3, true);
+
+    new Simulation(world).step();
+
+    expect(world.idAt(2, 2)).toBe(target);
+    expect(world.idAt(3, 3)).toBe(pushed);
+  });
+
   it("waits for the old rear charge and stops when that input is disconnected", () => {
     const world = new World(9, 3);
     const projector = world.place(1, 2, TileKind.ForceProjector, Direction.Right);

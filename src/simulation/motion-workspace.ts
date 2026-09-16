@@ -562,10 +562,73 @@ export class MotionWorkspace {
       expectDefined(this.bodyForceY[root], "vertical body force") + directionY(direction);
   }
 
+  /**
+   * Probe one force axis against geometry only. Competing intents still jam in
+   * the shared resolver; a wall on one axis must not cancel the other axis.
+   * Gravity's dependency queue and jam markers are free for reuse here.
+   */
+  private canPushAlongAxis(root: number, direction: Direction): boolean {
+    const moveX = directionX(direction);
+    const moveY = directionY(direction);
+    const magnetic = this.magneticConstraintCount === 0
+      ? undefined
+      : expectDefined(this.magneticConstraints, "active magnetic constraints");
+    let length = 1;
+    let head = 0;
+    let movable = true;
+    this.blockedBodyQueue[0] = root;
+    this.jammedBodies[root] = 1;
+    while (head < length && movable) {
+      const body = expectDefined(this.blockedBodyQueue[head], "axis probe body");
+      head += 1;
+      if (this.blocksTranslation(body, moveX, moveY)) {
+        movable = false;
+        break;
+      }
+      for (
+        let constraint = magnetic === undefined
+          ? -1
+          : expectDefined(magnetic.heads[body], "magnetic constraint head");
+        magnetic !== undefined && constraint >= 0;
+        constraint = expectDefined(magnetic.next[constraint], "next magnetic constraint")
+      ) {
+        if ((magnetic.isVertical[constraint] === 1) !== (moveY !== 0)) {
+          continue;
+        }
+        const other = expectDefined(magnetic.otherBodies[constraint], "constrained body");
+        if (this.jammedBodies[other] === 0) {
+          this.jammedBodies[other] = 1;
+          this.blockedBodyQueue[length++] = other;
+        }
+      }
+      for (
+        let member = expectDefined(this.bodyHeads[body], "body head");
+        member >= 0;
+        member = expectDefined(this.nextBodyMember[member], "next body member")
+      ) {
+        const destination = this.neighborIndex(member, direction);
+        if (destination < 0) {
+          movable = false;
+          break;
+        }
+        const other = expectDefined(this.bodyRoots[destination], "axis destination body");
+        if (other >= 0 && this.jammedBodies[other] === 0) {
+          this.jammedBodies[other] = 1;
+          this.blockedBodyQueue[length++] = other;
+        }
+      }
+    }
+    for (let i = 0; i < length; i += 1) {
+      this.jammedBodies[expectDefined(this.blockedBodyQueue[i], "axis probe body")] = 0;
+    }
+    return movable;
+  }
+
   private resolveDrivenMovements(): void {
     this.drivenBodies.fill(0);
     this.movementGroupRoots.fill(-1);
     this.blockedMovementGroups.fill(0);
+    this.jammedBodies.fill(0);
     const magnetic = this.magneticConstraintCount === 0
       ? undefined
       : expectDefined(this.magneticConstraints, "active magnetic constraints");
@@ -595,12 +658,22 @@ export class MotionWorkspace {
       }
       const forceX = expectDefined(this.bodyForceX[root], "horizontal body force");
       const forceY = expectDefined(this.bodyForceY[root], "vertical body force");
-      const moveX = forceX < 0 ? -1 : forceX > 0 ? 1 : 0;
-      const moveY = forceY > 0
+      let moveX = forceX < 0 ? -1 : forceX > 0 ? 1 : 0;
+      let moveY = forceY > 0
         ? 1
         : forceY < 0 && this.bodyFalls[root] === 0
           ? -1
           : 0;
+      if (moveX !== 0 && moveY !== 0) {
+        const horizontal = this.canPushAlongAxis(
+          root, moveX < 0 ? Direction.Left : Direction.Right,
+        );
+        const vertical = this.canPushAlongAxis(
+          root, moveY < 0 ? Direction.Up : Direction.Down,
+        );
+        if (!horizontal) moveX = 0;
+        if (!vertical) moveY = 0;
+      }
       if (moveX === 0 && moveY === 0) {
         continue;
       }
