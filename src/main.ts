@@ -16,7 +16,7 @@ import { SavedSandboxController } from "./game/saved-sandbox-controller";
 import { SavedSolutionController } from "./game/saved-solution-controller";
 import { PuzzleTestController } from "./game/puzzle-test-controller";
 import { parseSandboxImport } from "./game/sandbox-puzzle-authoring";
-import { computePuzzleDesignMetrics } from "./game/puzzle-scores";
+import { computePuzzleDesignMetrics, type PuzzleDesignMetrics } from "./game/puzzle-scores";
 import { createSandboxWorld, puzzleById, serializeShippedPuzzle } from "./game/puzzles";
 import { WorkshopSessionController } from "./game/workshop-session";
 import {
@@ -328,12 +328,15 @@ function updateTransportState(): void {
 function markSimulationStarted(): boolean {
   return sessions.beginSimulation();
 }
+let footprintBounds: PuzzleDesignMetrics["footprintBounds"] = null;
+
 function refreshPuzzleMetrics(edited = false): void {
   const screen = navigation.screen;
   const puzzleWorkshop = screen.kind === "puzzle";
   puzzleMetrics.hidden = !puzzleWorkshop;
   if (!puzzleWorkshop) {
     puzzlePriceFeedback.update(null, false);
+    footprintBounds = null;
     componentPalette.classList.remove("show-prices");
     return;
   }
@@ -345,6 +348,7 @@ function refreshPuzzleMetrics(edited = false): void {
   puzzlePrice.textContent = `${metrics.price}⚙`;
   puzzlePriceFeedback.update(metrics.price, edited);
   puzzleFootprint.textContent = `${metrics.footprintWidth}×${metrics.footprintHeight}`;
+  footprintBounds = metrics.footprintBounds;
 }
 
 
@@ -2480,6 +2484,11 @@ function frame(currentTime: number): void {
   signalPanel.update(signalTraces, surface.session.world, surface.simulation.tick);
   surface.renderer.setHighlightedTileId(
     signalTraces.visibleTileId(surface.world, hoveredSignalWorld, hoveredSignalTileId),
+  );
+  surface.renderer.setFootprintBounds(
+    navigation.screen.kind === "puzzle" && surface.viewDepth === 0 &&
+      puzzleFootprint.matches(":hover")
+      ? footprintBounds : null,
   );
   const animationProgress = clock.easedProgress(currentTime);
   surface.renderer.render(

@@ -11,7 +11,8 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Flipper: attaches to one block, then flips the entire connected/welded group of blocks around that line horizontally or vertically, if it would not collide/overlap other blocks. Similar to Kaizen game's rotation.
 * Add a bell block that plays a sound when it moves left/right (but not when moving up/down). Decide pitch by counting the blocks in the bell's body, so larger bells are lower pitch. Add a resonator rune that emits a charge when a bell with matching pitch rings, anywhere on the grid; decide resonator's pitch in the same way by counting its body's number of blocks. Constrain pitch to say one octave. Play audio in the browser when a bell block is triggered, maybe preventing it if sim rate is over 10 ticks per second.
 * Hole-puncher block that destroys any blocks moved onto its tile cell, in the same tick they attempt to move onto it. For example, a 5x5 body falling onto one of these blocks, or moved past it by a conveyor, should be cut in half. Once we have the flipper block, also allow flipping bodies onto this block, which destroys the blocks that overlap it. Unclear what behavior we should have when rotating bodies onto it; maybe count it as colliding / preventing rotation onto it, or find all tiles that would intersect the hole-punch's center when rotated through it.
-* Add a magic link block. Whenever two link blocks are in the same row or column, they count as part of the same welded body for all physics/sim purposes. These allow creating single bodies that have holes in them through which things can fall.
+* Add a magic link block. Any link block A counts as linked to the first link block in its forward direction which is pointing back at A. When linked, these link blocks' bodies are considered part of the same welded body, for all physics/sim purposes. These allow creating single bodies that have holes in them through which things can fall.
+	* As a follow-up, add a back circuit port which can be set to -1 to disable linking for the block.
 
 # New component behaviors
 
@@ -36,13 +37,13 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Add a delay block, but instead of advancing 1 space per tick, it advances when an additional input is +1. Maybe also allow -1 to scroll back. Uncertain, this seems similar to the queue block.
 * Add a delay block variant that only steps forward if the input is +1 or -1, ignoring zeros. Like the current delay block, on every tick, it outputs the queued value; but we only shift the ring buffer forward and write a value when the back value is +1. Uncertain, seems similar to the queue block.
 * Figure out what components are necessary to build a version of the 2D ROM that exists in-world. Given an NxM block of ruby and sapphire blocks, what components are needed to read or duplicate the block at a specific coordinate? Maybe add a light-beam block, and a beam reader block; then the beam reader reads the block in the row in front of it which has the light beam on it. So we have two arms which move to position the intersection at the necessary 2D coordinate. Reading could be by duplicating the block, or comparing it to an adjacent body like the existing body comparer block; or emit a signal based on the block's color (ruby is red so -1, sapphire is blue so +1).
+* Add a block type comparer. Similar to the existing body comparer, but simpler: instead of comparing entire bodies, only compare the block types on the two sides of the comparer.
 
 # UI
 
 * Implement undo and redo when editing in the sandbox and puzzle solutions.
 * Allow mirroring components with some hotkey. (Rotation currently uses WASD, Q picks blocks, E configures. Could use E when not over a block, or R.) Depends on the other change to store blocks' mirroring alongside rotation.
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
-* When solving a puzzle, on mouseover of the footprint readout in the bottom-left, show the footprint on the board as a colored rectangular overlay.
 
 # Visuals
 

@@ -1,4 +1,5 @@
 import type { PuzzleDefinition } from "./puzzles";
+import type { GridRectangle } from "./grid-region";
 import { TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
 import { expectDefined } from "../util/assert";
@@ -14,6 +15,7 @@ export interface PuzzleDesignMetrics {
   readonly price: number;
   readonly footprintWidth: number;
   readonly footprintHeight: number;
+  readonly footprintBounds: GridRectangle | null;
 }
 
 
@@ -52,6 +54,9 @@ export function computePuzzleDesignMetrics(
     price,
     footprintWidth: right < left ? 0 : right - left + 1,
     footprintHeight: bottom < top ? 0 : bottom - top + 1,
+    footprintBounds: right < left ? null : Object.freeze({
+      x: left, y: top, width: right - left + 1, height: bottom - top + 1,
+    }),
   });
 }
 

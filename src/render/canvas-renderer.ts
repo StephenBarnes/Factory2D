@@ -159,6 +159,7 @@ export class CanvasRenderer {
   private highlightedTileId: number | null = null;
   private highlightedTileIndex = -1;
   private highlightedGeometryRevision = -1;
+  private footprintBounds: GridRectangle | null = null;
   private renderInvalidated = true;
   private lightMode = false;
   private renderedWorldRevision = -1;
@@ -375,6 +376,7 @@ export class CanvasRenderer {
     this.drawHover(animationTime);
     this.drawTextBoxes();
     this.drawHighlightedTile(previousWorld, boundedProgress);
+    this.drawFootprint();
     this.drawEditRejection();
     if (drawWeldSparks(
       context, this.weldAnimations, this.world.width, this.world.height,
@@ -664,6 +666,36 @@ export class CanvasRenderer {
     this.highlightedTileIndex = -1;
     this.highlightedGeometryRevision = -1;
     this.renderInvalidated = true;
+  }
+
+  setFootprintBounds(bounds: GridRectangle | null): void {
+    if (this.footprintBounds === bounds) {
+      return;
+    }
+    this.footprintBounds = bounds;
+    this.renderInvalidated = true;
+  }
+
+  private drawFootprint(): void {
+    const bounds = this.footprintBounds;
+    if (bounds === null) {
+      return;
+    }
+    const { context, cellSize } = this;
+    const x = this.originX + bounds.x * cellSize;
+    const y = this.originY + bounds.y * cellSize;
+    const width = bounds.width * cellSize;
+    const height = bounds.height * cellSize;
+    context.save();
+    context.beginPath();
+    context.rect(this.originX, this.originY, this.world.width * cellSize, this.world.height * cellSize);
+    context.clip();
+    context.fillStyle = "rgb(220 220 120 / 10%)";
+    context.strokeStyle = "#e2b357";
+    context.lineWidth = 2;
+    context.fillRect(x, y, width, height);
+    context.strokeRect(x, y, width, height);
+    context.restore();
   }
 
   private resizeBackingStore(): void {
