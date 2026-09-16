@@ -200,7 +200,7 @@ describe("force projectors", () => {
     expect(world.idAt(6, 2)).toBe(farther);
   });
 
-  it("gives gravity priority for both the target and the unsupported projector", () => {
+  it("redirects a falling target while the unsupported projector still falls", () => {
     const world = new World(9, 6);
     const projector = world.place(1, 1, TileKind.ForceProjector, Direction.Right);
     const source = world.place(0, 1, TileKind.FixedCharge);
@@ -211,10 +211,10 @@ describe("force projectors", () => {
     new Simulation(world).step();
     expect(world.idAt(1, 2)).toBe(projector);
     expect(world.idAt(0, 2)).toBe(source);
-    expect(world.idAt(5, 2)).toBe(falling);
+    expect(world.idAt(6, 1)).toBe(falling);
   });
 
-  it("cannot lift supported stone but pushes and pulls a floatstone target with the same welded load", () => {
+  it("lifts and pulls ordinary stone with its welded load, then releases it when idle", () => {
     const world = new World(7, 7);
     world.place(3, 5, TileKind.ForceProjector, Direction.Up);
     world.place(3, 6, TileKind.Conduit);
@@ -227,18 +227,21 @@ describe("force projectors", () => {
     const simulation = new Simulation(world);
 
     simulation.step();
-    expect(world.idAt(3, 2)).toBe(stone);
-    expect(world.idAt(4, 2)).toBe(load);
-    const floating = world.place(3, 2, TileKind.Floatstone);
-    world.setWeld(3, 2, 4, 2, true);
-    world.setCharge(3, 6, 1);
-    simulation.step();
-    expect(world.idAt(3, 1)).toBe(floating);
+    expect(world.idAt(3, 1)).toBe(stone);
     expect(world.idAt(4, 1)).toBe(load);
-    expect(world.isWelded(3, 1, 4, 1)).toBe(true);
     world.setCharge(3, 6, -1);
     simulation.step();
-    expect(world.idAt(3, 2)).toBe(floating);
+    expect(world.idAt(3, 2)).toBe(stone);
+    expect(world.idAt(4, 2)).toBe(load);
+    expect(world.isWelded(3, 2, 4, 2)).toBe(true);
+    world.setCharge(3, 6, 1);
+    simulation.step();
+    expect(world.idAt(3, 1)).toBe(stone);
+    expect(world.idAt(4, 1)).toBe(load);
+    expect(world.isWelded(3, 1, 4, 1)).toBe(true);
+    world.setCharge(3, 6, 0);
+    simulation.step();
+    expect(world.idAt(3, 2)).toBe(stone);
     expect(world.idAt(4, 2)).toBe(load);
     expect(world.isWelded(3, 2, 4, 2)).toBe(true);
   });

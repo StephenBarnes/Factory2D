@@ -73,6 +73,14 @@ export class MotionWorkspace {
     direction: Direction;
   }[] = [];
   private projectedForceCount = 0;
+  /** Lazy scratch for reserving powered push chains before gravity groups move. */
+  private poweredMotion: {
+    readonly gravityRoots: Int32Array;
+    readonly sources: Uint8Array;
+    readonly bodies: Uint8Array;
+    readonly destinations: Int32Array;
+  } | undefined;
+  private reservingPoweredMotion = false;
 
   constructor(world: World) {
     this.world = world;
@@ -479,23 +487,104 @@ export class MotionWorkspace {
   }
 
   /**
-   * Gravity resolves before lower-priority conveyor and thruster movement.
-   * Driving forces cannot redirect a falling body or claim its destination.
+   * Powered push chains reserve their bodies and destinations before gravity.
+   * Conveyors alone still cannot redirect falling bodies.
    */
   private chooseMovements(): void {
     this.horizontalMoves.fill(0);
     this.verticalMoves.fill(0);
     this.drivenBodies.fill(0);
+    const reservedPower = this.reservePoweredMotion();
     this.chooseGravityMovements();
     this.resolveDestinationConflicts();
     this.restoreWeldedBodiesAfterGravity();
-    this.collectDrivingForces();
+    if (reservedPower) {
+      const powered = expectDefined(this.poweredMotion, "reserved powered motion");
+      if (this.magneticConstraintCount === 0) {
+        this.collectBodyMembers();
+      }
+      for (
+        let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
+        root >= 0;
+        root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
+      ) {
+        if (powered.bodies[root] === 1) {
+          this.bodyFalls[root] = 0;
+        }
+      }
+    }
+    if (!reservedPower) {
+      this.collectDrivingForces();
+    }
     this.resolveDrivenMovements();
+  }
+
+  private reservePoweredMotion(): boolean {
+    if (
+      this.world.firstFeatureIndex(WorldFeature.Thruster) < 0 &&
+      this.projectedForceCount === 0
+    ) {
+      this.poweredMotion?.bodies.fill(0);
+      this.poweredMotion?.destinations.fill(-1);
+      return false;
+    }
+    const powered = this.poweredMotion ??= {
+      gravityRoots: new Int32Array(this.world.cellCount),
+      sources: new Uint8Array(this.world.cellCount),
+      bodies: new Uint8Array(this.world.cellCount),
+      destinations: new Int32Array(this.world.cellCount),
+    };
+    powered.destinations.fill(-1);
+    if (this.magneticConstraintCount > 0) {
+      powered.gravityRoots.set(this.bodyRoots);
+      this.bodyRoots.set(this.weldedBodyRoots);
+      this.collectBodyMembers();
+    }
+    this.collectDrivingForces();
+    this.reservingPoweredMotion = true;
+    this.resolveDrivenMovements();
+    this.reservingPoweredMotion = false;
+    powered.bodies.set(this.drivenBodies);
+    for (
+      let index = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      index >= 0;
+      index = this.world.nextFeatureIndex(WorldFeature.Occupied, index)
+    ) {
+      const root = expectDefined(this.bodyRoots[index], "powered body root");
+      const moveX = expectDefined(this.horizontalMoves[root], "powered horizontal movement");
+      const moveY = expectDefined(this.verticalMoves[root], "powered vertical movement");
+      if (this.drivenBodies[root] === 1 && (moveX !== 0 || moveY !== 0)) {
+        powered.destinations[index + moveX + moveY * this.world.width] = root;
+      }
+    }
+    if (this.magneticConstraintCount > 0) {
+      this.bodyRoots.set(powered.gravityRoots);
+      this.collectBodyMembers();
+    }
+    for (
+      let index = this.world.firstFeatureIndex(WorldFeature.Occupied);
+      index >= 0;
+      index = this.world.nextFeatureIndex(WorldFeature.Occupied, index)
+    ) {
+      const weldedRoot = expectDefined(this.weldedBodyRoots[index], "powered welded root");
+      if (powered.bodies[weldedRoot] === 1) {
+        const root = expectDefined(this.bodyRoots[index], "powered gravity root");
+        // Even a jammed powered chain holds against weight. Preserve magnetic
+        // support as a group; driven motion will restore the welded axes below.
+        this.bodyBlockedAxes[root] = expectDefined(this.bodyBlockedAxes[root], "blocked axes") | 2;
+        this.bodySlidesDiagonally[root] = 0;
+      }
+    }
+    this.horizontalMoves.fill(0);
+    this.verticalMoves.fill(0);
+    this.drivenBodies.fill(0);
+    return true;
   }
 
   private collectDrivingForces(): void {
     this.bodyForceX.fill(0);
     this.bodyForceY.fill(0);
+    this.poweredMotion?.sources.fill(0);
     for (
       let index = this.world.firstFeatureIndex(WorldFeature.Conveyor);
       index >= 0;
@@ -536,6 +625,9 @@ export class MotionWorkspace {
         : this.world.orientationAtIndex(index);
       if (direction !== undefined) {
         this.addBodyForce(expectDefined(this.bodyRoots[index], "thruster body root"), direction);
+        if (this.poweredMotion !== undefined) {
+          this.poweredMotion.sources[expectDefined(this.bodyRoots[index], "thruster body root")] = 1;
+        }
       }
     }
     for (let i = 0; i < this.projectedForceCount; i += 1) {
@@ -551,6 +643,9 @@ export class MotionWorkspace {
       const targetRoot = expectDefined(this.bodyRoots[claim.target], "projected force target root");
       if (sourceRoot !== targetRoot) {
         this.addBodyForce(targetRoot, claim.direction);
+        if (this.poweredMotion !== undefined) {
+          this.poweredMotion.sources[targetRoot] = 1;
+        }
       }
     }
   }
@@ -652,7 +747,8 @@ export class MotionWorkspace {
     ) {
       if (
         expectDefined(this.bodyHeads[root], "body head") < 0 ||
-        this.verticalMoves[root] === 1
+        this.verticalMoves[root] === 1 ||
+        this.reservingPoweredMotion && this.poweredMotion?.sources[root] !== 1
       ) {
         continue;
       }
@@ -661,7 +757,7 @@ export class MotionWorkspace {
       let moveX = forceX < 0 ? -1 : forceX > 0 ? 1 : 0;
       let moveY = forceY > 0
         ? 1
-        : forceY < 0 && this.bodyFalls[root] === 0
+        : forceY < 0 && (this.bodyFalls[root] === 0 || this.reservingPoweredMotion)
           ? -1
           : 0;
       if (moveX !== 0 && moveY !== 0) {
@@ -875,7 +971,11 @@ export class MotionWorkspace {
   }
 
   private chooseGravityMovements(): void {
-    this.destinationOwners.fill(-1);
+    if (this.poweredMotion === undefined) {
+      this.destinationOwners.fill(-1);
+    } else {
+      this.destinationOwners.set(this.poweredMotion.destinations);
+    }
     this.jammedBodies.fill(0);
     this.dependencyHeads.fill(-1);
     let dependencyCount = 0;

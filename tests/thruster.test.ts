@@ -96,13 +96,28 @@ describe("thrusters", () => {
     expect(world.idAt(3, 2)).toBe(slider);
   });
 
-  it("yields its destination to a falling body instead of redirecting it", () => {
+  it("reserves its destination before a falling body", () => {
     const world = new World(5, 5);
     const thruster = world.place(1, 2, TileKind.Thruster, Direction.Right);
     const falling = world.place(2, 1, TileKind.Stone);
     new Simulation(world).step();
-    expect(world.idAt(1, 2)).toBe(thruster);
-    expect(world.idAt(2, 2)).toBe(falling);
+    expect(world.idAt(2, 2)).toBe(thruster);
+    expect(world.idAt(2, 1)).toBe(falling);
+  });
+
+  it("lifts an unwelded stack continuously and holds it against the ceiling", () => {
+    const world = new World(5, 7);
+    const thruster = world.place(2, 5, TileKind.Thruster, Direction.Up);
+    const lower = world.place(2, 4, TileKind.Stone);
+    const upper = world.place(2, 3, TileKind.Stone);
+    const simulation = new Simulation(world);
+    for (let tick = 1; tick <= 5; tick += 1) {
+      simulation.step();
+      const distance = Math.min(tick, 3);
+      expect(world.idAt(2, 5 - distance)).toBe(thruster);
+      expect(world.idAt(2, 4 - distance)).toBe(lower);
+      expect(world.idAt(2, 3 - distance)).toBe(upper);
+    }
   });
 });
 
