@@ -438,6 +438,9 @@ export class CircuitResolver {
 
       let outputCharge: Charge;
       switch (kind) {
+        case TileKind.DelayGate:
+          outputCharge = rearInput;
+          break;
         case TileKind.Inverter:
           outputCharge = chargeFromSum(-inputSum);
           break;

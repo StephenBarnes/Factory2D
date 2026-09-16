@@ -67,6 +67,7 @@ export const enum TileKind {
   MovementSensor = 65,
   LevitationProjector = 66,
   ForceProjector = 67,
+  DelayGate = 68,
 }
 
 export const enum Direction {
@@ -143,6 +144,7 @@ export const enum TileDecorationStyle {
   MovementSensor = 54,
   LevitationProjector = 55,
   ForceProjector = 56,
+  DelayGate = 57,
 }
 
 export const enum PaletteCategory {
@@ -563,6 +565,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#69727b",
     decorationStyle: TileDecorationStyle.Conduit,
     decorationColor: "#162f4b",
+  },
+  [TileKind.DelayGate]: {
+    name: "Delay Gate",
+    boardCode: ";",
+    defaultPrice: 4,
+    palette: {
+      order: 71,
+      category: PaletteCategory.CircuitBasic,
+      description: "Copies the isolated rear input to the front one tick later.",
+      extendedDescription: ["Passes -1, 0, and +1 unchanged with ordinary one-tick gate timing. A disconnected rear input produces 0; the sides have no circuit ports, but can be welded mechanically.", "Unlike the configurable Delay Rune, this gate has no queue or settings. Puzzle authors can price it separately from the Combiner Rune."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Up | WeldSide.Down,
+    circuitInputPorts: WeldSide.Down,
+    circuitOutputPorts: WeldSide.Up,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#69727b",
+    decorationStyle: TileDecorationStyle.DelayGate,
+    decorationColor: "#d5e9f2",
   },
   [TileKind.Sensor]: {
     name: "Sensor Rune",

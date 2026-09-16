@@ -45,6 +45,8 @@ Fasteners use a bronze-grey slab with a pale forged fastening pin: a broad slott
 
 Platforms use forest green; ROMs and graphers use jade/teal. Delay, counter, monitor, and array fills use sapphire/indigo, while fixed-charge/spark sources and sequence checkers use gold/amber. Channels and crossings retain neutral slate so wiring stays quieter than active components. These colors come from the shared tile metadata and are identical in both UI themes.
 
+Delay gates use the channel's neutral slate slab with a rear semicircular socket and separate front ball/stem. The socket shows rear-input charge and the ball shows output charge; the glyph rotates with its rear/front ports on the board and in shared previews.
+
 Discard runes use an indigo slab with a directional shutter and upright remaining-tick count. The shutter opens into a charge-colored forward arrow after the discard window; the shared glyph and rear/front port arrows follow orientation on the board and every preview.
 
 Lookup runes share the ROM grid renderer, using a teal slab and jade outline around their fixed 3×3 table without a cursor highlight. Local-left/rear input arrows and front/right output arrows rotate with the tile; the logical truth table stays upright on the board and in previews.

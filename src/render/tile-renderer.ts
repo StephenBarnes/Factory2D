@@ -1456,6 +1456,35 @@ function drawDecoration(
       context.restore();
       break;
     }
+    case TileDecorationStyle.DelayGate: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.lineWidth = Math.max(1.5, size * 0.055);
+      context.lineCap = "round";
+      // Rear socket and separate front ball keep the two networks visibly isolated.
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[
+        circuitPortCharge(circuitPortCharges, ((orientation + 2) & 3) as Direction)
+      ];
+      context.beginPath();
+      context.moveTo(0, size * 0.26);
+      context.lineTo(0, size * 0.17);
+      context.stroke();
+      context.beginPath();
+      context.arc(0, 0, size * 0.17, 0, Math.PI);
+      context.stroke();
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
+      context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
+      context.beginPath();
+      context.moveTo(0, -size * 0.26);
+      context.lineTo(0, -size * 0.1);
+      context.stroke();
+      context.beginPath();
+      drawDot(context, 0, -size * 0.03, size * 0.07);
+      context.fill();
+      context.restore();
+      break;
+    }
     case TileDecorationStyle.Combiner: {
       context.save();
       context.translate(left + size / 2, top + size / 2);

@@ -182,6 +182,7 @@ describe("board export", () => {
 
   it.each([
     { kind: TileKind.Combiner, code: "+" },
+    { kind: TileKind.DelayGate, code: ";" },
     { kind: TileKind.Rectifier, code: "R" },
     { kind: TileKind.Multiplier, code: "*" },
     { kind: TileKind.Subtractor, code: "-" },
