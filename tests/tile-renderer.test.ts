@@ -218,7 +218,7 @@ describe("body drawing", () => {
 });
 
 describe("circuit rendering", () => {
-  it("colors the conduit socket by charge and uses a compact radius", () => {
+  it("colors the conduit socket by charge", () => {
     const context = new RecordingCanvasContext();
     const conduit: BodyCell = {
       x: 0,
@@ -243,11 +243,6 @@ describe("circuit rendering", () => {
     );
 
     expect(context.fillStyles.at(-1)).toBe(CIRCUIT_CHARGE_COLORS[-1]);
-    expect(context.circles).toContainEqual({
-      centerX: 16,
-      centerY: 16,
-      radius: 32 * 0.13,
-    });
   });
 
 

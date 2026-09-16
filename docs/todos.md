@@ -17,9 +17,9 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 * Fully support mirrored components. We have tools to reflect a copy-pasted group, but they don't actually mirror components. Later we also want to add machine blocks that can flip bodies. Currently, flipping horizontally, a left/right-pointing selector rune is currently rotated 180 degrees, and up/down-pointing ones are not rotated, which is correct for some components like a combiner or inverter that have bilateral symmetry. But components like selectors, ROMs, and laser splitters are not symmetric under reflection around the front-to-back line. Components that are bilaterally symmetric, or fully symmetric (like stone blocks) may not need to store mirroring.
 	* As a follow-up, modify rendering for some components to match this - e.g. the indicator dots on selector runes and rotators.
-* Modify the assembler to add reaction force: When it has a pending output, but no space to output, shift the assembler in its forwards direction, emitting the product out the back (at assembler's pre-movement position). Allow this motion to push other blocks that are in front of the assembler.
+* Modify the assembler to add a pushing force for output: When it has a pending output, but no space to output, attempt to push the blocks away so that it can produce output; failing that, try to push the assembler itself in its forwards direction, so the product can be emitted out the back (at assembler's pre-movement position) in the same tick.
 * Modify the duplicator in the same way as assembler above - make it also attempt to push itself away from the output side, if it's trying to duplicate a single-tile body but there's something blocking the output. When duplicating multi-tile bodies, don't do this - require already empty space for the whole body.
-* Check whether we can make some pushing components stronger than gravity. Namely thrusters and force projectors. Currently a thruster pointing upwards, with a stone block above it (not welded), oscillates up and down in place. A force projector trying to push something upwards is overpowered by gravity. Can we make both of these overpower gravity reliably?
+* For components that push, make them stronger than gravity. Namely thrusters and force projectors. Currently a thruster pointing upwards, with a stone block above it (not welded), oscillates up and down in place. A force projector trying to push something upwards is overpowered by gravity. Can we make both of these overpower gravity reliably?
 
 # Performance
 
@@ -42,6 +42,7 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Implement undo and redo when editing in the sandbox and puzzle solutions.
 * Allow mirroring components with some hotkey. (Rotation currently uses WASD, Q picks blocks, E configures. Could use E when not over a block, or R.) Depends on the other change to store blocks' mirroring alongside rotation.
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
+* When solving a puzzle, on mouseover of the footprint readout in the bottom-left, show the footprint on the board as a colored rectangular overlay.
 
 # Visuals
 
