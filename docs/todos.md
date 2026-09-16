@@ -51,5 +51,3 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 # Content
 
 Ideas moved to `puzzle-ideas.md`. We need to add both tutorial puzzles to explain the game mechanics, and actual puzzles, at a range of difficulty levels.
-
-Added **Turn the Tide**, a Runelore tutorial on inverters and victory signals, with an editable victory block and on-board instructions. More tutorials and harder puzzles are still needed.

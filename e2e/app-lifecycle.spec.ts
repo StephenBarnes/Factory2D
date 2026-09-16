@@ -307,7 +307,7 @@ test("exports, clears, and imports all player data", async ({ page }) => {
   await page.locator("#import-player-data-file").setInputFiles(downloadPath);
   await importReload;
 
-  await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^2 gemstones\b/);
+  await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^3 gemstones\b/);
   expect(await page.evaluate(() => Object.fromEntries(
     Array.from({ length: window.localStorage.length }, (_, index) => {
       const key = window.localStorage.key(index);
@@ -560,7 +560,7 @@ test("unlocked fixture opens a gemstone-gated group and puzzle", async ({ page }
   const runelore = page.locator(".puzzle-group").filter({
     has: page.getByText("Runelore", { exact: true }),
   });
-  await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^2 gemstones\b/);
+  await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^3 gemstones\b/);
   await expect(basics).toHaveJSProperty("open", false);
   await expect(runelore).toHaveJSProperty("open", true);
 

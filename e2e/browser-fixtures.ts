@@ -70,7 +70,7 @@ export function browserStorageFixture(
     return {
       values: {
         [PUZZLE_PROGRESS_STORAGE_KEY]: progressValue(
-          new Set<PuzzleId>(["first-shift", "sand-fall"]),
+          new Set<PuzzleId>(["first-shift", "sand-fall", "puzzle-infrastructure"]),
         ),
       },
       solutionIds: [],

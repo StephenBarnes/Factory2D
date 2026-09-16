@@ -1,0 +1,79 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 5,
+  "width": 7,
+  "height": 6,
+  "id": "puzzle-infrastructure",
+  "group": "basics",
+  "order": 3,
+  "name": "Puzzle Infrastructure",
+  "difficulty": "tutorial",
+  "description": "A puzzle's victory conditions are determined by blocks in the puzzle itself. To win a puzzle, a +1 charge must get to a Judgment Stone. If it receives a -1 charge instead, you will lose the puzzle. You can create your own puzzles using the sandbox.",
+  "goal": "Place a judgment stone and give it a positive charge",
+  "cycleLimit": 10,
+  "components": [
+    {
+      "code": "C",
+      "price": 1
+    },
+    {
+      "code": "I",
+      "price": 2
+    },
+    {
+      "code": "V",
+      "price": 1
+    }
+  ],
+  "editableRegions": [
+    {
+      "x": 2,
+      "y": 2,
+      "width": 4,
+      "height": 3
+    }
+  ],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 15,
+    "width": 7,
+    "height": 6,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "#######",
+      "#######",
+      "#.....#",
+      "1I....#",
+      "#.....#",
+      "V######"
+    ],
+    "orientations": [
+      {
+        "x": 1,
+        "y": 3,
+        "direction": "right"
+      }
+    ],
+    "textBoxes": [
+      {
+        "id": "signs",
+        "x": 0.3567012262845979,
+        "y": 0.2602074295758131,
+        "width": 6.32,
+        "height": 1.26,
+        "text": "A puzzle's victory conditions are determined by blocks in the puzzle itself.\nTo win a puzzle, a +1 charge must get to a Judgment Stone.\nIf it receives a -1 charge instead, you will lose the puzzle.\nYou can create your own puzzles using the sandbox.",
+        "owner": "author"
+      }
+    ],
+    "welds": [
+      "++++++|",
+      "+-----|",
+      "|.....|",
+      "+.....|",
+      "|.....|",
+      "------."
+    ]
+  },
+  "testCases": []
+}

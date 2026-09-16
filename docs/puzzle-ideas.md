@@ -20,3 +20,8 @@ Ideas:
 * Crossing a gap by building a flying machine. (Uncertain if this is even possible, unless we allow components that trivialize it, like horizontal sliders.)
 * Kaizen-style puzzles: Given dispensers (duplicators with buttons) providing any number of welded 2x2 and 3x4 iron blocks, assemble iron helmets, which are some complex shape made of iron blocks. The player must decide how to drill and weld/unweld blocks to make up the helmet shape, and implement that in machinery.
 * Slider block puzzles, like Rush Hour: Given some complex arrangement of welded pieces, each with a slider block preventing horizontal or vertical movement, build a device that will untangle them and extract one gem in the center.
+* Puzzle: geode shelling. You're given geodes, must remove the shells, output the internal gems, either as wholes or as single tiles.
+* Puzzle: You have 1 gemstone. Must show the gemstone at port 1, then port 2, then port 3, etc., corresponding to requests on the back wall. Requires moving it around according to commands.
+* Route sand falling from above to different outputs on the right side. Some potential for tiny machinery plus long chutes, relying on sand falling rather than transporting all the way.
+* Puzzle where you have to push a hanging piece up a ladder; it slots into the rungs. Maybe your entire contraption also needs to go back into a hole periodically to avoid walls that sweep across.
+* Puzzle where a gemstone is entangled in differently-shaped stone pieces; must build pistons to shift the pieces in a specific way so the gemstone can drop down into a delivery box.
