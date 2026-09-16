@@ -23,8 +23,7 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 # Performance
 
-* Potential optimizations noted in `docs/performance-todos.md` - some have been completed and greatly improved performance.
-* Profile again at some point during/after doing those performance tasks, to determine whether / what should be optimized further.
+* Follow [the current performance plan](performance-todos.md): refresh end-to-end browser measurements, investigate active fitted rendering, and measure retained session memory before choosing further optimizations. The original profile and completed optimization log are [archived](performance-history.md).
 
 # Circuit network
 
