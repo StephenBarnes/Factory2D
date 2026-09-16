@@ -45,7 +45,7 @@ export class MotionWorkspace {
   private readonly movementQueue: Int32Array;
   private readonly jammedBodies: Uint8Array;
   private readonly destinationOwners: Int32Array;
-  private readonly gravityDestinationOwners: Int32Array;
+  private readonly gravityDestinations: Uint8Array;
   private readonly dependencyHeads: Int32Array;
   private readonly dependencyDependents: Int32Array;
   private readonly nextDependency: Int32Array;
@@ -101,7 +101,7 @@ export class MotionWorkspace {
     this.movementQueue = new Int32Array(world.cellCount);
     this.jammedBodies = new Uint8Array(world.cellCount);
     this.destinationOwners = new Int32Array(world.cellCount);
-    this.gravityDestinationOwners = new Int32Array(world.cellCount);
+    this.gravityDestinations = new Uint8Array(world.cellCount);
     this.dependencyHeads = new Int32Array(world.cellCount);
     this.dependencyDependents = new Int32Array(world.cellCount);
     this.nextDependency = new Int32Array(world.cellCount);
@@ -895,7 +895,7 @@ export class MotionWorkspace {
       }
     }
 
-    this.gravityDestinationOwners.fill(-1);
+    this.gravityDestinations.fill(0);
     for (
       let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
       root >= 0;
@@ -911,7 +911,7 @@ export class MotionWorkspace {
         member = expectDefined(this.nextBodyMember[member], "next body member")
       ) {
         const destination = member + moveX + this.world.width;
-        this.gravityDestinationOwners[destination] = root;
+        this.gravityDestinations[destination] = 1;
       }
     }
 
@@ -938,9 +938,9 @@ export class MotionWorkspace {
         const owner = expectDefined(this.destinationOwners[destination], "destination owner");
         if (
           expectDefined(
-            this.gravityDestinationOwners[destination],
-            "gravity destination owner",
-          ) >= 0
+            this.gravityDestinations[destination],
+            "gravity destination occupancy",
+          ) === 1
         ) {
           this.blockMovementGroup(root);
           continue;

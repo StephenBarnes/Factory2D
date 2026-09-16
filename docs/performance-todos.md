@@ -545,3 +545,21 @@ Implemented lazy floating-body gravity activation scratch, continuing the runtim
 - Headless Chromium through Vite exercised a 400×300 `MotionWorkspace`: an ordinary stone board owned **7,920,000 bytes** of direct typed-array scratch; adding floatstone activated the buffer and raised that to **8,040,000 bytes**. Removing/re-adding floatstone reused the same buffer, and falling weight pushed it down correctly.
 
 This defers **120,000 bytes (0.11 MiB)** per 400×300 motion workspace until floating-body gravity is needed. The measurement covers direct motion scratch, not total browser memory. No throughput improvement is claimed.
+
+# Update 12
+
+Compacted gravity-destination scratch, continuing the motion/runtime memory priority.
+
+## Changes
+
+- `MotionWorkspace` records gravity destinations in a `Uint8Array` occupancy table instead of an `Int32Array` body-owner table. Driven movement only needs to reject occupied destinations; it never reads the owner's identity.
+- Every driven-resolution pass clears and rebuilds the table, preserving gravity priority and preventing stale reservations across ticks and powered-motion probes.
+
+## Verification
+
+- Focused conveyor, thruster, force-projector, and simulation suites: **4 files, 81 tests passed**.
+- `npm run build` passed; Vite reported its bundle-size warning.
+- Headless Chromium through Vite exercised two falling-stone ticks on a 400×300 board, confirming movement, destination reservation, and clearing the previous tick's reservation.
+- Direct typed-array scratch owned by that `MotionWorkspace` measured **7,560,000 bytes**. The destination table uses **120,000 bytes**, versus **480,000 bytes** for the previous 32-bit owner representation.
+
+This saves **360,000 bytes (0.34 MiB)** per activated 400×300 motion workspace. This is buffer storage, not total browser memory; no tick-throughput improvement is claimed.
