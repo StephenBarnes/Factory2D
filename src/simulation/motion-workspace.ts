@@ -32,7 +32,7 @@ export class MotionWorkspace {
   private readonly bodyFalls: Uint8Array;
   /** Bit 0 blocks horizontal translation; bit 1 blocks vertical translation. */
   private readonly bodyBlockedAxes: Uint8Array;
-  private readonly gravityActivated: Uint8Array;
+  private gravityActivated: Uint8Array | undefined;
   private hasFloatingTiles = false;
   private readonly bodySlidesDiagonally: Uint8Array;
   private readonly horizontalMoves: Int16Array;
@@ -90,7 +90,6 @@ export class MotionWorkspace {
     this.nextBodyMember = new Int32Array(world.cellCount);
     this.bodyFalls = new Uint8Array(world.cellCount);
     this.bodyBlockedAxes = new Uint8Array(world.cellCount);
-    this.gravityActivated = new Uint8Array(world.cellCount);
     this.bodySlidesDiagonally = new Uint8Array(world.cellCount);
     this.horizontalMoves = new Int16Array(world.cellCount);
     this.verticalMoves = new Int16Array(world.cellCount);
@@ -1091,7 +1090,8 @@ export class MotionWorkspace {
     if (this.hasFloatingTiles) {
       // Only successful falling bodies exert weight. Propagate it down through
       // contacts; a body supported elsewhere must not push a floating neighbor.
-      this.gravityActivated.fill(0);
+      const gravityActivated = this.gravityActivated ??= new Uint8Array(this.world.cellCount);
+      gravityActivated.fill(0);
       queueHead = 0;
       queueLength = 0;
       for (
@@ -1103,7 +1103,7 @@ export class MotionWorkspace {
           expectDefined(this.bodyHeads[root], "body head") >= 0 &&
           this.bodyFalls[root] === 1 && this.jammedBodies[root] === 0
         ) {
-          this.gravityActivated[root] = 1;
+          gravityActivated[root] = 1;
           this.blockedBodyQueue[queueLength++] = root;
         }
       }
@@ -1115,10 +1115,10 @@ export class MotionWorkspace {
           member = expectDefined(this.nextBodyMember[member], "next body member")
         ) {
           const blocker = expectDefined(this.bodyRoots[member + this.world.width], "gravity contact");
-          if (blocker < 0 || this.gravityActivated[blocker] === 1) {
+          if (blocker < 0 || gravityActivated[blocker] === 1) {
             continue;
           }
-          this.gravityActivated[blocker] = 1;
+          gravityActivated[blocker] = 1;
           this.blockedBodyQueue[queueLength++] = blocker;
         }
       }
@@ -1127,7 +1127,7 @@ export class MotionWorkspace {
         root >= 0;
         root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
       ) {
-        if (this.gravityActivated[root] === 0) {
+        if (gravityActivated[root] === 0) {
           this.jammedBodies[root] = 1;
         }
       }

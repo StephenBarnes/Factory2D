@@ -37,6 +37,42 @@ describe("floatstone", () => {
     expect(world.idAt(0, 3)).toBe(lower);
   });
 
+  it("activates floating gravity after ordinary ticks and clears weight across removal and reset", () => {
+    const world = new World(1, 6);
+    world.place(0, 0, TileKind.Stone);
+    const ordinary = world.clone();
+    const simulation = new Simulation(world);
+    simulation.step();
+    expect(world.kindAt(0, 1)).toBe(TileKind.Stone);
+
+    world.place(0, 2, TileKind.Floatstone);
+    const weighted = world.clone();
+    simulation.step();
+    expect(world.kindAt(0, 2)).toBe(TileKind.Stone);
+    expect(world.kindAt(0, 3)).toBe(TileKind.Floatstone);
+
+    world.place(0, 2, TileKind.Empty);
+    simulation.step();
+    expect(world.kindAt(0, 3)).toBe(TileKind.Floatstone);
+    world.place(0, 3, TileKind.Empty);
+    world.place(0, 0, TileKind.Stone);
+    simulation.step();
+    expect(world.kindAt(0, 1)).toBe(TileKind.Stone);
+    world.place(0, 1, TileKind.Empty);
+    world.place(0, 2, TileKind.Floatstone);
+    simulation.step();
+    expect(world.kindAt(0, 2)).toBe(TileKind.Floatstone);
+
+    simulation.resetTo(weighted);
+    simulation.step();
+    expect(world.kindAt(0, 2)).toBe(TileKind.Stone);
+    expect(world.kindAt(0, 3)).toBe(TileKind.Floatstone);
+    simulation.resetTo(ordinary);
+    simulation.step();
+    expect(world.kindAt(0, 1)).toBe(TileKind.Stone);
+    expect(world.kindAt(0, 3)).toBe(TileKind.Empty);
+  });
+
   it("does not push from a body supported elsewhere", () => {
     const world = new World(2, 4);
     world.place(0, 0, TileKind.Stone);

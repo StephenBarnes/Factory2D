@@ -527,3 +527,21 @@ Implemented contact-free gravity-to-drive topology reuse, continuing the motion 
 | Fully welded stone board | 25.0 / 38.7 ms | 18.7 / 20.7 ms |
 
 Both scenarios' distinct typed-array backing storage reachable from `Simulation`, excluding `World`, fell from **8,280,000 to 8,040,000 bytes**. This saves **240,000 bytes (0.23 MiB)** until the first magnetic contact. These measurements cover stationary nonmagnetic boards, not moving or magnetic factories; total browser memory is not measured.
+
+# Update 11
+
+Implemented lazy floating-body gravity activation scratch, continuing the runtime-memory priority.
+
+## Changes
+
+- `MotionWorkspace` allocates the per-cell weight-propagation buffer only when gravity encounters floating tiles, rather than whenever ordinary motion first runs.
+- The buffer remains cached across removal/reset and is cleared before each active floating-body pass.
+- Added a behavioral regression covering ordinary ticks, late floatstone placement, weight removal, last-floatstone removal/re-addition, and reset to weighted/non-floating boards.
+
+## Verification
+
+- `npm test -- tests/floatstone.test.ts tests/simulation.test.ts`: **2 files, 35 tests passed**.
+- `npm run build` passed; Vite reported its bundle-size warning.
+- Headless Chromium through Vite exercised a 400×300 `MotionWorkspace`: an ordinary stone board owned **7,920,000 bytes** of direct typed-array scratch; adding floatstone activated the buffer and raised that to **8,040,000 bytes**. Removing/re-adding floatstone reused the same buffer, and falling weight pushed it down correctly.
+
+This defers **120,000 bytes (0.11 MiB)** per 400×300 motion workspace until floating-body gravity is needed. The measurement covers direct motion scratch, not total browser memory. No throughput improvement is claimed.
