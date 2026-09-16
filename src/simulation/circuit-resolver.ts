@@ -288,6 +288,13 @@ export class CircuitResolver {
           runtime.deliveryResolver.absorptionTargetIndices[index],
           "delivery absorption target",
         ) >= 0 ? 1 : 0;
+      } else if (kind === TileKind.BlockComparer) {
+        const orientation = world.orientationAtIndex(index);
+        const front = neighborIndex(world, index, orientation);
+        const rear = neighborIndex(world, index, oppositeDirection(orientation));
+        outputCharge = front >= 0 && rear >= 0 &&
+          world.kindAtIndex(front) !== TileKind.Empty &&
+          world.kindAtIndex(front) === world.kindAtIndex(rear) ? 1 : 0;
       } else if (kind === TileKind.Comparer) {
         const orientation = world.orientationAtIndex(index);
         const front = neighborIndex(world, index, orientation);

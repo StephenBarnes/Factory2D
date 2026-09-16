@@ -68,6 +68,7 @@ export const enum TileKind {
   LevitationProjector = 66,
   ForceProjector = 67,
   DelayGate = 68,
+  BlockComparer = 69,
 }
 
 export const enum Direction {
@@ -1431,6 +1432,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#635078",
     decorationStyle: TileDecorationStyle.Comparer,
     decorationColor: "#e8c987",
+  },
+  [TileKind.BlockComparer]: {
+    name: "Block Type Comparer",
+    boardCode: "@",
+    defaultPrice: 10,
+    palette: {
+      order: 72,
+      category: PaletteCategory.CircuitComplex,
+      description: "Outputs +1 sideways while the front and rear blocks have the same type; consumes nothing.",
+      extendedDescription: ["Both neighboring cells must contain blocks. Compares only their types, ignoring orientation, configuration, and welds, even when welded to the comparer. Different types or missing neighbors output 0."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Right | WeldSide.Left,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#4e647e",
+    decorationStyle: TileDecorationStyle.Comparer,
+    decorationColor: "#c7e3f5",
   },
   [TileKind.Victory]: {
     name: "Judgment Stone",

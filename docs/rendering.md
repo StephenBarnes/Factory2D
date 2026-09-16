@@ -21,7 +21,7 @@ Charge-sensor hover and placement overlays circle the first detectable forward c
 
 The discernment rune marks its left input blue (+1 rear control) and right input red (-1 rear control), offset toward the rear to clear circuit traces. These markers rotate with the tile. The rectifier's Thurisaz thorn points toward its output port.
 
-Body comparers use a purple slab with front/rear outlined blocks and a charge-colored equals sign; the glyph rotates with the sideways circuit ports.
+Body comparers use a purple slab with front/rear outlined blocks and a charge-colored equals sign; the glyph rotates with the sideways circuit ports. Block type comparers share the glyph with a blue-grey slab and pale-blue block outlines.
 
 Laser splitters use a violet slab and an offset forward arrow marking the local-left cutting side. Hover/placement previews draw the complete cutting line to the board boundary; the glyph and preview rotate together.
 
