@@ -7,6 +7,10 @@ import type {
 } from "./dev/diagnostic-snapshot";
 import { NavigationController } from "./game/navigation-controller";
 import { SimulationClock } from "./game/simulation-clock";
+import { CommunityClient } from "./game/community-client";
+import { getInstallationId } from "./game/installation-id";
+import { parsePuzzleFile } from "./game/puzzle-format";
+import { CommunityScoresView } from "./ui/community-scores";
 import {
   clearPlayerData,
   replacePlayerData,
@@ -93,6 +97,16 @@ function requiredElement<T extends HTMLElement>(id: string): T {
 }
 
 const sessions = new WorkshopSessionController(createSandboxWorld());
+const installationId = getInstallationId(window.localStorage);
+const communityApiUrl = import.meta.env.VITE_COMMUNITY_API_URL?.trim();
+const community = communityApiUrl
+  ? new CommunityClient(communityApiUrl, installationId)
+  : null;
+const communityScores = new CommunityScoresView(
+  community,
+  requiredElement("briefing-community-status"),
+  requiredElement("report-community-status"),
+);
 const canvas = requiredElement<HTMLCanvasElement>("game-canvas");
 const gameScreen = requiredElement<HTMLElement>("game-screen");
 const mainMenuScreen = requiredElement<HTMLElement>("main-menu-screen");
@@ -157,6 +171,9 @@ const downloadImageButton = requiredElement<HTMLButtonElement>("download-image-b
 const downloadPuzzleButton = requiredElement<HTMLButtonElement>("download-puzzle-button");
 const openPuzzleSandboxButton = requiredElement<HTMLButtonElement>("open-puzzle-sandbox-button");
 const sharePuzzleButton = requiredElement<HTMLButtonElement>("share-puzzle-button");
+const sharedPuzzleDialog = requiredElement<HTMLDialogElement>("shared-puzzle-dialog");
+const sharedPuzzleLink = requiredElement<HTMLAnchorElement>("shared-puzzle-link");
+let publishingPuzzle = false;
 const importButton = requiredElement<HTMLButtonElement>("import-button");
 const importFile = requiredElement<HTMLInputElement>("import-file");
 const animationToggle = requiredElement<HTMLInputElement>("animation-toggle");
@@ -1394,7 +1411,15 @@ const puzzleTests = new PuzzleTestController(
     setStepAnimation: (startedAt, duration) => clock.beginAnimation(startedAt, duration),
     finishAnimation,
     animationsEnabled: (ticksPerSecond) => clock.animationsEnabled(ticksPerSecond),
-    recordResult: (scores) => navigation.recordActivePuzzleTestResult(scores),
+    recordResult: (scores) => {
+      const previousBest = navigation.recordActivePuzzleTestResult(scores);
+      const screen = navigation.screen;
+      if (screen.kind !== "puzzle") {
+        throw new Error("Cannot submit puzzle scores outside a puzzle workshop");
+      }
+      void communityScores.recordResult(screen.puzzleId, scores);
+      return previousBest;
+    },
     refreshTransport: updateTransportState,
     refreshHover: refreshPointerHover,
     leaveWorkshop: () => navigation.leaveWorkshop(),
@@ -1504,6 +1529,7 @@ const navigation = new NavigationController(
   },
   {
     stopSimulation: stopWorkshopActivity,
+    onPuzzleInfoShown: (puzzleId) => { void communityScores.showBriefing(puzzleId); },
     onWorkshopSessionChanged: () => {
       surface.mountActiveSession({ fitBoard: true, cancelInteraction: true });
     },
@@ -1666,7 +1692,7 @@ importPlayerDataFile.addEventListener("change", async () => {
 clearPlayerDataButton.addEventListener("click", () => {
   if (
     !window.confirm(
-      "Clear all saved puzzle progress, solutions, sandboxes, snippets, and settings? This cannot be undone.",
+      "Clear all saved puzzle progress, solutions, sandboxes, snippets, and settings? Your installation ID and published community data will remain. This cannot be undone.",
     )
   ) {
     return;
@@ -2065,7 +2091,10 @@ function updateExportOptionsForSession(): void {
   downloadPuzzleButton.hidden = false;
   openPuzzleSandboxButton.hidden = sandboxOnly;
   sharePuzzleButton.hidden = !sandboxOnly;
-  sharePuzzleButton.disabled = true;
+  sharePuzzleButton.disabled = community === null || publishingPuzzle;
+  sharePuzzleButton.title = community === null
+    ? "Community sharing is not configured for this build"
+    : "Publish this puzzle and get a public download link";
   if (!sandboxOnly) {
     exportMenu.close();
   }
@@ -2126,6 +2155,35 @@ downloadPuzzleButton.addEventListener("click", () => {
     new Blob([source], { type: "application/json" }),
     puzzleAuthoring.fileName,
   );
+});
+
+sharePuzzleButton.addEventListener("click", async () => {
+  if (community === null || publishingPuzzle || navigation.screen.kind !== "sandbox") return;
+  exportMenu.close();
+  finalizeActivePointerGesture();
+  const session = surface.session;
+  const authoring = session.puzzleAuthoring;
+  const region = session.editableRegionAuthoring;
+  if (authoring === null || region === null) {
+    throw new Error("Sandbox puzzle authoring state is missing");
+  }
+  try {
+    const puzzle: unknown = JSON.parse(authoring.serialize(region.region));
+    parsePuzzleFile(puzzle, authoring.fileName);
+    if (!window.confirm("Publish this puzzle publicly? Its boards, text, and test cases will be downloadable by anyone with the link. Published copies cannot be edited or removed from the game.")) return;
+    publishingPuzzle = true;
+    updateExportOptionsForSession();
+    const url = await community.publishPuzzle(puzzle);
+    sharedPuzzleLink.href = url;
+    sharedPuzzleLink.textContent = url;
+    sharedPuzzleDialog.showModal();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    window.alert(`Could not share puzzle: ${message}`);
+  } finally {
+    publishingPuzzle = false;
+    updateExportOptionsForSession();
+  }
 });
 
 openPuzzleSandboxButton.addEventListener("click", () => {

@@ -15,7 +15,7 @@ The theme is dwarven engineering: lodestones, glowing runes, mineral processing,
 * Procedural tile graphics shared by the board, previews, and palette. Tile metadata lives in `src/simulation/tile.ts`.
 * Implemented simulation includes gravity, welded bodies, magnets, conveyors, pistons, rotators, welders/splitters, furnaces, duplicators, delivery boxes, assemblers, ternary circuits, configurable sequential runes, and recursively nested rune arrays.
 * The workshop supports placement/welding, selection transforms, snippets, component configuration, annotations, nested-array editing, signal traces, and scene/puzzle JSON plus PNG export.
-* URL-routed menus and briefings lead to independently saved solutions and sandboxes. Puzzle progression, all-case verification, scoring, authoring, and player-data import/export work locally. Backend sharing, histograms, and GIF export are not implemented.
+* URL-routed menus and briefings lead to independently saved solutions and sandboxes. Puzzle progression, all-case verification, scoring, authoring, and player-data import/export work locally. An optional Cloudflare Workers + D1 backend accepts successful scores, returns per-installation-best histogram data, and publishes downloadable puzzle files. Community browsing/solving, voting, histogram charts/ranks, and GIF export are not implemented. Deployment and static-host packaging remain separate setup steps.
 
 ## Task-specific references
 
@@ -25,7 +25,7 @@ Read the relevant reference before changing its subsystem; most tasks do not nee
 | --- | --- |
 | Physics, circuits, components, nested boards, board serialization | `docs/simulation.md` |
 | Tile appearance, Canvas rendering, animation, camera, visual performance | `docs/rendering.md` |
-| Controls, tools, dialogs, navigation, persistence, puzzle authoring/testing | `docs/ui-lifecycle.md` |
+| Controls, tools, dialogs, navigation, persistence, puzzle authoring/testing, community API/deployment | `docs/ui-lifecycle.md` |
 | Planned features and priorities | `docs/todos.md` |
 | Current puzzles and ideas for more puzzles | `docs/puzzles.md` |
 | Performance investigations and proposed optimizations | `docs/performance-todos.md` |

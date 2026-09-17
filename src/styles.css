@@ -3023,6 +3023,21 @@ kbd {
   color: var(--score-worse-text);
 }
 
+.community-status {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+#report-community-status {
+  margin: 0 24px 24px;
+}
+
+.shared-puzzle-link {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
 .test-report-result {
   min-height: 52px;
   padding: 9px 12px;

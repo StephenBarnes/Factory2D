@@ -1,3 +1,5 @@
+import { getInstallationId, INSTALLATION_ID_STORAGE_KEY, isInstallationId } from "./installation-id";
+
 export const PLAYER_DATA_FORMAT = "factory2d-player-data";
 export const PLAYER_DATA_VERSION = 1;
 
@@ -65,6 +67,9 @@ function parsePlayerData(serialized: string): readonly PlayerDataEntry[] {
     if (seenKeys.has(entryRecord.key)) {
       throw new Error(`Player data file contains duplicate key ${JSON.stringify(entryRecord.key)}`);
     }
+    if (entryRecord.key === INSTALLATION_ID_STORAGE_KEY && !isInstallationId(entryRecord.value)) {
+      throw new Error("Player data installation ID is not a valid UUID");
+    }
     seenKeys.add(entryRecord.key);
     return { key: entryRecord.key, value: entryRecord.value };
   });
@@ -78,6 +83,7 @@ function restoreEntries(storage: PlayerDataStorage, entries: readonly PlayerData
 }
 
 export function serializePlayerData(storage: PlayerDataStorage): string {
+  getInstallationId(storage);
   const playerData: StoredPlayerData = {
     format: PLAYER_DATA_FORMAT,
     version: PLAYER_DATA_VERSION,
@@ -86,26 +92,45 @@ export function serializePlayerData(storage: PlayerDataStorage): string {
   return JSON.stringify(playerData);
 }
 
-export function replacePlayerData(storage: PlayerDataStorage, serialized: string): void {
-  const importedEntries = parsePlayerData(serialized);
-  const previousEntries = snapshotEntries(storage);
+function replaceEntriesAtomically(
+  storage: PlayerDataStorage,
+  entries: readonly PlayerDataEntry[],
+  previousEntries: readonly PlayerDataEntry[],
+  operation: "import" | "clear",
+): void {
   try {
-    restoreEntries(storage, importedEntries);
+    restoreEntries(storage, entries);
   } catch (error) {
     try {
       restoreEntries(storage, previousEntries);
     } catch (rollbackError) {
       throw new AggregateError(
         [error, rollbackError],
-        "Could not import player data or restore the previous player data",
+        `Could not ${operation} player data or restore the previous player data`,
       );
     }
-    throw new Error("Could not import player data; the previous player data was restored", {
+    throw new Error(`Could not ${operation} player data; the previous player data was restored`, {
       cause: error,
     });
   }
 }
 
+export function replacePlayerData(storage: PlayerDataStorage, serialized: string): void {
+  const importedEntries = parsePlayerData(serialized);
+  const previousEntries = snapshotEntries(storage);
+  const entries = importedEntries.some((entry) => entry.key === INSTALLATION_ID_STORAGE_KEY)
+    ? importedEntries
+    : [...importedEntries, { key: INSTALLATION_ID_STORAGE_KEY, value: getInstallationId(storage) }];
+  replaceEntriesAtomically(storage, entries, previousEntries, "import");
+}
+
 export function clearPlayerData(storage: PlayerDataStorage): void {
-  storage.clear();
+  const previousEntries = snapshotEntries(storage);
+  const installationId = getInstallationId(storage);
+  replaceEntriesAtomically(
+    storage,
+    [{ key: INSTALLATION_ID_STORAGE_KEY, value: installationId }],
+    previousEntries,
+    "clear",
+  );
 }

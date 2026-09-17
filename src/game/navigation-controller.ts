@@ -45,6 +45,7 @@ export interface NavigationCallbacks {
   readonly onWorkshopSessionChanged: () => void;
   readonly onWorkshopShown: () => void;
   readonly onSandboxPropertiesChanged: (properties: SandboxPuzzleProperties) => void;
+  readonly onPuzzleInfoShown: (puzzleId: PuzzleId) => void;
 }
 
 export class NavigationController {
@@ -346,5 +347,6 @@ export class NavigationController {
         this.renderPuzzleInfo(puzzleId);
       },
     });
+    this.callbacks.onPuzzleInfoShown(puzzleId);
   }
 }

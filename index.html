@@ -81,6 +81,7 @@
                 <span>OBJECTIVE</span>
                 <strong id="puzzle-info-goal"></strong>
               </div>
+              <p class="community-status" id="briefing-community-status" role="status" hidden></p>
             </section>
             <section class="solutions-panel" aria-labelledby="solutions-title">
               <div class="solutions-heading">
@@ -348,7 +349,7 @@
                 <button
                   id="share-puzzle-button"
                   type="button"
-                  title="Puzzle sharing is not available yet"
+                  title="Community sharing is not configured for this build"
                   disabled
                   hidden
                 >SHARE PUZZLE</button>
@@ -447,7 +448,7 @@
             </section>
             <section class="settings-section settings-danger-section" aria-labelledby="clear-data-title">
               <h3 id="clear-data-title">CLEAR PLAYER DATA</h3>
-              <p>Erase all puzzle progress, solutions, sandboxes, snippets, and other saved settings.</p>
+              <p>Erase all puzzle progress, solutions, sandboxes, snippets, and other saved settings. Your installation ID and published community data are kept.</p>
               <div class="settings-action-row">
                 <button id="clear-player-data-button" class="danger-button" type="button">
                   CLEAR ALL PLAYER DATA
@@ -482,6 +483,7 @@
               <p>Built in TypeScript with plain HTML and CSS, without a UI framework. Canvas 2D draws the board and its procedural tiles; Vite builds the browser application.</p>
               <p>The simulation advances in deterministic, discrete ticks: components observe the board, competing actions are resolved, and changes commit together. Welded tiles move as rigid bodies, while signed-ternary circuits carry negative, neutral, or positive charge. Animation draws between committed states.</p>
               <p>Browser storage keeps your designs and progress locally.</p>
+              <p>When community services are configured, successful puzzle scores are submitted with a random installation ID. Sharing a puzzle publishes its boards and text only after confirmation. No email or login is required.</p>
             </section>
             <a href="https://github.com/StephenBarnes/Factory2D" target="_blank" rel="noopener noreferrer">
               VIEW SOURCE ON GITHUB
@@ -490,6 +492,18 @@
           <div class="main-menu-dialog-actions">
             <button type="submit">CLOSE</button>
           </div>
+        </form>
+      </dialog>
+      <dialog class="main-menu-dialog" id="shared-puzzle-dialog" aria-labelledby="shared-puzzle-title">
+        <form method="dialog">
+          <div class="main-menu-dialog-status">COMMUNITY PUZZLE</div>
+          <div class="main-menu-dialog-content">
+            <h2 id="shared-puzzle-title">Puzzle published</h2>
+            <p>Copy this public link to share the puzzle file. To edit it, download the file and import it into a sandbox. Community browsing and solving shared puzzles are not available yet.</p>
+            <a id="shared-puzzle-link" class="shared-puzzle-link" target="_blank" rel="noopener noreferrer"></a>
+            <p>Publishing changes creates a new link; the existing copy remains unchanged.</p>
+          </div>
+          <div class="main-menu-dialog-actions"><button type="submit">CLOSE</button></div>
         </form>
       </dialog>
       <dialog
@@ -745,6 +759,7 @@
             <div><dt>FOOTPRINT</dt><dd data-test-report-footprint></dd></div>
             <div><dt>COMBINED</dt><dd data-test-report-combined></dd></div>
           </dl>
+          <p class="community-status" id="report-community-status" role="status" hidden></p>
           <div class="test-report-actions">
             <button type="button" data-test-report-continue>CONTINUE EDITING</button>
             <button class="test-report-back" type="button" data-test-report-back>

@@ -5,20 +5,26 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && tsc -p backend/tsconfig.json && vite build",
     "test": "vitest run",
     "test:browser": "playwright test",
     "benchmark": "playwright test --config playwright.benchmark.config.ts",
     "benchmark:trace": "node tools/benchmark/summarize-trace.ts",
     "test:watch": "vitest",
-    "typecheck": "tsc -b --pretty false",
+    "typecheck": "tsc -b --pretty false && tsc -p backend/tsconfig.json --pretty false",
+    "dev:backend": "wrangler dev --config backend/wrangler.jsonc",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local --config backend/wrangler.jsonc",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote --config backend/wrangler.jsonc",
+    "deploy:backend": "wrangler deploy --config backend/wrangler.jsonc",
     "search:ternary": "python3 tools/ternary_logic_search.py"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260917.1",
     "@playwright/test": "^1.62.1",
     "@types/node": "^26.4.0",
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "wrangler": "^4.133.0"
   }
 }

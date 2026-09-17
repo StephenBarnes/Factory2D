@@ -6,6 +6,7 @@ import {
   PLAYER_DATA_VERSION,
 } from "../src/game/player-data";
 import { PUZZLE_SOLUTIONS_STORAGE_KEY } from "../src/game/puzzle-solutions";
+import { INSTALLATION_ID_STORAGE_KEY } from "../src/game/installation-id";
 import { puzzleById } from "../src/game/puzzles";
 import { expectDefined } from "../src/util/assert";
 import { seedBrowserStorage } from "./browser-fixtures";
@@ -269,6 +270,8 @@ test("exports, clears, and imports all player data", async ({ page }) => {
   await page.evaluate(() => {
     window.localStorage.setItem("factory2d.test-setting", "custom value");
   });
+  const installationId = await page.evaluate((key) => window.localStorage.getItem(key), INSTALLATION_ID_STORAGE_KEY);
+  expect(installationId).toMatch(/^[0-9a-f-]{36}$/);
 
   await page.getByRole("button", { name: "SETTINGS" }).click();
   const settings = page.getByRole("dialog", { name: "SETTINGS" });
@@ -291,6 +294,7 @@ test("exports, clears, and imports all player data", async ({ page }) => {
     entries: Object.entries({
       ...fixture.values,
       "factory2d.test-setting": "custom value",
+      [INSTALLATION_ID_STORAGE_KEY]: installationId,
     }).sort(([first], [second]) => first.localeCompare(second))
       .map(([key, value]) => ({ key, value })),
   });
@@ -302,7 +306,9 @@ test("exports, clears, and imports all player data", async ({ page }) => {
   await settings.getByRole("button", { name: "CLEAR ALL PLAYER DATA" }).click();
   await clearReload;
   await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^0 gemstones\b/);
-  expect(await page.evaluate(() => window.localStorage.length)).toBe(0);
+  expect(await page.evaluate(() => ({ ...window.localStorage }))).toEqual({
+    [INSTALLATION_ID_STORAGE_KEY]: installationId,
+  });
 
   await page.getByRole("button", { name: "SETTINGS" }).click();
   const importReload = page.waitForEvent("load");
@@ -328,6 +334,7 @@ test("exports, clears, and imports all player data", async ({ page }) => {
   ))).toEqual({
     ...fixture.values,
     "factory2d.test-setting": "custom value",
+    [INSTALLATION_ID_STORAGE_KEY]: installationId,
   });
 });
 

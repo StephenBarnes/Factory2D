@@ -11,3 +11,8 @@ blob-report/
 __pycache__/
 *.py[cod]
 temp/
+.wrangler/
+.dev.vars
+.env
+.env.*
+!.env.example
