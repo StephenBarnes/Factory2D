@@ -94,6 +94,7 @@ interface MutableSerializedBoard {
   result: string;
   grid: string[];
   orientations?: CoordinateEntry[];
+  mirrored?: CoordinateEntry[];
   charges?: CoordinateEntry[];
   crossingCharges?: CoordinateEntry[];
   isolatedOutputCharges?: CoordinateEntry[];
@@ -441,6 +442,7 @@ function serializeAuthoredBoard(world: World): Record<string, unknown> {
     grid: board.grid,
     welds: board.welds,
     orientations: board.orientations ?? [],
+    mirrored: board.mirrored ?? [],
     charges: board.charges ?? [],
     crossingCharges: board.crossingCharges ?? [],
     isolatedOutputCharges: board.isolatedOutputCharges ?? [],
@@ -544,6 +546,7 @@ export function resizeWorld(
   const translate = <T extends CoordinateEntry>(entries: readonly T[]): T[] =>
     entries.map((entry) => ({ ...entry, x: entry.x - originX, y: entry.y - originY }));
   board.orientations = filterCoordinates(translate(board.orientations ?? []), width, height);
+  board.mirrored = filterCoordinates(translate(board.mirrored ?? []), width, height);
   board.charges = filterCoordinates(translate(board.charges ?? []), width, height);
   board.crossingCharges = filterCoordinates(translate(board.crossingCharges ?? []), width, height);
   board.isolatedOutputCharges = filterCoordinates(translate(board.isolatedOutputCharges ?? []), width, height);

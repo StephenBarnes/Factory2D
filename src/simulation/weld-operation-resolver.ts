@@ -3,6 +3,7 @@ import {
   Direction,
   directionX,
   directionY,
+  orientedDirection,
   TileKind,
 } from "./tile";
 import type { World } from "./world";
@@ -117,7 +118,9 @@ export class WeldOperationResolver {
   private processOperatorEdges(index: number, collecting: boolean): void {
     const kind = this.world.kindAtIndex(index);
     const orientation = this.world.orientationAtIndex(index);
-    const leftSide = ((orientation + Direction.Left) & 3) as Direction;
+    const leftSide = orientedDirection(
+      Direction.Left, orientation, this.world.mirroredAtIndex(index),
+    );
     if (this.world.chargeAtPortIndex(index, leftSide) === -1) {
       return;
     }

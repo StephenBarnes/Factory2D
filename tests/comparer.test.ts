@@ -59,6 +59,23 @@ describe("body comparer", () => {
     expect(world.chargeAt(1, 0)).toBe(0);
   });
 
+  it("distinguishes chiral bodies while block comparison ignores handedness", () => {
+    const world = new World(3, 1);
+    world.place(0, 0, TileKind.Selector);
+    world.place(1, 0, TileKind.Comparer, Direction.Right);
+    world.place(2, 0, TileKind.Selector, Direction.Up, true);
+    const simulation = new Simulation(world);
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(0);
+    world.place(0, 0, TileKind.Selector, Direction.Up, true);
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(1);
+    world.place(1, 0, TileKind.BlockComparer, Direction.Right);
+    world.place(0, 0, TileKind.Selector);
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(1);
+  });
+
   it("compares inside a serialized nested rune array", () => {
     const root = new World(1, 1);
     root.place(0, 0, TileKind.RuneArray);

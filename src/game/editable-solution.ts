@@ -23,7 +23,7 @@ export function applyEditableSolution(
         copySignalOrder(target, solution, x, y);
         continue;
       }
-      target.place(x, y, solution.kindAt(x, y), solution.orientationAt(x, y));
+      target.place(x, y, solution.kindAt(x, y), solution.orientationAt(x, y), solution.mirroredAt(x, y));
       const componentState = solution.componentStateSnapshotAt(x, y);
       if (componentState !== null) {
         target.restoreComponentState(x, y, componentState);

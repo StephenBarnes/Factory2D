@@ -7,6 +7,7 @@ import {
   Direction,
   directionX,
   directionY,
+  orientedDirection,
   orientedSides,
   oppositeDirection,
   TILE_DEFINITIONS,
@@ -240,7 +241,9 @@ export class CircuitResolver {
       }
       if (isProcessingMachine(kind)) {
         const orientation = world.orientationAtIndex(index);
-        const leftSide = ((orientation + Direction.Left) & 3) as Direction;
+        const leftSide = orientedDirection(
+          Direction.Left, orientation, world.mirroredAtIndex(index),
+        );
         const disabled = world.chargeAtPortIndex(index, leftSide) === -1;
         runtime.furnaceDisabled[index] = disabled ? 1 : 0;
         const targetIndex = neighborIndex(world, index, orientation);
@@ -254,7 +257,9 @@ export class CircuitResolver {
         this.driveOutputs(
           runtime,
           index,
-          orientedSides(TILE_DEFINITIONS[kind].circuitOutputPorts, orientation),
+          orientedSides(
+            TILE_DEFINITIONS[kind].circuitOutputPorts, orientation, world.mirroredAtIndex(index),
+          ),
           outputCharge,
           false,
         );
@@ -270,7 +275,9 @@ export class CircuitResolver {
         this.driveOutputs(
           runtime,
           index,
-          orientedSides(TILE_DEFINITIONS[kind].circuitOutputPorts, orientation),
+          orientedSides(
+            TILE_DEFINITIONS[kind].circuitOutputPorts, orientation, world.mirroredAtIndex(index),
+          ),
           outputCharge,
           false,
         );
@@ -334,12 +341,13 @@ export class CircuitResolver {
       }
 
       const orientation = world.orientationAtIndex(index);
+      const mirrored = world.mirroredAtIndex(index);
       if (kind === TileKind.ChargeSensor) {
         const outputCharge = this.sensorObservedCharge(runtime, index, orientation);
         this.driveOutputs(
           runtime,
           index,
-          orientedSides(definition.circuitOutputPorts, orientation),
+          orientedSides(definition.circuitOutputPorts, orientation, mirrored),
           outputCharge,
         );
         continue;
@@ -399,7 +407,7 @@ export class CircuitResolver {
         }
         continue;
       }
-      const inputSides = orientedSides(definition.circuitInputPorts, orientation);
+      const inputSides = orientedSides(definition.circuitInputPorts, orientation, mirrored);
       let inputSum = 0;
       let inputProduct = 1;
       let leftInput: Charge = 0;
@@ -433,7 +441,9 @@ export class CircuitResolver {
         }
         hasInput = true;
         inputSum += inputCharge;
-        const relativeDirection = ((direction - orientation + 4) & 3) as Direction;
+        const relativeDirection = orientedDirection(
+          ((direction - orientation + 4) & 3) as Direction, Direction.Up, mirrored,
+        );
         if (relativeDirection === Direction.Left) {
           leftInput = inputCharge;
         } else if (relativeDirection === Direction.Right) {
@@ -491,8 +501,8 @@ export class CircuitResolver {
           outputCharge = world.lookupLutAtIndex(index, leftInput, rearInput);
           break;
         case TileKind.Rom: {
-          const leftInputSide = ((orientation + Direction.Left) & 3) as Direction;
-          const rearInputSide = ((orientation + Direction.Down) & 3) as Direction;
+          const leftInputSide = orientedDirection(Direction.Left, orientation, mirrored);
+          const rearInputSide = orientedDirection(Direction.Down, orientation, mirrored);
           const cursorDeltaX = chargeFromSum(
             -directionX(leftInputSide) * leftInput -
               directionX(rearInputSide) * rearInput,
@@ -510,7 +520,7 @@ export class CircuitResolver {
       this.driveOutputs(
         runtime,
         index,
-        orientedSides(definition.circuitOutputPorts, orientation),
+        orientedSides(definition.circuitOutputPorts, orientation, mirrored),
         outputCharge,
       );
     }
@@ -687,6 +697,7 @@ export class CircuitResolver {
       (definition.circuitPorts &
         ~(definition.circuitInputPorts | definition.circuitOutputPorts)) as WeldSide,
       orientation,
+      world.mirroredAtIndex(index),
     );
     return (sharedPorts & (1 << direction)) !== 0;
   }
@@ -759,7 +770,9 @@ function isVirtualPort(world: World, index: number, side: Direction): boolean {
     return false;
   }
   const definition = TILE_DEFINITIONS[world.kindAtIndex(index)];
-  const ports = orientedSides(definition.circuitPorts, world.orientationAtIndex(index));
+  const ports = orientedSides(
+    definition.circuitPorts, world.orientationAtIndex(index), world.mirroredAtIndex(index),
+  );
   return (ports & (1 << side)) !== 0;
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ASSEMBLER_PATTERNS, ASSEMBLER_RECIPES } from "../src/simulation/assembler";
+import { AssemblerResolver } from "../src/simulation/assembler-resolver";
 import { deserializeBoard, serializeBoard } from "../src/simulation/board-export";
 import {
   MAX_ASSEMBLER_OUTPUTS,
@@ -14,6 +14,7 @@ import {
   TileKind,
 } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
+import { WeldedBodyIndex } from "../src/simulation/welded-body-index";
 
 /** Glass welded left of iron: the "Sensor pair" recipe input in its unrotated form. */
 function placeSensorPairInput(world: World, x: number, y: number): void {
@@ -30,42 +31,6 @@ function pendingKinds(world: World, x: number, y: number): TileKind[] {
   return state.pending.map((output) => output.kind);
 }
 
-describe("assembler recipes", () => {
-  it("precomputes distinct rotations of every recipe with rotated outputs", () => {
-    for (const recipe of ASSEMBLER_RECIPES) {
-      const patterns = ASSEMBLER_PATTERNS.filter((pattern) => pattern.recipe === recipe);
-      expect(patterns.length).toBeGreaterThan(0);
-      expect(patterns.length).toBeLessThanOrEqual(4);
-      expect(patterns[0]?.rotation).toBe(0);
-      for (const pattern of patterns) {
-        expect(pattern.cells.length).toBe(patterns[0]?.cells.length);
-        expect(pattern.outputs.length).toBe(recipe.outputs.length);
-        expect(pattern.outputs.length).toBeLessThanOrEqual(MAX_ASSEMBLER_OUTPUTS);
-      }
-    }
-    const lodestone = ASSEMBLER_PATTERNS.filter((pattern) => pattern.recipe.name === "Lodestone");
-    expect(lodestone.map((pattern) => pattern.rotation)).toEqual([0, 1, 2, 3]);
-    expect(lodestone.map((pattern) => pattern.outputs[0]?.orientation)).toEqual([
-      Direction.Right,
-      Direction.Down,
-      Direction.Left,
-      Direction.Up,
-    ]);
-    const conduits = ASSEMBLER_PATTERNS.filter((pattern) => pattern.recipe.name === "Conduits");
-    expect(conduits.map((pattern) => pattern.rotation)).toEqual([0]);
-  });
-
-  it("rotates welds along with cells", () => {
-    const piston = ASSEMBLER_PATTERNS.filter((pattern) => pattern.recipe.name === "Piston");
-    expect(piston).toHaveLength(4);
-    const clockwise = piston[1];
-    expect(clockwise?.cells).toEqual([
-      { dx: 0, dy: 0, kind: TileKind.Stone, orientation: Direction.Up, rightWeld: true, downWeld: false },
-      { dx: 1, dy: 0, kind: TileKind.Iron, orientation: Direction.Up, rightWeld: false, downWeld: false },
-    ]);
-    expect(clockwise?.outputs).toEqual([{ kind: TileKind.Piston, orientation: Direction.Right }]);
-  });
-});
 
 describe("assemblers", () => {
   it("consumes a matching body ahead, then emits outputs one per tick behind it", () => {
@@ -113,17 +78,21 @@ describe("assemblers", () => {
     expect(world.chargeAt(2, 2)).toBe(1);
   });
 
-  it.each([Direction.Up, Direction.Right, Direction.Down, Direction.Left])(
-    "isolates the production output from the disable input at orientation %s",
-    (orientation) => {
+  it.each(
+    [Direction.Up, Direction.Right, Direction.Down, Direction.Left].flatMap((orientation) =>
+      [false, true].map((mirrored) => ({ orientation, mirrored })),
+    ),
+  )(
+    "isolates production from disable at orientation $orientation, mirrored $mirrored",
+    ({ orientation, mirrored }) => {
       const world = new World(7, 7);
-      const left = ((orientation + Direction.Left) & 3) as Direction;
-      const right = ((orientation + Direction.Right) & 3) as Direction;
+      const left = ((orientation + (mirrored ? Direction.Right : Direction.Left)) & 3) as Direction;
+      const right = ((orientation + (mirrored ? Direction.Left : Direction.Right)) & 3) as Direction;
       const lx = directionX(left);
       const ly = directionY(left);
       const bx = -directionX(orientation);
       const by = -directionY(orientation);
-      world.place(3, 3, TileKind.Assembler, orientation);
+      world.place(3, 3, TileKind.Assembler, orientation, mirrored);
       world.place(3 + lx, 3 + ly, TileKind.Conduit);
       world.place(3 - lx, 3 - ly, TileKind.Conduit);
       world.place(3 + 2 * lx, 3 + 2 * ly, TileKind.Platform);
@@ -162,6 +131,21 @@ describe("assemblers", () => {
     },
   );
 
+  it("joins only the reflected disable side to a powered shared network", () => {
+    const world = new World(6, 3);
+    world.place(3, 1, TileKind.Assembler, Direction.Up, true);
+    world.place(4, 1, TileKind.FixedCharge);
+    world.place(5, 1, TileKind.Platform);
+    world.place(2, 1, TileKind.Conduit);
+    world.setWeld(2, 1, 3, 1, true);
+    world.setWeld(3, 1, 4, 1, true);
+    world.setWeld(4, 1, 5, 1, true);
+    new Simulation(world).step();
+    expect(world.chargeAtPort(3, 1, Direction.Right)).toBe(1);
+    expect(world.chargeAtPort(3, 1, Direction.Left)).toBe(0);
+    expect(world.chargeAt(2, 1)).toBe(0);
+  });
+
   it("does not pulse when a duplicator wins the output cell", () => {
     const world = new World(5, 5);
     world.place(2, 1, TileKind.Assembler, Direction.Up);
@@ -183,28 +167,32 @@ describe("assemblers", () => {
     expect(world.chargeAtPort(2, 1, Direction.Right)).toBe(0);
   });
 
-  it.each([false, true])(
-    "exports a nested production pulse unless delivery consumes the assembler (delivery: %s)",
-    (delivered) => {
+  it.each(
+    [false, true].flatMap((delivered) =>
+      [false, true].map((mirrored) => ({ delivered, mirrored })),
+    ),
+  )(
+    "exports nested pulse with delivery $delivered and mirroring $mirrored",
+    ({ delivered, mirrored }) => {
       const world = new World(4, 1);
       world.place(1, 0, TileKind.RuneArray);
       world.place(2, 0, TileKind.Monitor);
       world.setWeld(1, 0, 2, 0, true);
       const inner = world.runeArrayWorldAt(1, 0);
-      inner.place(4, 2, TileKind.Assembler, Direction.Up);
+      inner.place(4, 2, TileKind.Assembler, mirrored ? Direction.Down : Direction.Up, mirrored);
       inner.restoreComponentState(4, 2, {
         type: "assembler",
         pending: [{ kind: TileKind.Floatstone, orientation: Direction.Up }],
       });
       if (delivered) {
         inner.place(3, 2, TileKind.Delivery, Direction.Right);
-        inner.place(2, 2, TileKind.Assembler, Direction.Up);
+        inner.place(2, 2, TileKind.Assembler, mirrored ? Direction.Down : Direction.Up, mirrored);
       }
       new Simulation(world).step();
       expect(world.chargeAt(2, 0)).toBe(delivered ? 0 : 1);
       if (delivered) {
         expect(inner.kindAt(4, 2)).toBe(TileKind.Empty);
-        expect(inner.kindAt(4, 3)).toBe(TileKind.Empty);
+        expect(inner.kindAt(4, mirrored ? 1 : 3)).toBe(TileKind.Empty);
       }
     },
   );
@@ -271,6 +259,56 @@ describe("assemblers", () => {
       expect(world.orientationAt(output[0] ?? 0, output[1] ?? 0)).toBe(magnet);
     },
   );
+
+  it.each([
+    { turns: 0, normal: Direction.Right, reflected: Direction.Left, x: 2, y: 4 },
+    { turns: 1, normal: Direction.Down, reflected: Direction.Up, x: 0, y: 2 },
+    { turns: 2, normal: Direction.Left, reflected: Direction.Right, x: 2, y: 0 },
+    { turns: 3, normal: Direction.Up, reflected: Direction.Down, x: 4, y: 2 },
+  ])("reflects recipe geometry and products before rotation $turns", ({ turns, normal, reflected, x, y }) => {
+    const original = new World(5, 5);
+    original.place(2, 1, TileKind.Iron);
+    original.place(2, 2, TileKind.Iron);
+    original.place(3, 2, TileKind.Iron);
+    original.setWeld(2, 1, 2, 2, true);
+    original.setWeld(2, 2, 3, 2, true);
+    original.place(2, 3, TileKind.Assembler);
+    for (const mirrored of [false, true]) {
+      const world = original.transformed(turns, mirrored, false);
+      const bodies = new WeldedBodyIndex(world);
+      const resolver = new AssemblerResolver(world, bodies);
+      bodies.collect();
+      resolver.collect(null, null);
+      resolver.commit();
+      expect(world.kindAt(x, y)).toBe(TileKind.Empty);
+      bodies.collect();
+      resolver.collect(null, null);
+      resolver.commit();
+      expect(world.kindAt(x, y)).toBe(TileKind.Magnet);
+      expect(world.orientationAt(x, y)).toBe(mirrored ? reflected : normal);
+    }
+  });
+
+  it("emits queued chiral outputs with their handedness into both world snapshots", () => {
+    const world = new World(3, 3);
+    world.place(1, 1, TileKind.Assembler, Direction.Up, true);
+    world.restoreComponentState(1, 1, {
+      type: "assembler",
+      pending: [{ kind: TileKind.Selector, orientation: Direction.Right, mirrored: true }],
+    });
+    const previous = world.clone();
+    const bodies = new WeldedBodyIndex(world);
+    bodies.collect();
+    const resolver = new AssemblerResolver(world, bodies);
+    resolver.collect(null, null);
+    resolver.commit(previous);
+    for (const snapshot of [world, previous]) {
+      expect(snapshot.kindAt(1, 2)).toBe(TileKind.Selector);
+      expect(snapshot.orientationAt(1, 2)).toBe(Direction.Right);
+      expect(snapshot.mirroredAt(1, 2)).toBe(true);
+      expect(pendingKinds(snapshot, 1, 1)).toEqual([]);
+    }
+  });
 
   it("rejects bodies with a different weld topology, extra cells, or the wrong kind", () => {
     const world = new World(4, 4);

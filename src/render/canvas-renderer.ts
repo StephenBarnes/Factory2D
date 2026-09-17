@@ -1,12 +1,14 @@
 import type { GridRectangle, GridRegion } from "../game/grid-region";
 import type { TileSelectionOverlay } from "../game/tile-selection";
-import type { Charge } from "../simulation/circuit";
+import { CIRCUIT_CHARGE_COLORS, type Charge } from "../simulation/circuit";
 import { runeArrayPortCellIndex } from "../simulation/rune-array";
 import {
   Direction,
   directionX,
   directionY,
   oppositeDirection,
+  mirroringForKind,
+  orientedDirection,
   TILE_DEFINITIONS,
   TILE_KINDS,
   TileKind,
@@ -156,6 +158,7 @@ export class CanvasRenderer {
   private hoverEdge: GridEdge | null = null;
   private hoverKind = TileKind.Empty;
   private hoverOrientation = Direction.Up;
+  private hoverMirrored = false;
   private highlightedTileId: number | null = null;
   private highlightedTileIndex = -1;
   private highlightedGeometryRevision = -1;
@@ -625,14 +628,17 @@ export class CanvasRenderer {
     cell: GridCell | null,
     kind: TileKind = TileKind.Empty,
     orientation: Direction = Direction.Up,
+    mirrored = false,
   ): void {
     const x = cell?.x ?? -1;
     const y = cell?.y ?? -1;
+    mirrored = mirroringForKind(kind, mirrored);
     if (
       this.hoverX !== x ||
       this.hoverY !== y ||
       this.hoverKind !== kind ||
       this.hoverOrientation !== orientation ||
+      this.hoverMirrored !== mirrored ||
       this.hoverEdge !== null
     ) {
       this.renderInvalidated = true;
@@ -640,6 +646,7 @@ export class CanvasRenderer {
       this.hoverY = y;
       this.hoverKind = kind;
       this.hoverOrientation = orientation;
+      this.hoverMirrored = mirrored;
       this.hoverEdge = null;
     }
   }
@@ -1093,19 +1100,7 @@ export class CanvasRenderer {
       }
       let cell = this.selectionBodyCells[count];
       if (cell === undefined) {
-        cell = {
-          x: 0,
-          y: 0,
-          kind: TileKind.Empty,
-          orientation: Direction.Up,
-          outputCharge: 0,
-          circuitConnections: WeldSide.None,
-          circuitPortCharges: 0,
-          componentState: null,
-          nestedWorld: null,
-          seamRight: false,
-          seamDown: false,
-        };
+        cell = createBodyCell();
         this.selectionBodyCells.push(cell);
       }
       count += 1;
@@ -1113,6 +1108,7 @@ export class CanvasRenderer {
       cell.y = preview.y;
       cell.kind = preview.kind;
       cell.orientation = preview.orientation;
+      cell.mirrored = mirroringForKind(preview.kind, preview.mirrored ?? false);
       cell.outputCharge = 0;
       cell.circuitConnections = WeldSide.None;
       cell.circuitPortCharges = 0;
@@ -1737,12 +1733,12 @@ export class CanvasRenderer {
   }
 
 
-  private drawComponentOverlay(kind: TileKind, orientation: Direction): void {
+  private drawComponentOverlay(kind: TileKind, orientation: Direction, mirrored = false): void {
     switch (kind) {
       case TileKind.Welder:
       case TileKind.Splitter:
       case TileKind.LaserSplitter:
-        this.drawWeldOperationPreview(kind, orientation);
+        this.drawWeldOperationPreview(kind, orientation, mirrored);
         break;
       case TileKind.Sensor:
       case TileKind.Magnet:
@@ -1763,7 +1759,7 @@ export class CanvasRenderer {
         this.drawLevitationBeam(orientation);
         break;
       case TileKind.Rotator:
-        this.drawRotatorReach(orientation);
+        this.drawRotatorReach(orientation, mirrored);
         break;
     }
   }
@@ -1805,7 +1801,7 @@ export class CanvasRenderer {
     context.restore();
   }
 
-  private drawWeldOperationPreview(kind: TileKind, orientation: Direction): void {
+  private drawWeldOperationPreview(kind: TileKind, orientation: Direction, mirrored: boolean): void {
     const forwardX = directionX(orientation);
     const forwardY = directionY(orientation);
     const targetX = this.hoverX + forwardX;
@@ -1825,10 +1821,10 @@ export class CanvasRenderer {
     context.globalAlpha = 0.8;
     context.beginPath();
     if (kind === TileKind.LaserSplitter) {
-      // Local left edge, from the front neighbor through the board boundary.
-      const leftSide = ((orientation + Direction.Left) & 3) as Direction;
-      const sideX = directionX(leftSide);
-      const sideY = directionY(leftSide);
+      // The cutting edge follows local handedness, from the front neighbor to the boundary.
+      const cuttingSide = orientedDirection(Direction.Left, orientation, mirrored);
+      const sideX = directionX(cuttingSide);
+      const sideY = directionY(cuttingSide);
       if (
         targetX + sideX >= 0 && targetX + sideX < this.world.width &&
         targetY + sideY >= 0 && targetY + sideY < this.world.height
@@ -1924,7 +1920,7 @@ export class CanvasRenderer {
     context.restore();
   }
 
-  private drawRotatorReach(orientation: Direction): void {
+  private drawRotatorReach(orientation: Direction, mirrored: boolean): void {
     const { context, cellSize } = this;
     context.save();
     // Clip both cells and arrows to the board when the pivot is near a wall.
@@ -1946,18 +1942,20 @@ export class CanvasRenderer {
       context.fillRect(x - 0.44, y - 0.44, 0.88, 0.88);
       context.strokeRect(x - 0.44, y - 0.44, 0.88, 0.88);
     }
-    // Both turn directions are possible, but the grip never enters the rear.
+    // Signed arcs show both commands; reflection swaps their physical turn directions.
+    if (mirrored) context.scale(-1, 1);
     context.lineWidth = 0.045;
     context.lineCap = "round";
     context.lineJoin = "round";
-    context.beginPath();
-    context.arc(0, 0, 0.8, Math.PI, Math.PI * 2);
-    for (let side = -1; side <= 1; side += 2) {
-      context.moveTo(side * 0.65, -0.15);
-      context.lineTo(side * 0.8, 0);
-      context.lineTo(side * 0.95, -0.15);
+    for (let sign = -1; sign <= 1; sign += 2) {
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[sign as Charge];
+      context.beginPath();
+      context.arc(0, 0, 0.8, -Math.PI / 2, sign === 1 ? 0 : -Math.PI, sign === -1);
+      context.moveTo(sign * 0.65, -0.15);
+      context.lineTo(sign * 0.8, 0);
+      context.lineTo(sign * 0.95, -0.15);
+      context.stroke();
     }
-    context.stroke();
     context.restore();
   }
 
@@ -2050,7 +2048,8 @@ export class CanvasRenderer {
     const editable = this.editableRegion === null ||
       this.editableRegion.contains(this.hoverX, this.hoverY);
     const placedKind = this.world.kindAt(this.hoverX, this.hoverY);
-    this.drawComponentOverlay(placedKind, this.world.orientationAt(this.hoverX, this.hoverY));
+    this.drawComponentOverlay(placedKind, this.world.orientationAt(this.hoverX, this.hoverY),
+      this.world.mirroredAt(this.hoverX, this.hoverY));
 
     if (
       editable &&
@@ -2067,9 +2066,13 @@ export class CanvasRenderer {
         this.hoverKind,
         this.hoverOrientation,
         animationTime,
+        0,
+        WeldSide.None,
+        0,
+        this.hoverMirrored,
       );
       this.context.restore();
-      this.drawComponentOverlay(this.hoverKind, this.hoverOrientation);
+      this.drawComponentOverlay(this.hoverKind, this.hoverOrientation, this.hoverMirrored);
     }
 
     this.context.strokeStyle = editable ? "#78dcca" : "#e15a4f";

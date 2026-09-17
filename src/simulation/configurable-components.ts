@@ -10,6 +10,7 @@ import {
   flipDirectionHorizontally,
   flipDirectionVertically,
   isTileKind,
+  mirroringForKind,
   orientationForKind,
   TILE_DEFINITIONS,
   TileKind,
@@ -220,17 +221,19 @@ export interface RuneArrayComponentState {
 export interface AssemblerOutput {
   readonly kind: TileKind;
   readonly orientation: Direction;
+  readonly mirrored?: boolean;
 }
 
 /**
- * Assembler output queue. `pendingKinds` and `pendingOrientations` hold every output of
- * the consumed recipe; `cursor` counts the outputs already emitted, so the queue is empty
- * once `cursor` reaches the length.
+ * Assembler output queue. `pendingKinds`, `pendingOrientations`, and `pendingMirrored`
+ * hold every output of the consumed recipe; `cursor` counts outputs already emitted,
+ * so the queue is empty once `cursor` reaches the length.
  */
 export interface AssemblerComponentState {
   readonly type: "assembler";
   pendingKinds: Uint8Array;
   pendingOrientations: Uint8Array;
+  pendingMirrored: Uint8Array;
   cursor: number;
 }
 
@@ -389,6 +392,7 @@ export function createDefaultComponentState(
         type: "assembler",
         pendingKinds: new Uint8Array(0),
         pendingOrientations: new Uint8Array(0),
+        pendingMirrored: new Uint8Array(0),
         cursor: 0,
       };
     case TileKind.Rotator:
@@ -468,6 +472,7 @@ export function cloneComponentState(
         type: "assembler",
         pendingKinds: state.pendingKinds.slice(),
         pendingOrientations: state.pendingOrientations.slice(),
+        pendingMirrored: state.pendingMirrored.slice(),
         cursor: state.cursor,
       };
     case "rotator":
@@ -541,6 +546,7 @@ export function snapshotComponentState(
         pending.push({
           kind: state.pendingKinds[index] as TileKind,
           orientation: state.pendingOrientations[index] as Direction,
+          ...(state.pendingMirrored[index] === 1 ? { mirrored: true } : {}),
         });
       }
       return { type: "assembler", pending };
@@ -621,6 +627,9 @@ export function validateComponentSnapshot(
           throw new RangeError("Assembler queue contains an invalid tile kind");
         }
         requireInteger(output.orientation, "Assembler output orientation", Direction.Up, Direction.Left);
+        if (output.mirrored !== undefined && typeof output.mirrored !== "boolean") {
+          throw new RangeError("Assembler output mirroring must be a boolean");
+        }
       }
       break;
     case "rotator":
@@ -731,6 +740,10 @@ export function stateFromSnapshot(
         pendingOrientations: Uint8Array.from(
           snapshot.pending,
           (output) => orientationForKind(output.kind, output.orientation),
+        ),
+        pendingMirrored: Uint8Array.from(
+          snapshot.pending,
+          (output) => Number(mirroringForKind(output.kind, output.mirrored ?? false)),
         ),
         cursor: 0,
       };
@@ -898,7 +911,7 @@ export function transformComponentSnapshot(
   };
 }
 
-/** Flips, then rotates clockwise, the orientation of one queued assembler output. */
+/** Flips, then rotates clockwise, the orientation and handedness of a queued output. */
 export function transformAssemblerOutput(
   output: AssemblerOutput,
   quarterTurns: number,
@@ -913,7 +926,15 @@ export function transformAssemblerOutput(
     orientation = flipDirectionVertically(orientation);
   }
   orientation = ((orientation + quarterTurns) & 3) as Direction;
-  return { kind: output.kind, orientation: orientationForKind(output.kind, orientation) };
+  const mirrored = mirroringForKind(
+    output.kind,
+    (output.mirrored ?? false) !== (flippedHorizontally !== flippedVertically),
+  );
+  return {
+    kind: output.kind,
+    orientation: orientationForKind(output.kind, orientation),
+    ...(mirrored ? { mirrored: true } : {}),
+  };
 }
 
 export function componentStateMatchesKind(

@@ -2,6 +2,8 @@ import { expectDefined } from "../util/assert";
 import { MAX_ASSEMBLER_OUTPUTS, type AssemblerOutput } from "./configurable-components";
 import {
   Direction,
+  mirroringForKind,
+  orientedDirection,
   orientationForKind,
   TILE_DEFINITIONS,
   tileKindForBoardCode,
@@ -14,8 +16,8 @@ export type { AssemblerOutput };
  * One assembler recipe. `input` rows use compact board codes (`.` for empty) and `welds`
  * rows use board weld codes (`.`, `-`, `|`, `+`) for each cell's right and down welds.
  * Every input cell faces up and all input cells must form one welded body. Output
- * orientations are relative to this unrotated input; a rotated input body produces
- * outputs rotated the same way.
+ * orientations and handedness are relative to this untransformed input; a rotated or
+ * reflected input produces outputs transformed the same way.
  */
 export interface AssemblerRecipe {
   readonly name: string;
@@ -65,6 +67,7 @@ export interface AssemblerPatternCell {
   readonly dy: number;
   readonly kind: TileKind;
   readonly orientation: Direction;
+  readonly mirrored: boolean;
   readonly rightWeld: boolean;
   readonly downWeld: boolean;
 }
@@ -83,6 +86,7 @@ interface MutablePatternCell {
   y: number;
   kind: TileKind;
   orientation: Direction;
+  mirrored: boolean;
   rightWeld: boolean;
   downWeld: boolean;
 }
@@ -108,7 +112,9 @@ function parseRecipeCells(recipe: AssemblerRecipe): MutablePatternCell[] {
         throw new Error(`Assembler recipe "${recipe.name}" uses unknown tile code "${code}"`);
       }
       if (kind !== TileKind.Empty) {
-        cells.push({ x, y, kind, orientation: Direction.Up, rightWeld: false, downWeld: false });
+        cells.push({
+          x, y, kind, orientation: Direction.Up, mirrored: false, rightWeld: false, downWeld: false,
+        });
       }
     }
   }
@@ -178,6 +184,7 @@ function rotateCellsClockwise(
     y: cell.x,
     kind: cell.kind,
     orientation: orientationForKind(cell.kind, ((cell.orientation + 1) & 3) as Direction),
+    mirrored: cell.mirrored,
     rightWeld: false,
     downWeld: false,
   }));
@@ -197,6 +204,30 @@ function rotateCellsClockwise(
   return rotated;
 }
 
+/** Reflect the recipe across its vertical axis, including edge ownership and chirality. */
+function reflectCells(cells: readonly MutablePatternCell[], width: number): MutablePatternCell[] {
+  const reflected = cells.map((cell) => ({
+    x: width - 1 - cell.x,
+    y: cell.y,
+    kind: cell.kind,
+    orientation: orientationForKind(
+      cell.kind, orientedDirection(cell.orientation, Direction.Up, true),
+    ),
+    mirrored: mirroringForKind(cell.kind, !cell.mirrored),
+    rightWeld: false,
+    downWeld: cell.downWeld,
+  }));
+  for (let index = 0; index < cells.length; index += 1) {
+    const source = expectDefined(cells[index], "reflected source cell");
+    if (source.rightWeld) {
+      const target = expectDefined(reflected[index], "reflected target cell");
+      const left = reflected.find((cell) => cell.x === target.x - 1 && cell.y === target.y);
+      expectDefined(left, "reflected left weld neighbor").rightWeld = true;
+    }
+  }
+  return reflected;
+}
+
 function normalizedCells(cells: readonly MutablePatternCell[]): AssemblerPatternCell[] {
   let minX = Number.POSITIVE_INFINITY;
   let minY = Number.POSITIVE_INFINITY;
@@ -210,6 +241,7 @@ function normalizedCells(cells: readonly MutablePatternCell[]): AssemblerPattern
       dy: cell.y - minY,
       kind: cell.kind,
       orientation: cell.orientation,
+      mirrored: cell.mirrored,
       rightWeld: cell.rightWeld,
       downWeld: cell.downWeld,
     }))
@@ -219,12 +251,12 @@ function normalizedCells(cells: readonly MutablePatternCell[]): AssemblerPattern
 function patternKey(cells: readonly AssemblerPatternCell[]): string {
   return cells
     .map((cell) =>
-      `${cell.dx},${cell.dy},${cell.kind},${cell.orientation},` +
+      `${cell.dx},${cell.dy},${cell.kind},${cell.orientation},${cell.mirrored ? 1 : 0},` +
       `${cell.rightWeld ? 1 : 0}${cell.downWeld ? 1 : 0}`)
     .join(";");
 }
 
-function buildPatterns(recipes: readonly AssemblerRecipe[]): AssemblerPattern[] {
+function buildPatterns(recipes: readonly AssemblerRecipe[], mirrored: boolean): AssemblerPattern[] {
   const patterns: AssemblerPattern[] = [];
   const recipeByKey = new Map<string, AssemblerRecipe>();
   for (const recipe of recipes) {
@@ -242,6 +274,9 @@ function buildPatterns(recipes: readonly AssemblerRecipe[]): AssemblerPattern[] 
     requireSingleWeldedBody(cells, recipe);
     let height = recipe.input.length;
     let width = expectDefined(recipe.input[0], `${recipe.name} input row`).length;
+    if (mirrored) {
+      cells = reflectCells(cells, width);
+    }
     for (let rotation = 0; rotation < 4; rotation += 1) {
       if (rotation > 0) {
         cells = rotateCellsClockwise(cells, height);
@@ -269,8 +304,11 @@ function buildPatterns(recipes: readonly AssemblerRecipe[]): AssemblerPattern[] 
           kind: output.kind,
           orientation: orientationForKind(
             output.kind,
-            ((output.orientation + rotation) & 3) as Direction,
+            orientedDirection(output.orientation, rotation as Direction, mirrored),
           ),
+          ...(mirroringForKind(output.kind, (output.mirrored ?? false) !== mirrored)
+            ? { mirrored: true }
+            : {}),
         }))),
       }));
     }
@@ -284,5 +322,10 @@ function buildPatterns(recipes: readonly AssemblerRecipe[]): AssemblerPattern[] 
  * rotation and the output orientation is deterministic.
  */
 export const ASSEMBLER_PATTERNS: readonly AssemblerPattern[] = Object.freeze(
-  buildPatterns(ASSEMBLER_RECIPES),
+  buildPatterns(ASSEMBLER_RECIPES, false),
+);
+
+/** Reflected recipe inputs and products, in the same deterministic rotation order. */
+export const MIRRORED_ASSEMBLER_PATTERNS: readonly AssemblerPattern[] = Object.freeze(
+  buildPatterns(ASSEMBLER_RECIPES, true),
 );

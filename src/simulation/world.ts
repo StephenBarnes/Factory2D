@@ -35,6 +35,7 @@ import {
   directionY,
   flipDirectionHorizontally,
   flipDirectionVertically,
+  mirroringForKind,
   oppositeDirection,
   orientationForKind,
   orientedSides,
@@ -163,6 +164,10 @@ export class World {
   }
   orientationAt(x: number, y: number): Direction {
     return this.cells.orientations[this.indexOf(x, y)] as Direction;
+  }
+
+  mirroredAt(x: number, y: number): boolean {
+    return this.cells.mirrored[this.indexOf(x, y)] === 1;
   }
 
   chargeAt(x: number, y: number): Charge {
@@ -911,6 +916,7 @@ export class World {
       }
       this.replaceKindAtIndex(targetIndex, outputKind);
       this.cells.orientations[targetIndex] = Direction.Up;
+      this.cells.mirrored[targetIndex] = 0;
       this.cells.resetTransientState(targetIndex);
       const state = createDefaultComponentState(
         outputKind,
@@ -953,6 +959,7 @@ export class World {
     queuedCounts: Uint8Array,
     queuedKinds: Uint8Array,
     queuedOrientations: Uint8Array,
+    queuedMirrored: Uint8Array,
     emitTargetIndices: Int32Array,
   ): void {
     if (
@@ -961,6 +968,7 @@ export class World {
       queuedCounts.length !== this.cellCount ||
       queuedKinds.length !== this.cellCount * MAX_ASSEMBLER_OUTPUTS ||
       queuedOrientations.length !== this.cellCount * MAX_ASSEMBLER_OUTPUTS ||
+      queuedMirrored.length !== this.cellCount * MAX_ASSEMBLER_OUTPUTS ||
       emitTargetIndices.length !== this.cellCount
     ) {
       throw new RangeError("Assembler buffers must match the world cell count");
@@ -1008,6 +1016,7 @@ export class World {
       const base = assembler * MAX_ASSEMBLER_OUTPUTS;
       state.pendingKinds = queuedKinds.slice(base, base + outputCount);
       state.pendingOrientations = queuedOrientations.slice(base, base + outputCount);
+      state.pendingMirrored = queuedMirrored.slice(base, base + outputCount);
       state.cursor = 0;
       for (let slot = 0; slot < outputCount; slot += 1) {
         const kind = state.pendingKinds[slot] as TileKind;
@@ -1018,6 +1027,7 @@ export class World {
           kind,
           state.pendingOrientations[slot] as Direction,
         );
+        state.pendingMirrored[slot] = Number(mirroringForKind(kind, state.pendingMirrored[slot] === 1));
       }
       changed = true;
     }
@@ -1044,10 +1054,11 @@ export class World {
       }
       const kind = state.pendingKinds[state.cursor] as TileKind;
       const orientation = state.pendingOrientations[state.cursor] as Direction;
+      const mirrored = state.pendingMirrored[state.cursor] === 1;
       state.cursor += 1;
       const targetX = target % this.width;
       const targetY = (target - targetX) / this.width;
-      this.place(targetX, targetY, kind, orientation);
+      this.place(targetX, targetY, kind, orientation, mirrored);
       changed = true;
     }
 
@@ -1203,6 +1214,9 @@ export class World {
           ? flipDirectionVertically(sourceOrientation)
           : flipDirectionHorizontally(sourceOrientation),
       );
+      this.cells.mirrored[destination] = Number(mirroringForKind(
+        kind, this.cells.mirrored[source] !== 1,
+      ));
       this.cells.charges[destination] = expectDefined(
         this.cells.charges[source],
         "duplicated tile charge",
@@ -1443,10 +1457,14 @@ export class World {
 
     const ownDefinition = TILE_DEFINITIONS[this.cells.kinds[index] as TileKind];
     const neighborDefinition = TILE_DEFINITIONS[this.cells.kinds[neighbor] as TileKind];
-    const ownPorts = orientedSides(ownDefinition.circuitPorts, this.cells.orientations[index] as Direction);
+    const ownPorts = orientedSides(
+      ownDefinition.circuitPorts, this.cells.orientations[index] as Direction,
+      this.cells.mirrored[index] === 1,
+    );
     const neighborPorts = orientedSides(
       neighborDefinition.circuitPorts,
       this.cells.orientations[neighbor] as Direction,
+      this.cells.mirrored[neighbor] === 1,
     );
     return (
       (ownPorts & (1 << direction)) !== 0 &&
@@ -1460,6 +1478,7 @@ export class World {
     y: number,
     kind: TileKind,
     orientation: Direction = Direction.Up,
+    mirrored = false,
   ): number {
     const index = this.indexOf(x, y);
     if (!Number.isInteger(orientation) || orientation < Direction.Up || orientation > Direction.Left) {
@@ -1473,18 +1492,23 @@ export class World {
       this.touchGeometryRevision();
       return 0;
     }
+    mirrored = mirroringForKind(kind, mirrored);
 
     if (this.cells.kinds[index] === kind) {
-      if (this.cells.orientations[index] !== orientation) {
+      if (this.cells.orientations[index] !== orientation || (this.cells.mirrored[index] === 1) !== mirrored) {
         if (this.cells.kinds[index] === TileKind.Rotator) {
           const state = this.requireComponentStateAtIndex(index);
           if (state.type !== "rotator") {
             throw new Error(`Rotator at index ${index} has invalid component state`);
           }
-          const turns = (orientation - (this.cells.orientations[index] as Direction) + 4) & 3;
-          state.direction = ((state.direction + turns) & 3) as Direction;
+          let localDirection = ((state.direction - (this.cells.orientations[index] as Direction) + 4) & 3) as Direction;
+          if ((this.cells.mirrored[index] === 1) !== mirrored) {
+            localDirection = flipDirectionHorizontally(localDirection);
+          }
+          state.direction = ((localDirection + orientation) & 3) as Direction;
         }
         this.cells.orientations[index] = orientation;
+        this.cells.mirrored[index] = Number(mirrored);
         this.cells.resetTransientState(index);
         this.clearDisallowedWeldsAtIndex(index);
         this.touchGeometryRevision();
@@ -1502,6 +1526,7 @@ export class World {
     this.replaceKindAtIndex(index, kind);
     this.cells.ids[index] = id;
     this.cells.orientations[index] = orientation;
+    this.cells.mirrored[index] = Number(mirrored);
     this.cells.resetTransientState(index);
     const componentState = createDefaultComponentState(
       kind,
@@ -1572,6 +1597,11 @@ export class World {
     return this.cells.orientations[index] as Direction;
   }
 
+  mirroredAtIndex(index: number): boolean {
+    this.assertIndex(index);
+    return this.cells.mirrored[index] === 1;
+  }
+
   chargeAtPort(x: number, y: number, direction: Direction): Charge {
     return this.chargeAtPortIndex(this.indexOf(x, y), direction);
   }
@@ -1597,6 +1627,7 @@ export class World {
     const inputSides = orientedSides(
       definition.circuitInputPorts,
       this.cells.orientations[index] as Direction,
+      this.cells.mirrored[index] === 1,
     );
     if ((inputSides & (1 << direction)) !== 0) {
       return 0;
@@ -1604,6 +1635,7 @@ export class World {
     const outputSides = orientedSides(
       definition.circuitOutputPorts,
       this.cells.orientations[index] as Direction,
+      this.cells.mirrored[index] === 1,
     );
     if (
       hasSeparateIsolatedOutput(kind) &&
@@ -2042,7 +2074,10 @@ export class World {
           kind,
           mapDirection(this.cells.orientations[index] as Direction),
         );
-        result.place(destination.x, destination.y, kind, orientation);
+        result.place(
+          destination.x, destination.y, kind, orientation,
+          (this.cells.mirrored[index] === 1) !== (flippedHorizontally !== flippedVertically),
+        );
         const snapshot = this.componentStateSnapshotAtIndex(index);
         if (snapshot !== null) {
           result.restoreComponentState(
@@ -2128,7 +2163,10 @@ export class World {
         if (kind === TileKind.Empty) {
           continue;
         }
-        this.place(targetX, targetY, kind, source.cells.orientations[index] as Direction);
+        this.place(
+          targetX, targetY, kind, source.cells.orientations[index] as Direction,
+          source.cells.mirrored[index] === 1,
+        );
         const snapshot = source.componentStateSnapshotAtIndex(index);
         if (snapshot !== null) {
           this.restoreComponentState(targetX, targetY, snapshot);
@@ -2288,10 +2326,12 @@ export class World {
     const firstWeldableSides = orientedSides(
       firstDefinition.weldableSides,
       this.cells.orientations[first] as Direction,
+      this.cells.mirrored[first] === 1,
     );
     const secondWeldableSides = orientedSides(
       secondDefinition.weldableSides,
       this.cells.orientations[second] as Direction,
+      this.cells.mirrored[second] === 1,
     );
     return (
       (firstWeldableSides & (1 << firstSide)) !== 0 &&
@@ -2399,6 +2439,7 @@ export class World {
     }
     this.featureIndex.replace(index, previousKind, kind);
     this.cells.kinds[index] = kind;
+    this.cells.mirrored[index] = 0;
   }
 }
 

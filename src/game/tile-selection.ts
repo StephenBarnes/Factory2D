@@ -8,6 +8,7 @@ import {
   flipDirectionHorizontally,
   flipDirectionVertically,
   orientationForKind,
+  mirroringForKind,
   TileKind,
 } from "../simulation/tile";
 import { World } from "../simulation/world";
@@ -17,6 +18,7 @@ export interface SelectionPreviewCell {
   readonly y: number;
   readonly kind: TileKind;
   readonly orientation: Direction;
+  readonly mirrored: boolean;
   readonly componentState: ConfigurableComponentSnapshot | null;
   readonly weldRight: boolean;
   readonly weldDown: boolean;
@@ -42,6 +44,7 @@ interface GridCell {
 interface OccupiedSelectionCell extends GridCell {
   readonly kind: TileKind;
   readonly orientation: Direction;
+  readonly mirrored: boolean;
   readonly componentState: ConfigurableComponentSnapshot | null;
 }
 
@@ -377,7 +380,7 @@ export class TileSelectionState {
     }
     const world = new World(right - left + 1, bottom - top + 1);
     for (const cell of mappedCells) {
-      world.place(cell.destinationX - left, cell.destinationY - top, cell.kind, cell.orientation);
+      world.place(cell.destinationX - left, cell.destinationY - top, cell.kind, cell.orientation, cell.mirrored);
       if (cell.componentState !== null) {
         world.restoreComponentState(
           cell.destinationX - left,
@@ -440,7 +443,7 @@ export class TileSelectionState {
       }
     }
     for (const cell of mappedCells) {
-      next.place(cell.destinationX, cell.destinationY, cell.kind, cell.orientation);
+      next.place(cell.destinationX, cell.destinationY, cell.kind, cell.orientation, cell.mirrored);
       if (cell.componentState !== null) {
         next.restoreComponentState(cell.destinationX, cell.destinationY, cell.componentState);
       }
@@ -534,6 +537,7 @@ function captureSelectionContent(world: World, region: GridRegion): SelectionCon
         y,
         kind,
         orientation: sourceWorld.orientationAt(x, y),
+        mirrored: sourceWorld.mirroredAt(x, y),
         componentState: sourceWorld.componentStateSnapshotAt(x, y),
       });
     }
@@ -562,6 +566,10 @@ function mapOccupiedCells(active: ActiveSelection): MappedSelectionCell[] {
       destinationX: destination.x,
       destinationY: destination.y,
       orientation,
+      mirrored: mirroringForKind(
+        cell.kind,
+        cell.mirrored !== (active.flippedHorizontally !== active.flippedVertically),
+      ),
       componentState: cell.componentState === null
         ? null
         : transformComponentSnapshot(
@@ -592,6 +600,7 @@ function createPreviewCells(
       y: cell.destinationY,
       kind: cell.kind,
       orientation: cell.orientation,
+      mirrored: cell.mirrored,
       componentState: cell.componentState,
       weldRight: false,
       weldDown: false,

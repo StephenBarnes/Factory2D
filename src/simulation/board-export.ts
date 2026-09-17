@@ -31,6 +31,7 @@ import {
   directionY,
   oppositeDirection,
   orientationForKind,
+  orientedDirection,
   TILE_DEFINITIONS,
   tileKindForBoardCode,
   TileKind,
@@ -75,6 +76,11 @@ interface ExportedOrientation {
   readonly x: number;
   readonly y: number;
   readonly direction: string;
+}
+
+interface ExportedMirrored {
+  readonly x: number;
+  readonly y: number;
 }
 
 interface ExportedCharge {
@@ -164,6 +170,7 @@ interface ExportedSignalLabel {
 interface ExportedAssemblerOutput {
   readonly code: string;
   readonly direction: string;
+  readonly mirrored?: boolean;
 }
 
 /** Assembler output queue: the outputs still to be emitted, in emission order. */
@@ -227,6 +234,7 @@ interface ExportedBoardContents {
   readonly height: number;
   readonly grid: readonly string[];
   readonly orientations?: readonly ExportedOrientation[];
+  readonly mirrored?: readonly ExportedMirrored[];
   readonly charges?: readonly ExportedCharge[];
   readonly crossingCharges?: readonly ExportedCrossingCharge[];
   readonly isolatedOutputCharges?: readonly ExportedCharge[];
@@ -241,6 +249,7 @@ const BOARD_CONTENTS_FIELDS = [
   "height",
   "grid",
   "orientations",
+  "mirrored",
   "charges",
   "crossingCharges",
   "isolatedOutputCharges",
@@ -280,6 +289,7 @@ export function serializeBoard(world: World, tick: number): string {
     result: PUZZLE_RESULT_NAMES[world.puzzleResult],
     grid: contents.grid,
     ...(contents.orientations === undefined ? {} : { orientations: contents.orientations }),
+    ...(contents.mirrored === undefined ? {} : { mirrored: contents.mirrored }),
     ...(contents.charges === undefined ? {} : { charges: contents.charges }),
     ...(contents.crossingCharges === undefined
       ? {}
@@ -296,6 +306,7 @@ export function serializeBoard(world: World, tick: number): string {
 function exportBoardContents(world: World): ExportedBoardContents {
   const grid: string[] = [];
   const orientations: ExportedOrientation[] = [];
+  const mirrored: ExportedMirrored[] = [];
   const charges: ExportedCharge[] = [];
   const crossingCharges: ExportedCrossingCharge[] = [];
   const isolatedOutputCharges: ExportedCharge[] = [];
@@ -320,6 +331,9 @@ function exportBoardContents(world: World): ExportedBoardContents {
       if (orientation !== Direction.Up) {
         orientations.push({ x, y, direction: DIRECTION_NAMES[orientation] });
       }
+      if (world.mirroredAt(x, y)) {
+        mirrored.push({ x, y });
+      }
 
       if (kind === TileKind.WireCrossing) {
         const horizontal = world.chargeAtPort(x, y, Direction.Left);
@@ -339,7 +353,7 @@ function exportBoardContents(world: World): ExportedBoardContents {
           x,
           y,
           kind === TileKind.Assembler
-            ? ((orientation + Direction.Right) & 3) as Direction
+            ? orientedDirection(Direction.Right, orientation, world.mirroredAt(x, y))
             : oppositeDirection(orientation),
         );
         if (outputCharge !== 0) {
@@ -389,6 +403,7 @@ function exportBoardContents(world: World): ExportedBoardContents {
             pending: componentState.pending.map((output) => ({
               code: TILE_DEFINITIONS[output.kind].boardCode,
               direction: DIRECTION_NAMES[output.orientation],
+              ...(output.mirrored === true ? { mirrored: true } : {}),
             })),
           });
         } else if (componentState.type === "monitor" || componentState.type === "grapher") {
@@ -423,6 +438,7 @@ function exportBoardContents(world: World): ExportedBoardContents {
     height: world.height,
     grid,
     ...(orientations.length === 0 ? {} : { orientations }),
+    ...(mirrored.length === 0 ? {} : { mirrored }),
     ...(charges.length === 0 ? {} : { charges }),
     ...(crossingCharges.length === 0 ? {} : { crossingCharges }),
     ...(isolatedOutputCharges.length === 0 ? {} : { isolatedOutputCharges }),
@@ -453,6 +469,7 @@ export function deserializeBoardValue(value: unknown): ImportedBoard {
     "height",
     "grid",
     "orientations",
+    "mirrored",
     "charges",
     "crossingCharges",
     "furnaces",
@@ -563,6 +580,26 @@ function importBoardContents(
     }
     orientationByCell[cellIndex] = direction;
     hasOrientation[cellIndex] = 1;
+  }
+
+  const mirrored = board.mirrored === undefined
+    ? []
+    : requireArray(board.mirrored, `${label} mirrored`);
+  const mirroredByCell = new Uint8Array(width * height);
+  for (let index = 0; index < mirrored.length; index += 1) {
+    const mirrorLabel = entryLabel(label, depth, "Mirrored", index);
+    const state = requireObject(mirrored[index], mirrorLabel, ["x", "y"]);
+    const x = requireInteger(state.x, `${mirrorLabel} x`, 0, width - 1);
+    const y = requireInteger(state.y, `${mirrorLabel} y`, 0, height - 1);
+    const cellIndex = y * width + x;
+    if (mirroredByCell[cellIndex] === 1) {
+      throw new Error(`${mirrorLabel} duplicates cell (${x}, ${y})`);
+    }
+    const kind = expectDefined(kinds[cellIndex], `tile kind at (${x}, ${y})`) as TileKind;
+    if (TILE_DEFINITIONS[kind].usesMirroring !== true) {
+      throw new Error(`${mirrorLabel} targets a symmetric tile`);
+    }
+    mirroredByCell[cellIndex] = 1;
   }
 
   const furnaces = board.furnaces === undefined
@@ -799,7 +836,7 @@ function importBoardContents(
         type: "assembler",
         pending: pending.map((value, outputIndex) => {
           const outputLabel = `${componentLabel} pending output ${outputIndex}`;
-          const output = requireObject(value, outputLabel, ["code", "direction"]);
+          const output = requireObject(value, outputLabel, ["code", "direction", "mirrored"]);
           const code = requireString(output.code, `${outputLabel} code`);
           const outputKind = tileKindForBoardCode(code);
           if (outputKind === undefined || outputKind === TileKind.Empty) {
@@ -810,7 +847,17 @@ function importBoardContents(
           if (direction === undefined) {
             throw new Error(`${outputLabel} has unknown direction "${directionName}"`);
           }
-          return { kind: outputKind, orientation: orientationForKind(outputKind, direction) };
+          if (output.mirrored !== undefined && typeof output.mirrored !== "boolean") {
+            throw new Error(`${outputLabel} mirrored must be a boolean`);
+          }
+          if (output.mirrored === true && TILE_DEFINITIONS[outputKind].usesMirroring !== true) {
+            throw new Error(`${outputLabel} cannot mirror a symmetric tile`);
+          }
+          return {
+            kind: outputKind,
+            orientation: orientationForKind(outputKind, direction),
+            ...(output.mirrored === true ? { mirrored: true } : {}),
+          };
         }),
       };
     } else if (type === "rotator") {
@@ -1056,7 +1103,7 @@ function importBoardContents(
         orientationByCell[cellIndex],
         `tile orientation at (${x}, ${y})`,
       ) as Direction;
-      world.place(x, y, kind, orientation);
+      world.place(x, y, kind, orientation, mirroredByCell[cellIndex] === 1);
       if (hasCharge[cellIndex] === 1) {
         const charge = expectDefined(
           chargeByCell[cellIndex],

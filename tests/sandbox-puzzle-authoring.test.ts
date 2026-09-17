@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { GridRegion } from "../src/game/grid-region";
+import { applyEditableSolution } from "../src/game/editable-solution";
+import { deserializeSnippetBoard, serializeSnippetWorld } from "../src/game/snippet-library";
 import { serializePuzzleTemplate } from "../src/game/puzzle-export";
 import { parsePuzzleFile } from "../src/game/puzzle-format";
 import {
   parseSandboxImport,
   resizeWorld,
 } from "../src/game/sandbox-puzzle-authoring";
-import { TILE_DEFINITIONS, TileKind } from "../src/simulation/tile";
+import { Direction, TILE_DEFINITIONS, TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
 
 function authoredPuzzleSource(): string {
@@ -46,6 +48,37 @@ function authoredPuzzleSource(): string {
 }
 
 describe("sandbox puzzle authoring", () => {
+  it("preserves mirrored designs across cropping, snippets, and editable case transfer", () => {
+    const world = new World(5, 4);
+    world.place(2, 2, TileKind.Selector, Direction.Left, true);
+    world.place(3, 2, TileKind.Rom, Direction.Up, true);
+    const cropped = resizeWorld(world, 2, 1, 2, 2);
+    const serialized = serializeSnippetWorld(cropped);
+    if (serialized === null) throw new Error("Expected mirrored snippet");
+    const snippet = deserializeSnippetBoard(serialized);
+    const target = new World(2, 1);
+    target.place(1, 0, TileKind.Rom);
+    applyEditableSolution(target, snippet, new GridRegion([{ x: 0, y: 0, width: 1, height: 1 }]));
+    expect(target.mirroredAt(0, 0)).toBe(true);
+    expect(target.orientationAt(0, 0)).toBe(Direction.Left);
+    expect(target.mirroredAt(1, 0)).toBe(false);
+    expect(snippet.mirroredAt(1, 0)).toBe(true);
+  });
+
+  it("round-trips test-case overrides that explicitly clear inherited mirroring", () => {
+    const imported = parseSandboxImport(authoredPuzzleSource(), "mirrored.json");
+    const standard = imported.authoring.selectTestCase("standard");
+    standard.place(0, 0, TileKind.Selector, Direction.Up, true);
+    imported.authoring.saveSelectedWorld(standard);
+    const alternate = imported.authoring.selectTestCase("alternate");
+    alternate.place(0, 0, TileKind.Selector);
+    imported.authoring.saveSelectedWorld(alternate);
+    const exported = imported.authoring.serialize(imported.editableRegion);
+    const restored = parseSandboxImport(exported, "mirrored.json");
+    expect(restored.authoring.selectTestCase("standard").mirroredAt(0, 0)).toBe(true);
+    expect(restored.authoring.selectTestCase("alternate").mirroredAt(0, 0)).toBe(false);
+  });
+
   it("imports puzzle metadata, editable regions, components, and test cases for re-export", () => {
     const imported = parseSandboxImport(authoredPuzzleSource(), "imported-puzzle.json");
 

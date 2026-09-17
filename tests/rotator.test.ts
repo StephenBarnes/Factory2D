@@ -5,6 +5,8 @@ import { RotatorResolver } from "../src/simulation/rotator-resolver";
 import { Simulation } from "../src/simulation/simulation";
 import {
   Direction,
+  directionX,
+  directionY,
   TILE_DEFINITIONS,
   TileDecorationStyle,
   TileKind,
@@ -92,6 +94,35 @@ describe("rotators", () => {
       direction: Direction.Right,
     });
   });
+
+  it.each([Direction.Up, Direction.Right, Direction.Down, Direction.Left])(
+    "reverses signed turns when mirrored at orientation %s without entering the rear",
+    (orientation) => {
+      for (const charge of [-1, 1] as const) {
+        const world = new World(7, 7);
+        world.place(3, 3, TileKind.Rotator, orientation, true);
+        const target = world.place(
+          3 + directionX(orientation), 3 + directionY(orientation),
+          TileKind.Selector, orientation, true,
+        );
+        chargeRotator(world, 3, 3, charge);
+        const resolver = new RotatorResolver(world);
+        const destination = ((orientation - charge + 4) & 3) as Direction;
+        const x = 3 + directionX(destination);
+        const y = 3 + directionY(destination);
+        expect(resolver.resolve()).toBe(1);
+        expect(world.idAt(x, y)).toBe(target);
+        expect(world.orientationAt(x, y)).toBe(destination);
+        expect(world.mirroredAt(x, y)).toBe(true);
+        expect(world.rotatorDirectionAtIndex(24)).toBe(destination);
+        expect(resolver.resolve()).toBe(0);
+        expect(world.idAt(x, y)).toBe(target);
+        chargeRotator(world, 3, 3, charge === 1 ? -1 : 1);
+        expect(resolver.resolve()).toBe(1);
+        expect(world.idAt(3 + directionX(orientation), 3 + directionY(orientation))).toBe(target);
+      }
+    },
+  );
 
   it("rotates a complete welded body, its orientations, and its weld topology", () => {
     const world = new World(7, 7);

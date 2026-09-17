@@ -187,6 +187,8 @@ export interface TileDefinition {
   readonly weldableSides: WeldSide;
   readonly excludesFacingWeld: boolean;
   readonly usesOrientation: boolean;
+  /** Reflects local left/right before applying orientation; omitted means symmetric. */
+  readonly usesMirroring?: boolean;
   readonly circuitPorts: WeldSide;
   /** Isolated input or sensing ports relative to an upward-facing tile. */
   readonly circuitInputPorts: WeldSide;
@@ -832,6 +834,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationColor: "#e2d2ff",
   },
   [TileKind.Selector]: {
+    usesMirroring: true,
     name: "Discernment Rune",
     boardCode: "T",
     defaultPrice: 10,
@@ -1554,6 +1557,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationColor: "#eadcf7",
   },
   [TileKind.Rom]: {
+    usesMirroring: true,
     name: "Lore Rune",
     boardCode: "U",
     defaultPrice: 20,
@@ -1578,6 +1582,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationColor: "#d1ece1",
   },
   [TileKind.Lut]: {
+    usesMirroring: true,
     name: "Lookup Rune",
     boardCode: "p",
     defaultPrice: 20,
@@ -1650,6 +1655,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationColor: "#e0b7ee",
   },
   [TileKind.LaserSplitter]: {
+    usesMirroring: true,
     name: "Laser Splitter",
     boardCode: "x",
     defaultPrice: 20,
@@ -1794,6 +1800,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationColor: "#c7d3f4",
   },
   [TileKind.Assembler]: {
+    usesMirroring: true,
     name: "Assembler",
     boardCode: "H",
     defaultPrice: 20,
@@ -1818,6 +1825,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationColor: "#e2b96a",
   },
   [TileKind.Rotator]: {
+    usesMirroring: true,
     name: "Rotator",
     boardCode: "r",
     defaultPrice: 20,
@@ -1939,8 +1947,25 @@ export function orientationForKind(kind: TileKind, orientation: Direction): Dire
   return TILE_DEFINITIONS[kind].usesOrientation ? orientation : Direction.Up;
 }
 
-/** Rotates a side mask from its upward-facing definition to a tile's orientation. */
-export function orientedSides(sides: WeldSide, orientation: Direction): WeldSide {
+export function mirroringForKind(kind: TileKind, mirrored: boolean): boolean {
+  return TILE_DEFINITIONS[kind].usesMirroring === true && mirrored;
+}
+
+/** Reflects a local direction, then rotates it into world coordinates. */
+export function orientedDirection(
+  direction: Direction,
+  orientation: Direction,
+  mirrored = false,
+): Direction {
+  return (((mirrored ? flipDirectionHorizontally(direction) : direction) + orientation) & 3) as Direction;
+}
+
+/** Reflects local left/right, then rotates an upward-facing side mask. */
+export function orientedSides(sides: WeldSide, orientation: Direction, mirrored = false): WeldSide {
+  if (mirrored) {
+    sides = ((sides & (WeldSide.Up | WeldSide.Down)) |
+      ((sides & WeldSide.Left) >> 2) | ((sides & WeldSide.Right) << 2)) as WeldSide;
+  }
   return (
     ((sides << orientation) | (sides >> (4 - orientation))) &
     WeldSide.All

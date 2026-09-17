@@ -71,13 +71,14 @@ export class RotatorResolver {
       if (charge === 0) {
         continue;
       }
-      const nextDirection = ((direction + charge + 4) & 3) as Direction;
+      const quarterTurn = (this.world.mirroredAtIndex(pivot) ? -charge : charge) as -1 | 1;
+      const nextDirection = ((direction + quarterTurn + 4) & 3) as Direction;
       if (nextDirection === rear) {
         continue;
       }
       const proposal = this.takeProposal();
       proposal.pivot = pivot;
-      proposal.quarterTurn = charge;
+      proposal.quarterTurn = quarterTurn;
       proposal.nextDirection = nextDirection;
       this.buildProposal(proposal, direction);
     }

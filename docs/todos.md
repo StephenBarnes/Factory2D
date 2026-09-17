@@ -16,14 +16,13 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 # New component behaviors
 
-* Fully support mirrored components. We have tools to reflect a copy-pasted group, but they don't actually mirror components. Later we also want to add machine blocks that can flip bodies. Currently, flipping horizontally, a left/right-pointing selector rune is currently rotated 180 degrees, and up/down-pointing ones are not rotated, which is correct for some components like a combiner or inverter that have bilateral symmetry. But components like selectors, ROMs, and laser splitters are not symmetric under reflection around the front-to-back line. Components that are bilaterally symmetric, or fully symmetric (like stone blocks) may not need to store mirroring.
-	* As a follow-up, modify rendering for some components to match this - e.g. the indicator dots on selector runes and rotators.
+* Audit our components for mirror asymmetries. As a rule, flipping any machine horizontally or vertically should produce analogously flipped behavior - device semantics should be equivariant under the dihedral group D_4. Currently I know of one block that violates this - conveyors rotate clockwise with +1 charge and do not have orientation, so a flipped conveyor's direction of motion is not flipped; we need to change conveyors to have handedness and mark nonstandard handedness in some way (though default mirroring can still render the same way). Other blocks to look at: the ROM / lore rune, lookup rune, sequence checker.
 * Modify the assembler to add a pushing force for output: When it has a pending output, but no space to output, attempt to push the blocks away so that it can produce output; failing that, try to push the assembler itself in its forwards direction, so the product can be emitted out the back (at assembler's pre-movement position) in the same tick.
 * Modify the duplicator in the same way as assembler above - make it also attempt to push itself away from the output side, if it's trying to duplicate a single-tile body but there's something blocking the output. When duplicating multi-tile bodies, don't do this - require already empty space for the whole body.
 
 # Performance
 
-* Follow [the current performance plan](performance-todos.md): refresh end-to-end browser measurements, investigate active fitted rendering, and measure retained session memory before choosing further optimizations. The original profile and completed optimization log are [archived](performance-history.md).
+* Follow the current performance plan `docs/performance-todos.md`: refresh end-to-end browser measurements, investigate active fitted rendering, and measure retained session memory before choosing further optimizations. The original profile and completed optimization log are archived in `performance-history.md`.
 
 # Circuit network
 
@@ -39,7 +38,7 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 # UI
 
 * Implement undo and redo when editing in the sandbox and puzzle solutions.
-* Allow mirroring components with some hotkey. (Rotation currently uses WASD, Q picks blocks, E configures. Could use E when not over a block, or R.) Depends on the other change to store blocks' mirroring alongside rotation.
+* Allow mirroring components with some hotkey. (Rotation currently uses WASD, Q picks blocks, E configures. Could use E when not over a block, or R.) Mirroring is stored and selection reflection works; a direct placement shortcut remains to be added.
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
 
 # Visuals

@@ -1,10 +1,11 @@
 import { expectDefined } from "../util/assert";
-import { ASSEMBLER_PATTERNS, type AssemblerPattern } from "./assembler";
+import { ASSEMBLER_PATTERNS, MIRRORED_ASSEMBLER_PATTERNS, type AssemblerPattern } from "./assembler";
 import { MAX_ASSEMBLER_OUTPUTS } from "./configurable-components";
 import type { DeliveryResolver } from "./delivery-resolver";
 import type { DuplicatorResolver } from "./duplicator-resolver";
 import {
   Direction,
+  orientedDirection,
   oppositeDirection,
   TILE_DEFINITIONS,
   TileKind,
@@ -32,6 +33,7 @@ export class AssemblerResolver {
   private readonly queuedCounts: Uint8Array;
   private readonly queuedKinds: Uint8Array;
   private readonly queuedOrientations: Uint8Array;
+  private readonly queuedMirrored: Uint8Array;
   private readonly emitTargetIndices: Int32Array;
   private readonly emitOwners: Int32Array;
   private intentCount = 0;
@@ -46,6 +48,7 @@ export class AssemblerResolver {
     this.queuedCounts = new Uint8Array(world.cellCount);
     this.queuedKinds = new Uint8Array(world.cellCount * MAX_ASSEMBLER_OUTPUTS);
     this.queuedOrientations = new Uint8Array(world.cellCount * MAX_ASSEMBLER_OUTPUTS);
+    this.queuedMirrored = new Uint8Array(world.cellCount * MAX_ASSEMBLER_OUTPUTS);
     this.emitTargetIndices = new Int32Array(world.cellCount);
     this.emitOwners = new Int32Array(world.cellCount);
   }
@@ -64,7 +67,8 @@ export class AssemblerResolver {
       assembler = this.world.nextFeatureIndex(WorldFeature.Assembler, assembler)
     ) {
       const orientation = this.world.orientationAtIndex(assembler);
-      const left = ((orientation + Direction.Left) & 3) as Direction;
+      const mirrored = this.world.mirroredAtIndex(assembler);
+      const left = orientedDirection(Direction.Left, orientation, mirrored);
       if (this.world.chargeAtPortIndex(assembler, left) === -1 ||
           deliveries?.willAbsorb(assembler)) {
         continue;
@@ -91,7 +95,7 @@ export class AssemblerResolver {
       if (root === this.bodies.rootAt(assembler)) {
         continue;
       }
-      const pattern = this.matchingPattern(root);
+      const pattern = this.matchingPattern(root, mirrored);
       if (pattern === null) {
         continue;
       }
@@ -102,6 +106,7 @@ export class AssemblerResolver {
         const output = expectDefined(pattern.outputs[slot], "assembler recipe output");
         this.queuedKinds[base + slot] = output.kind;
         this.queuedOrientations[base + slot] = output.orientation;
+        this.queuedMirrored[base + slot] = output.mirrored ? 1 : 0;
       }
       let member = this.bodies.headAtRoot(root);
       while (member >= 0) {
@@ -190,6 +195,7 @@ export class AssemblerResolver {
       this.queuedCounts,
       this.queuedKinds,
       this.queuedOrientations,
+      this.queuedMirrored,
       this.emitTargetIndices,
     );
     interpolationSource?.applyAssemblerResults(
@@ -198,6 +204,7 @@ export class AssemblerResolver {
       this.queuedCounts,
       this.queuedKinds,
       this.queuedOrientations,
+      this.queuedMirrored,
       this.emitTargetIndices,
     );
   }
@@ -221,11 +228,11 @@ export class AssemblerResolver {
     return true;
   }
 
-  private matchingPattern(root: number): AssemblerPattern | null {
+  private matchingPattern(root: number, mirrored: boolean): AssemblerPattern | null {
     const count = this.bodies.memberCountAtRoot(root);
     const minX = this.bodies.minXAtRoot(root);
     const minY = this.bodies.minYAtRoot(root);
-    for (const pattern of ASSEMBLER_PATTERNS) {
+    for (const pattern of mirrored ? MIRRORED_ASSEMBLER_PATTERNS : ASSEMBLER_PATTERNS) {
       if (pattern.cells.length === count && this.matchesPattern(root, minX, minY, pattern)) {
         return pattern;
       }
@@ -252,6 +259,7 @@ export class AssemblerResolver {
         this.bodies.rootAt(index) !== root ||
         (TILE_DEFINITIONS[kind].usesOrientation &&
           this.world.orientationAtIndex(index) !== cell.orientation) ||
+        this.world.mirroredAtIndex(index) !== cell.mirrored ||
         this.world.hasRightWeldAtIndex(index) !== cell.rightWeld ||
         this.world.hasDownWeldAtIndex(index) !== cell.downWeld
       ) {

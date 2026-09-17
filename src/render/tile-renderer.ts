@@ -9,6 +9,8 @@ import {
   Direction,
   directionX,
   directionY,
+  mirroringForKind,
+  orientedDirection,
   orientedSides,
   TILE_DEFINITIONS,
   TileDecorationStyle,
@@ -25,6 +27,8 @@ export interface BodyCell {
   y: number;
   kind: TileKind;
   orientation: Direction;
+  /** Local left/right reflection, applied before orientation. */
+  mirrored?: boolean;
   /** Charge emitted by this tile, independent of its connected network's resolved charge. */
   outputCharge: Charge;
   /** Two signed bits per direction, used to color each connected circuit port. */
@@ -192,6 +196,7 @@ function drawBodyCellDecoration(
     cellSize,
     TILE_DEFINITIONS[cell.kind],
     cell.orientation,
+    mirroringForKind(cell.kind, cell.mirrored ?? false),
     cell.outputCharge,
     cell.circuitConnections,
     cell.circuitPortCharges,
@@ -227,6 +232,7 @@ const SINGLE_CELL: [BodyCell] = [
     y: 0,
     kind: 0 as TileKind,
     orientation: Direction.Up,
+    mirrored: false,
     outputCharge: 0,
     circuitConnections: WeldSide.None,
     circuitPortCharges: 0,
@@ -251,9 +257,11 @@ export function drawTile(
   outputCharge: Charge = 0,
   circuitConnections: WeldSide = WeldSide.None,
   circuitPortCharges = 0,
+  mirrored = false,
 ): void {
   SINGLE_CELL[0].kind = kind;
   SINGLE_CELL[0].orientation = orientation;
+  SINGLE_CELL[0].mirrored = mirroringForKind(kind, mirrored);
   SINGLE_CELL[0].outputCharge = outputCharge;
   SINGLE_CELL[0].circuitConnections = circuitConnections;
   SINGLE_CELL[0].circuitPortCharges = circuitPortCharges;
@@ -466,6 +474,7 @@ function drawDecoration(
   size: number,
   definition: TileDefinition,
   orientation: Direction,
+  mirrored: boolean,
   outputCharge: Charge,
   circuitConnections: WeldSide,
   circuitPortCharges: number,
@@ -485,6 +494,7 @@ function drawDecoration(
       definition.decorationStyle === TileDecorationStyle.Lut ||
       definition.decorationStyle === TileDecorationStyle.Checker ||
       definition.decorationStyle === TileDecorationStyle.Rotator ||
+      definition.decorationStyle === TileDecorationStyle.Assembler ||
       definition.decorationStyle === TileDecorationStyle.ForceProjector ||
       definition.decorationStyle === TileDecorationStyle.LevitationProjector ||
       definition.decorationStyle === TileDecorationStyle.Furnace ||
@@ -516,6 +526,7 @@ function drawDecoration(
             ? WeldSide.Down
             : WeldSide.None)) as WeldSide,
         orientation,
+        mirrored,
       ) |
         (definition.decorationStyle === TileDecorationStyle.WireCrossing ||
             definition.decorationStyle === TileDecorationStyle.RuneArray ||
@@ -527,8 +538,10 @@ function drawDecoration(
       definition.decorationStyle === TileDecorationStyle.MovementSensor
         ? WeldSide.All
         : definition.decorationStyle === TileDecorationStyle.Lut
-          ? orientedSides(WeldSide.Up | WeldSide.Right, orientation)
-          : hasOutputArrow ? orientedSides(WeldSide.Up, orientation) : WeldSide.None,
+          ? orientedSides(WeldSide.Up | WeldSide.Right, orientation, mirrored)
+          : definition.decorationStyle === TileDecorationStyle.Assembler
+            ? orientedSides(WeldSide.Right, orientation, mirrored)
+            : hasOutputArrow ? orientedSides(WeldSide.Up, orientation, mirrored) : WeldSide.None,
     );
   }
   context.fillStyle = definition.decorationColor;
@@ -915,6 +928,7 @@ function drawDecoration(
       context.save();
       context.translate(left + size / 2, top + size / 2);
       context.rotate(orientation * Math.PI / 2);
+      if (mirrored) context.scale(-1, 1);
       context.strokeStyle = definition.decorationColor;
       context.fillStyle = "#211a16";
       context.lineWidth = Math.max(1.5, size * 0.055);
@@ -1132,16 +1146,15 @@ function drawDecoration(
       context.lineTo(size * 0.1, -size * 0.24);
       context.stroke();
       context.restore();
-      // Draw dots to indicate +1 rotates clockwise, -1 anticlockwise.
       context.rotate(orientation * Math.PI / 2);
-      context.fillStyle = CIRCUIT_CHARGE_COLORS[-1];
-      context.beginPath();
-      drawDot(context, -size * 0.2, size * 0.25, size * 0.055);
-      context.fill();
-      context.fillStyle = CIRCUIT_CHARGE_COLORS[1];
-      context.beginPath();
-      drawDot(context, size * 0.2, size * 0.25, size * 0.055);
-      context.fill();
+      if (mirrored) context.scale(-1, 1);
+      context.lineWidth = Math.max(1, size * 0.035);
+      for (let sign = -1; sign <= 1; sign += 2) {
+        context.beginPath();
+        context.fillStyle = CIRCUIT_CHARGE_COLORS[sign as Charge];
+        drawDot(context, sign * size * 0.2, size * 0.25, size * 0.055);
+        context.fill();
+      }
       context.restore();
       drawPortArrows(context, left, top, size, orientation,
         WeldSide.Down, WeldSide.None, circuitPortCharges);
@@ -1151,6 +1164,7 @@ function drawDecoration(
       context.save();
       context.translate(left + size / 2, top + size / 2);
       context.rotate(orientation * Math.PI / 2);
+      if (mirrored) context.scale(-1, 1);
       context.lineWidth = Math.max(1.5, size * 0.055);
       context.lineCap = "round";
       context.lineJoin = "round";
@@ -1201,6 +1215,8 @@ function drawDecoration(
         context.fill();
       }
       context.restore();
+      drawPortArrows(context, left, top, size, orientation,
+        WeldSide.Left, WeldSide.Right, circuitPortCharges, mirrored);
       break;
     }
     case TileDecorationStyle.Comparer: {
@@ -1542,6 +1558,7 @@ function drawDecoration(
       context.save();
       context.translate(left + size / 2, top + size / 2);
       context.rotate(orientation * Math.PI / 2);
+      if (mirrored) context.scale(-1, 1);
       context.lineWidth = Math.max(1.5, size * 0.055);
       context.lineCap = "round";
       context.lineJoin = "round";
@@ -1823,6 +1840,7 @@ function drawDecoration(
         WeldSide.Left | WeldSide.Down,
         isLut ? WeldSide.Up | WeldSide.Right : WeldSide.None,
         circuitPortCharges,
+        mirrored,
       );
       break;
     }
@@ -2161,10 +2179,12 @@ function drawPortArrows(
   inputSides: WeldSide,
   outputSides: WeldSide,
   color: string | number,
+  mirrored = false,
 ): void {
   context.save();
   context.translate(left + size / 2, top + size / 2);
   context.rotate(orientation * Math.PI / 2);
+  if (mirrored) context.scale(-1, 1);
   // Packed charges use absolute board directions; arrow masks are tile-relative.
   context.lineWidth = Math.max(1.5, size * 0.05);
   context.lineCap = "round";
@@ -2178,7 +2198,7 @@ function drawPortArrows(
     context.strokeStyle = typeof color === "string"
       ? color
       : CIRCUIT_CHARGE_COLORS[circuitPortCharge(
-        color, ((orientation + direction) & 3) as Direction,
+        color, orientedDirection(direction, orientation, mirrored),
       )];
     context.beginPath();
     const sideX = directionX(direction);

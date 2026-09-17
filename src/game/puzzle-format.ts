@@ -48,6 +48,7 @@ const BOARD_FIELDS = [
 ] as const;
 const OPTIONAL_BOARD_FIELDS = [
   "orientations",
+  "mirrored",
   "charges",
   "crossingCharges",
   "isolatedOutputCharges",
@@ -61,6 +62,7 @@ const TEST_CASE_OVERRIDE_FIELDS = ["initialBoard"] as const;
 const INITIAL_BOARD_OVERRIDE_FIELDS = [
   "grid",
   "orientations",
+  "mirrored",
   "charges",
   "crossingCharges",
   "isolatedOutputCharges",

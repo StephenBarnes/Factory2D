@@ -986,6 +986,62 @@ describe("circuit networks", () => {
     },
   );
 
+  it.each([Direction.Up, Direction.Right, Direction.Down, Direction.Left])(
+    "selects reflected local inputs at orientation %s",
+    (orientation) => {
+      const world = new World(3, 3);
+      world.place(1, 1, TileKind.Selector, orientation, true);
+      for (const side of [Direction.Up, Direction.Right, Direction.Down, Direction.Left]) {
+        const x = 1 + directionX(side);
+        const y = 1 + directionY(side);
+        world.place(x, y, TileKind.Conduit);
+        world.setWeld(1, 1, x, y, true);
+      }
+      const left = ((orientation + Direction.Right) & 3) as Direction;
+      const rear = oppositeDirection(orientation);
+      const right = oppositeDirection(left);
+      const runtime = new WorldRuntime(world);
+      const resolver = new CircuitResolver();
+      for (const command of [1, -1, 0] as const) {
+        world.setCharge(1 + directionX(left), 1 + directionY(left), 1);
+        world.setCharge(1 + directionX(right), 1 + directionY(right), -1);
+        world.setCharge(1 + directionX(rear), 1 + directionY(rear), command);
+        resolver.resolve(0, [runtime]);
+        expect(world.chargeAt(1 + directionX(orientation), 1 + directionY(orientation))).toBe(command);
+        expect(world.chargeAtPort(1, 1, left)).toBe(0);
+        expect(world.chargeAtPort(1, 1, right)).toBe(0);
+      }
+    },
+  );
+
+  it.each([
+    { orientation: Direction.Up, input: Direction.Right, cursor: 3 },
+    { orientation: Direction.Right, input: Direction.Down, cursor: 1 },
+    { orientation: Direction.Down, input: Direction.Left, cursor: 5 },
+    { orientation: Direction.Left, input: Direction.Up, cursor: 7 },
+  ])("moves mirrored ROM away from its physical input at orientation $orientation", ({ orientation, input, cursor }) => {
+    const world = new World(3, 3);
+    world.place(1, 1, TileKind.Rom, orientation, true);
+    for (const side of [Direction.Up, Direction.Right, Direction.Down, Direction.Left]) {
+      const x = 1 + directionX(side);
+      const y = 1 + directionY(side);
+      world.place(x, y, TileKind.Conduit);
+      world.setWeld(1, 1, x, y, true);
+    }
+    const values = [0, 1, 0, -1, 0, 1, 0, -1, 0] as const;
+    world.restoreComponentState(1, 1, {
+      type: "rom", width: 3, height: 3, cursor: 4, values,
+      wrapX: false, wrapY: false,
+    });
+    world.setCharge(1 + directionX(input), 1 + directionY(input), 1);
+    new CircuitResolver().resolve(0, [new WorldRuntime(world)]);
+    expect(world.componentStateSnapshotAt(1, 1)).toMatchObject({ cursor, values });
+    expect(world.chargeAt(1 + directionX(orientation), 1 + directionY(orientation))).toBe(values[cursor]);
+    const output = oppositeDirection(input);
+    expect(world.chargeAt(1 + directionX(output), 1 + directionY(output))).toBe(values[cursor]);
+    expect(world.chargeAtPort(1, 1, input)).toBe(0);
+  });
+
   it("delays the rear input by its configured ring-buffer length", () => {
     const world = new World(1, 3);
     world.place(0, 0, TileKind.Conduit);

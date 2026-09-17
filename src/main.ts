@@ -42,6 +42,7 @@ import {
   directionY,
   Direction,
   orientationForKind,
+  mirroringForKind,
   TILE_DEFINITIONS,
   isTileKind,
   TileKind,
@@ -282,6 +283,7 @@ let paletteTab: PaletteTab = "components";
 let selectedKind = TileKind.Sand;
 let previousSelectedKind: TileKind = selectedKind;
 let selectedOrientation = Direction.Up;
+let selectedMirrored = false;
 let selectedTool: BuildTool = "tile";
 let previousSelectionTool: BuildTool = "tile";
 let temporaryWeldTool: BuildTool | null = null;
@@ -530,7 +532,7 @@ function refreshTileInspector(): void {
 }
 
 function refreshPointerHover(): void {
-  toolCursor.update(selectedTool, selectedKind, selectedOrientation);
+  toolCursor.update(selectedTool, selectedKind, selectedOrientation, selectedMirrored);
   if (selectedTool === "text-box") {
     surface.renderer.setHover(null);
   } else if (!surface.session.editingState.editable) {
@@ -546,6 +548,7 @@ function refreshPointerHover(): void {
       surface.hoveredCell,
       selectedKind,
       orientationForKind(selectedKind, selectedOrientation),
+      selectedMirrored,
     );
   }
   coordinates.textContent = surface.hoveredCell === null
@@ -622,6 +625,7 @@ function configureComponentPalette(): void {
       selectedTool = "weld";
     } else {
       selectedKind = firstComponent.kind;
+      selectedMirrored = false;
     }
   }
   if (availableComponents !== null && !availableComponents.has(previousSelectedKind)) {
@@ -819,10 +823,11 @@ function exportSnippet(id: string): void {
   );
 }
 
-function selectTile(kind: TileKind): void {
+function selectTile(kind: TileKind, mirrored = false): void {
   if (!componentIsAvailable(kind)) {
     return;
   }
+  selectedMirrored = mirroringForKind(kind, mirrored);
   if (selectedTool === "text-box") canvasInteraction.cancel();
   if (selectedTool === "selection") {
     commitTileSelection();
@@ -869,7 +874,7 @@ function pickTileAt(cell: GridCell): void {
     return;
   }
 
-  selectTile(pickedKind);
+  selectTile(pickedKind, surface.world.mirroredAt(cell.x, cell.y));
   if (TILE_DEFINITIONS[pickedKind].usesOrientation) {
     setSelectedOrientation(surface.world.orientationAt(cell.x, cell.y));
   }
@@ -919,7 +924,7 @@ function renderPalettePreviews(): void {
       orientationForKind(kind, selectedOrientation),
     );
   }
-  toolCursor.update(selectedTool, selectedKind, selectedOrientation);
+  toolCursor.update(selectedTool, selectedKind, selectedOrientation, selectedMirrored);
 }
 
 function setSelectedOrientation(orientation: Direction): void {
@@ -1103,10 +1108,11 @@ function editCellLine(
         surface.world.kindAt(x, y) !== kind ||
         (
           kind !== TileKind.Empty &&
-          surface.world.orientationAt(x, y) !== orientation
+          (surface.world.orientationAt(x, y) !== orientation ||
+            surface.world.mirroredAt(x, y) !== selectedMirrored)
         )
       ) {
-        surface.world.place(x, y, kind, orientation);
+        surface.world.place(x, y, kind, orientation, selectedMirrored);
         changed = true;
         tilesChanged = true;
       }

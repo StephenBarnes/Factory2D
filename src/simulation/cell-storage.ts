@@ -13,6 +13,7 @@ export class CellStorage {
   readonly kinds: Uint8Array;
   readonly ids: Uint32Array;
   readonly orientations: Uint8Array;
+  readonly mirrored: Uint8Array;
   readonly charges: Int8Array;
   readonly crossingVerticalCharges: Int8Array;
   readonly isolatedOutputCharges: Int8Array;
@@ -25,6 +26,7 @@ export class CellStorage {
     this.kinds = new Uint8Array(cellCount);
     this.ids = new Uint32Array(cellCount);
     this.orientations = new Uint8Array(cellCount);
+    this.mirrored = new Uint8Array(cellCount);
     this.charges = new Int8Array(cellCount);
     this.crossingVerticalCharges = new Int8Array(cellCount);
     this.isolatedOutputCharges = new Int8Array(cellCount);
@@ -39,6 +41,7 @@ export class CellStorage {
     this.kinds.fill(TileKind.Empty);
     this.ids.fill(0);
     this.orientations.fill(Direction.Up);
+    this.mirrored.fill(0);
     this.charges.fill(0);
     this.crossingVerticalCharges.fill(0);
     this.isolatedOutputCharges.fill(0);
@@ -55,6 +58,7 @@ export class CellStorage {
     this.kinds.set(source.kinds);
     this.ids.set(source.ids);
     this.orientations.set(source.orientations);
+    this.mirrored.set(source.mirrored);
     this.charges.set(source.charges);
     this.crossingVerticalCharges.set(source.crossingVerticalCharges);
     this.isolatedOutputCharges.set(source.isolatedOutputCharges);
@@ -69,6 +73,7 @@ export class CellStorage {
     this.kinds[index] = TileKind.Empty;
     this.ids[index] = 0;
     this.orientations[index] = Direction.Up;
+    this.mirrored[index] = 0;
     this.resetTransientState(index);
     this.rightWelds[index] = 0;
     this.downWelds[index] = 0;
@@ -88,6 +93,7 @@ export class CellStorage {
     this.kinds[to] = expectDefined(source.kinds[from], "copied tile kind");
     this.ids[to] = expectDefined(source.ids[from], "copied tile ID");
     this.orientations[to] = expectDefined(source.orientations[from], "copied tile orientation");
+    this.mirrored[to] = expectDefined(source.mirrored[from], "copied tile mirroring");
     this.charges[to] = expectDefined(source.charges[from], "copied tile charge");
     this.crossingVerticalCharges[to] = expectDefined(
       source.crossingVerticalCharges[from],

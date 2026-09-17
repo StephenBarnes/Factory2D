@@ -7,6 +7,47 @@ import { Direction, TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
 
 describe("board export", () => {
+  it("round-trips mirrored ports, nested tiles, and pending assembler output handedness", () => {
+    const world = new World(3, 2);
+    world.place(0, 0, TileKind.Lut, Direction.Right, true);
+    world.setCharge(0, 0, -1);
+    world.place(1, 0, TileKind.Assembler, Direction.Up, true);
+    world.setIsolatedOutputCharge(1, 0, 1);
+    world.restoreComponentState(1, 0, {
+      type: "assembler",
+      pending: [{ kind: TileKind.Selector, orientation: Direction.Left, mirrored: true }],
+    });
+    world.place(2, 0, TileKind.RuneArray);
+    world.runeArrayWorldAt(2, 0).place(1, 1, TileKind.LaserSplitter, Direction.Down, true);
+    const loaded = deserializeBoard(serializeBoard(world, 0)).world;
+
+    expect(loaded.chargeAtPort(0, 0, Direction.Up)).toBe(-1);
+    expect(loaded.chargeAtPort(0, 0, Direction.Down)).toBe(0);
+    expect(loaded.chargeAtPort(1, 0, Direction.Left)).toBe(1);
+    expect(loaded.chargeAtPort(1, 0, Direction.Right)).toBe(0);
+    expect(loaded.runeArrayWorldAt(2, 0).mirroredAt(1, 1)).toBe(true);
+    expect(loaded.componentStateSnapshotAt(1, 0)).toEqual({
+      type: "assembler",
+      pending: [{ kind: TileKind.Selector, orientation: Direction.Left, mirrored: true }],
+    });
+  });
+
+  it("rejects malformed, duplicate, and symmetric mirrored entries", () => {
+    const world = new World(2, 1);
+    world.place(0, 0, TileKind.Selector);
+    world.place(1, 0, TileKind.Stone);
+    const board = JSON.parse(serializeBoard(world, 0));
+    for (const mirrored of [
+      [{ x: 0, y: 0 }, { x: 0, y: 0 }],
+      [{ x: 1, y: 0 }],
+      [{ x: 2, y: 0 }],
+      [{ x: 0, y: 0, unexpected: true }],
+      true,
+    ]) {
+      expect(() => deserializeBoard(JSON.stringify({ ...board, mirrored }))).toThrow();
+    }
+  });
+
   it("serializes the tile grid and sparse state in grid order", () => {
     const world = new World(3, 2);
     world.place(2, 0, TileKind.Magnet, Direction.Left);

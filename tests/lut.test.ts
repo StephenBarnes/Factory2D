@@ -8,15 +8,15 @@ import { expectDefined } from "../src/util/assert";
 
 const values = [-1, 1, 0, 0, -1, 1, 1, 0, -1] as const;
 
-function port(orientation: Direction, side: Direction): readonly [number, number] {
-  const direction = ((orientation + side) & 3) as Direction;
+function port(orientation: Direction, side: Direction, mirrored = false): readonly [number, number] {
+  const direction = ((orientation + (mirrored ? (4 - side) & 3 : side)) & 3) as Direction;
   return [1 + directionX(direction), 1 + directionY(direction)];
 }
 
-function placeLookup(world: World, orientation = Direction.Up): void {
-  world.place(1, 1, TileKind.Lut, orientation);
+function placeLookup(world: World, orientation = Direction.Up, mirrored = false): void {
+  world.place(1, 1, TileKind.Lut, orientation, mirrored);
   for (const side of [Direction.Up, Direction.Right, Direction.Down, Direction.Left]) {
-    const [x, y] = port(orientation, side);
+    const [x, y] = port(orientation, side, mirrored);
     world.place(x, y, TileKind.Conduit);
     world.setWeld(1, 1, x, y, true);
   }
@@ -25,23 +25,28 @@ function placeLookup(world: World, orientation = Direction.Up): void {
 
 function feed(world: World, simulation: Simulation, left: Charge, rear: Charge): readonly Charge[] {
   const orientation = world.orientationAt(1, 1);
-  const [leftX, leftY] = port(orientation, Direction.Left);
-  const [rearX, rearY] = port(orientation, Direction.Down);
+  const mirrored = world.mirroredAt(1, 1);
+  const [leftX, leftY] = port(orientation, Direction.Left, mirrored);
+  const [rearX, rearY] = port(orientation, Direction.Down, mirrored);
   world.setCharge(leftX, leftY, left);
   world.setCharge(rearX, rearY, rear);
   simulation.step();
   return [Direction.Up, Direction.Right].map((side) => {
-    const [x, y] = port(orientation, side);
+    const [x, y] = port(orientation, side, mirrored);
     return world.chargeAt(x, y);
   });
 }
 
 describe("lookup rune", () => {
-  it.each([Direction.Up, Direction.Right, Direction.Down, Direction.Left])(
-    "addresses all nine cells without accumulating input in orientation %s",
-    (orientation) => {
+  it.each(
+    [Direction.Up, Direction.Right, Direction.Down, Direction.Left].flatMap((orientation) =>
+      [false, true].map((mirrored) => ({ orientation, mirrored })),
+    ),
+  )(
+    "addresses all nine logical cells at orientation $orientation, mirrored $mirrored",
+    ({ orientation, mirrored }) => {
       const world = new World(3, 3);
-      placeLookup(world, orientation);
+      placeLookup(world, orientation, mirrored);
       const simulation = new Simulation(world);
       const observed: Charge[] = [];
       for (const rear of [-1, 0, 1] as const) {
@@ -53,8 +58,9 @@ describe("lookup rune", () => {
         }
       }
       expect(observed).toEqual(values);
-      const [x, y] = port(orientation, Direction.Left);
-      expect(world.chargeAtPort(1, 1, ((orientation + Direction.Left) & 3) as Direction)).toBe(0);
+      const [x, y] = port(orientation, Direction.Left, mirrored);
+      const inputSide = ((orientation + (mirrored ? Direction.Right : Direction.Left)) & 3) as Direction;
+      expect(world.chargeAtPort(1, 1, inputSide)).toBe(0);
       expect(world.chargeAt(x, y)).toBe(0);
     },
   );
@@ -77,7 +83,7 @@ describe("lookup rune", () => {
     expect(world.chargeAt(1, 0)).toBe(1);
   });
 
-  it("keeps logical addresses through rotation, cloning and nested scene persistence", () => {
+  it("keeps logical addresses through rotation, reflection, cloning and nested scene persistence", () => {
     const root = new World(1, 1);
     root.place(0, 0, TileKind.RuneArray);
     root.configureRuneArray(0, 0, 3, 3, "");
@@ -87,6 +93,8 @@ describe("lookup rune", () => {
       expect(feed(inner, new Simulation(restored), -1, 1)).toEqual([1, 1]);
       const rotated = inner.transformed(1, false, false);
       expect(feed(rotated, new Simulation(rotated), -1, 1)).toEqual([1, 1]);
+      const reflected = rotated.transformed(0, true, false);
+      expect(feed(reflected, new Simulation(reflected), -1, 1)).toEqual([1, 1]);
       inner.configureTernaryGrid(1, 1, 3, 3, new Array<Charge>(9).fill(0));
     }
     const original = root.runeArrayWorldAt(0, 0);

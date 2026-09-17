@@ -178,16 +178,20 @@ describe("welder and splitter operations", () => {
 });
 
 describe("laser splitter operations", () => {
-  it.each([Direction.Up, Direction.Right, Direction.Down, Direction.Left])(
-    "cuts only local-left welds through gaps to the boundary facing %s",
-    (orientation) => {
+  it.each(
+    [Direction.Up, Direction.Right, Direction.Down, Direction.Left].flatMap((orientation) =>
+      [false, true].map((mirrored) => ({ orientation, mirrored })),
+    ),
+  )(
+    "cuts only local-left welds through gaps facing $orientation, mirrored $mirrored",
+    ({ orientation, mirrored }) => {
       const world = new World(9, 9);
       const dx = directionX(orientation);
       const dy = directionY(orientation);
-      const left = ((orientation + Direction.Left) & 3) as Direction;
+      const left = ((orientation + (mirrored ? Direction.Right : Direction.Left)) & 3) as Direction;
       const lx = directionX(left);
       const ly = directionY(left);
-      world.place(4, 4, TileKind.LaserSplitter, orientation);
+      world.place(4, 4, TileKind.LaserSplitter, orientation, mirrored);
       world.place(4 - dx, 4 - dy, TileKind.Platform);
       world.setWeld(4, 4, 4 - dx, 4 - dy, true);
       for (const distance of [1, 3, 4]) {

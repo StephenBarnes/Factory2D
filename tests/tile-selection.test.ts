@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { GridRegion } from "../src/game/grid-region";
 import { TileSelectionState } from "../src/game/tile-selection";
 import { Direction, TileKind } from "../src/simulation/tile";
+import { Simulation } from "../src/simulation/simulation";
 import { World } from "../src/simulation/world";
 
 const ALLOW_CELL = () => true;
@@ -23,6 +24,44 @@ function selectRectangle(
 }
 
 describe("tile selection", () => {
+  it("keeps selector control attached to the same signal through reflected clipboard copies", () => {
+    const world = new World(5, 3);
+    for (let x = 0; x < 5; x += 1) world.place(x, 2, TileKind.Platform);
+    world.place(2, 1, TileKind.Selector);
+    world.place(1, 1, TileKind.Conduit);
+    world.place(3, 1, TileKind.Conduit);
+    world.place(2, 2, TileKind.Conduit);
+    world.setWeld(2, 1, 1, 1, true);
+    world.setWeld(2, 1, 3, 1, true);
+    world.setWeld(2, 1, 2, 2, true);
+    world.setWeld(2, 2, 1, 2, true);
+    const selection = new TileSelectionState(5, 3);
+    selectRectangle(selection, world, 0, 0, 4, 2);
+    selection.flipHorizontally();
+    selection.copy();
+    expect(selection.overlay(ALLOW_CELL, ALLOW_KIND)?.previewCells.find(
+      (cell) => cell.kind === TileKind.Selector,
+    )?.mirrored).toBe(true);
+    const captured = selection.captureWorld();
+    expect(captured?.mirroredAt(2, 0)).toBe(true);
+    selection.commit(world, ALLOW_CELL, ALLOW_KIND);
+    world.setCharge(3, 1, 1);
+    world.setCharge(1, 1, -1);
+    world.setCharge(2, 2, 1);
+    new Simulation(world).step();
+    expect(world.chargeAt(2, 1)).toBe(1);
+
+    selection.paste(0, 0);
+    selection.flipHorizontally();
+    selection.commit(world, ALLOW_CELL, ALLOW_KIND);
+    expect(world.mirroredAt(2, 1)).toBe(false);
+    world.setCharge(1, 1, 1);
+    world.setCharge(3, 1, -1);
+    world.setCharge(2, 2, 1);
+    new Simulation(world).step();
+    expect(world.chargeAt(2, 1)).toBe(1);
+  });
+
   it("moves overlapping tiles as one edit and preserves configuration and internal welds", () => {
     const world = new World(6, 5);
     world.place(1, 1, TileKind.Stone);

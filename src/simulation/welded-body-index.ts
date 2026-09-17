@@ -156,6 +156,7 @@ export class WeldedBodyIndex {
         (TILE_DEFINITIONS[firstKind].usesOrientation &&
           this.world.orientationAtIndex(firstMember) !==
             this.world.orientationAtIndex(secondMember)) ||
+        this.world.mirroredAtIndex(firstMember) !== this.world.mirroredAtIndex(secondMember) ||
         this.world.hasRightWeldAtIndex(firstMember) !==
           this.world.hasRightWeldAtIndex(secondMember) ||
         this.world.hasDownWeldAtIndex(firstMember) !==

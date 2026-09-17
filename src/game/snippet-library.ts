@@ -341,7 +341,7 @@ function cropWorldToOccupiedBounds(world: World): World | null {
       if (kind === TileKind.Empty) {
         continue;
       }
-      cropped.place(x - left, y - top, kind, world.orientationAt(x, y));
+      cropped.place(x - left, y - top, kind, world.orientationAt(x, y), world.mirroredAt(x, y));
       const componentState = world.componentStateSnapshotAt(x, y);
       if (componentState !== null) {
         cropped.restoreComponentState(x - left, y - top, componentState);

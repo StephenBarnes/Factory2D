@@ -20,6 +20,7 @@ export function createBodyCell(): BodyCell {
     y: 0,
     kind: TileKind.Empty,
     orientation: Direction.Up,
+    mirrored: false,
     outputCharge: 0,
     circuitConnections: WeldSide.None,
     circuitPortCharges: 0,
@@ -44,6 +45,7 @@ export function populateBodyCell(world: World, index: number, cell: BodyCell): v
   cell.y = (index - x) / width;
   cell.kind = world.kindAtIndex(index);
   cell.orientation = world.orientationAtIndex(index);
+  cell.mirrored = world.mirroredAtIndex(index);
   const definition = TILE_DEFINITIONS[cell.kind];
   // Gate glyphs show their stored output, independent of which side faces up.
   const networkCharge = definition.circuitInputPorts !== WeldSide.None
@@ -84,6 +86,7 @@ export function populateBodyCell(world: World, index: number, cell: BodyCell): v
   const inputPorts = orientedSides(
     definition.circuitInputPorts,
     cell.orientation,
+    cell.mirrored,
   );
   for (let value = Direction.Up; value <= Direction.Left; value += 1) {
     const direction = value as Direction;

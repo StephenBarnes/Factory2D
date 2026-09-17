@@ -43,10 +43,10 @@ export class ToolCursor {
     this.element.hidden = true;
   }
 
-  update(tool: BuildTool, kind: TileKind, orientation: Direction): void {
+  update(tool: BuildTool, kind: TileKind, orientation: Direction, mirrored = false): void {
     const pixelRatio = window.devicePixelRatio || 1;
     const resolvedOrientation = orientationForKind(kind, orientation);
-    const key = `${tool}:${kind}:${resolvedOrientation}:${pixelRatio}:${tileAppearance.bevels}`;
+    const key = `${tool}:${kind}:${resolvedOrientation}:${mirrored}:${pixelRatio}:${tileAppearance.bevels}`;
     if (key === this.drawnKey) return;
     this.drawnKey = key;
     this.element.dataset.tool = tool;
@@ -63,6 +63,6 @@ export class ToolCursor {
     const context = this.tileCanvas.getContext("2d");
     if (context === null) throw new Error("Cursor preview requires Canvas 2D");
     context.setTransform(backingSize / ICON_SIZE, 0, 0, backingSize / ICON_SIZE, 0, 0);
-    drawTile(context, 0, 0, ICON_SIZE, kind, resolvedOrientation);
+    drawTile(context, 0, 0, ICON_SIZE, kind, resolvedOrientation, 0, 0, 0, 0, mirrored);
   }
 }
