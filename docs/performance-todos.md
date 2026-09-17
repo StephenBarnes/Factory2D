@@ -1,6 +1,6 @@
 # Performance status and remaining work
 
-Updated **2026-09-16**, against source revision `35a9bbc0b7dff729199001c17401350c869222dc`.
+Updated **2026-09-17**. The spot measurements and source-status table below remain against revision `35a9bbc0b7dff729199001c17401350c869222dc`; the new workshop runner records its own source identity per result.
 
 This is the active plan, not an optimization changelog. The [original investigation and Updates 1–14](performance-history.md) are archived unchanged. Their timings, hotspot percentages, memory totals, and recommendations describe earlier revisions; do not use them as current baselines or add their memory savings together.
 
@@ -9,7 +9,7 @@ This is the active plan, not an optimization changelog. The [original investigat
 * **Do not restart the original optimization list.** LOD, culling, geometry caching, sparse feature discovery, cached circuit connectivity, and most lazy-allocation work are implemented. See the status table below.
 * **Active fitted rendering is still a priority to investigate.** Fresh synthetic measurements below exceed the proposed 12 ms render p95 at 5% occupancy and become much more expensive at 10%. These are headless software-renderer results, not measured gameplay FPS on the workstation GPU.
 * **Empty/static-platform simulation is no longer a board-size blocker in isolation.** Dense stationary and moving workloads still cost milliseconds to tens of milliseconds. A 5-tick/s throughput budget does not ensure smooth 60 FPS: a synchronous tick can interrupt a frame.
-* **The largest evidence gap is the complete workshop.** Isolated `Simulation.step()` and `CanvasRenderer.render()` measurements exclude snapshot copying, signal capture, much of the UI, case transitions, and persistence. Current low-end-device performance and total retained browser memory are not established.
+* **The largest evidence gap remains representative complete-workshop coverage.** A production browser runner now measures workshop RAF cadence, long tasks, and thresholded event timing for a deterministic initial subset (usage below). The isolated measurements below still exclude snapshot copying, signal capture, much of the UI, case transitions, and persistence. Current low-end-device performance and total retained browser memory are not established.
 
 The product direction remains up to 400×300 tiles, 5 simulation ticks/s, and 60 FPS animation on low-end hardware. Treat maximum-size 60-tick/s playback as a separate requirement: the dense simulation cases below already exceed its 16.7 ms interval, but that does not mean every maximum-size workload does.
 
@@ -76,7 +76,7 @@ Source-checked at the revision above. Durable contracts belong in [rendering](re
 | Reuse welded topology | Implemented where phase-safe | Observer membership and ordinary welded roots reuse geometry revisions. Contact-free gravity-to-drive reuse exists. Powered probes, magnetic groups, and phase-specific topology still do their required work; do not merge their ownership blindly. |
 | Reduce full-array clears / compact occupied-body storage | Partial / open | Several scratch representations are narrower, and some clears are sparse. Ordinary motion and active resolvers still have board-sized arrays/fills/copies. Compact occupied-body storage has not been implemented. |
 | Bound inactive session retention | Open | Both sandbox and solution maps retain visited sessions. Lazy allocation reduces unused scratch, not the number of retained worlds or previously activated buffers. |
-| Repeatable performance gates | Open | The spot checks above are not a maintained benchmark runner or an end-to-end acceptance suite. |
+| Repeatable performance gates | Runner implemented; gates open | The production workshop runner provides raw observations, not timing assertions. Complete the workload/device matrix and phase attribution before choosing gates. |
 
 ## Prioritized remaining work
 
@@ -84,13 +84,40 @@ These are profiling/implementation tasks, not assertions that every candidate sh
 
 ### 1. Establish a repeatable end-to-end baseline
 
-- [ ] Add a small browser benchmark runner with deterministic fixtures and machine-readable results. Record source revision, build mode, browser/version, actual graphics backend, CPU/throttle, DPR/canvas size, occupancy, body size/count, sample/warmup counts, and percentile method. Include cold first use and retained-state runs separately. Do not turn unstable timings into ordinary unit-test assertions.
+- [ ] Extend the maintained browser runner below to the remaining workload matrix, repeated cold-start distributions, and isolated/attributed call timings. Its initial seven fixtures cover root-board occupancy, falling stones, dense welded stone/conduits, and a small puzzle scene; they do not complete this priority's exit criteria.
 - [ ] Run production-build workshop scenarios on the development GPU and representative low-end hardware. Use 4× CPU throttling only as a labeled relative proxy, not low-end certification. Collect frame intervals, long tasks, interaction latency, and CPU/GC/raster traces alongside isolated call durations.
 - [ ] Attribute complete tick/frame cost: `previousWorld.copyFrom`, simulation, signal sampling, signal-panel derivation/drawing, interpolation/cache preparation, Canvas work, and DOM/layout. Exercise 5 and 60 ticks/s, animation on/off, manual steps, automatic puzzle tests, and fast verification. Fast mode's 8 ms/100-tick cooperative budget checks between indivisible ticks; it is not an enforced maximum frame time.
 
 Minimum workload matrix: 400×300 at 0%, 1%, 5%, and 10% occupancy; continuous falling material; dense stationary welded stone and circuits; representative mixed moving factory; nested arrays; fitted and zoomed views. Include visual-only changes, local edits, giant-body split/merge, sustained movement/rotation, first render, zoom/remount, and unchanged idle frames. Vary board area separately from visible area and occupied/body counts. Keep at least one current small puzzle as a control.
 
 **Exit:** reproducible results and attributed costs, with actual full-frame behavior; no declaration that 400×300 is ready based only on `step()` or suppressed `render()` calls.
+
+#### Running the workshop baseline
+
+`npm run benchmark` builds production assets, starts an isolated Vite preview on port 4174, and drives the real workshop through Playwright. Install its Chromium with `npx playwright install chromium`, or set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` as for the browser suite. No benchmark hooks enter the production bundle. Only workload validity fails the run (browser errors, failed imports/steps, no active tick advancement, or a falling fixture reaching its settling bound); unstable timings are never assertions.
+
+The default is one worker, fresh browser context per fixture, a 1280×800 viewport at DPR 1.25, fitted view, animations enabled, 5 ticks/s, 15 RAF warmups, and 120 requested frame intervals per idle/active window. Seven deterministic fixtures live in `tools/benchmark/fixtures.ts`: `empty`, `falling-1`, `falling-5`, `falling-10`, `welded-stone`, `welded-conduit`, and `stone-drop`. Falling stones occupy upper checkerboard rows with documented clearance; **these placements differ from the earlier spot checks**. The small puzzle solution runs as a sandbox scene, not as an automatic puzzle test.
+
+Each fixture writes `result.json` and `workshop.png` under `test-results/benchmark/`. JSON includes raw samples, nearest-rank p50/p95/max, actual sample counts, first-import/manual-step action latency, separate idle/retained-active windows, source revision and dirty-tree hashes, scene hash, browser/version, CDP graphics backend, host CPU, throttle, canvas CSS/backing sizes, and initial root occupancy/body-size metadata. First use means the fixture's first import/step **after shell startup**, not a cold browser or cold-JIT distribution. Warmup counts are RAF callbacks, not simulation ticks.
+
+Useful runs:
+
+```sh
+npm run benchmark
+BENCH_FIXTURES=falling-5,falling-10 BENCH_TRACE=1 npm run benchmark -- --output temp/fitted-trace
+BENCH_FIXTURES=empty BENCH_SAMPLES=30 BENCH_SPEED=60 BENCH_ANIMATE=0 BENCH_VIEW=zoomed BENCH_THROTTLE=4 npm run benchmark -- --output temp/options-smoke
+BENCH_HEADED=1 npm run benchmark -- --output temp/headed-baseline
+```
+
+`BENCH_SAMPLES` and `BENCH_WARMUP` override frame counts; use enough samples to observe committed ticks. `BENCH_SPEED` accepts 5/60, `BENCH_THROTTLE` accepts 1/4, and `BENCH_VIEW` accepts fitted/zoomed (requests 8× center zoom, subject to the normal cell-size cap). A 4× throttle is only a relative proxy. Headed mode does not guarantee hardware acceleration: inspect `environment.graphics`. Playwright clears the selected output directory on the next run; use distinct `--output` paths to preserve comparisons.
+
+High-speed or heavily throttled falling runs can exhaust their finite clearances before the requested frames finish. Completed windows are saved with `validity.valid: false` and reasons before failing the run; do not treat them as continuous-falling measurements. Reduce frame counts or select a stationary workload. The empty-fixture command above is an option smoke check, not a loaded 60-tick/s performance result.
+
+`BENCH_TRACE=1` additionally writes `chrome-trace.json` with CPU samples, timeline/GC and compositor/raster events, plus `benchmark:` phase marks, for inspection in Chrome's Performance panel or Perfetto. Capture traces separately from untraced timing baselines because profiling changes timings. RAF intervals describe callback cadence, **not displayed FPS or isolated Canvas time**. Event Timing is thresholded and may omit events still awaiting presentation at the window boundary; unsupported observers report null, not zero. Host action latency includes automation and two subsequent RAF callbacks, not input-to-photon latency.
+
+Initial verification exercised all seven production fixtures on headless Chromium/SwiftShader; it is not hardware-GPU or low-end certification. Mixed factories, nested arrays, edits/split/merge/rotation, remounts, puzzle verification/case transitions, repeated cold-start distributions, memory retention, and per-phase cost attribution remain open. Keep the historical spot measurements above distinct from these full-workshop observations.
+
+Useful lead: on headless Chromium’s SwiftShader backend, dense welded stone/conduits showed approximately 400/417 ms p95 RAF intervals. These are full-workshop callback intervals—not isolated render durations or hardware-GPU results.
 
 ### 2. Investigate fitted active rendering
 

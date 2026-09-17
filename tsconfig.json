@@ -17,5 +17,5 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["src", "tests", "e2e", "vite.config.ts", "playwright.config.ts"]
+  "include": ["src", "tests", "e2e", "tools/benchmark", "vite.config.ts", "playwright.config.ts", "playwright.benchmark.config.ts"]
 }

@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "test": "vitest run",
     "test:browser": "playwright test",
+    "benchmark": "playwright test --config playwright.benchmark.config.ts",
     "test:watch": "vitest",
     "typecheck": "tsc -b --pretty false",
     "search:ternary": "python3 tools/ternary_logic_search.py"
