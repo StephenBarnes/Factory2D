@@ -20,14 +20,24 @@ Things we are not teaching yet:
 
 # Current non-tutorial puzzles
 
-Our current set of non-tutorial puzzles is very small: three mechanical puzzles and five circuit puzzles. The puzzle set we ship on first release version will have more focus on mechanical puzzles.
+Our current set of non-tutorial puzzles is very small: four mechanical puzzles and five circuit puzzles. The puzzle set we ship on first release version will have more focus on mechanical puzzles.
 
-## Mining operations
+## Transport
 
 * Vehicle: build a self-propelled vehicle in a small left-hand bay and reach the fixed sensors on the right. This introduces conveyor reaction forces without adding another tutorial.
 * Climber: build a vehicle that can climb up 1-high steps to reach the goal. This is harder than the Vehicle puzzle; reference solution uses a back wheel (conveyor belt) plus an elevated front wheel which is pushed down with a piston when a sensor detects a step. Could instead just jostle the front wheel up and down. Other solutions are possible, e.g. creating multiple vehicles and using each as a platform for the one above, abandoning each layer at each step.
+
+## Extraction
+
 * Geode Extractor: requires triggering a duplicator to create geodes, some drills to carve away the stone, and conveyors to move the center ruby block to the delivery box. There's 2 separate duplicators in different directions, so players can solve it via different layouts, or use both for faster throughput. Most circuit and mechanical components (welder, splitter, rotator, magnet, grinder) are enabled; the reference solution uses drills and conveyors. More intermediate puzzles could introduce drills before this puzzle.
+
+## Manufacturing
+
 * Iron Plates: duplicate iron ore, smelt to iron, and weld together 3 of them to make an iron plate; deliver 10 iron plates to the delivery box. There are 2 duplicators, so deciding whether to use one or both and in what amount trades cycles against footprint, cost, and complexity. There are definitely also exploits possible, e.g. using the drill to remove a duplicator and duplicate entire plates.
+
+## Mining
+
+Currently empty. Future puzzles could involve drilling a large block of stone to extract gemstones scattered throughout it.
 
 ## Runelore
 

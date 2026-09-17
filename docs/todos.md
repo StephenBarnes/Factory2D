@@ -49,6 +49,3 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 # Content
 
 Ideas and puzzle list moved to `puzzles.md`. We need to add both tutorial puzzles to explain the game mechanics, and actual puzzles, at a range of difficulty levels. Before adding any puzzles, read that file, and keep it updated with new puzzles added.
-
-Additional:
-* Remove the "mining operations" puzzle group; replace with "transport" (containing vehicle and climber), "extraction" (geode extractor), "manufacturing" (iron plates), and "mining" (currently empty). Update those puzzles and check `npm test` and Playwright tests pass, or update them to not assume the old categorization. Later we'll add mining puzzles, e.g. drilling a large block of stone to extract gemstones scattered in it. This categorization splits things more cleanly by the actual puzzle type.
