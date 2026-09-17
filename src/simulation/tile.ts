@@ -1712,7 +1712,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 32,
       category: PaletteCategory.Transformation,
-      description: "Mirrors the welded body behind it across itself on +1 side charge.",
+      description: "When given +1 side charge, creates a mirrored duplicate of the welded body behind it.",
       extendedDescription: ["Uses the previous-tick shared side charge. Every mirrored destination must be empty and inside the board; blocked or overlapping copies jam. Copies retain configuration and mirrored welds but get new tile IDs."],
     },
     affectedByGravity: true,

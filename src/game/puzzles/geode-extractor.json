@@ -1,0 +1,228 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 5,
+  "width": 11,
+  "height": 12,
+  "id": "geode-extractor",
+  "group": "mining",
+  "order": 0,
+  "name": "Geode extractor",
+  "difficulty": 2,
+  "description": "The miners have found a large collection of geodes - ruby blocks surrounded by stone. Use drills, splitters, or other mechanical components to extract the gems.",
+  "goal": "Extract 10 rubies from geodes and move them to the delivery box.",
+  "components": [
+    {
+      "code": "L",
+      "price": 10
+    },
+    {
+      "code": "B",
+      "price": 10
+    },
+    {
+      "code": "C",
+      "price": 2
+    },
+    {
+      "code": "S",
+      "price": 10
+    },
+    {
+      "code": "1",
+      "price": 10
+    },
+    {
+      "code": "K",
+      "price": 10
+    },
+    {
+      "code": "I",
+      "price": 10
+    },
+    {
+      "code": "+",
+      "price": 10
+    },
+    {
+      "code": "R",
+      "price": 10
+    },
+    {
+      "code": "*",
+      "price": 10
+    },
+    {
+      "code": "-",
+      "price": 10
+    },
+    {
+      "code": "Q",
+      "price": 10
+    },
+    {
+      "code": "T",
+      "price": 10
+    },
+    {
+      "code": "e",
+      "price": 10
+    },
+    {
+      "code": "<",
+      "price": 10
+    },
+    {
+      "code": ">",
+      "price": 10
+    },
+    {
+      "code": "P",
+      "price": 20
+    },
+    {
+      "code": "Z",
+      "price": 10
+    },
+    {
+      "code": "N",
+      "price": 10
+    },
+    {
+      "code": "U",
+      "price": 20
+    },
+    {
+      "code": "J",
+      "price": 10
+    },
+    {
+      "code": "X",
+      "price": 10
+    },
+    {
+      "code": "r",
+      "price": 20
+    },
+    {
+      "code": "m",
+      "price": 0
+    },
+    {
+      "code": "g",
+      "price": 0
+    },
+    {
+      "code": "A",
+      "price": 10
+    },
+    {
+      "code": "#",
+      "price": 1
+    },
+    {
+      "code": "x",
+      "price": 20
+    },
+    {
+      "code": "f",
+      "price": 20
+    },
+    {
+      "code": "k",
+      "price": 20
+    },
+    {
+      "code": "n",
+      "price": 10
+    },
+    {
+      "code": "p",
+      "price": 20
+    },
+    {
+      "code": "W",
+      "price": 4
+    },
+    {
+      "code": ";",
+      "price": 4
+    }
+  ],
+  "editableRegions": [
+    {
+      "x": 5,
+      "y": 1,
+      "width": 5,
+      "height": 8
+    },
+    {
+      "x": 1,
+      "y": 5,
+      "width": 6,
+      "height": 6
+    }
+  ],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 15,
+    "width": 11,
+    "height": 12,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "######v####",
+      "#####.....#",
+      "##u#Y.....#",
+      "####C.....#",
+      "##YC#.....u",
+      "#.........#",
+      "#.........#",
+      "j.........#",
+      "#.........#",
+      "#......#DNV",
+      "#......#u##",
+      "###########"
+    ],
+    "orientations": [
+      {
+        "x": 4,
+        "y": 2,
+        "direction": "right"
+      },
+      {
+        "x": 2,
+        "y": 4,
+        "direction": "down"
+      },
+      {
+        "x": 9,
+        "y": 9,
+        "direction": "right"
+      }
+    ],
+    "components": [
+      {
+        "x": 9,
+        "y": 9,
+        "type": "counter",
+        "threshold": 10,
+        "count": 0
+      }
+    ],
+    "welds": [
+      "++-++-----|",
+      "+.|-|.....|",
+      "|-+.|.....|",
+      "+|.+|.....|",
+      "+---......|",
+      "|.........|",
+      "|.........|",
+      "|.........|",
+      "|.........|",
+      "|......+-+|",
+      "|......|.+|",
+      "----------."
+    ]
+  },
+  "testCases": []
+}

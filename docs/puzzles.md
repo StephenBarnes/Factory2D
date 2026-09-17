@@ -1,47 +1,42 @@
-Create a few puzzles that are actually difficult.
-Also create a few better tutorial puzzles.
-Use the text box component we've added.
 
 # Tutorial puzzles
 
-**Before adding more tutorial puzzles, first figure out a good sequence of tutorials that are actually needed, and write them here.** Figure out what concepts we need to teach - that components are directional and can be rotated, that the possible signals are -1, 0, and +1, that there's a 1-tick delay on gates, etc. We want to avoid excessive trivial tutorial puzzles; cover each topic once only. Be sparing with explanations, let the player figure some of it out for themselves. Assume they've played games like Factorio, Minecraft, Zachtronics games, etc., and know what basic logic gates are or can figure it out from the descriptions given in the inspector.
+**Be wary of adding more tutorial puzzles.** Players don't need a separate tutorial for each component, they can figure it out from the inspector's tooltips and examples. Assume they've played Zachtronics games.
 
 Current tutorial puzzles:
-* Stone drop: drop one stone block on the delivery box. Teaches gravity, placing blocks, player-modifiable region, testing a solution.
-* Sand fall: build a ramp for sand to fall diagonally down. Teaches diagonal gravity, and welding maybe (though they could click-and-drag and not pay attention to welds).
-* Puzzle infrastructure: place a judgment stone / victory block, and an inverter. Teaches welding, inverter, charges, directional components, judgement stone, and the general concept that a puzzle's win condition is defined on the game board rather than via metadata.
-* Conduits: place channel/wire blocks. Teaches welding, welding at edges of the player-modifiable region, signed ternary charges.
-* Conduits II: similar, but with a more complex board layout and some opportunities for optimization.
-
-We should move several puzzles (conduits, conduits 2, opposite charges) to the "basics" section, and rename that section to "tutorial". The runelore section should be for things that are actual puzzles, not tutorials, e.g. rectifier and crossed channels puzzles.
-
+* Click to test: no player-modifiable region; they just click the button to test it. Demonstrates basic puzzle testing flow.
+* Stone drop: teaches placing blocks, player-modifiable region, palette, gravity. Place one stone block and let it fall into the delivery box. The right half shows exactly what's needed.
+* Sand fall: build a ramp for sand to fall diagonally down. Teaches diagonal gravity and welding. Right side of the grid has an example showing how welded parts work and how sand falls.
+* Basic runelore: place conduits and an inverter in 3 steps to carry a signal to the output. Instructions on the grid in text boxes. We also enable placing the charge sensor which allows for a shortcut. Reinforces welding mechanics.
+* Puzzle infrastructure: place a judgment stone / victory block. Teaches the general concept that a puzzle's win condition is defined on the game board rather than via metadata.
 
 Things we are not teaching yet:
 * Gates delay signals by one tick; branches must be time-equalized with delay gates. Necessary for solving the rectifier puzzle, binary crossed channels, and other puzzles we add later.
 * Conveyors, pistons, rotators.
 * Magnets.
-* Transformation machines: furnaces, grinders, assemblers.
+* Transformation machines: furnaces, grinders, assemblers, duplicators.
 * Machines that weld and unweld.
 * Charge sensors, the fact that they can sense at a distance, and their interaction with glass.
 
-Specific todos:
-* Rename "basics" puzzle group to "tutorial".
-* Add a first puzzle with no editable region. Player only clicks "test" and runs it. We'll build some contraption that they can watch.
-* Rework the "conduits" puzzle to also teach inverters. Give the player only a -1 input. They have to invert it and then feed it to the victory block. Potentially also teach directionality / WASD rotation, by letting them only place in a 1-by-N column, so they have to rotate the inverter from default orientation.
-* Add a tutorial puzzle teaching delays: give an input signal, and require them to output the most recent 5 values to different output ports.
-* Maybe unify the stone-drop and sand-fall puzzles on one board. Require both delivery boxes to give positive answers.
-
 # Current non-tutorial puzzles
 
-Our current set of non-tutorial puzzles is very small, and only has fairly simple circuit puzzles, no mechanical puzzles (conveyors, pistons, rotators). We just haven't added those yet; the puzzle set we ship on first release version will have more focus on mechanical puzzles.
+Our current set of non-tutorial puzzles is very small, and mostly has circuit puzzles, only one mechanical puzzle (conveyors, pistons, rotators). We just haven't added more yet; the puzzle set we ship on first release version will have more focus on mechanical puzzles.
+
+## Mining operations
+
+We have one "geode extractor" puzzle that's fairly easy - requires triggering a duplicator to create geodes, some drills to carve away the stone, and conveyors to move the ruby to the delivery box. There's 2 separate duplicators in different directions, so they could solve it via different layouts, or use both for faster throughput. We enable most circuit components and mechanical components (welder, splitter, rotator, magnet, grinder) so they can choose which to use; reference solution only uses drills and conveyors. This is probably too complex to be the first thing the player sees after the tutorial; we should add more puzzles that introduce conveyors and drills more gradually.
+
+## Runelore
 
 * Rectifier: requires building rectifier without the rectifier block - requires combiners and multipliers, or other combinations of components.
-* Change of Shift: detect increases (+1), decreases (-1), and unchanged values (0) using only conduits, inverters, and combiners. A fixed processing delay is allowed; the checker compares every tick after the first nonzero output. Three cases cover all nine ternary transitions, negative startup, and long steady readings. Includes board annotations and a reference solution verified at 27 cycles per case.
+* Change of Shift: detect increases, decreases, and unchanged values using only conduits, inverters, and combiners. Three cases cover all nine ternary transitions, negative startup, and long steady readings.
 * Binary crossed channels: requires crossing two signals (only 0 and +1, no -1) without the dedicated crossing block. Can be done with 3 equality gates, plus some details for delaying specific lines and handling initial spurious `0 = 0` equality.
 * Ternary crossed channels: similar but with -1 allowed. This is more difficult. Current reference solution has nested rune arrays.
 
 # Ideas for non-tutorial puzzles
 
+* Mining puzzles before the geode extractor: (1) make a vehicle (conveyor and fixed charge) that moves to the right; (2) make a vehicle that moves right, then left, to activate two sensors; (3) make a vehicle that does this but also drills away obstacles.
+* Add a runelore puzzle (not marked as tutorial) teaching delays and delay latches: give an input signal for one tick, and require them to output it for say 10 ticks.
 * Count up to N pulses from two separate sources and decide which source gave more pulses in total. One solution idea: use a counter block, with an inverter on one of the two inputs, and then check whether final value is positive or negative? But wrap-arounds are possible, so maybe use spark blocks to initialize it to N. Also we can't read the value of the counter block directly, would need to decrement it until it reaches zero and compare number of decrements to initial value; but that seems like almost the same problem we started with?
 * A suite of basic circuit problems, where you only have: conduit, combiner, inverter, and fixed source. Add puzzles to build most of the more advanced circuit components out of these. The combiner is effectively a sum or vote/majority rune. Combiner also gives a 1-tick delay, so you can chain them to make a machine that acts like a delay rune with arbitrary memory size. Combiner with duplicate inputs, one delayed and inverted, gives edge detection. Spark is fixed value plus edge detection. For the rectifier/diode, we have a puzzle and reference solution, which needs two combiners and a multiplier. Rectifier could also be built using two combiners, fixed source, and inverter: use fixed source and inverter to get -1, then compute `Combiner(x, x, -1)` which takes (-1, 0, 1) to (-1, -1, 1), and then combine that with +1.
 * Physically reverse a list: The player's machine receives ruby blocks and sapphire blocks in some order; they must be output in reverse order. Requires building a physical contraption that behaves like a push/pop stack, or maybe putting them in a box and physically rotating it. The player presses a button to receive the next block, and we drop a stone block (or pulse a signal) to indicate the end of the sequence. (How do we build the infra to test? Maybe a delivery box, swapping which block is below it. Or maybe use block-comparer to produce +1 and -1 charge for each one received, and then compare sequences omitting zeros. Or maybe put the entire sequence we expect on a conveyor belt below the delivery box.)
