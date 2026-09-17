@@ -1,13 +1,13 @@
 # Performance status and remaining work
 
-Updated **2026-09-17**. The spot measurements and source-status table below remain against revision `35a9bbc0b7dff729199001c17401350c869222dc`; the new workshop runner records its own source identity per result.
+Updated **2026-09-17**. The isolated spot measurements and source-status table below remain against revision `35a9bbc0b7dff729199001c17401350c869222dc`. The production workshop comparison uses `a00c9409fac594e87e3f174bb373e2a5f7715c8c`; each runner result records its own source identity and dirty-tree hashes.
 
 This is the active plan, not an optimization changelog. The [original investigation and Updates 1–14](performance-history.md) are archived unchanged. Their timings, hotspot percentages, memory totals, and recommendations describe earlier revisions; do not use them as current baselines or add their memory savings together.
 
 ## Current assessment
 
 * **Do not restart the original optimization list.** LOD, culling, geometry caching, sparse feature discovery, cached circuit connectivity, and most lazy-allocation work are implemented. See the status table below.
-* **Active fitted rendering is still a priority to investigate.** Fresh synthetic measurements below exceed the proposed 12 ms render p95 at 5% occupancy and become much more expensive at 10%. These are headless software-renderer results, not measured gameplay FPS on the workstation GPU.
+* **Separate software rasterization from hardware-GPU costs.** The production comparison below identifies a large main-thread Canvas-resource cost on SwiftShader, absent on the RTX 4060 capture. Hardware fitted falling cases have near-refresh RAF cadence, but dense welded cases still reach roughly 50 ms RAF p95. Neither proves low-end readiness or the isolated render budget.
 * **Empty/static-platform simulation is no longer a board-size blocker in isolation.** Dense stationary and moving workloads still cost milliseconds to tens of milliseconds. A 5-tick/s throughput budget does not ensure smooth 60 FPS: a synchronous tick can interrupt a frame.
 * **The largest evidence gap remains representative complete-workshop coverage.** A production browser runner now measures workshop RAF cadence, long tasks, and thresholded event timing for a deterministic initial subset (usage below). The isolated measurements below still exclude snapshot copying, signal capture, much of the UI, case transitions, and persistence. Current low-end-device performance and total retained browser memory are not established.
 
@@ -23,7 +23,7 @@ These are scoped observations, not release gates or a CPU hotspot profile:
 * Each scenario uses a fresh 400×300 `World` populated through `place`/`setWeld`. Timing uses `performance.now()`. Report median and nearest-rank p95 over **60 samples** after **15 warmup calls**; the simulation additionally records one first tick before warmup. Values rounded to 0.1 ms; zero means below effective timer resolution, not no work.
 * Simulation timings cover `step()` only, without an interpolation-source world. Placement, construction, buffer inspection, rendering, and snapshots are outside the timed interval. First ticks are single observations with different JIT/allocation conditions, not a cold-start distribution.
 * Rendering timings cover the synchronous `render()` call, including its preparation and Canvas submission, not completion of raster/compositor work or displayed frame intervals. Calls yield through `setTimeout(0)` between samples, not paced animation frames. An initial RAF-paced attempt timed out and is not included. Two completed render passes are reported separately where relevant; no before/after speedup is inferred from historical runs.
-* No production-build, physical low-end, 4×-throttled, mixed-factory, nested-array, real-GPU, or full-workshop measurements were performed in this refresh. Those remain work below.
+* No production-build, physical low-end, 4×-throttled, mixed-factory, nested-array, real-GPU, or full-workshop measurements were performed in this isolated spot refresh. The later production comparison below covers a subset separately.
 
 ### Simulation
 
@@ -58,7 +58,7 @@ A 1000×600 CSS-pixel canvas (1250×750 backing store), dark theme, default beve
 * Unchanged fitted calls at all four occupancies had median <0.1 ms and p95 0.1 ms in both runs. This is draw suppression, not the cost of an actively redrawn frame or the whole idle workshop.
 * Fitted one-cell edits at 10% had median/p95 **49.4/477.0 ms** in run A and **49.1/50.0 ms** in run B. The large tail was not diagnosed; keep it as a reason to capture a timeline/GC/raster trace, not as an attributed code hotspot or a stable expected latency.
 
-The 5% and 10% fitted costs reproduced across both runs. Their cause needs a current trace; the old percentages for `save`, `clip`, and decorations do not explain today's below-six-pixel path.
+The 5% and 10% fitted costs reproduced across both runs. The later production traces use different placements and a newer browser; they identify a software-backend Canvas-resource bottleneck, not a retrospective native-code explanation for these exact spot measurements.
 
 ## Disposition of the original recommendations
 
@@ -85,7 +85,7 @@ These are profiling/implementation tasks, not assertions that every candidate sh
 ### 1. Establish a repeatable end-to-end baseline
 
 - [ ] Extend the maintained browser runner below to the remaining workload matrix, repeated cold-start distributions, and isolated/attributed call timings. Its initial seven fixtures cover root-board occupancy, falling stones, dense welded stone/conduits, and a small puzzle scene; they do not complete this priority's exit criteria.
-- [ ] Run production-build workshop scenarios on the development GPU and representative low-end hardware. Use 4× CPU throttling only as a labeled relative proxy, not low-end certification. Collect frame intervals, long tasks, interaction latency, and CPU/GC/raster traces alongside isolated call durations.
+- [ ] Extend the production GPU measurements below to the remaining workshop matrix and representative low-end hardware. Use 4× CPU throttling only as a labeled relative proxy, not low-end certification. Collect frame intervals, long tasks, interaction latency, and CPU/GC/raster traces alongside isolated call durations.
 - [ ] Attribute complete tick/frame cost: `previousWorld.copyFrom`, simulation, signal sampling, signal-panel derivation/drawing, interpolation/cache preparation, Canvas work, and DOM/layout. Exercise 5 and 60 ticks/s, animation on/off, manual steps, automatic puzzle tests, and fast verification. Fast mode's 8 ms/100-tick cooperative budget checks between indivisible ticks; it is not an enforced maximum frame time.
 
 Minimum workload matrix: 400×300 at 0%, 1%, 5%, and 10% occupancy; continuous falling material; dense stationary welded stone and circuits; representative mixed moving factory; nested arrays; fitted and zoomed views. Include visual-only changes, local edits, giant-body split/merge, sustained movement/rotation, first render, zoom/remount, and unchanged idle frames. Vary board area separately from visible area and occupied/body counts. Keep at least one current small puzzle as a control.
@@ -115,14 +115,42 @@ High-speed or heavily throttled falling runs can exhaust their finite clearances
 
 `BENCH_TRACE=1` additionally writes `chrome-trace.json` with CPU samples, timeline/GC and compositor/raster events, plus `benchmark:` phase marks, for inspection in Chrome's Performance panel or Perfetto. Capture traces separately from untraced timing baselines because profiling changes timings. RAF intervals describe callback cadence, **not displayed FPS or isolated Canvas time**. Event Timing is thresholded and may omit events still awaiting presentation at the window boundary; unsupported observers report null, not zero. Host action latency includes automation and two subsequent RAF callbacks, not input-to-photon latency.
 
-Initial verification exercised all seven production fixtures on headless Chromium/SwiftShader; it is not hardware-GPU or low-end certification. Mixed factories, nested arrays, edits/split/merge/rotation, remounts, puzzle verification/case transitions, repeated cold-start distributions, memory retention, and per-phase cost attribution remain open. Keep the historical spot measurements above distinct from these full-workshop observations.
+`npm run benchmark:trace -- <fixture-directory>/result.json` summarizes the sibling `chrome-trace.json` offline and writes `trace-summary.json`. This command uses Node's native TypeScript support (Node 22.18+ or 24+). It aligns the trace mark's browser timestamp with the measurement window, clips intersecting complete slices, and reports per-thread/category/event count, union coverage, and nearest-rank slice-duration p50/p95/max. The console shows the top twelve main-thread groups; JSON retains all renderer-process groups and the run's source/environment/workload/validity. **Different groups overlap; do not add their times.** These are not exclusive JS costs, per-frame totals, or GPU-process execution times. Missing events are not proven zero work. The input trace and result must come from the same fixture run.
 
-Useful lead: on headless Chromium’s SwiftShader backend, dense welded stone/conduits showed approximately 400/417 ms p95 RAF intervals. These are full-workshop callback intervals—not isolated render durations or hardware-GPU results.
+#### Production workshop comparison
+
+Measured 2026-09-17 at `a00c9409fac594e87e3f174bb373e2a5f7715c8c`, using the maintained fixtures and production bundle. Headless inputs were clean; headed inputs include only uncommitted offline trace-tool/package/test work, not application changes (exact identities in each `result.json`). Host: Ryzen 9 5900X, Chromium **151.0.7922.34**, no throttle, 1280×800 viewport, DPR 1.25; canvas 1008×728 CSS pixels / 1260×910 backing pixels. CDP confirmed headless **ANGLE/SwiftShader** and headed **ANGLE/OpenGL NVIDIA RTX 4060**, driver 580.173.02. This is one workstation, not a low-end certification.
+
+One untraced run per backend/fixture, fitted view, 5 ticks/s, animation enabled, 15 RAF warmups and **90 measured active RAF intervals**. All validity checks passed. These are callback intervals, not displayed FPS or isolated render timings; different wall-clock durations mean different committed tick counts, especially in the slow dense cases.
+
+| Fixture | SwiftShader RAF p50 / p95 / max (ms) | RTX 4060 RAF p50 / p95 / max (ms) | Long tasks, software / GPU |
+|---|---:|---:|---:|
+| `falling-5` | 16.7 / 33.4 / 33.4 | 16.7 / 16.7 / 16.8 | 0 / 0 |
+| `falling-10` | 33.3 / 50.0 / 50.0 | 16.7 / 16.8 / 33.3 | 1 / 0 |
+| `welded-stone` | 366.7 / 416.6 / 450.0 | 16.7 / 49.9 / 50.1 | 92 / 5 |
+| `welded-conduit` | 383.3 / 433.4 / 483.4 | 16.7 / 50.0 / 66.7 | 92 / 5 |
+
+Separate traced 5%/10% runs used the same settings. In the 10% active window, main-thread `Canvas2DResourceProviderSharedImage::ProduceCanvasResource` covered **2,181.5 ms** of a 2,605.2 ms software window, with a **39.0 ms** maximum slice. On hardware it covered **18.6 ms** of a 1,530.1 ms window, maximum **0.177 ms**. `FireAnimationFrame` coverage was 339.6 / 436.1 ms respectively; these include application and benchmark callbacks, not just `render()`. Software recorded one 0.5 ms `MinorGC` slice and no `MajorGC` slices in that active window. Many Canvas-resource calls are tiny: their slice p95 is not a game-frame budget. The raw timeline, not summed nested event groups, establishes that the dominant software stall is outside the RAF callbacks during Canvas resource production. Native rasterization versus backpressure remains unresolved.
+
+A separate Canvas correctness probe compared one combined rectangle path, per-rectangle fills, and row-sized paths. Both alternatives **were rejected**: on a dense 30×30 grid at 2.13-pixel cells with fractional origin (0.17, 0.37), readback and visual inspection showed internal seams absent from the combined path. No renderer optimization was shipped. Any replacement must preserve fractional-scale coverage, same-kind overlap, interpolation, and rotation before its timing matters.
+
+Reproduce the production comparison and attribution:
+
+```sh
+BENCH_FIXTURES=falling-5,falling-10,welded-stone,welded-conduit BENCH_SAMPLES=90 npm run benchmark -- --output temp/fitted-before
+BENCH_FIXTURES=falling-5,falling-10,welded-stone,welded-conduit BENCH_SAMPLES=90 BENCH_HEADED=1 npm run benchmark -- --output temp/fitted-headed
+BENCH_FIXTURES=falling-5,falling-10 BENCH_SAMPLES=90 BENCH_TRACE=1 npm run benchmark -- --output temp/fitted-before-trace
+BENCH_FIXTURES=falling-5,falling-10 BENCH_SAMPLES=90 BENCH_TRACE=1 BENCH_HEADED=1 npm run benchmark -- --output temp/fitted-headed-trace
+npm run benchmark:trace -- temp/fitted-before-trace/workshop.bench.ts-falling-10/result.json
+npm run benchmark:trace -- temp/fitted-headed-trace/workshop.bench.ts-falling-10/result.json
+```
+
+Local raw results, screenshots, traces, and generated summaries remain in those output directories; they are not checked-in timing gates. Headed GPU availability depends on the display/driver environment: verify `environment.graphics` on every run. Mixed factories, nested arrays, dirty split/merge frames, rotation, remounts, puzzle verification/case transitions, repeated cold starts, memory retention, and isolated tick-phase attribution remain open. **Next measured target:** trace the dense welded cases on hardware to distinguish synchronous tick/snapshot work from Canvas cost; do not infer that split from the sparse traces.
 
 ### 2. Investigate fitted active rendering
 
-- [ ] Capture a current trace of the reproducible 5%/10% low-detail cases and the long-tail dirty frames. Separate JS/path building, Canvas submission, raster/backpressure, and GC; compare software and hardware rendering before choosing an optimization.
-- [ ] Measure `drawLowDetailTiles`, `TranslationInterpolation.prepare`, detailed cache scans/state refresh, large partially visible bodies, and topology/scale rebuilds. Consider cached low-detail batches, sparse visible iteration, more selective visual refresh, or dirty-region/chunk indexing **only for measured costs**. Interpolation and rotation must retain their existing visibility and identity rules.
+- [ ] Trace dirty-frame tails and dense welded hardware cases; separate native rasterization/backpressure from JS/path construction. The fitted 5%/10% production comparison above establishes a large software-specific Canvas-resource cost, not its native implementation cause.
+- [ ] Measure `drawLowDetailTiles`, `TranslationInterpolation.prepare`, detailed cache scans/state refresh, large partially visible bodies, and topology/scale rebuilds. Compare any low-detail candidate on both backends and check fractional-cell seams and overlapping same-kind cells, not only throughput. Consider cached low-detail batches, sparse visible iteration, more selective visual refresh, or dirty-region/chunk indexing **only for measured costs**. Interpolation and rotation must retain their existing visibility and identity rules.
 
 Source starting points: `src/render/canvas-renderer.ts` (`drawTiles`, `drawLowDetailTiles`, `rebuildChangedBodyGeometry`, `refreshCachedBodyState`), `src/render/translation-interpolation.ts`, and `src/render/rotation-interpolation.ts`.
 
