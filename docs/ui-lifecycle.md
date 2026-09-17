@@ -19,6 +19,8 @@ Canonical routes are `/`, `/sandbox`, `/sandbox/:sandboxId`, `/puzzles/:puzzleId
 
 Persist the active dirty workshop before every transition; `pagehide` is the final boundary. Creation, duplication, deletion, completed edit gestures, imports, property changes, case changes, and clearing persist immediately. Sandbox snapshots contain the complete authoring workspace and selected case; solutions contain the editable baseline and optional scores. Sessions are created lazily per saved ID and reused on return; deleting a record also forgets its session.
 
+Duplicated puzzle solutions retain their original name as a family prefix and use a single numeric revision suffix: `Solution 1` → `Solution 1.1` → `Solution 1.2`. Duplication increments the source revision (or starts at `.1`) and skips names already used in that puzzle. Branching from an earlier revision keeps the same family rather than appending another suffix. No separate ancestry metadata is stored.
+
 A session has four related runtime references:
 
 * `world`: current mutable simulation state.

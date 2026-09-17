@@ -2,6 +2,7 @@ import { puzzleById, PUZZLES, type PuzzleId } from "./puzzles";
 import { deserializeBoard } from "../simulation/board-export";
 import { PuzzleResult } from "../simulation/puzzle-result";
 import { parsePuzzleScores, type PuzzleScores } from "./puzzle-scores";
+import { expectDefined } from "../util/assert";
 
 export const PUZZLE_SOLUTIONS_STORAGE_KEY = "factory2d.puzzle-solutions";
 const PUZZLE_SOLUTIONS_VERSION = 2;
@@ -152,12 +153,15 @@ export class PuzzleSolutions {
   duplicate(id: string): SavedPuzzleSolution {
     const source = this.byId(id);
     const usedNames = new Set(this.forPuzzle(source.puzzleId).map((solution) => solution.name));
-    const baseName = `${source.name} Copy`;
-    let name = baseName;
-    let copyNumber = 2;
+    const suffix = /\.(\d+)$/.exec(source.name);
+    const baseName = suffix === null ? source.name : source.name.slice(0, suffix.index);
+    let copyNumber = suffix === null
+      ? 1n
+      : BigInt(expectDefined(suffix[1], "Solution revision suffix is missing")) + 1n;
+    let name = `${baseName}.${copyNumber}`;
     while (usedNames.has(name)) {
-      name = `${baseName} ${copyNumber}`;
-      copyNumber += 1;
+      copyNumber += 1n;
+      name = `${baseName}.${copyNumber}`;
     }
 
     const duplicate = this.create(source.puzzleId, source.board);

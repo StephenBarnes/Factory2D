@@ -887,9 +887,9 @@ test("duplicates an edited board into an independent restorable solution", async
 
   const solutionRows = page.locator("#solution-list").getByRole("listitem");
   await expect(solutionRows).toHaveCount(2);
-  const duplicateRow = solutionRows.filter({ hasText: "Solution 1 Copy" });
+  const duplicateRow = solutionRows.filter({ hasText: "Solution 1.1" });
   await expect(duplicateRow).toBeVisible();
-  await duplicateRow.getByRole("button", { name: "Edit Solution 1 Copy" }).click();
+  await duplicateRow.getByRole("button", { name: "Edit Solution 1.1", exact: true }).click();
   const duplicate = await diagnosticSnapshot(page);
   expect(duplicate.activeSolutionId).toBe("solution-2");
   expect(duplicate.serializedBoard).toBe(fixture.editedBoard);

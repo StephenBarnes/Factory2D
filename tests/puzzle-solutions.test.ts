@@ -47,7 +47,7 @@ describe("puzzle solutions", () => {
       "Solution 1",
       "Solution 2",
       "Solution 1",
-      "Solution 1 Copy",
+      "Solution 1.1",
     ]);
     expect(duplicate.scores).toEqual({
       price: 1,
@@ -66,7 +66,7 @@ describe("puzzle solutions", () => {
     const loaded = loadPuzzleSolutions(storage);
     expect(loaded.forPuzzle("stone-drop").map(({ id, name }) => ({ id, name }))).toEqual([
       { id: first.id, name: "Solution 1" },
-      { id: duplicate.id, name: "Solution 1 Copy" },
+      { id: duplicate.id, name: "Solution 1.1" },
     ]);
     expect(loaded.byId(first.id).scores).toEqual({
       price: 1,
@@ -78,6 +78,42 @@ describe("puzzle solutions", () => {
     expect(loaded.byId(duplicate.id).board).toBe(editedBoard);
     expect(loaded.forPuzzle("sand-fall")).toHaveLength(1);
     expect(storage.getItem(PUZZLE_SOLUTIONS_STORAGE_KEY)).toBe(solutions.serialize());
+  });
+
+  it("keeps one lineage suffix across repeated copies and branches", () => {
+    const solutions = PuzzleSolutions.empty();
+    const original = solutions.create("stone-drop", initialBoard());
+    const otherFamily = solutions.create("stone-drop", initialBoard());
+    const first = solutions.duplicate(original.id);
+    const second = solutions.duplicate(first.id);
+    const branch = solutions.duplicate(original.id);
+
+    expect([first.name, second.name, branch.name]).toEqual([
+      "Solution 1.1", "Solution 1.2", "Solution 1.3",
+    ]);
+    expect(solutions.duplicate(otherFamily.id).name).toBe("Solution 2.1");
+
+    solutions.delete(second.id);
+    const loaded = PuzzleSolutions.deserialize(solutions.serialize());
+    expect(loaded.duplicate(branch.id).name).toBe("Solution 1.4");
+    expect(loaded.byId(original.id).name).toBe("Solution 1");
+
+    const otherPuzzle = loaded.create("sand-fall", initialBoard("sand-fall"));
+    expect(loaded.duplicate(otherPuzzle.id).name).toBe("Solution 1.1");
+  });
+
+  it("preserves a custom family name when adding and incrementing revisions", () => {
+    const solutions = PuzzleSolutions.empty();
+    const original = solutions.create("stone-drop", initialBoard());
+    const stored = JSON.parse(solutions.serialize()) as {
+      solutions: { name: string }[];
+    };
+    for (const solution of stored.solutions) solution.name = "Compact furnace";
+    const loaded = PuzzleSolutions.deserialize(JSON.stringify(stored));
+
+    const first = loaded.duplicate(original.id);
+    expect(first.name).toBe("Compact furnace.1");
+    expect(loaded.duplicate(first.id).name).toBe("Compact furnace.2");
   });
 
   it("discards scores from a different scoring contract without losing designs", () => {
