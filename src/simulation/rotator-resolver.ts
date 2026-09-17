@@ -24,10 +24,10 @@ interface RotationProposal {
 }
 
 /**
- * Resolves quarter-turns around stationary rotator cells. Collision is deliberately
- * tile-discrete: every rotating cell traces a supercover of its center's quarter-circle.
- * Bodies touched by that sweep, and bodies enclosed by the rotating cells, join the same
- * rigid turn recursively. Any fixed body or out-of-bounds sweep blocks the whole proposal.
+ * Resolves quarter-turns around stationary rotator cells, trying opposite base
+ * rotation when the gripped body's turn is geometrically blocked. Collision is
+ * tile-discrete: swept bodies and enclosed contents join the turn recursively.
+ * Fixed bodies, out-of-bounds sweeps, or capture of the stationary body block it.
  */
 export class RotatorResolver {
   private readonly world: World;
@@ -81,6 +81,12 @@ export class RotatorResolver {
       proposal.quarterTurn = quarterTurn;
       proposal.nextDirection = nextDirection;
       this.buildProposal(proposal, direction);
+      if (proposal.blocked) {
+        // Competing feasible turns still jam; only geometry can trigger reaction.
+        proposal.quarterTurn = -quarterTurn as -1 | 1;
+        proposal.nextDirection = direction;
+        this.buildProposal(proposal, direction, true);
+      }
     }
 
     this.markConflicts();
@@ -142,11 +148,18 @@ export class RotatorResolver {
     return proposal;
   }
 
-  private buildProposal(proposal: RotationProposal, direction: Direction): void {
+  private buildProposal(
+    proposal: RotationProposal,
+    direction: Direction,
+    reaction = false,
+  ): void {
     this.selected.fill(0);
+    proposal.selected.length = 0;
     const target = this.neighborIndex(proposal.pivot, direction);
-    if (target >= 0 && this.world.kindAtIndex(target) !== TileKind.Empty) {
-      this.addBodyAt(target, proposal.selected);
+    const stationary = reaction ? target : proposal.pivot;
+    const seed = reaction ? proposal.pivot : target;
+    if (seed >= 0 && this.world.kindAtIndex(seed) !== TileKind.Empty) {
+      this.addBodyAt(seed, proposal.selected);
     }
 
     let changed: boolean;
@@ -177,7 +190,7 @@ export class RotatorResolver {
     } while (changed);
 
     this.buildSweep(proposal);
-    proposal.blocked = this.sweepLeavesWorld || this.selected[proposal.pivot] === 1;
+    proposal.blocked = this.sweepLeavesWorld || this.selected[stationary] === 1;
     for (const source of proposal.selected) {
       if (TILE_DEFINITIONS[this.world.kindAtIndex(source)].immovable) {
         proposal.blocked = true;
@@ -196,6 +209,10 @@ export class RotatorResolver {
         proposal.blocked = true;
         break;
       }
+    }
+    if (reaction && !proposal.blocked) {
+      // Claim the stationary grip too: another turn must not carry it away.
+      proposal.sweep.push(target);
     }
   }
 

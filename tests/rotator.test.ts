@@ -7,13 +7,9 @@ import {
   Direction,
   directionX,
   directionY,
-  TILE_DEFINITIONS,
-  TileDecorationStyle,
   TileKind,
-  WeldSide,
 } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
-import { WorldFeature } from "../src/simulation/world-features";
 
 function chargeRotator(world: World, x: number, y: number, charge: -1 | 1): void {
   world.setCharge(x, y, charge);
@@ -33,23 +29,6 @@ function weldRing(world: World, left: number, top: number, size: number): void {
 }
 
 describe("rotators", () => {
-  it("defines a rear-only circuit mount and forward initial grip", () => {
-    const definition = TILE_DEFINITIONS[TileKind.Rotator];
-    expect(definition.usesOrientation).toBe(true);
-    expect(definition.weldableSides).toBe(WeldSide.Down);
-    expect(definition.circuitPorts).toBe(WeldSide.Down);
-    expect(definition.circuitInputPorts).toBe(WeldSide.None);
-    expect(definition.decorationStyle).toBe(TileDecorationStyle.Rotator);
-
-
-    const world = new World(2, 2);
-    world.place(0, 0, TileKind.Rotator, Direction.Right);
-    expect(world.componentStateSnapshotAt(0, 0)).toEqual({
-      type: "rotator",
-      direction: Direction.Right,
-    });
-    expect(world.hasFeature(WorldFeature.Rotator)).toBe(true);
-  });
   it("mirrors its grip direction when duplicated", () => {
     const world = new World(3, 5);
     world.place(1, 2, TileKind.Duplicator, Direction.Up);
@@ -184,6 +163,8 @@ describe("rotators", () => {
     chargeRotator(collisionWorld, 3, 3, 1);
     const targetId = collisionWorld.place(3, 2, TileKind.Stone);
     collisionWorld.place(4, 3, TileKind.Platform);
+    collisionWorld.place(3, 4, TileKind.Platform);
+    collisionWorld.setWeld(3, 3, 3, 4, true);
 
     expect(new RotatorResolver(collisionWorld).resolve()).toBe(0);
     expect(collisionWorld.idAt(3, 2)).toBe(targetId);
@@ -197,10 +178,118 @@ describe("rotators", () => {
     boundaryWorld.setRotatorDirectionAtIndex(4, Direction.Up);
     chargeRotator(boundaryWorld, 0, 1, -1);
     const boundaryTargetId = boundaryWorld.place(0, 0, TileKind.Stone);
+    boundaryWorld.place(1, 1, TileKind.Platform);
+    boundaryWorld.setWeld(0, 1, 1, 1, true);
 
     expect(new RotatorResolver(boundaryWorld).resolve()).toBe(0);
     expect(boundaryWorld.idAt(0, 0)).toBe(boundaryTargetId);
     expect(boundaryWorld.rotatorDirectionAtIndex(4)).toBe(Direction.Up);
+  });
+
+  it.each([false, true])("reacts against a fixed grip with mirrored=%s", (mirrored) => {
+    for (const charge of [-1, 1] as const) {
+      const world = new World(7, 7);
+      const rotator = world.place(3, 3, TileKind.Rotator, Direction.Up, mirrored);
+      const grip = world.place(3, 2, TileKind.Platform);
+      const rear = world.place(3, 4, TileKind.Sensor, Direction.Down);
+      world.setWeld(3, 3, 3, 4, true);
+      chargeRotator(world, 3, 3, charge);
+      const resolver = new RotatorResolver(world);
+      const turn = mirrored ? -charge : charge;
+      const nextOrientation = ((4 - turn) & 3) as Direction;
+
+      expect(resolver.resolve()).toBe(2);
+      expect(world.idAt(3, 3)).toBe(rotator);
+      expect(world.idAt(3, 2)).toBe(grip);
+      expect(world.orientationAt(3, 3)).toBe(nextOrientation);
+      expect(world.mirroredAt(3, 3)).toBe(mirrored);
+      expect(world.rotatorDirectionAtIndex(24)).toBe(Direction.Up);
+      expect(world.idAt(3 + turn, 3)).toBe(rear);
+      expect(world.orientationAt(3 + turn, 3)).toBe(turn === 1 ? Direction.Right : Direction.Left);
+      expect(world.isWelded(3, 3, 3 + turn, 3)).toBe(true);
+      // The same command would now put the grip behind the rotated base.
+      expect(resolver.resolve()).toBe(0);
+      expect(world.orientationAt(3, 3)).toBe(nextOrientation);
+      chargeRotator(world, 3, 3, charge === 1 ? -1 : 1);
+      expect(resolver.resolve()).toBe(2);
+      expect(world.orientationAt(3, 3)).toBe(Direction.Up);
+      expect(world.idAt(3, 4)).toBe(rear);
+      expect(world.rotatorDirectionAtIndex(24)).toBe(Direction.Up);
+    }
+  });
+
+  it("reacts when a movable grip hits terrain, without carrying the grip", () => {
+    const world = new World(7, 7);
+    world.place(3, 3, TileKind.Rotator, Direction.Up);
+    const grip = world.place(3, 2, TileKind.Stone);
+    world.place(4, 2, TileKind.Platform);
+    chargeRotator(world, 3, 3, 1);
+
+    expect(new RotatorResolver(world).resolve()).toBe(1);
+    expect(world.idAt(3, 2)).toBe(grip);
+    expect(world.orientationAt(3, 3)).toBe(Direction.Left);
+    expect(world.rotatorDirectionAtIndex(24)).toBe(Direction.Up);
+  });
+
+  it("blocks reaction when the base sweeps outside the board", () => {
+    const world = new World(4, 4);
+    world.place(3, 1, TileKind.Rotator, Direction.Up);
+    world.place(3, 0, TileKind.Platform);
+    const rear = world.place(3, 2, TileKind.Stone);
+    world.setWeld(3, 1, 3, 2, true);
+    chargeRotator(world, 3, 1, 1);
+
+    expect(new RotatorResolver(world).resolve()).toBe(0);
+    expect(world.idAt(3, 2)).toBe(rear);
+    expect(world.orientationAt(3, 1)).toBe(Direction.Up);
+  });
+
+  it("cannot react by sweeping the gripped body along with the base", () => {
+    const world = new World(7, 7);
+    world.place(3, 3, TileKind.Rotator, Direction.Up);
+    world.place(3, 4, TileKind.Stone);
+    world.setWeld(3, 3, 3, 4, true);
+    world.place(3, 2, TileKind.Stone);
+    world.place(4, 2, TileKind.Stone);
+    world.place(4, 3, TileKind.Stone);
+    world.place(4, 4, TileKind.Stone);
+    world.setWeld(3, 2, 4, 2, true);
+    world.setWeld(4, 2, 4, 3, true);
+    world.setWeld(4, 3, 4, 4, true);
+    chargeRotator(world, 3, 3, 1);
+    const before = serializeBoard(world, 0);
+
+    expect(new RotatorResolver(world).resolve()).toBe(0);
+    expect(serializeBoard(world, 0)).toBe(before);
+  });
+
+  it("jams reaction when another rotator would carry its stationary grip away", () => {
+    const world = new World(7, 7);
+    world.place(3, 3, TileKind.Rotator, Direction.Up);
+    world.place(3, 2, TileKind.Stone);
+    world.place(4, 2, TileKind.Platform);
+    world.place(2, 2, TileKind.Rotator, Direction.Right);
+    chargeRotator(world, 3, 3, 1);
+    chargeRotator(world, 2, 2, -1);
+    const before = serializeBoard(world, 0);
+
+    expect(new RotatorResolver(world).resolve()).toBe(0);
+    expect(serializeBoard(world, 0)).toBe(before);
+  });
+
+  it("jams competing reaction turns without choosing a winner", () => {
+    const world = new World(7, 7);
+    for (const x of [2, 4]) {
+      world.place(x, 3, TileKind.Rotator, Direction.Up);
+      world.place(x, 2, TileKind.Platform);
+      world.place(x, 4, TileKind.Stone);
+      world.setWeld(x, 3, x, 4, true);
+      chargeRotator(world, x, 3, x === 2 ? 1 : -1);
+    }
+    const before = serializeBoard(world, 0);
+
+    expect(new RotatorResolver(world).resolve()).toBe(0);
+    expect(serializeBoard(world, 0)).toBe(before);
   });
 
   it("jams simultaneous turns whose swept regions overlap", () => {

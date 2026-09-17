@@ -2,9 +2,10 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 # Authoring tools, player-created puzzles, histograms
 
+* Add histograms on the puzzle solution result modal. Rate solutions by percentile as coal, iron, gold, mithril. On the puzzle briefing screen, show the player's best score and percentile-mineral rank on each of the 4 metrics - for each metric, take the min/best over all their solutions. Also, if they have 2 or more solutions, the result modal should show their best score and the current solution's score for each metric, on each histogram. The backend already returns each installation's best-ever submitted metric frequencies without double-counting improvements; UI binning and ranks remain to be implemented.
+* Check that we're submitting histogram scores correctly. If a player has two solutions, and one has low cycles while another has low price, we should submit their best on each metric, even if that combined best can't be reached by any single solution. We shouldn't submit only the scores of the solution that they just tested.
 * Add community puzzle browsing and solution-mode play of downloaded shared puzzles. Published files can currently be downloaded and imported into sandboxes.
 * Allow voting community-created puzzles up and down. We can assume users aren't malicious, this is a zero-stakes indie game; expect under 10 players per day. Use the existing installation UUID rather than email/auth. Browser-level site-data deletion can still create another identity, but the game's clear button preserves it and full player-data import/export transfers it. If popularity warrants it, upgrade to a more robust system.
-* Add histograms on the puzzle solution result modal. Rate solutions by percentile as coal, iron, gold, mithril. On the puzzle briefing screen, show the player's best score and percentile-mineral rank on each of the 4 metrics - for each metric, take the min/best over all their solutions. Also, if they have 2 or more solutions, the result modal should show their best score and the current solution's score for each metric, on each histogram. The backend already returns each installation's best-ever submitted metric frequencies without double-counting improvements; UI binning and ranks remain to be implemented.
 
 # New non-circuit components
 
@@ -17,7 +18,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 * Modify the assembler to add a pushing force for output: When it has a pending output, but no space to output, attempt to push the blocks away so that it can produce output; failing that, try to push the assembler itself in its forwards direction, so the product can be emitted out the back (at assembler's pre-movement position) in the same tick.
 * Modify the duplicator in the same way as assembler above - make it also attempt to push itself away from the output side, if it's trying to duplicate a single-tile body but there's something blocking the output. When duplicating multi-tile bodies, don't do this - require already empty space for the whole body.
-* Modify the rotator to have reaction force: if it can't rotate the body it's attempting to rotate, instead try to rotate the rotator block's own body in the opposite direction, so that in the rotator's own frame of reference its head is still rotating in the requested direction.
 
 # Performance
 

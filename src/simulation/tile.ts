@@ -1860,7 +1860,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 34,
       category: PaletteCategory.Motion,
       description: "Turns its gripped body 90° with +1 clockwise or -1 counterclockwise rear input.",
-      extendedDescription: ["Grips ahead or to either side, never behind. A turn carries swept bodies and enclosed loose contents; fixed terrain, board boundaries, or competing turns jam the entire move. Orientations and welds turn with the body."],
+      extendedDescription: ["Grips ahead or to either side, never behind. If terrain, a boundary, or its own body blocks the gripped body's turn, it instead tries turning its own body the opposite way around the rotator cell, keeping the grip stationary. Turns carry swept bodies and enclosed loose contents, preserving orientations and welds. A blocked reaction or competing turns jam; competing turns do not trigger reaction."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,
