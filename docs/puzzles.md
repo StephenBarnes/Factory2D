@@ -20,7 +20,7 @@ Things we are not teaching yet:
 
 # Current non-tutorial puzzles
 
-Our current set of non-tutorial puzzles is very small: two mechanical puzzles and four circuit puzzles. The puzzle set we ship on first release version will have more focus on mechanical puzzles.
+Our current set of non-tutorial puzzles is very small: three mechanical puzzles and five circuit puzzles. The puzzle set we ship on first release version will have more focus on mechanical puzzles.
 
 ## Mining operations
 
@@ -31,15 +31,15 @@ Our current set of non-tutorial puzzles is very small: two mechanical puzzles an
 
 * Rectifier: requires building rectifier without the rectifier block - requires combiners and multipliers, or other combinations of components.
 * Change of Shift: detect increases, decreases, and unchanged values using only conduits, inverters, and combiners. Three cases cover all nine ternary transitions, negative startup, and long steady readings.
+* Holding Pattern: stretch each one-tick +1 or -1 pulse into exactly ten ticks of the same sign, then return to zero. Four cases cover both starting signs, back-to-back pulses (including repeated signs), and uneven gaps. Channels, inverters, combiners, delay gates, and delay runes are available. The reference solution uses combiner feedback and a delayed inverted input to end each hold, passing every case in 51 cycles (120-cycle limit).
 * Binary crossed channels: requires crossing two signals (only 0 and +1, no -1) without the dedicated crossing block. Can be done with 3 equality gates, plus some details for delaying specific lines and handling initial spurious `0 = 0` equality.
 * Ternary crossed channels: similar but with -1 allowed. This is more difficult. Current reference solution has nested rune arrays.
 
-The fixed ROM signal sources in these four runelore puzzles face right and are mirrored, so rear +1 reads the authored spatial grid left-to-right, then top-to-bottom under component-relative carry rules. Reference scenes use the same handedness; test-case sequences are unchanged.
+The fixed ROM signal sources in these five runelore puzzles face right and are mirrored, so rear +1 reads the authored spatial grid left-to-right, then top-to-bottom under component-relative carry rules. Reference scenes use the same handedness.
 
 # Ideas for non-tutorial puzzles
 
 * More mining puzzles between First Cart and Geode Extractor: (1) make a vehicle that moves right, then left, to activate two sensors; (2) make a vehicle that does this but also drills away obstacles.
-* Add a runelore puzzle (not marked as tutorial) teaching delays and delay latches: give an input signal for one tick, and require them to output it for say 10 ticks.
 * Count up to N pulses from two separate sources and decide which source gave more pulses in total. One solution idea: use a counter block, with an inverter on one of the two inputs, and then check whether final value is positive or negative? But wrap-arounds are possible, so maybe use spark blocks to initialize it to N. Also we can't read the value of the counter block directly, would need to decrement it until it reaches zero and compare number of decrements to initial value; but that seems like almost the same problem we started with?
 * A suite of basic circuit problems, where you only have: conduit, combiner, inverter, and fixed source. Add puzzles to build most of the more advanced circuit components out of these. The combiner is effectively a sum or vote/majority rune. Combiner also gives a 1-tick delay, so you can chain them to make a machine that acts like a delay rune with arbitrary memory size. Combiner with duplicate inputs, one delayed and inverted, gives edge detection. Spark is fixed value plus edge detection. For the rectifier/diode, we have a puzzle and reference solution, which needs two combiners and a multiplier. Rectifier could also be built using two combiners, fixed source, and inverter: use fixed source and inverter to get -1, then compute `Combiner(x, x, -1)` which takes (-1, 0, 1) to (-1, -1, 1), and then combine that with +1.
 * Physically reverse a list: The player's machine receives ruby blocks and sapphire blocks in some order; they must be output in reverse order. Requires building a physical contraption that behaves like a push/pop stack, or maybe putting them in a box and physically rotating it. The player presses a button to receive the next block, and we drop a stone block (or pulse a signal) to indicate the end of the sequence. (How do we build the infra to test? Maybe a delivery box, swapping which block is below it. Or maybe use block-comparer to produce +1 and -1 charge for each one received, and then compare sequences omitting zeros. Or maybe put the entire sequence we expect on a conveyor belt below the delivery box.)
