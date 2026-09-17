@@ -20,11 +20,12 @@ Things we are not teaching yet:
 
 # Current non-tutorial puzzles
 
-Our current set of non-tutorial puzzles is very small, and mostly has circuit puzzles, only one mechanical puzzle (conveyors, pistons, rotators). We just haven't added more yet; the puzzle set we ship on first release version will have more focus on mechanical puzzles.
+Our current set of non-tutorial puzzles is very small: two mechanical puzzles and four circuit puzzles. The puzzle set we ship on first release version will have more focus on mechanical puzzles.
 
 ## Mining operations
 
-We have one "geode extractor" puzzle that's fairly easy - requires triggering a duplicator to create geodes, some drills to carve away the stone, and conveyors to move the ruby to the delivery box. There's 2 separate duplicators in different directions, so they could solve it via different layouts, or use both for faster throughput. We enable most circuit components and mechanical components (welder, splitter, rotator, magnet, grinder) so they can choose which to use; reference solution only uses drills and conveyors. This is probably too complex to be the first thing the player sees after the tutorial; we should add more puzzles that introduce conveyors and drills more gradually.
+* First Cart: an Easy puzzle before Geode Extractor. Build a self-propelled cart in a small left-hand bay and reach the fixed sensor on the right. Only stone, channels, fixed charge runes, and conveyors are available; the track and finish circuitry are outside the editable region. The reference solution welds a fixed charge rune above a conveyor and reaches victory in 14 cycles (80-cycle limit). This introduces conveyor reaction forces without adding another tutorial.
+* Geode Extractor: requires triggering a duplicator to create geodes, some drills to carve away the stone, and conveyors to move the ruby to the delivery box. There's 2 separate duplicators in different directions, so players can solve it via different layouts, or use both for faster throughput. Most circuit and mechanical components (welder, splitter, rotator, magnet, grinder) are enabled; the reference solution only uses drills and conveyors. More intermediate puzzles could introduce drills before this puzzle.
 
 ## Runelore
 
@@ -37,7 +38,7 @@ The fixed ROM signal sources in these four runelore puzzles face right and are m
 
 # Ideas for non-tutorial puzzles
 
-* Mining puzzles before the geode extractor: (1) make a vehicle (conveyor and fixed charge) that moves to the right; (2) make a vehicle that moves right, then left, to activate two sensors; (3) make a vehicle that does this but also drills away obstacles.
+* More mining puzzles between First Cart and Geode Extractor: (1) make a vehicle that moves right, then left, to activate two sensors; (2) make a vehicle that does this but also drills away obstacles.
 * Add a runelore puzzle (not marked as tutorial) teaching delays and delay latches: give an input signal for one tick, and require them to output it for say 10 ticks.
 * Count up to N pulses from two separate sources and decide which source gave more pulses in total. One solution idea: use a counter block, with an inverter on one of the two inputs, and then check whether final value is positive or negative? But wrap-arounds are possible, so maybe use spark blocks to initialize it to N. Also we can't read the value of the counter block directly, would need to decrement it until it reaches zero and compare number of decrements to initial value; but that seems like almost the same problem we started with?
 * A suite of basic circuit problems, where you only have: conduit, combiner, inverter, and fixed source. Add puzzles to build most of the more advanced circuit components out of these. The combiner is effectively a sum or vote/majority rune. Combiner also gives a 1-tick delay, so you can chain them to make a machine that acts like a delay rune with arbitrary memory size. Combiner with duplicate inputs, one delayed and inverted, gives edge detection. Spark is fixed value plus edge detection. For the rectifier/diode, we have a puzzle and reference solution, which needs two combiners and a multiplier. Rectifier could also be built using two combiners, fixed source, and inverter: use fixed source and inverter to get -1, then compute `Combiner(x, x, -1)` which takes (-1, 0, 1) to (-1, -1, 1), and then combine that with +1.

@@ -1,0 +1,58 @@
+{
+  "format": "factory2d-board",
+  "version": 15,
+  "width": 18,
+  "height": 9,
+  "tick": 0,
+  "result": "in-progress",
+  "grid": [
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "...1............V=",
+    "...B............S=",
+    "==================",
+    ".................."
+  ],
+  "orientations": [
+    {
+      "x": 16,
+      "y": 6,
+      "direction": "left"
+    }
+  ],
+  "textBoxes": [
+    {
+      "id": "cart-bay",
+      "x": 1,
+      "y": 1,
+      "width": 5,
+      "height": 1.5,
+      "text": "BUILDING BAY\nAssemble your cart in the yellow region.",
+      "owner": "author"
+    },
+    {
+      "id": "cart-destination",
+      "x": 11,
+      "y": 1,
+      "width": 6,
+      "height": 1.5,
+      "text": "SURVEY STATION\nReach the cell immediately left of the sensor.",
+      "owner": "author"
+    }
+  ],
+  "welds": [
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "...|............+.",
+    "................-.",
+    "..................",
+    ".................."
+  ]
+}
+
