@@ -1,0 +1,268 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 5,
+  "width": 15,
+  "height": 9,
+  "id": "inverter",
+  "group": "runelore",
+  "order": 3,
+  "name": "Opposite Charges",
+  "difficulty": "tutorial",
+  "description": "The rune-smith needs the opposite of every incoming charge. An inverter turns blue +1 into red -1, red -1 into blue +1, and leaves neutral 0 unchanged. Its rear port accepts the input; its arrow points toward the output. Select an inverter, press D to point it right, then place it between the fixed INPUT and OUTPUT wires. Connect the gaps with conduits and weld every touching pair along the signal path. Hold Control to weld without changing tools. Gates read the previous tick, so a short initial delay is allowed. Once your first nonzero output arrives, the sequence checker checks one value every tick, including zeros. Use Test to pass both input sequences.",
+  "goal": "Invert every input charge: +1 becomes -1, -1 becomes +1, and 0 stays 0.",
+  "cycleLimit": 60,
+  "components": [
+    {
+      "code": "C",
+      "price": 1
+    },
+    {
+      "code": "I",
+      "price": 3
+    }
+  ],
+  "editableRegions": [
+    {
+      "x": 4,
+      "y": 3,
+      "width": 7,
+      "height": 3
+    }
+  ],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 15,
+    "width": 15,
+    "height": 9,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "...............",
+      "...............",
+      "...............",
+      "====.......====",
+      "1UmC.......CmEV",
+      "====.......==g=",
+      "...............",
+      "...............",
+      "..............."
+    ],
+    "orientations": [
+      {
+        "x": 1,
+        "y": 4,
+        "direction": "right"
+      },
+      {
+        "x": 13,
+        "y": 4,
+        "direction": "right"
+      }
+    ],
+    "components": [
+      {
+        "x": 1,
+        "y": 4,
+        "type": "rom",
+        "width": 5,
+        "height": 4,
+        "cursor": 0,
+        "wrapY": false,
+        "values": [
+          1,
+          -1,
+          0,
+          1,
+          1,
+          -1,
+          -1,
+          0,
+          0,
+          1,
+          -1,
+          1,
+          0,
+          -1,
+          1,
+          0,
+          0,
+          -1,
+          0,
+          0
+        ]
+      },
+      {
+        "x": 2,
+        "y": 4,
+        "type": "monitor",
+        "label": "INPUT"
+      },
+      {
+        "x": 12,
+        "y": 4,
+        "type": "monitor",
+        "label": "OUTPUT"
+      },
+      {
+        "x": 13,
+        "y": 4,
+        "type": "checker",
+        "width": 5,
+        "height": 4,
+        "cursor": 0,
+        "failed": false,
+        "values": [
+          -1,
+          1,
+          0,
+          -1,
+          -1,
+          1,
+          1,
+          0,
+          0,
+          -1,
+          1,
+          -1,
+          0,
+          1,
+          -1,
+          0,
+          0,
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "x": 13,
+        "y": 5,
+        "type": "grapher",
+        "label": "EXPECTED"
+      }
+    ],
+    "welds": [
+      "...............",
+      "...............",
+      "...............",
+      "+++|.......+++|",
+      "+++|.......+++|",
+      "---........---.",
+      "...............",
+      "...............",
+      "..............."
+    ],
+    "textBoxes": [
+      {
+        "id": "inverter-ports",
+        "x": 0,
+        "y": 0,
+        "width": 15,
+        "height": 3,
+        "owner": "author",
+        "text": "INVERTERS\nBlue +1 becomes red -1. Red -1 becomes blue +1. Zero stays zero."
+      },
+      {
+        "id": "inverter-help",
+        "x": 0,
+        "y": 6,
+        "width": 15,
+        "height": 3,
+        "owner": "author",
+        "text": "BUILD BETWEEN THE WIRES\nD points the inverter right. Fill gaps with conduits. Hold Control to weld each connection, then Test."
+      }
+    ]
+  },
+  "testCases": [
+    {
+      "id": "bursts",
+      "name": "Red first",
+      "overrides": {
+        "initialBoard": {
+          "components": [
+            {
+              "x": 1,
+              "y": 4,
+              "type": "rom",
+              "width": 5,
+              "height": 4,
+              "cursor": 0,
+              "wrapY": false,
+              "values": [
+                -1,
+                1,
+                1,
+                -1,
+                -1,
+                -1,
+                0,
+                0,
+                0,
+                -1,
+                1,
+                -1,
+                1,
+                0,
+                -1,
+                -1,
+                1,
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "x": 13,
+              "y": 5,
+              "type": "grapher",
+              "label": "EXPECTED"
+            },
+            {
+              "x": 2,
+              "y": 4,
+              "type": "monitor",
+              "label": "INPUT"
+            },
+            {
+              "x": 12,
+              "y": 4,
+              "type": "monitor",
+              "label": "OUTPUT"
+            },
+            {
+              "x": 13,
+              "y": 4,
+              "type": "checker",
+              "width": 5,
+              "height": 4,
+              "cursor": 0,
+              "failed": false,
+              "values": [
+                1,
+                -1,
+                -1,
+                1,
+                1,
+                1,
+                0,
+                0,
+                0,
+                1,
+                -1,
+                1,
+                -1,
+                0,
+                1,
+                1,
+                -1,
+                0,
+                0,
+                0
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

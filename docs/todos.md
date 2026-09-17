@@ -51,3 +51,5 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 # Content
 
 Ideas moved to `puzzle-ideas.md`. We need to add both tutorial puzzles to explain the game mechanics, and actual puzzles, at a range of difficulty levels.
+
+Added **Opposite Charges**, an inverter tutorial between Conduits and Rectifier, with on-board building instructions and two sequences covering positive, negative, and neutral inputs. More tutorials and non-tutorial puzzles remain needed.
