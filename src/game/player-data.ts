@@ -46,7 +46,7 @@ function parsePlayerData(serialized: string): readonly PlayerDataEntry[] {
   }
   const record = value as Record<string, unknown>;
   if (record.format !== PLAYER_DATA_FORMAT) {
-    throw new Error("File is not a Factory 2D player data export");
+    throw new Error("File is not a Dwarfworks player data export");
   }
   if (record.version !== PLAYER_DATA_VERSION) {
     throw new Error("Player data file has an unsupported version");

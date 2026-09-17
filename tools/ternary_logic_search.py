@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exhaustive small-circuit search for Factory 2D signed-ternary runes.
+"""Exhaustive small-circuit search for Dwarfworks signed-ternary runes.
 
 Edit the CONFIGURATION section near the bottom, then run:
 

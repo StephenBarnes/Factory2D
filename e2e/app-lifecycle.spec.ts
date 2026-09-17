@@ -235,16 +235,16 @@ test("routes only to accessible canonical screens", async ({ page }) => {
   await expect(page.getByText("No saved sandboxes. Create one to enter the workshop.")).toBeVisible();
 
   await page.goto("/#/puzzles/stone-drop");
-  await expect(page.getByRole("heading", { name: "Factory 2D" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dwarfworks" })).toBeVisible();
   await expect(page).toHaveURL(/\/#\/$/);
 
   await page.goto("/#/puzzles/crossed-channels");
   await expect(page).toHaveURL(/\/#\/$/);
-  await expect(page.getByRole("heading", { name: "Factory 2D" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dwarfworks" })).toBeVisible();
 
   await page.goto("/#/not-a-route");
   await expect(page).toHaveURL(/\/#\/$/);
-  await expect(page.getByRole("heading", { name: "Factory 2D" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dwarfworks" })).toBeVisible();
 });
 
 test("manual hash navigation and browser history restore saved workshop edits", async ({ page }) => {
@@ -290,7 +290,7 @@ test("opens settings and about from the main menu", async ({ page }) => {
   await settings.getByRole("button", { name: "CLOSE" }).click();
 
   await page.getByRole("button", { name: "ABOUT", exact: true }).click();
-  const about = page.getByRole("dialog", { name: "Factory 2D", exact: true });
+  const about = page.getByRole("dialog", { name: "Dwarfworks", exact: true });
   await expect(about).toBeVisible();
   await expect(about.getByRole("link", { name: "VIEW SOURCE ON GITHUB" })).toHaveAttribute(
     "href",

@@ -1,4 +1,4 @@
-# Factory 2D (working title)
+# Dwarfworks / Factory 2D
 
 ## Concept and direction
 
@@ -16,6 +16,7 @@ The theme is dwarven engineering: lodestones, glowing runes, mineral processing,
 * Implemented simulation includes gravity, welded bodies, magnets, conveyors, pistons, rotators, welders/splitters, furnaces, duplicators, delivery boxes, assemblers, ternary circuits, configurable sequential runes, and recursively nested rune arrays.
 * The workshop supports placement/welding, selection transforms, snippets, component configuration, annotations, nested-array editing, signal traces, and scene/puzzle JSON plus PNG export.
 * Hash-routed menus and briefings lead to independently saved solutions and sandboxes. Puzzle progression, all-case verification, scoring, authoring, and player-data import/export work locally. An optional Cloudflare Workers + D1 backend accepts successful scores, returns per-installation-best histogram data, and publishes downloadable puzzle files. Community browsing/solving, voting, histogram charts/ranks, and GIF export are not implemented. Relative production assets and `npm run package:itch` support static-host/itch.io ZIP releases; uploading and host-specific verification remain separate steps.
+* The game is currently published as a draft at `https://stephen6174.itch.io/dwarfworks`, not publicly visible. Feel free to delete all saved player data or change schema whenever necessary. We are still in early development; backwards compatibility is not required.
 
 ## Task-specific references
 

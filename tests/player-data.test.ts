@@ -160,7 +160,7 @@ describe("player data transfer", () => {
     const storage = new MemoryStorage();
     storage.setItem("existing", "preserved");
 
-    expect(() => replacePlayerData(storage, serialized)).toThrow(/Player data|Factory 2D|duplicate/);
+    expect(() => replacePlayerData(storage, serialized)).toThrow(/Player data|Dwarfworks|duplicate/);
     expect(Object.fromEntries(storage.values)).toEqual({ existing: "preserved" });
   });
 
