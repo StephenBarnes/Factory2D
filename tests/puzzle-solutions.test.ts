@@ -80,26 +80,55 @@ describe("puzzle solutions", () => {
     expect(storage.getItem(PUZZLE_SOLUTIONS_STORAGE_KEY)).toBe(solutions.serialize());
   });
 
-  it("keeps one lineage suffix across repeated copies and branches", () => {
+  it("keeps linear revisions short and records the source of each branch", () => {
     const solutions = PuzzleSolutions.empty();
     const original = solutions.create("stone-drop", initialBoard());
-    const otherFamily = solutions.create("stone-drop", initialBoard());
     const first = solutions.duplicate(original.id);
     const second = solutions.duplicate(first.id);
-    const branch = solutions.duplicate(original.id);
+    const rootBranch = solutions.duplicate(original.id);
+    const branch = solutions.duplicate(first.id);
+    const branchContinuation = solutions.duplicate(branch.id);
 
-    expect([first.name, second.name, branch.name]).toEqual([
-      "Solution 1.1", "Solution 1.2", "Solution 1.3",
+    expect([first.name, second.name, rootBranch.name, branch.name, branchContinuation.name]).toEqual([
+      "Solution 1.1", "Solution 1.2", "Solution 1a.1", "Solution 1.1a.1", "Solution 1.1a.2",
     ]);
+    expect(solutions.duplicate(first.id).name).toBe("Solution 1.1b.1");
+    expect(solutions.duplicate(branch.id).name).toBe("Solution 1.1a.1a.1");
+
+    const otherFamily = solutions.create("stone-drop", initialBoard());
     expect(solutions.duplicate(otherFamily.id).name).toBe("Solution 2.1");
+    const otherPuzzle = solutions.create("sand-fall", initialBoard("sand-fall"));
+    expect(solutions.duplicate(otherPuzzle.id).name).toBe("Solution 1.1");
+  });
 
+  it("does not reuse a deleted ancestor's name while descendants survive a reload", () => {
+    const solutions = PuzzleSolutions.empty();
+    const original = solutions.create("stone-drop", initialBoard());
+    const first = solutions.duplicate(original.id);
+    const second = solutions.duplicate(first.id);
+    const third = solutions.duplicate(second.id);
+    const branch = solutions.duplicate(first.id);
+    const nested = solutions.duplicate(branch.id);
+    solutions.duplicate(branch.id);
     solutions.delete(second.id);
-    const loaded = PuzzleSolutions.deserialize(solutions.serialize());
-    expect(loaded.duplicate(branch.id).name).toBe("Solution 1.4");
-    expect(loaded.byId(original.id).name).toBe("Solution 1");
+    solutions.delete(branch.id);
+    solutions.delete(nested.id);
 
-    const otherPuzzle = loaded.create("sand-fall", initialBoard("sand-fall"));
-    expect(loaded.duplicate(otherPuzzle.id).name).toBe("Solution 1.1");
+    const loaded = PuzzleSolutions.deserialize(solutions.serialize());
+    expect(loaded.duplicate(first.id).name).toBe("Solution 1.1b.1");
+    expect(loaded.duplicate(third.id).name).toBe("Solution 1.4");
+    loaded.delete(original.id);
+    expect(loaded.create("stone-drop", initialBoard()).name).toBe("Solution 2");
+  });
+
+  it("continues branch lettering past z without lengthening the revision chain", () => {
+    const solutions = PuzzleSolutions.empty();
+    const original = solutions.create("stone-drop", initialBoard());
+    solutions.duplicate(original.id);
+    for (let index = 0; index < 26; index += 1) solutions.duplicate(original.id);
+    const branch = solutions.duplicate(original.id);
+    expect(branch.name).toBe("Solution 1aa.1");
+    expect(solutions.duplicate(branch.id).name).toBe("Solution 1aa.2");
   });
 
   it("preserves a custom family name when adding and incrementing revisions", () => {
@@ -114,6 +143,7 @@ describe("puzzle solutions", () => {
     const first = loaded.duplicate(original.id);
     expect(first.name).toBe("Compact furnace.1");
     expect(loaded.duplicate(first.id).name).toBe("Compact furnace.2");
+    expect(loaded.duplicate(first.id).name).toBe("Compact furnace.1a.1");
   });
 
   it("discards scores from a different scoring contract without losing designs", () => {

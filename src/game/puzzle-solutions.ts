@@ -26,6 +26,26 @@ interface StoredPuzzleSolutions {
   readonly solutions: readonly SavedPuzzleSolution[];
 }
 
+// A later revision or a nested branch also reserves its missing ancestors.
+function hasRevision(names: readonly string[], baseName: string, minimum: bigint): boolean {
+  const prefix = `${baseName}.`;
+  return names.some((name) => {
+    if (!name.startsWith(prefix)) return false;
+    const suffix = /^(\d+)(?:[a-z]+\.\d+)*$/.exec(name.slice(prefix.length));
+    return suffix !== null
+      && BigInt(expectDefined(suffix[1], "Solution revision suffix is missing")) >= minimum;
+  });
+}
+
+function branchLetters(index: number): string {
+  let letters = "";
+  do {
+    letters = String.fromCharCode(97 + index % 26) + letters;
+    index = Math.floor(index / 26) - 1;
+  } while (index >= 0);
+  return letters;
+}
+
 export class PuzzleSolutions {
   private constructor(
     private readonly solutions: SavedPuzzleSolution[],
@@ -126,9 +146,14 @@ export class PuzzleSolutions {
 
   create(puzzleId: PuzzleId, board: string): SavedPuzzleSolution {
     puzzleById(puzzleId);
-    const usedNames = new Set(this.forPuzzle(puzzleId).map((solution) => solution.name));
+    const usedNames = this.forPuzzle(puzzleId).map((solution) => solution.name);
     let nameNumber = 1;
-    while (usedNames.has(`Solution ${nameNumber}`)) {
+    while (usedNames.some((name) => {
+      const candidate = `Solution ${nameNumber}`;
+      return name === candidate
+        || (name.startsWith(candidate)
+          && /^[a-z]*\.\d+(?:[a-z]+\.\d+)*$/.test(name.slice(candidate.length)));
+    })) {
       nameNumber += 1;
     }
 
@@ -152,16 +177,21 @@ export class PuzzleSolutions {
 
   duplicate(id: string): SavedPuzzleSolution {
     const source = this.byId(id);
-    const usedNames = new Set(this.forPuzzle(source.puzzleId).map((solution) => solution.name));
+    const usedNames = this.forPuzzle(source.puzzleId).map((solution) => solution.name);
     const suffix = /\.(\d+)$/.exec(source.name);
     const baseName = suffix === null ? source.name : source.name.slice(0, suffix.index);
-    let copyNumber = suffix === null
+    const copyNumber = suffix === null
       ? 1n
       : BigInt(expectDefined(suffix[1], "Solution revision suffix is missing")) + 1n;
     let name = `${baseName}.${copyNumber}`;
-    while (usedNames.has(name)) {
-      copyNumber += 1n;
-      name = `${baseName}.${copyNumber}`;
+    if (hasRevision(usedNames, baseName, copyNumber)) {
+      let branchIndex = 0;
+      let branchName = `${source.name}${branchLetters(branchIndex)}`;
+      while (hasRevision(usedNames, branchName, 1n)) {
+        branchIndex += 1;
+        branchName = `${source.name}${branchLetters(branchIndex)}`;
+      }
+      name = `${branchName}.1`;
     }
 
     const duplicate = this.create(source.puzzleId, source.board);
