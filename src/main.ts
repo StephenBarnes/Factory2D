@@ -1417,7 +1417,13 @@ const puzzleTests = new PuzzleTestController(
       if (screen.kind !== "puzzle") {
         throw new Error("Cannot submit puzzle scores outside a puzzle workshop");
       }
-      void communityScores.recordResult(screen.puzzleId, scores);
+      const submissionScores = scores === null || previousBest === null ? scores : {
+        price: Math.min(previousBest.price, scores.price),
+        cycles: Math.min(previousBest.cycles, scores.cycles),
+        footprint: Math.min(previousBest.footprint, scores.footprint),
+        combined: Math.min(previousBest.combined, scores.combined),
+      };
+      void communityScores.recordResult(screen.puzzleId, submissionScores);
       return previousBest;
     },
     refreshTransport: updateTransportState,
