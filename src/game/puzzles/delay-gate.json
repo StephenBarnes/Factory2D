@@ -1,0 +1,381 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 5,
+  "width": 16,
+  "height": 12,
+  "id": "delay-gate",
+  "group": "runelore",
+  "order": 3.5,
+  "name": "One Beat Later",
+  "difficulty": "tutorial",
+  "description": "The bottling line needs its control signal one tick later. Conduits carry a charge through an entire welded wire in the same tick; a Delay Gate copies its rear input to its front output on the next tick, preserving +1, -1, and 0. Select a Delay Gate, press D to point it right, and place it between the fixed INPUT and OUTPUT wires. Fill the gaps with conduits and weld every touching pair along the path; hold Control to weld without changing tools. The fixed machinery compares your OUTPUT against EXPECTED on every tick, so a plain wire or two gates in series will fail. Watch the three signal traces, then use Test to pass both sequences.",
+  "goal": "Reproduce every input charge exactly one tick later, including zeros.",
+  "cycleLimit": 60,
+  "components": [
+    {
+      "code": "C",
+      "price": 1
+    },
+    {
+      "code": ";",
+      "price": 4
+    }
+  ],
+  "editableRegions": [
+    {
+      "x": 4,
+      "y": 3,
+      "width": 7,
+      "height": 3
+    }
+  ],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 15,
+    "width": 16,
+    "height": 12,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "................",
+      "................",
+      "................",
+      "====.......=====",
+      "1UmC.......CmeEV",
+      "====.......==Cg=",
+      "...........==C==",
+      "...........1Um==",
+      "...........=====",
+      "................",
+      "................",
+      "................"
+    ],
+    "orientations": [
+      {
+        "x": 1,
+        "y": 4,
+        "direction": "right"
+      },
+      {
+        "x": 13,
+        "y": 4,
+        "direction": "right"
+      },
+      {
+        "x": 14,
+        "y": 4,
+        "direction": "right"
+      },
+      {
+        "x": 12,
+        "y": 7,
+        "direction": "right"
+      }
+    ],
+    "components": [
+      {
+        "x": 1,
+        "y": 4,
+        "type": "rom",
+        "width": 7,
+        "height": 3,
+        "cursor": 0,
+        "wrapY": false,
+        "values": [
+          1,
+          -1,
+          0,
+          1,
+          1,
+          -1,
+          -1,
+          0,
+          0,
+          1,
+          -1,
+          1,
+          0,
+          -1,
+          1,
+          0,
+          0,
+          -1,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "x": 2,
+        "y": 4,
+        "type": "monitor",
+        "label": "INPUT"
+      },
+      {
+        "x": 12,
+        "y": 4,
+        "type": "monitor",
+        "label": "OUTPUT"
+      },
+      {
+        "x": 14,
+        "y": 4,
+        "type": "checker",
+        "width": 5,
+        "height": 5,
+        "cursor": 0,
+        "failed": false,
+        "values": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "x": 14,
+        "y": 5,
+        "type": "grapher",
+        "label": "TIMING CHECK"
+      },
+      {
+        "x": 12,
+        "y": 7,
+        "type": "rom",
+        "width": 7,
+        "height": 3,
+        "cursor": 0,
+        "wrapY": false,
+        "values": [
+          0,
+          1,
+          -1,
+          0,
+          1,
+          1,
+          -1,
+          -1,
+          0,
+          0,
+          1,
+          -1,
+          1,
+          0,
+          -1,
+          1,
+          0,
+          0,
+          -1,
+          0,
+          0
+        ]
+      },
+      {
+        "x": 13,
+        "y": 7,
+        "type": "monitor",
+        "label": "EXPECTED"
+      }
+    ],
+    "welds": [
+      "................",
+      "................",
+      "................",
+      "+++|.......++++|",
+      "+++|.......++++|",
+      "---........++++|",
+      "...........++++|",
+      "...........++++|",
+      "...........----.",
+      "................",
+      "................",
+      "................"
+    ],
+    "textBoxes": [
+      {
+        "id": "delay-ports",
+        "x": 0,
+        "y": 0,
+        "width": 16,
+        "height": 3,
+        "owner": "author",
+        "text": "ONE BEAT LATER\nA Delay Gate copies its rear input one tick later. Blue, red, and zero all keep their values."
+      },
+      {
+        "id": "delay-help",
+        "x": 0,
+        "y": 6,
+        "width": 10,
+        "height": 3,
+        "owner": "author",
+        "text": "BUILD BETWEEN THE WIRES\nD points the gate right. Add conduits and hold Control to weld every connection."
+      },
+      {
+        "id": "delay-timing",
+        "x": 0,
+        "y": 9,
+        "width": 16,
+        "height": 3,
+        "owner": "author",
+        "text": "MATCH THE TIMING\nOUTPUT must match EXPECTED every tick. A plain wire is too early; two gates are too late. Test both sequences."
+      }
+    ]
+  },
+  "testCases": [
+    {
+      "id": "bursts",
+      "name": "Red first",
+      "overrides": {
+        "initialBoard": {
+          "components": [
+            {
+              "x": 1,
+              "y": 4,
+              "type": "rom",
+              "width": 7,
+              "height": 3,
+              "cursor": 0,
+              "wrapY": false,
+              "values": [
+                -1,
+                1,
+                1,
+                -1,
+                -1,
+                -1,
+                0,
+                0,
+                0,
+                -1,
+                1,
+                -1,
+                1,
+                0,
+                -1,
+                -1,
+                1,
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "x": 2,
+              "y": 4,
+              "type": "monitor",
+              "label": "INPUT"
+            },
+            {
+              "x": 12,
+              "y": 4,
+              "type": "monitor",
+              "label": "OUTPUT"
+            },
+            {
+              "x": 14,
+              "y": 4,
+              "type": "checker",
+              "width": 5,
+              "height": 5,
+              "cursor": 0,
+              "failed": false,
+              "values": [
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1
+              ]
+            },
+            {
+              "x": 14,
+              "y": 5,
+              "type": "grapher",
+              "label": "TIMING CHECK"
+            },
+            {
+              "x": 12,
+              "y": 7,
+              "type": "rom",
+              "width": 7,
+              "height": 3,
+              "cursor": 0,
+              "wrapY": false,
+              "values": [
+                0,
+                -1,
+                1,
+                1,
+                -1,
+                -1,
+                -1,
+                0,
+                0,
+                0,
+                -1,
+                1,
+                -1,
+                1,
+                0,
+                -1,
+                -1,
+                1,
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "x": 13,
+              "y": 7,
+              "type": "monitor",
+              "label": "EXPECTED"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

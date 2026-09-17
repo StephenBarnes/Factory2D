@@ -11,7 +11,8 @@ Current tutorial puzzles:
 * Sand fall: build a ramp for sand to fall diagonally down. Teaches diagonal gravity, and welding maybe (though they could click-and-drag and not pay attention to welds).
 * Puzzle infrastructure: place a judgment stone / victory block, and an inverter. Teaches welding, inverter, charges, directional components, judgement stone, and the general concept that a puzzle's win condition is defined on the game board rather than via metadata.
 * Conduits: place channel/wire blocks. Teaches welding, welding at edges of the player-modifiable region, signed ternary charges.
-* Opposite charges: place inverter and conduit. Teaches directionality, signed ternary charges. We could maybe remove this if other puzzles teach the same stuff.
+* Opposite charges: place inverter and conduit. Teaches directionality, signed ternary charges. We should maybe remove this if other puzzles teach the same stuff.
+* One beat later: place conduit and one delay gate. Teaches delays. We should maybe remove this and add a better puzzle that requires more understanding to solve, specifically ensuring that the player understands that different branches of a computation may require delays to synchronize the branches before values are combined. Maybe replace this with a puzzle that requires adding together the most recent 3 values in a sequence, since that naturally requires delays.
 
 We should move the conduits and opposite charges puzzles to the "basics" section, and rename that section to "tutorial".
 
@@ -22,6 +23,14 @@ Things we are not teaching yet:
 * Transformation machines: furnaces, grinders, assemblers.
 * Machines that weld and unweld.
 * Charge sensors.
+
+# Current non-tutorial puzzles
+
+Our current set of non-tutorial puzzles is very small, and only has fairly simple circuit puzzles, no mechanical puzzles (conveyors, pistons, rotators). We just haven't added those yet; the puzzle set we ship on first release version will have more focus on mechanical puzzles.
+
+* Rectifier: requires building rectifier without the rectifier block - requires combiners and multipliers, or other combinations of components.
+* Binary crossed channels: requires crossing two signals (only 0 and +1, no -1) without the dedicated crossing block. Can be done with 3 equality gates, plus some details for delaying specific lines and handling initial spurious `0 = 0` equality.
+* Ternary crossed channels: similar but with -1 allowed. This is more difficult. Current reference solution has nested rune arrays.
 
 # Ideas for non-tutorial puzzles
 
@@ -36,7 +45,7 @@ Things we are not teaching yet:
 * Look at other puzzle games (The Witness, various Zachtronics games, Roody:2d) for inspiration. Add any components necessary to allow implementing similar puzzles in our game. For example, we could make Witness-style mazes by letting the player place only conduits, and they have to link a fixed charge to the victory block; but how could we implement other constraints from Witness's puzzles?
 * Various straightforward mechanical manipulation puzzles, e.g. given stone blocks, weld them into 1x2 bodies, or 2x2, or one of each tetromino, or shapes made of different block types in specific configurations.
 	* As additional puzzles, could add various constraints, e.g. use lock gate pattern to enforce creating some intermediate, then unwelding that and reassembling into a different shape.
-	* Or give them a large top region to assemble one tetromino (chosen by a circuit input, different one each test case), but then it has to pass through a 2-wide gap to reach the delivery box.
+	* Or give them a large top region to assemble one tetromino (chosen by a circuit input, different one each test case), but then it has to pass through a 2-wide gap to reach the delivery box. Or through a 1-wide gap to a small region that can do only a small amount of additional welding.
 * Given rotator blocks and various circuit blocks, carry stone blocks from a low starting position to a high delivery block, by rotating them repeatedly.
 * Puzzle: build a lock gate that allows through only bodies matching a specific shape.
 * Puzzle: build a gantry that grabs bodies and moves them over a wall.
