@@ -1,0 +1,382 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 5,
+  "width": 15,
+  "height": 7,
+  "id": "change-of-shift",
+  "group": "runelore",
+  "order": 5,
+  "name": "Change of Shift",
+  "difficulty": 2,
+  "description": "The mine's warning line should report changes, not steady readings. Build a circuit that compares each INPUT value with the previous tick: emit +1 if it increased, -1 if it decreased, and 0 if it stayed the same. Treat the value before the sequence as 0; a jump directly from -1 to +1 still produces only +1 (and the reverse produces -1). Only conduits, inverters, and combiners are available. A fixed processing delay is allowed: the checker starts at your first nonzero output, then checks every tick, including zeros. Pass all three test cases.",
+  "goal": "Output the sign of the change from the previous input value.",
+  "cycleLimit": 100,
+  "components": [
+    {
+      "code": "C",
+      "price": 1
+    },
+    {
+      "code": "I",
+      "price": 3
+    },
+    {
+      "code": "+",
+      "price": 3
+    }
+  ],
+  "editableRegions": [
+    {
+      "x": 4,
+      "y": 2,
+      "width": 7,
+      "height": 3
+    }
+  ],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 15,
+    "width": 15,
+    "height": 7,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "...............",
+      "...............",
+      "====.......====",
+      "1UmC.......CmEV",
+      "====.......==g=",
+      "...............",
+      "..............."
+    ],
+    "orientations": [
+      {
+        "x": 1,
+        "y": 3,
+        "direction": "right"
+      },
+      {
+        "x": 13,
+        "y": 3,
+        "direction": "right"
+      }
+    ],
+    "components": [
+      {
+        "x": 1,
+        "y": 3,
+        "type": "rom",
+        "width": 6,
+        "height": 4,
+        "cursor": 0,
+        "wrapY": false,
+        "values": [
+          1,
+          1,
+          0,
+          0,
+          -1,
+          -1,
+          0,
+          0,
+          1,
+          -1,
+          1,
+          0,
+          -1,
+          1,
+          1,
+          1,
+          0,
+          -1,
+          -1,
+          0,
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "x": 2,
+        "y": 3,
+        "type": "monitor",
+        "label": "INPUT"
+      },
+      {
+        "x": 12,
+        "y": 3,
+        "type": "monitor",
+        "label": "OUTPUT"
+      },
+      {
+        "x": 13,
+        "y": 3,
+        "type": "checker",
+        "width": 6,
+        "height": 4,
+        "cursor": 0,
+        "failed": false,
+        "values": [
+          1,
+          0,
+          -1,
+          0,
+          -1,
+          0,
+          1,
+          0,
+          1,
+          -1,
+          1,
+          -1,
+          -1,
+          1,
+          0,
+          0,
+          -1,
+          -1,
+          0,
+          1,
+          1,
+          -1,
+          0,
+          0
+        ]
+      },
+      {
+        "x": 13,
+        "y": 4,
+        "type": "grapher",
+        "label": "EXPECTED"
+      }
+    ],
+    "welds": [
+      "...............",
+      "...............",
+      "+++|.......+++|",
+      "+++|.......+++|",
+      "---........---.",
+      "...............",
+      "..............."
+    ],
+    "textBoxes": [
+      {
+        "id": "change-rule",
+        "x": 0,
+        "y": 0,
+        "width": 15,
+        "height": 2,
+        "owner": "author",
+        "text": "CHANGE OF SHIFT\nRising input: +1. Falling input: -1. Unchanged: 0."
+      },
+      {
+        "id": "change-timing",
+        "x": 0,
+        "y": 5,
+        "width": 15,
+        "height": 2,
+        "owner": "author",
+        "text": "The input starts from 0. A processing delay is allowed.\nAfter the first nonzero output, every tick counts."
+      }
+    ]
+  },
+  "testCases": [
+    {
+      "id": "falling-first",
+      "name": "Falling First",
+      "overrides": {
+        "initialBoard": {
+          "components": [
+            {
+              "x": 1,
+              "y": 3,
+              "type": "rom",
+              "width": 6,
+              "height": 4,
+              "cursor": 0,
+              "wrapY": false,
+              "values": [
+                -1,
+                -1,
+                0,
+                0,
+                1,
+                1,
+                0,
+                0,
+                -1,
+                1,
+                -1,
+                0,
+                1,
+                -1,
+                -1,
+                -1,
+                0,
+                1,
+                1,
+                0,
+                -1,
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "x": 2,
+              "y": 3,
+              "type": "monitor",
+              "label": "INPUT"
+            },
+            {
+              "x": 12,
+              "y": 3,
+              "type": "monitor",
+              "label": "OUTPUT"
+            },
+            {
+              "x": 13,
+              "y": 3,
+              "type": "checker",
+              "width": 6,
+              "height": 4,
+              "cursor": 0,
+              "failed": false,
+              "values": [
+                -1,
+                0,
+                1,
+                0,
+                1,
+                0,
+                -1,
+                0,
+                -1,
+                1,
+                -1,
+                1,
+                1,
+                -1,
+                0,
+                0,
+                1,
+                1,
+                0,
+                -1,
+                -1,
+                1,
+                0,
+                0
+              ]
+            },
+            {
+              "x": 13,
+              "y": 4,
+              "type": "grapher",
+              "label": "EXPECTED"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "long-shifts",
+      "name": "Long Shifts",
+      "overrides": {
+        "initialBoard": {
+          "components": [
+            {
+              "x": 1,
+              "y": 3,
+              "type": "rom",
+              "width": 6,
+              "height": 4,
+              "cursor": 0,
+              "wrapY": false,
+              "values": [
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                -1,
+                1,
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "x": 2,
+              "y": 3,
+              "type": "monitor",
+              "label": "INPUT"
+            },
+            {
+              "x": 12,
+              "y": 3,
+              "type": "monitor",
+              "label": "OUTPUT"
+            },
+            {
+              "x": 13,
+              "y": 3,
+              "type": "checker",
+              "width": 6,
+              "height": 4,
+              "cursor": 0,
+              "failed": false,
+              "values": [
+                1,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                -1,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                -1,
+                -1,
+                1,
+                -1,
+                0,
+                0
+              ]
+            },
+            {
+              "x": 13,
+              "y": 4,
+              "type": "grapher",
+              "label": "EXPECTED"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

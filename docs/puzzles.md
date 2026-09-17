@@ -29,6 +29,7 @@ Things we are not teaching yet:
 Our current set of non-tutorial puzzles is very small, and only has fairly simple circuit puzzles, no mechanical puzzles (conveyors, pistons, rotators). We just haven't added those yet; the puzzle set we ship on first release version will have more focus on mechanical puzzles.
 
 * Rectifier: requires building rectifier without the rectifier block - requires combiners and multipliers, or other combinations of components.
+* Change of Shift: detect increases (+1), decreases (-1), and unchanged values (0) using only conduits, inverters, and combiners. A fixed processing delay is allowed; the checker compares every tick after the first nonzero output. Three cases cover all nine ternary transitions, negative startup, and long steady readings. Includes board annotations and a reference solution verified at 27 cycles per case.
 * Binary crossed channels: requires crossing two signals (only 0 and +1, no -1) without the dedicated crossing block. Can be done with 3 equality gates, plus some details for delaying specific lines and handling initial spurious `0 = 0` equality.
 * Ternary crossed channels: similar but with -1 allowed. This is more difficult. Current reference solution has nested rune arrays.
 

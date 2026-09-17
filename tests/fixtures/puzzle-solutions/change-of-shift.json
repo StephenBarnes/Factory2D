@@ -1,0 +1,161 @@
+{
+  "format": "factory2d-board",
+  "version": 15,
+  "width": 15,
+  "height": 7,
+  "tick": 0,
+  "result": "in-progress",
+  "grid": [
+    "...............",
+    "...............",
+    "====CICC...====",
+    "1UmCCCC+CCCCmEV",
+    "====.......==g=",
+    "...............",
+    "..............."
+  ],
+  "orientations": [
+    {
+      "x": 5,
+      "y": 2,
+      "direction": "right"
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "direction": "right"
+    },
+    {
+      "x": 7,
+      "y": 3,
+      "direction": "right"
+    },
+    {
+      "x": 13,
+      "y": 3,
+      "direction": "right"
+    }
+  ],
+  "components": [
+    {
+      "x": 1,
+      "y": 3,
+      "type": "rom",
+      "width": 6,
+      "height": 4,
+      "cursor": 0,
+      "wrapX": true,
+      "wrapY": false,
+      "values": [
+        1,
+        1,
+        0,
+        0,
+        -1,
+        -1,
+        0,
+        0,
+        1,
+        -1,
+        1,
+        0,
+        -1,
+        1,
+        1,
+        1,
+        0,
+        -1,
+        -1,
+        0,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "type": "monitor",
+      "label": "INPUT"
+    },
+    {
+      "x": 12,
+      "y": 3,
+      "type": "monitor",
+      "label": "OUTPUT"
+    },
+    {
+      "x": 13,
+      "y": 3,
+      "type": "checker",
+      "width": 6,
+      "height": 4,
+      "cursor": 0,
+      "failed": false,
+      "ignoreZeros": false,
+      "values": [
+        1,
+        0,
+        -1,
+        0,
+        -1,
+        0,
+        1,
+        0,
+        1,
+        -1,
+        1,
+        -1,
+        -1,
+        1,
+        0,
+        0,
+        -1,
+        -1,
+        0,
+        1,
+        1,
+        -1,
+        0,
+        0
+      ]
+    },
+    {
+      "x": 13,
+      "y": 4,
+      "type": "grapher",
+      "label": "EXPECTED"
+    }
+  ],
+  "textBoxes": [
+    {
+      "id": "change-rule",
+      "x": 0,
+      "y": 0,
+      "width": 15,
+      "height": 2,
+      "owner": "author",
+      "text": "CHANGE OF SHIFT\nRising input: +1. Falling input: -1. Unchanged: 0."
+    },
+    {
+      "id": "change-timing",
+      "x": 0,
+      "y": 5,
+      "width": 15,
+      "height": 2,
+      "owner": "author",
+      "text": "The input starts from 0. A processing delay is allowed.\nAfter the first nonzero output, every tick counts."
+    }
+  ],
+  "welds": [
+    "...............",
+    "...............",
+    "+++|+--|...+++|",
+    "++++-------+++|",
+    "---........---.",
+    "...............",
+    "..............."
+  ]
+}
+
