@@ -1,51 +1,71 @@
 {
   "format": "factory2d-puzzle",
   "version": 5,
-  "width": 9,
-  "height": 8,
+  "width": 13,
+  "height": 10,
   "id": "sand-fall",
   "group": "basics",
-  "order": 1,
+  "order": 2,
   "name": "Sand fall",
   "difficulty": "tutorial",
-  "description": "Tutorial puzzle teaching diagonal gravity and welding.",
-  "goal": "Guide one sand block to the goal.",
+  "description": "Learn about gravity and sand.",
+  "goal": "Guide one sand block to the delivery box.",
   "cycleLimit": 20,
-  "components": [ { "code": "#", "price": 1 } ],
+  "components": [
+    {
+      "code": "#",
+      "price": 1
+    }
+  ],
   "editableRegions": [
     {
-      "x": 2,
-      "y": 2,
-      "width": 5,
+      "x": 1,
+      "y": 4,
+      "width": 6,
       "height": 4
     }
   ],
   "initialBoard": {
     "format": "factory2d-board",
     "version": 15,
-    "width": 9,
-    "height": 8,
+    "width": 13,
+    "height": 10,
     "tick": 0,
     "result": "in-progress",
     "grid": [
-      "=========",
-      "=..:....=",
-      "=.......=",
-      "=.......=",
-      "=.......=",
-      "=.......=",
-      "=...=DV.=",
-      "=====:==="
+      "=============",
+      "========.:..=",
+      "========#...=",
+      "=.:....=##..=",
+      "=......=...#=",
+      "=......==.##=",
+      "=......=..#.=",
+      "=......=#..==",
+      "=..=DV.=.=..=",
+      "====:========"
+    ],
+    "textBoxes": [
+      {
+        "id": "4247b3de-c949-44cc-83e6-053b1b36a83d",
+        "x": 0.9093761444091797,
+        "y": 0.44479095935821533,
+        "width": 5.53,
+        "height": 1.26,
+        "text": "Place stone blocks to guide the sand into the delivery box below.\nClick and drag to WELD placed blocks together.\nYou can also use control-click to weld and unweld, or shift-click\nto place a block welded on all sides. Sand cannot be welded.",
+        "owner": "author"
+      }
     ],
     "welds": [
-      "+-------|",
-      "|.......|",
-      "|.......|",
-      "|.......|",
-      "|.......|",
-      "|.......|",
-      "|...+-|.|",
-      "----..--."
+      "++++++++----|",
+      "+++++++|....|",
+      "+------||...|",
+      "|......|-...|",
+      "|......|...||",
+      "|......+..+.|",
+      "|......|....|",
+      "|......|...-|",
+      "|..+-|.|.|..|",
+      "---..-------."
     ]
   },
   "testCases": []

@@ -1,0 +1,124 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 5,
+  "width": 14,
+  "height": 11,
+  "id": "basic-runelore",
+  "group": "basics",
+  "order": 3,
+  "name": "Basic runelore",
+  "difficulty": "tutorial",
+  "description": "Learn how to use runes and channels to build circuits.",
+  "goal": "See instructions in the puzzle.",
+  "cycleLimit": 10,
+  "components": [
+    {
+      "code": "C",
+      "price": 1
+    },
+    {
+      "code": "I",
+      "price": 10
+    },
+    {
+      "code": "Q",
+      "price": 10
+    }
+  ],
+  "editableRegions": [
+    {
+      "x": 7,
+      "y": 5,
+      "width": 2,
+      "height": 2
+    },
+    {
+      "x": 5,
+      "y": 8,
+      "width": 4,
+      "height": 1
+    },
+    {
+      "x": 5,
+      "y": 2,
+      "width": 4,
+      "height": 2
+    }
+  ],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 15,
+    "width": 14,
+    "height": 11,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "##############",
+      "#..#.........#",
+      "#.1CC........#",
+      "#........CCC.#",
+      "#..........C##",
+      "#........CCC.#",
+      "#.CCQ........#",
+      "##C..........#",
+      "#.CIC....CCV##",
+      "#............#",
+      "##############"
+    ],
+    "orientations": [
+      {
+        "x": 4,
+        "y": 6,
+        "direction": "right"
+      },
+      {
+        "x": 3,
+        "y": 8,
+        "direction": "right"
+      }
+    ],
+    "textBoxes": [
+      {
+        "id": "6004751e-0706-44ca-8cec-9dfd01a6a47f",
+        "x": 4.471137235655209,
+        "y": 1.0656751967610207,
+        "width": 5.000000000000001,
+        "height": 0.74,
+        "text": "1. Place channels to carry the +1 blue signal to the right.\nRemember that you can weld with ctrl-click or shift-click.",
+        "owner": "author"
+      },
+      {
+        "id": "4949ca60-ef1a-45da-b4a3-4e317c78d067",
+        "x": 1.4685751471233583,
+        "y": 5.2866085292194995,
+        "width": 4.91,
+        "height": 0.4800000000000004,
+        "text": "2. The CHARGE SENSOR detects charges at a distance.",
+        "owner": "author"
+      },
+      {
+        "id": "db3d8390-8e02-4105-9915-7df18f5966a8",
+        "x": 3.9952352415451493,
+        "y": 9.355083486634548,
+        "width": 5.940000000000001,
+        "height": 1,
+        "text": "3. The blue +1 signal has been inverted to a red -1 signal.\nYou need to invert it back to blue before it gets to the judgment stone.\nUse WASD to rotate a block before placing it.",
+        "owner": "author"
+      }
+    ],
+    "welds": [
+      "+--+---------|",
+      "|..|.........|",
+      "|.--.........|",
+      "|........--|.|",
+      "|..........+-|",
+      "|........--..|",
+      "|.+-.........|",
+      "+-|..........|",
+      "|.--.....----|",
+      "|............|",
+      "-------------."
+    ]
+  },
+  "testCases": []
+}
