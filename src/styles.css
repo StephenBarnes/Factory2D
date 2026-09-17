@@ -1474,7 +1474,8 @@ kbd {
   pointer-events: none;
 }
 
-#component-palette.show-prices .palette-tile[data-price]:not([data-price=""])::after {
+#component-palette.show-prices .palette-tile[data-price]:not([data-price=""])::after,
+#component-palette .palette-tile[data-price]:not([data-price=""]):hover::after {
   content: attr(data-price) "⚙";
   position: absolute;
   top: 2px;
