@@ -14,15 +14,15 @@
   "components": [
     {
       "code": "C",
-      "price": 1
-    },
-    {
-      "code": "I",
       "price": 2
     },
     {
+      "code": "I",
+      "price": 10
+    },
+    {
       "code": "V",
-      "price": 1
+      "price": 20
     }
   ],
   "editableRegions": [

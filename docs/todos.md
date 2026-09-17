@@ -17,6 +17,7 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 * Modify the assembler to add a pushing force for output: When it has a pending output, but no space to output, attempt to push the blocks away so that it can produce output; failing that, try to push the assembler itself in its forwards direction, so the product can be emitted out the back (at assembler's pre-movement position) in the same tick.
 * Modify the duplicator in the same way as assembler above - make it also attempt to push itself away from the output side, if it's trying to duplicate a single-tile body but there's something blocking the output. When duplicating multi-tile bodies, don't do this - require already empty space for the whole body.
+* Modify the rotator to have reaction force: if it can't rotate the body it's attempting to rotate, instead try to rotate the rotator block's own body in the opposite direction, so that in the rotator's own frame of reference its head is still rotating in the requested direction.
 
 # Performance
 

@@ -259,7 +259,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Stone]: {
     name: "Stone",
     boardCode: "#",
-    defaultPrice: 2,
+    defaultPrice: 1,
     palette: {
       order: 41,
       category: PaletteCategory.RawMaterials,
@@ -307,7 +307,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Platform]: {
     name: "Platform",
     boardCode: "=",
-    defaultPrice: 2,
+    defaultPrice: 10,
     palette: {
       order: 43,
       category: PaletteCategory.PuzzleTools,
@@ -333,7 +333,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Floatstone]: {
     name: "Floatstone",
     boardCode: "z",
-    defaultPrice: 10,
+    defaultPrice: 20,
     palette: {
       order: 61,
       category: PaletteCategory.Motion,
@@ -357,7 +357,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.LevitationProjector]: {
     name: "Levitation Projector",
     boardCode: "%",
-    defaultPrice: 20,
+    defaultPrice: 30,
     palette: {
       order: 69,
       category: PaletteCategory.Motion,
@@ -381,7 +381,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.ForceProjector]: {
     name: "Force Projector",
     boardCode: "&",
-    defaultPrice: 25,
+    defaultPrice: 30,
     palette: {
       order: 70,
       category: PaletteCategory.Motion,
@@ -405,7 +405,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.MagicLink]: {
     name: "Magic Link",
     boardCode: "}",
-    defaultPrice: 20,
+    defaultPrice: 30,
     palette: {
       order: 73,
       category: PaletteCategory.Motion,
@@ -453,7 +453,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Slider]: {
     name: "Slider",
     boardCode: "~",
-    defaultPrice: 8,
+    defaultPrice: 20,
     palette: {
       order: 65,
       category: PaletteCategory.Motion,
@@ -502,7 +502,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.ControlledThruster]: {
     name: "Controlled Thruster",
     boardCode: "!",
-    defaultPrice: 25,
+    defaultPrice: 40,
     palette: {
       order: 67,
       category: PaletteCategory.Motion,
@@ -598,7 +598,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.DelayGate]: {
     name: "Delay Gate",
     boardCode: ";",
-    defaultPrice: 4,
+    defaultPrice: 3,
     palette: {
       order: 71,
       category: PaletteCategory.CircuitBasic,
@@ -646,7 +646,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.FixedCharge]: {
     name: "Fixed Charge Rune",
     boardCode: "1",
-    defaultPrice: 10,
+    defaultPrice: 5,
     palette: {
       order: 11,
       category: PaletteCategory.CircuitBasic,
@@ -670,7 +670,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Spark]: {
     name: "Spark Rune",
     boardCode: "K",
-    defaultPrice: 10,
+    defaultPrice: 3,
     palette: {
       order: 12,
       category: PaletteCategory.CircuitBasic,
@@ -742,7 +742,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Rectifier]: {
     name: "Rectifier Rune",
     boardCode: "R",
-    defaultPrice: 10,
+    defaultPrice: 15,
     palette: {
       order: 15,
       category: PaletteCategory.CircuitGates,
@@ -790,7 +790,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Subtractor]: {
     name: "Subtractor Rune",
     boardCode: "-",
-    defaultPrice: 10,
+    defaultPrice: 15,
     palette: {
       order: 17,
       category: PaletteCategory.CircuitGates,
@@ -814,7 +814,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.ChargeSensor]: {
     name: "Charge Sensor Rune",
     boardCode: "Q",
-    defaultPrice: 10,
+    defaultPrice: 15,
     palette: {
       order: 18,
       category: PaletteCategory.CircuitBasic,
@@ -861,7 +861,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   },
   [TileKind.Selector]: {
     usesMirroring: true,
-    name: "Discernment Rune",
+    name: "Selector Rune",
     boardCode: "T",
     defaultPrice: 10,
     palette: {
@@ -959,7 +959,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.WireCrossing]: {
     name: "Crossing Rune",
     boardCode: "W",
-    defaultPrice: 4,
+    defaultPrice: 10,
     palette: {
       order: 68,
       category: PaletteCategory.CircuitBasic,
@@ -1105,7 +1105,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Ruby]: {
     name: "Ruby",
     boardCode: "u",
-    defaultPrice: 6,
+    defaultPrice: 10,
     palette: {
       order: 53,
       category: PaletteCategory.Gemstones,
@@ -1129,7 +1129,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Sapphire]: {
     name: "Sapphire",
     boardCode: "v",
-    defaultPrice: 6,
+    defaultPrice: 10,
     palette: {
       order: 54,
       category: PaletteCategory.Gemstones,
@@ -1153,7 +1153,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Emerald]: {
     name: "Emerald",
     boardCode: "j",
-    defaultPrice: 6,
+    defaultPrice: 10,
     palette: {
       order: 55,
       category: PaletteCategory.Gemstones,
@@ -1177,7 +1177,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Diamond]: {
     name: "Diamond",
     boardCode: "q",
-    defaultPrice: 8,
+    defaultPrice: 20,
     palette: {
       order: 57,
       category: PaletteCategory.Gemstones,
@@ -1201,7 +1201,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Amethyst]: {
     name: "Amethyst",
     boardCode: "t",
-    defaultPrice: 6,
+    defaultPrice: 10,
     palette: {
       order: 56,
       category: PaletteCategory.Gemstones,
@@ -1297,7 +1297,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Wood]: {
     name: "Wood",
     boardCode: "w",
-    defaultPrice: 2,
+    defaultPrice: 1,
     palette: {
       order: 42,
       category: PaletteCategory.RawMaterials,
@@ -1321,7 +1321,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Drill]: {
     name: "Drill",
     boardCode: "f",
-    defaultPrice: 20,
+    defaultPrice: 15,
     palette: {
       order: 59,
       category: PaletteCategory.Transformation,
@@ -1345,7 +1345,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Furnace]: {
     name: "Furnace",
     boardCode: "F",
-    defaultPrice: 20,
+    defaultPrice: 15,
     palette: {
       order: 7,
       category: PaletteCategory.Transformation,
@@ -1369,7 +1369,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Grinder]: {
     name: "Grinder",
     boardCode: "k",
-    defaultPrice: 20,
+    defaultPrice: 15,
     palette: {
       order: 60,
       category: PaletteCategory.Transformation,
@@ -1394,7 +1394,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     usesMirroring: true,
     name: "Conveyor Belt",
     boardCode: "B",
-    defaultPrice: 10,
+    defaultPrice: 5,
     palette: {
       order: 8,
       category: PaletteCategory.Motion,
@@ -1418,7 +1418,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Delivery]: {
     name: "Delivery Box",
     boardCode: "D",
-    defaultPrice: 20,
+    defaultPrice: 10,
     palette: {
       order: 24,
       category: PaletteCategory.PuzzleTools,
@@ -1442,7 +1442,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Comparer]: {
     name: "Body Comparer",
     boardCode: "?",
-    defaultPrice: 20,
+    defaultPrice: 15,
     palette: {
       order: 35,
       category: PaletteCategory.CircuitComplex,
@@ -1514,7 +1514,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Delay]: {
     name: "Delay Rune",
     boardCode: "Z",
-    defaultPrice: 10,
+    defaultPrice: 30,
     palette: {
       order: 27,
       category: PaletteCategory.CircuitComplex,
@@ -1538,7 +1538,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Discard]: {
     name: "Discard Rune",
     boardCode: "n",
-    defaultPrice: 10,
+    defaultPrice: 20,
     palette: {
       order: 62,
       category: PaletteCategory.CircuitComplex,
@@ -1562,7 +1562,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Counter]: {
     name: "Counter Rune",
     boardCode: "N",
-    defaultPrice: 10,
+    defaultPrice: 20,
     palette: {
       order: 28,
       category: PaletteCategory.CircuitComplex,
@@ -1587,7 +1587,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     usesMirroring: true,
     name: "Lore Rune",
     boardCode: "U",
-    defaultPrice: 20,
+    defaultPrice: 30,
     palette: {
       order: 29,
       category: PaletteCategory.CircuitComplex,
@@ -1685,7 +1685,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     usesMirroring: true,
     name: "Laser Splitter",
     boardCode: "x",
-    defaultPrice: 20,
+    defaultPrice: 15,
     palette: {
       order: 58,
       category: PaletteCategory.Transformation,
@@ -1709,7 +1709,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Duplicator]: {
     name: "Duplicator",
     boardCode: "Y",
-    defaultPrice: 20,
+    defaultPrice: 30,
     palette: {
       order: 32,
       category: PaletteCategory.Transformation,
@@ -1830,7 +1830,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     usesMirroring: true,
     name: "Assembler",
     boardCode: "H",
-    defaultPrice: 20,
+    defaultPrice: 15,
     palette: {
       order: 33,
       category: PaletteCategory.Transformation,
@@ -1855,7 +1855,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     usesMirroring: true,
     name: "Rotator",
     boardCode: "r",
-    defaultPrice: 20,
+    defaultPrice: 15,
     palette: {
       order: 34,
       category: PaletteCategory.Motion,
@@ -1879,7 +1879,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.Piston]: {
     name: "Piston",
     boardCode: "P",
-    defaultPrice: 20,
+    defaultPrice: 10,
     palette: {
       order: 26,
       category: PaletteCategory.Motion,

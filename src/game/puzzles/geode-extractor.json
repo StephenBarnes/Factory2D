@@ -5,7 +5,7 @@
   "height": 12,
   "id": "geode-extractor",
   "group": "mining",
-  "order": 1,
+  "order": 2,
   "name": "Geode extractor",
   "difficulty": 2,
   "description": "The miners have found a large collection of geodes - ruby blocks surrounded by stone. Use drills, splitters, or other mechanical components to extract the gems.",
@@ -17,7 +17,7 @@
     },
     {
       "code": "B",
-      "price": 10
+      "price": 5
     },
     {
       "code": "C",
@@ -29,11 +29,11 @@
     },
     {
       "code": "1",
-      "price": 10
+      "price": 5
     },
     {
       "code": "K",
-      "price": 10
+      "price": 3
     },
     {
       "code": "I",
@@ -77,19 +77,19 @@
     },
     {
       "code": "P",
-      "price": 20
+      "price": 10
     },
     {
       "code": "Z",
-      "price": 10
+      "price": 30
     },
     {
       "code": "N",
-      "price": 10
+      "price": 20
     },
     {
       "code": "U",
-      "price": 20
+      "price": 30
     },
     {
       "code": "J",
@@ -101,7 +101,7 @@
     },
     {
       "code": "r",
-      "price": 20
+      "price": 15
     },
     {
       "code": "m",
@@ -121,19 +121,19 @@
     },
     {
       "code": "x",
-      "price": 20
+      "price": 15
     },
     {
       "code": "f",
-      "price": 20
+      "price": 15
     },
     {
       "code": "k",
-      "price": 20
+      "price": 15
     },
     {
       "code": "n",
-      "price": 10
+      "price": 20
     },
     {
       "code": "p",
@@ -141,11 +141,11 @@
     },
     {
       "code": "W",
-      "price": 4
+      "price": 10
     },
     {
       "code": ";",
-      "price": 4
+      "price": 3
     }
   ],
   "editableRegions": [
@@ -171,10 +171,10 @@
     "result": "in-progress",
     "grid": [
       "######v####",
-      "#####.....#",
+      "####C.....#",
       "##u#Y.....#",
       "####C.....#",
-      "##YC#.....u",
+      "#CYC#.....u",
       "#.........#",
       "#.........#",
       "j.........#",

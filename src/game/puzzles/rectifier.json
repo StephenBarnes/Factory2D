@@ -14,19 +14,19 @@
   "components": [
     {
       "code": "C",
-      "price": 1
+      "price": 2
     },
     {
       "code": "I",
-      "price": 3
+      "price": 10
     },
     {
       "code": "+",
-      "price": 3
+      "price": 10
     },
     {
       "code": "*",
-      "price": 3
+      "price": 10
     }
   ],
   "editableRegions": [

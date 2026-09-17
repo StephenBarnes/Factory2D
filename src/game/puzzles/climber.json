@@ -1,0 +1,136 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 5,
+  "width": 19,
+  "height": 10,
+  "id": "climber",
+  "group": "mining",
+  "order": 1,
+  "name": "Climber",
+  "difficulty": 2,
+  "description": "Build a vehicle that can climb over steps.",
+  "goal": "Activate the sensor on the right.",
+  "cycleLimit": 80,
+  "components": [
+    {
+      "code": "B",
+      "price": 5
+    },
+    {
+      "code": "C",
+      "price": 2
+    },
+    {
+      "code": "S",
+      "price": 10
+    },
+    {
+      "code": "1",
+      "price": 5
+    },
+    {
+      "code": "K",
+      "price": 3
+    },
+    {
+      "code": "I",
+      "price": 10
+    },
+    {
+      "code": "+",
+      "price": 10
+    },
+    {
+      "code": "R",
+      "price": 15
+    },
+    {
+      "code": "Q",
+      "price": 15
+    },
+    {
+      "code": "T",
+      "price": 10
+    },
+    {
+      "code": "<",
+      "price": 10
+    },
+    {
+      "code": ">",
+      "price": 10
+    },
+    {
+      "code": "M",
+      "price": 10
+    },
+    {
+      "code": "P",
+      "price": 10
+    },
+    {
+      "code": "r",
+      "price": 15
+    },
+    {
+      "code": "#",
+      "price": 1
+    },
+    {
+      "code": "f",
+      "price": 15
+    },
+    {
+      "code": ";",
+      "price": 3
+    }
+  ],
+  "editableRegions": [
+    {
+      "x": 1,
+      "y": 4,
+      "width": 5,
+      "height": 5
+    }
+  ],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 15,
+    "width": 19,
+    "height": 10,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "...................",
+      "...................",
+      "...................",
+      "...................",
+      "...................",
+      ".................SV",
+      "..................#",
+      "...........########",
+      ".......############",
+      "###################"
+    ],
+    "orientations": [
+      {
+        "x": 17,
+        "y": 5,
+        "direction": "left"
+      }
+    ],
+    "welds": [
+      "...................",
+      "...................",
+      "...................",
+      "...................",
+      "...................",
+      ".................-|",
+      "..................|",
+      "...........+++++++|",
+      ".......+++++++++++|",
+      "------------------."
+    ]
+  },
+  "testCases": []
+}

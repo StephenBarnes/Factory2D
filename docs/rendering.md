@@ -20,7 +20,7 @@ Movement sensors use a purple angular eye with a pale diamond pupil and four ind
 
 Charge-sensor hover and placement overlays circle the first detectable forward cell in the displayed board, skipping empty space and invisible tiles (glass). A line runs from the sensor's front edge to the target circle, or to the grid boundary without a circle when no target is visible. Occupancy sensors retain their immediate-cell marker. Targets beyond an enclosing array's boundary are outside the displayed board and are not circled.
 
-The discernment rune marks its local-left input blue (+1 rear control) and local-right input red (-1 rear control), offset toward the rear to clear circuit traces. These markers rotate with the tile and swap sides when mirrored. The rectifier's Thurisaz thorn points toward its output port.
+The selector rune marks its local-left input blue (+1 rear control) and local-right input red (-1 rear control), offset toward the rear to clear circuit traces. These markers rotate with the tile and swap sides when mirrored. The rectifier's Thurisaz thorn points toward its output port.
 
 Body comparers use a purple slab with front/rear outlined blocks and a charge-colored equals sign; the glyph rotates with the sideways circuit ports. Block type comparers share the glyph with a blue-grey slab and pale-blue block outlines.
 

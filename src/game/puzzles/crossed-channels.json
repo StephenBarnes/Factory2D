@@ -22,11 +22,11 @@
     },
     {
       "code": "1",
-      "price": 10
+      "price": 5
     },
     {
       "code": "K",
-      "price": 10
+      "price": 3
     },
     {
       "code": "I",
@@ -50,7 +50,7 @@
     },
     {
       "code": "Q",
-      "price": 10
+      "price": 15
     },
     {
       "code": "T",
