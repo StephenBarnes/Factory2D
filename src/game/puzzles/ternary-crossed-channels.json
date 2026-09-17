@@ -134,6 +134,10 @@
         "direction": "right"
       }
     ],
+    "mirrored": [
+      { "x": 1, "y": 2 },
+      { "x": 1, "y": 6 }
+    ],
     "components": [
       {
         "x": 1,

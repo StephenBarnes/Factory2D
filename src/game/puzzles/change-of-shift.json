@@ -61,6 +61,9 @@
         "direction": "right"
       }
     ],
+    "mirrored": [
+      { "x": 1, "y": 3 }
+    ],
     "components": [
       {
         "x": 1,

@@ -33,6 +33,8 @@ We have one "geode extractor" puzzle that's fairly easy - requires triggering a 
 * Binary crossed channels: requires crossing two signals (only 0 and +1, no -1) without the dedicated crossing block. Can be done with 3 equality gates, plus some details for delaying specific lines and handling initial spurious `0 = 0` equality.
 * Ternary crossed channels: similar but with -1 allowed. This is more difficult. Current reference solution has nested rune arrays.
 
+The fixed ROM signal sources in these four runelore puzzles face right and are mirrored, so rear +1 reads the authored spatial grid left-to-right, then top-to-bottom under component-relative carry rules. Reference scenes use the same handedness; test-case sequences are unchanged.
+
 # Ideas for non-tutorial puzzles
 
 * Mining puzzles before the geode extractor: (1) make a vehicle (conveyor and fixed charge) that moves to the right; (2) make a vehicle that moves right, then left, to activate two sensors; (3) make a vehicle that does this but also drills away obstacles.

@@ -112,6 +112,28 @@ describe("conveyor belt forces", () => {
     },
   );
 
+  it("preserves tangential motion under every rotation and reflection, including after save/load", () => {
+    for (const charge of [-1, 1] as const) {
+      const world = new World(9, 9);
+      placeFixedPoweredConveyor(world, 4, 4, charge, Direction.Down);
+      // Floatstone isolates the machine's frame from world-down gravity.
+      world.place(4, 3, TileKind.Floatstone);
+      const expected = world.clone();
+      new Simulation(expected).step();
+
+      for (let turns = 0; turns < 4; turns += 1) {
+        for (const reflected of [false, true]) {
+          const transformed = world.transformed(turns, reflected, false);
+          const restored = deserializeBoard(serializeBoard(transformed, 0)).world;
+          new Simulation(restored).step();
+          expect(serializeBoard(restored, 1)).toBe(
+            serializeBoard(expected.transformed(turns, reflected, false), 1),
+          );
+        }
+      }
+    }
+  });
+
   it("stops when its resolved circuit charge is neutral", () => {
     const world = new World(9, 9);
     placeFixedPoweredConveyor(world, 4, 4, 0, Direction.Down);

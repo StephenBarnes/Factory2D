@@ -82,6 +82,8 @@ Rotator grip arrows interpolate between committed directions using stable IDs an
 
 Rotators show blue + and red - curved direction indicators, reversing with handedness; hover sweep hints use the same signed mapping. The live grip direction is absolute world state and must not be reflected again when drawing or interpolating it.
 
+Conveyors reverse their animated belt travel with handedness. Mirrored belts add fixed counterclockwise chevrons identifying their +1 direction even when stopped; normal belts retain their unmarked center dot. The shared glyph covers the board, palette, placement ghosts, and selection/snippet previews.
+
 Furnaces, drills, and grinders draw a rear progress bar from committed processing ticks and the current target's recipe duration. Active bars are gold; paused progress is muted and retained. The completion tick shows a full bar, then clears on the next idle tick. Target identity checks prevent transferred progress from appearing on a replacement target. The shared body-cell path carries this display into selections and thumbnails without adding simulation state.
 
 Processing glyphs use the machine's isolated rear output, independent of orientation: active furnaces flicker, drill grooves travel along the bit, and grinder teeth counter-rotate. Like conveyor animation, these use the render clock, including while the simulation is paused on an active tick. Visible active machines keep frames invalidated without rebuilding body geometry. Glyphs and bars follow the existing decoration-detail cutoff and rotate with the machine.

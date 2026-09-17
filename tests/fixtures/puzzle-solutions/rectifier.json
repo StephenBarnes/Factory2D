@@ -10,6 +10,9 @@
     "1UmCCC*+CCCCmEV",
     "====C+CC...==g="
   ],
+  "mirrored": [
+    { "x": 1, "y": 1 }
+  ],
   "orientations": [
     {
       "x": 1,

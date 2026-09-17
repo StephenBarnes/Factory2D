@@ -38,6 +38,7 @@ import {
   mirroringForKind,
   oppositeDirection,
   orientationForKind,
+  orientedDirection,
   orientedSides,
   TILE_DEFINITIONS,
   TileKind,
@@ -711,30 +712,56 @@ export class World {
       throw new Error(`Tile at index ${index} is not a ROM`);
     }
     const cellCount = state.values.length;
-    const column = state.cursor % state.width;
-    const horizontalCursor = state.cursor + cursorDeltaX;
-    // Reject the entire horizontal move if its step or carry crosses a disabled edge.
+    // Carry directions and input priority belong to the component frame, while
+    // the stored grid/cursor remain spatial so the artwork transforms with it.
+    const orientation = this.orientationAtIndex(index);
+    const mirrored = this.mirroredAtIndex(index);
+    const horizontal = orientedDirection(Direction.Right, orientation, mirrored);
+    const vertical = orientedDirection(Direction.Down, orientation, mirrored);
+    const hx = directionX(horizontal);
+    const hy = directionY(horizontal);
+    const vx = directionX(vertical);
+    const vy = directionY(vertical);
+    const width = hx === 0 ? state.height : state.width;
+    const height = hx === 0 ? state.width : state.height;
+    const wrapX = hx === 0 ? state.wrapY : state.wrapX;
+    const wrapY = hx === 0 ? state.wrapX : state.wrapY;
+    const originX = hx < 0 || vx < 0 ? state.width - 1 : 0;
+    const originY = hy < 0 || vy < 0 ? state.height - 1 : 0;
+    const spatialX = state.cursor % state.width - originX;
+    const spatialY = Math.floor(state.cursor / state.width) - originY;
+    const column = spatialX * hx + spatialY * hy;
+    const row = spatialX * vx + spatialY * vy;
+    const localCursor = row * width + column;
+    const deltaX = cursorDeltaX * hx + cursorDeltaY * hy;
+    const deltaY = cursorDeltaX * vx + cursorDeltaY * vy;
+    const horizontalCursor = localCursor + deltaX;
+    // Reject the entire local-horizontal move if its step or carry crosses a disabled edge.
     const horizontalBlocked =
-      (!state.wrapX && (column + cursorDeltaX < 0 || column + cursorDeltaX >= state.width)) ||
-      (!state.wrapY && (horizontalCursor < 0 || horizontalCursor >= cellCount));
+      (!wrapX && (column + deltaX < 0 || column + deltaX >= width)) ||
+      (!wrapY && (horizontalCursor < 0 || horizontalCursor >= cellCount));
     let nextCursor = horizontalBlocked
-      ? state.cursor
+      ? localCursor
       : (horizontalCursor + cellCount) % cellCount;
-    if (cursorDeltaY !== 0) {
-      const column = nextCursor % state.width;
-      const row = (nextCursor - column) / state.width;
-      const columnMajorCursor = column * state.height + row;
-      const verticalCursor = columnMajorCursor + cursorDeltaY;
+    if (deltaY !== 0) {
+      const column = nextCursor % width;
+      const row = (nextCursor - column) / width;
+      const columnMajorCursor = column * height + row;
+      const verticalCursor = columnMajorCursor + deltaY;
       const verticalBlocked =
-        (!state.wrapY && (row + cursorDeltaY < 0 || row + cursorDeltaY >= state.height)) ||
-        (!state.wrapX && (verticalCursor < 0 || verticalCursor >= cellCount));
+        (!wrapY && (row + deltaY < 0 || row + deltaY >= height)) ||
+        (!wrapX && (verticalCursor < 0 || verticalCursor >= cellCount));
       if (!verticalBlocked) {
         const nextColumnMajorCursor = (verticalCursor + cellCount) % cellCount;
-        const nextColumn = Math.floor(nextColumnMajorCursor / state.height);
-        const nextRow = nextColumnMajorCursor % state.height;
-        nextCursor = nextRow * state.width + nextColumn;
+        const nextColumn = Math.floor(nextColumnMajorCursor / height);
+        const nextRow = nextColumnMajorCursor % height;
+        nextCursor = nextRow * width + nextColumn;
       }
     }
+    const nextColumn = nextCursor % width;
+    const nextRow = Math.floor(nextCursor / width);
+    nextCursor = (originY + nextColumn * hy + nextRow * vy) * state.width +
+      originX + nextColumn * hx + nextRow * vx;
     if (nextCursor !== state.cursor) {
       state.cursor = nextCursor;
       this.touchVisualRevision();

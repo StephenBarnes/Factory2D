@@ -1182,6 +1182,43 @@ describe("circuit networks", () => {
   });
 
   it.each([
+    { name: "reflected edge carry", height: 3, wrapY: true, rear: 0, values: [0, 0, 1, 0, -1, 0] },
+    { name: "simultaneous input priority", height: 2, wrapY: false, rear: 1, values: [1, 0, -1, 0] },
+  ] as const)("preserves ROM output through all eight frames: $name", (scenario) => {
+    const world = new World(3, 3);
+    world.place(1, 1, TileKind.Rom);
+    for (const side of [Direction.Up, Direction.Right, Direction.Down, Direction.Left]) {
+      const x = 1 + directionX(side);
+      const y = 1 + directionY(side);
+      world.place(x, y, TileKind.Conduit);
+      world.setWeld(1, 1, x, y, true);
+    }
+    world.restoreComponentState(1, 1, {
+      type: "rom", width: 2, height: scenario.height, cursor: 1,
+      wrapX: true, wrapY: scenario.wrapY, values: scenario.values,
+    });
+    world.setCharge(0, 1, 1);
+    world.setCharge(1, 2, scenario.rear);
+    const expected = world.clone();
+    new CircuitResolver().resolve(0, [new WorldRuntime(expected)]);
+    expect(expected.chargeAt(1, 0)).toBe(1);
+
+    for (let turns = 0; turns < 4; turns += 1) {
+      for (const reflected of [false, true]) {
+        const transformed = world.transformed(turns, reflected, false);
+        new CircuitResolver().resolve(0, [new WorldRuntime(transformed)]);
+        const expectedFrame = expected.transformed(turns, reflected, false);
+        expect(transformed.componentStateSnapshotAt(1, 1))
+          .toEqual(expectedFrame.componentStateSnapshotAt(1, 1));
+        for (const side of [Direction.Up, Direction.Right, Direction.Down, Direction.Left]) {
+          expect(transformed.chargeAtPort(1, 1, side))
+            .toBe(expectedFrame.chargeAtPort(1, 1, side));
+        }
+      }
+    }
+  });
+
+  it.each([
     {
       name: "clockwise quarter turn",
       turns: 1, horizontal: false, vertical: false,
@@ -1220,9 +1257,6 @@ describe("circuit networks", () => {
     });
     // The cursor follows its cell rather than selecting another value after a turn.
     expect(transformed.advanceRomAtIndex(0, 0, 0)).toBe(-1);
-    expect(transformed.advanceRomAtIndex(0, 1, 0)).toBe(
-      testCase.values[(testCase.cursor + 1) % testCase.values.length],
-    );
     expect(world.componentStateSnapshotAt(0, 0)).toEqual({
       type: "rom", width: 2, height: 3, cursor: 2,
       wrapX: true, wrapY: true,

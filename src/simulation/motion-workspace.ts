@@ -616,6 +616,7 @@ export class MotionWorkspace {
       if (charge === 0) {
         continue;
       }
+      const spin = this.world.mirroredAtIndex(index) ? -charge : charge;
 
       const conveyorRoot = expectDefined(this.bodyRoots[index], "conveyor body root");
       for (let value = Direction.Up; value <= Direction.Left; value += 1) {
@@ -629,7 +630,7 @@ export class MotionWorkspace {
           continue;
         }
 
-        const forceDirection = ((side + charge + 4) & 3) as Direction;
+        const forceDirection = ((side + spin + 4) & 3) as Direction;
         this.addBodyForce(neighborRoot, forceDirection);
         this.addBodyForce(conveyorRoot, oppositeDirection(forceDirection));
       }

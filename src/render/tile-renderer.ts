@@ -1337,7 +1337,7 @@ function drawDecoration(
       context.setLineDash([size * 0.11, size * 0.09]);
       context.lineDashOffset = outputCharge === 0
         ? 0
-        : -outputCharge * animationTime * size / 1000;
+        : -outputCharge * (mirrored ? -1 : 1) * animationTime * size / 1000;
       context.beginPath();
       context.moveTo(left + inset, top + inset);
       context.lineTo(left + size - inset, top + inset);
@@ -1350,6 +1350,18 @@ function drawDecoration(
       context.beginPath();
       drawDot(context, left + size / 2, top + size / 2, Math.max(2, size * 0.12));
       context.fill();
+      if (mirrored) {
+        // Fixed counterclockwise chevrons identify the +1 direction even at rest.
+        context.lineWidth = Math.max(1, size * 0.035);
+        context.beginPath();
+        context.moveTo(left + size * 0.54, top + size * 0.23);
+        context.lineTo(left + size * 0.46, top + size * 0.3);
+        context.lineTo(left + size * 0.54, top + size * 0.37);
+        context.moveTo(left + size * 0.46, top + size * 0.63);
+        context.lineTo(left + size * 0.54, top + size * 0.7);
+        context.lineTo(left + size * 0.46, top + size * 0.77);
+        context.stroke();
+      }
       context.restore();
       break;
     }
