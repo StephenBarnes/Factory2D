@@ -37,11 +37,16 @@ function progressionPuzzle(id: string, order: number): PuzzleDefinition {
 describe("puzzle definitions", () => {
   it("unlocks groups at their gemstone thresholds", () => {
     const runelore = expectDefined(puzzleGroupById("runelore"), "Missing Runelore group");
-    expect(isPuzzleGroupUnlocked(runelore, new Set())).toBe(false);
-    expect(isPuzzleGroupUnlocked(
-      runelore,
-      new Set<PuzzleId>(["stone-drop", "sand-fall"]),
-    )).toBe(true);
+    const completed = new Set<PuzzleId>(
+      PUZZLES.slice(0, runelore.gemstoneThreshold - 1).map(({ id }) => id),
+    );
+    expect(isPuzzleGroupUnlocked(runelore, completed)).toBe(false);
+    const nextPuzzle = expectDefined(
+      PUZZLES[runelore.gemstoneThreshold - 1],
+      "Missing puzzle needed to reach the Runelore threshold",
+    );
+    completed.add(nextPuzzle.id);
+    expect(isPuzzleGroupUnlocked(runelore, completed)).toBe(true);
   });
 
   it("uses the group's initial count and unlocks one more puzzle per completion", () => {

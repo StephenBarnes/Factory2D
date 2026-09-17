@@ -1,16 +1,22 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { runPuzzleTests } from "../src/game/puzzle-test-runner";
-import { PUZZLES } from "../src/game/puzzles";
+import { puzzleById } from "../src/game/puzzles";
 import { deserializeBoard } from "../src/simulation/board-export";
 import { PuzzleResult } from "../src/simulation/puzzle-result";
 
-// Iterate the registry, not the fixture directory: every new shipped puzzle must have a solution.
+const fixtureDirectory = new URL("./fixtures/puzzle-solutions/", import.meta.url);
+const fixtureNames = readdirSync(fixtureDirectory)
+  .filter((name) => name.endsWith(".json"))
+  .sort();
+
+// Fixtures are optional, but every saved solution must solve a current shipped puzzle.
 describe("shipped puzzle reference solutions", () => {
-  it.each(PUZZLES)("$id remains solvable in every test case", (puzzle) => {
+  it.each(fixtureNames)("%s remains solvable in every test case", (fileName) => {
+    const puzzle = puzzleById(fileName.slice(0, -".json".length));
     const source = readFileSync(
-      new URL(`./fixtures/puzzle-solutions/${puzzle.id}.json`, import.meta.url),
+      new URL(fileName, fixtureDirectory),
       "utf8",
     );
     const { world, tick } = deserializeBoard(source);

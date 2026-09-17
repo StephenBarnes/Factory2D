@@ -6,6 +6,8 @@ import {
   PLAYER_DATA_VERSION,
 } from "../src/game/player-data";
 import { PUZZLE_SOLUTIONS_STORAGE_KEY } from "../src/game/puzzle-solutions";
+import { puzzleById } from "../src/game/puzzles";
+import { expectDefined } from "../src/util/assert";
 import { seedBrowserStorage } from "./browser-fixtures";
 
 async function diagnosticSnapshot(page: Page): Promise<DevelopmentDiagnosticSnapshot> {
@@ -155,18 +157,18 @@ for (const entering of [false, true]) {
     await page.getByRole("button", { name: "+ NEW SOLUTION" }).click();
     await page.getByRole("button", { name: /^Stone/ }).click();
     const before = JSON.parse((await diagnosticSnapshot(page)).serializedBoard);
-    const inside = await boardCellCenter(page, 4, 5);
-    const outside = await boardCellCenter(page, 4, 6);
+    const inside = await boardCellCenter(page, 3, 7);
+    const outside = await boardCellCenter(page, 3, 8);
     const [start, end] = entering ? [outside, inside] : [inside, outside];
     await page.mouse.move(start.x, start.y);
     await page.mouse.down();
     await page.mouse.move(end.x, end.y);
     await page.mouse.up();
     const board = JSON.parse((await diagnosticSnapshot(page)).serializedBoard);
-    expect(board.grid[5][4]).toBe("#");
-    expect(board.welds[5][4]).toBe("|");
-    expect(board.grid[6]).toBe(before.grid[6]);
-    expect(board.welds[6]).toBe(before.welds[6]);
+    expect(board.grid[7][3]).toBe("#");
+    expect(board.welds[7][3]).toBe("|");
+    expect(board.grid[8]).toBe(before.grid[8]);
+    expect(board.welds[8]).toBe(before.welds[8]);
     await page.reload();
     expect(JSON.parse((await diagnosticSnapshot(page)).serializedBoard)).toEqual(board);
   });
@@ -218,16 +220,19 @@ test("selection shortcuts use occupied bounds and grid clicks unselect", async (
 
 test("routes only to accessible canonical screens", async ({ page }) => {
   await seedBrowserStorage(page, "empty");
-  await page.goto("/puzzles/stone-drop");
-  await expect(page.getByRole("heading", { name: "Stone Drop" })).toBeVisible();
-  await expect(page).toHaveURL(/\/puzzles\/stone-drop$/);
+  await page.goto("/puzzles/click-to-test");
+  await expect(page.getByRole("heading", { name: "Click to Test" })).toBeVisible();
+  await expect(page).toHaveURL(/\/puzzles\/click-to-test$/);
   expect((await diagnosticSnapshot(page)).screen).toEqual({
     kind: "puzzle-info",
-    puzzleId: "stone-drop",
+    puzzleId: "click-to-test",
   });
 
-  await page.goto("/puzzles/beltworks");
+  await page.goto("/puzzles/stone-drop");
   await expect(page.getByRole("heading", { name: "Factory 2D" })).toBeVisible();
+  await expect(page).toHaveURL(/\/$/);
+
+  await page.goto("/puzzles/crossed-channels");
   await expect(page).toHaveURL(/\/$/);
 
   await page.goto("/not-a-route");
@@ -307,7 +312,7 @@ test("exports, clears, and imports all player data", async ({ page }) => {
   await page.locator("#import-player-data-file").setInputFiles(downloadPath);
   await importReload;
 
-  await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^3 gemstones\b/);
+  await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^5 gemstones\b/);
   expect(await page.evaluate(() => Object.fromEntries(
     Array.from({ length: window.localStorage.length }, (_, index) => {
       const key = window.localStorage.key(index);
@@ -412,7 +417,7 @@ test("workshop identity exposes information and live puzzle metrics", async ({ p
     stoneButton.evaluate((element) => getComputedStyle(element, "::after").content)
   ).toContain("1⚙");
 
-  await placeStone(page, 8, 3);
+  await placeStone(page, 4, 4);
   await expect(price).toHaveText("1⚙");
   await expect(footprint).toHaveText("1×1");
   await expect(palette).not.toHaveClass(/show-prices/);
@@ -526,23 +531,24 @@ test("tile inspector follows palette, tool, and occupied-board hover", async ({ 
   expect(Math.abs(inspectorBounds.y - 18)).toBeLessThanOrEqual(1);
 });
 
-test("puzzle groups show gemstone progression and default collapse states", async ({ page }) => {
+test("puzzle groups expose locked progression and can be expanded", async ({ page }) => {
   await seedBrowserStorage(page, "empty");
   await page.goto("/");
 
   const gemstoneCount = page.locator(".gemstone-count");
   const basics = page.locator(".puzzle-group").filter({
-    has: page.getByText("Basics", { exact: true }),
+    has: page.locator(".puzzle-group-heading strong", { hasText: /^Tutorial$/ }),
   });
   const runelore = page.locator(".puzzle-group").filter({
     has: page.getByText("Runelore", { exact: true }),
   });
   await expect(gemstoneCount).toHaveAccessibleName(/^0 gemstones\b/);
-  await expect(basics).toHaveJSProperty("open", true);
-  await expect(runelore).toHaveJSProperty("open", false);
+  await expect(basics).toHaveAttribute("data-state", "unlocked");
+  await expect(runelore).toHaveAttribute("data-state", "locked");
   await runelore.locator("summary").click();
-  await expect(runelore).toHaveJSProperty("open", true);
-  await expect(page.getByRole("button", { name: /Stone Drop/ })).toBeEnabled();
+  await expect(runelore.locator(".puzzle-group-list")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Click to Test/ })).toBeEnabled();
+  await expect(page.getByRole("button", { name: /Stone Drop/ })).toBeDisabled();
   const runeloreButtons = runelore.locator("button");
   await expect(runeloreButtons).not.toHaveCount(0);
   for (const button of await runeloreButtons.all()) {
@@ -555,30 +561,30 @@ test("unlocked fixture opens a gemstone-gated group and puzzle", async ({ page }
   await page.goto("/");
 
   const basics = page.locator(".puzzle-group").filter({
-    has: page.getByText("Basics", { exact: true }),
+    has: page.locator(".puzzle-group-heading strong", { hasText: /^Tutorial$/ }),
   });
   const runelore = page.locator(".puzzle-group").filter({
     has: page.getByText("Runelore", { exact: true }),
   });
-  await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^3 gemstones\b/);
-  await expect(basics).toHaveJSProperty("open", false);
-  await expect(runelore).toHaveJSProperty("open", true);
+  await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^5 gemstones\b/);
+  await expect(basics).toHaveAttribute("data-state", "completed");
+  await expect(runelore).toHaveAttribute("data-state", "unlocked");
 
-  const conduits = page.getByRole("button", { name: /Conduits Tutorial/ });
-  await expect(conduits).toBeEnabled();
-  await conduits.click();
-  await expect(page).toHaveURL(/\/puzzles\/conduits$/);
+  const crossedChannels = runelore.getByRole("button", { name: /Binary crossed channels/ });
+  await expect(crossedChannels).toBeEnabled();
+  await crossedChannels.click();
+  await expect(page).toHaveURL(/\/puzzles\/crossed-channels$/);
 });
 
 test("creates, edits, persists, and restores a solution on reload", async ({ page }) => {
-  await seedBrowserStorage(page, "empty");
+  await seedBrowserStorage(page, "unlocked");
   await page.goto("/puzzles/stone-drop");
   await page.getByRole("button", { name: "+ NEW SOLUTION" }).click();
   await expect(page).toHaveURL(/\/puzzles\/stone-drop\/solutions\/solution-1$/);
 
   const initial = await diagnosticSnapshot(page);
   expect(initial.activeSolutionId).toBe("solution-1");
-  await placeStone(page, 8, 3);
+  await placeStone(page, 4, 4);
   const edited = await diagnosticSnapshot(page);
   expect(edited.worldRevision).toBeGreaterThan(initial.worldRevision);
   expect(edited.serializedBoard).not.toBe(initial.serializedBoard);
@@ -654,15 +660,15 @@ test("commits multi-event tile drags once on pointer up or cancellation", async 
     };
   }, PUZZLE_SOLUTIONS_STORAGE_KEY);
 
-  const firstStart = await boardCellCenter(page, 8, 3);
-  const firstEnd = await boardCellCenter(page, 11, 3);
+  const firstStart = await boardCellCenter(page, 2, 4);
+  const firstEnd = await boardCellCenter(page, 5, 4);
   await page.mouse.move(firstStart.x, firstStart.y);
   await page.mouse.down();
   await page.mouse.move(firstEnd.x, firstEnd.y, { steps: 8 });
   const liveFirstGrid = JSON.parse((await diagnosticSnapshot(page)).serializedBoard) as {
     readonly grid: readonly string[];
   };
-  expect(liveFirstGrid.grid[3]?.slice(8, 12)).toBe("####");
+  expect(liveFirstGrid.grid[4]?.slice(2, 6)).toBe("####");
   await expect(canvas).toHaveAttribute("data-solution-storage-writes", "0");
 
   await page.mouse.up();
@@ -671,8 +677,8 @@ test("commits multi-event tile drags once on pointer up or cancellation", async 
   await canvas.evaluate((element) => {
     element.dataset.solutionStorageWrites = "0";
   });
-  const secondStart = await boardCellCenter(page, 8, 4);
-  const secondEnd = await boardCellCenter(page, 11, 4);
+  const secondStart = await boardCellCenter(page, 2, 5);
+  const secondEnd = await boardCellCenter(page, 5, 5);
   await page.mouse.move(secondStart.x, secondStart.y);
   await page.mouse.down();
   await page.mouse.move(secondEnd.x, secondEnd.y, { steps: 8 });
@@ -703,23 +709,34 @@ test("commits multi-event tile drags once on pointer up or cancellation", async 
     const board: { readonly grid: readonly string[] } = JSON.parse(solution.board);
     return board.grid;
   }, PUZZLE_SOLUTIONS_STORAGE_KEY);
-  expect(storedGrid[3]?.slice(8, 12)).toBe("####");
-  expect(storedGrid[4]?.slice(8, 12)).toBe("####");
+  expect(storedGrid[4]?.slice(2, 6)).toBe("####");
+  expect(storedGrid[5]?.slice(2, 6)).toBe("####");
 });
 
 test("renders puzzle cases and leaves the failed case paused on the board", async ({ page }) => {
   await seedBrowserStorage(page, "populated");
   await page.goto("/puzzles/stone-drop/solutions/solution-1");
+  const testCase = expectDefined(
+    puzzleById("stone-drop").testCases[0],
+    "Stone Drop must have a test case",
+  );
+  const terminalTick = `TICK ${String(testCase.cycleLimit).padStart(4, "0")}`;
+  const baseline = (await diagnosticSnapshot(page)).serializedBoard;
 
   const testButton = page.getByRole("button", { name: "▶ TEST" });
   const fastForwardButton = page.getByRole("button", { name: /FAST/ });
-  const report = page.getByRole("dialog");
+  const report = page.locator("#test-report-dialog");
   await expect(testButton).toBeVisible();
   await expect(page.getByRole("button", { name: /RUN/ })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "CASE: Standard case" })).toBeVisible();
-  await page.getByRole("button", { name: "CASE: Standard case" }).click();
-  await expect(page.getByRole("button", { name: "Standard case", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Standard case", exact: true }).click();
+  const caseButton = page.locator("#test-case-button");
+  await expect(caseButton).toHaveText(`CASE: ${testCase.name}`);
+  await caseButton.click();
+  const caseOption = page.locator("#test-case-options")
+    .locator(`[data-test-case-id="${testCase.id}"]`);
+  await expect(caseOption).toHaveText(testCase.name);
+  await caseOption.click();
+  const stone = page.getByRole("button", { name: /^Stone/ });
+  await stone.click();
   await testButton.click();
 
   await expect(fastForwardButton).toBeVisible();
@@ -727,28 +744,40 @@ test("renders puzzle cases and leaves the failed case paused on the board", asyn
   await fastForwardButton.click();
 
   await expect(report).not.toBeVisible();
-  await expect(page.getByRole("status")).toHaveText(
-    "Failed: test case \"Standard case\" reached cycle limit 10",
-  );
-  await expect(page.locator("#tick-counter")).toHaveText("TICK 0010");
+  await expect(page.locator("#test-status-toast")).toBeVisible();
+  await expect(page.locator("#tick-counter")).toHaveText(terminalTick);
   await expect(page.locator("#state-label")).toHaveText("TEST FAILED");
   await expect(fastForwardButton).toBeVisible();
+  const failed = await diagnosticSnapshot(page);
+  expect(failed.simulation).toMatchObject({
+    running: false,
+    editable: false,
+    tick: testCase.cycleLimit,
+  });
+  await expect(stone).toBeDisabled();
+  const lockedCell = await boardCellCenter(page, 4, 4);
+  await page.mouse.click(lockedCell.x, lockedCell.y);
+  expect((await diagnosticSnapshot(page)).serializedBoard).toBe(failed.serializedBoard);
 
-  await page.getByRole("button", { name: "RESET" }).click();
-  await expect(page.getByRole("status")).not.toBeVisible();
+  await page.locator("#reset-button").click();
+  await expect(page.locator("#test-status-toast")).not.toBeVisible();
   await expect(page.locator("#tick-counter")).toHaveText("TICK 0000");
   await expect(page.locator("#state-label")).toHaveText("BUILD MODE");
+  const reset = await diagnosticSnapshot(page);
+  expect(reset.simulation.editable).toBe(true);
+  expect(reset.serializedBoard).toBe(baseline);
 
   await fastForwardButton.click();
-  await expect(page.locator("#tick-counter")).toHaveText("TICK 0010");
+  await expect(page.locator("#tick-counter")).toHaveText(terminalTick);
   await page.keyboard.press("r");
   await expect(page.locator("#tick-counter")).toHaveText("TICK 0000");
   await page.keyboard.press("n");
   await expect(page.locator("#tick-counter")).toHaveText("TICK 0001");
+  expect((await diagnosticSnapshot(page)).simulation.editable).toBe(false);
   await page.keyboard.press("r");
   await page.keyboard.press("f");
   await expect(page.locator("#state-label")).toHaveText("TEST FAILED");
-  await expect(page.locator("#tick-counter")).toHaveText("TICK 0010");
+  await expect(page.locator("#tick-counter")).toHaveText(terminalTick);
 
   await page.locator("#menu-button").click();
   await expect(page).toHaveURL(/\/puzzles\/stone-drop$/);
@@ -762,27 +791,34 @@ test("renders puzzle cases and leaves the failed case paused on the board", asyn
 test("persists successful solution scores on the puzzle briefing", async ({ page }) => {
   await seedBrowserStorage(page, "populated");
   await page.goto("/puzzles/stone-drop/solutions/solution-1");
-  await placeStone(page, 9, 3);
+  await placeStone(page, 4, 4);
   await page.getByRole("button", { name: "▶ TEST" }).click();
   await page.getByRole("button", { name: /FAST/ }).click();
 
-  const report = page.getByRole("dialog");
+  const report = page.locator("#test-report-dialog");
   await expect(report.getByRole("heading", { name: "ALL TESTS PASSED" })).toBeVisible();
   await expect(report.locator("[data-test-report-price]")).toHaveText("1");
-  await expect(report.locator("[data-test-report-cycles]")).toHaveText("9");
+  const cycles = Number(await report.locator("[data-test-report-cycles]").textContent());
+  expect(cycles).toBeGreaterThan(0);
+  expect(cycles).toBeLessThanOrEqual(puzzleById("stone-drop").cycleLimit);
   await expect(report.locator("[data-test-report-footprint]")).toHaveText("1");
-  await expect(report.locator("[data-test-report-combined]")).toHaveText("11");
+  await expect(report.locator("[data-test-report-combined]")).toHaveText(String(cycles + 2));
 
   await report.getByRole("button", { name: "BACK TO BRIEFING" }).click();
   const scoredSolution = page.locator("#solution-list").getByRole("listitem").filter({
     has: page.locator(".solution-identity strong", { hasText: "Solution 1" }),
   });
   await expect(scoredSolution).toBeVisible();
-  await expect(scoredSolution.locator(".solution-scores strong")).toHaveText(["1", "9", "1", "11"]);
+  await expect(scoredSolution.locator(".solution-scores strong")).toHaveText([
+    "1", String(cycles), "1", String(cycles + 2),
+  ]);
   await expect(scoredSolution).toHaveClass(/best-score/);
   await page.reload();
   await expect(scoredSolution).toBeVisible();
   await expect(scoredSolution).toHaveClass(/best-score/);
+  await expect(scoredSolution.locator(".solution-scores strong")).toHaveText([
+    "1", String(cycles), "1", String(cycles + 2),
+  ]);
 });
 
 test("highlights every confirmed solution tied for the lowest combined score", async ({ page }) => {
@@ -880,8 +916,8 @@ test("deletes a solution from its row and keeps it deleted after reload", async 
 
 test("malformed storage falls back to a usable empty state", async ({ page }) => {
   await seedBrowserStorage(page, "malformed-storage");
-  await page.goto("/puzzles/stone-drop");
-  await expect(page.getByText("No saved solutions. Create one to enter the workshop.")).toBeVisible();
+  await page.goto("/puzzles/click-to-test");
+  await expect(page.locator("#empty-solutions")).toBeVisible();
   await page.getByRole("button", { name: "+ NEW SOLUTION" }).click();
   await expect(page).toHaveURL(/\/solutions\/solution-1$/);
 });
@@ -1010,7 +1046,7 @@ test("export dropup exposes scene actions and sandbox puzzle authoring", async (
   await propertiesDialog.getByRole("button", { name: "CANCEL" }).click();
 
 
-  await page.goto("/puzzles/stone-drop");
+  await page.goto("/puzzles/click-to-test");
   await page.getByRole("button", { name: "+ NEW SOLUTION" }).click();
   await exportButton.click();
   await expect(page.getByRole("button", { name: "Editable region tool" })).toHaveCount(0);
@@ -1020,12 +1056,12 @@ test("export dropup exposes scene actions and sandbox puzzle authoring", async (
   const originalDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "DOWNLOAD PUZZLE FILE" }).click();
   const originalDownload = await originalDownloadPromise;
-  expect(originalDownload.suggestedFilename()).toBe("stone-drop.json");
+  expect(originalDownload.suggestedFilename()).toBe("click-to-test.json");
   const originalPath = await originalDownload.path();
   if (originalPath === null) {
     throw new Error("Original puzzle download is missing");
   }
-  const shippedPuzzle = JSON.parse(await readFile("src/game/puzzles/stone-drop.json", "utf8"));
+  const shippedPuzzle = JSON.parse(await readFile("src/game/puzzles/click-to-test.json", "utf8"));
   expect(JSON.parse(await readFile(originalPath, "utf8"))).toEqual(shippedPuzzle);
 
   await exportButton.click();
@@ -1033,7 +1069,7 @@ test("export dropup exposes scene actions and sandbox puzzle authoring", async (
   await expect(page).toHaveURL(/\/sandbox\/sandbox-\d+$/);
   await page.reload();
   await page.getByRole("button", { name: "Puzzle properties" }).click();
-  await expect(propertiesDialog.getByRole("textbox", { name: "ID" })).toHaveValue("stone-drop");
+  await expect(propertiesDialog.getByRole("textbox", { name: "ID" })).toHaveValue("click-to-test");
   await propertiesDialog.getByRole("button", { name: "CANCEL" }).click();
   await exportButton.click();
   await expect(page.getByRole("button", { name: "OPEN PUZZLE IN SANDBOX" })).toHaveCount(0);

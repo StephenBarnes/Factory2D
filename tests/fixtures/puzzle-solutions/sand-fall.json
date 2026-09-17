@@ -1,0 +1,44 @@
+{
+  "format": "factory2d-board",
+  "version": 15,
+  "width": 13,
+  "height": 10,
+  "tick": 0,
+  "result": "in-progress",
+  "grid": [
+    "=============",
+    "========.:..=",
+    "========#...=",
+    "=.:....=##..=",
+    "=#.....=...#=",
+    "=##....==.##=",
+    "=.##...=..#.=",
+    "=..#...=#..==",
+    "=..=DV.=.=..=",
+    "====:========"
+  ],
+  "textBoxes": [
+    {
+      "id": "4247b3de-c949-44cc-83e6-053b1b36a83d",
+      "x": 0.9093761444091797,
+      "y": 0.44479095935821533,
+      "width": 5.53,
+      "height": 1.26,
+      "text": "Place stone blocks to guide the sand into the delivery box below.\nClick and drag to WELD placed blocks together.\nYou can also use control-click to weld and unweld, or shift-click\nto place a block welded on all sides. Sand cannot be welded.",
+      "owner": "author"
+    }
+  ],
+  "welds": [
+    "++++++++----|",
+    "+++++++|....|",
+    "+------||...|",
+    "|......|-...|",
+    "+|.....|...||",
+    "|-|....+..+.|",
+    "|.-|...|....|",
+    "|..|...|...-|",
+    "|..+-|.|.|..|",
+    "---..-------."
+  ]
+}
+

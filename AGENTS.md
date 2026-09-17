@@ -27,6 +27,7 @@ Read the relevant reference before changing its subsystem; most tasks do not nee
 | Tile appearance, Canvas rendering, animation, camera, visual performance | `docs/rendering.md` |
 | Controls, tools, dialogs, navigation, persistence, puzzle authoring/testing | `docs/ui-lifecycle.md` |
 | Planned features and priorities | `docs/todos.md` |
+| Current puzzles and ideas for more puzzles | `docs/puzzles.md` |
 | Performance investigations and proposed optimizations | `docs/performance-todos.md` |
 
 Update the relevant reference when changing architecture or a durable contract.

@@ -13,6 +13,7 @@ import { SandboxPuzzleAuthoringState } from "../src/game/sandbox-puzzle-authorin
 import { serializeBoard } from "../src/simulation/board-export";
 import { TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
+import { expectDefined } from "../src/util/assert";
 
 function createStorage(): Pick<Storage, "getItem" | "setItem"> {
   const values = new Map<string, string>();
@@ -95,6 +96,10 @@ describe("workshop session controller", () => {
   it("retains independent sandbox and saved-solution sessions", () => {
     const puzzle = puzzleById("stone-drop");
     const initialWorld = puzzle.createInitialWorld();
+    const { x, y } = expectDefined(
+      puzzle.editableRegion.rectangles[0],
+      "Session fixture needs an editable cell",
+    );
     const solution = {
       id: "solution-1",
       puzzleId: puzzle.id,
@@ -120,12 +125,12 @@ describe("workshop session controller", () => {
     expect(puzzleSession.availableComponents).toBe(puzzle.availableComponents);
     expect(puzzleSession.editableRegionAuthoring).toBeNull();
 
-    puzzleSession.world.place(8, 3, TileKind.Stone);
+    puzzleSession.world.place(x, y, TileKind.Stone);
     sessions.saveEditedBaseline();
     expect(sessions.beginSimulation()).toBe(true);
-    puzzleSession.world.place(8, 3, TileKind.Empty);
+    puzzleSession.world.place(x, y, TileKind.Empty);
     sessions.resetSimulation();
-    expect(puzzleSession.world.kindAt(8, 3)).toBe(TileKind.Stone);
+    expect(puzzleSession.world.kindAt(x, y)).toBe(TileKind.Stone);
     expect(puzzleSession.editingState.editable).toBe(true);
 
     expect(sessions.activateSandbox("sandbox-1", {

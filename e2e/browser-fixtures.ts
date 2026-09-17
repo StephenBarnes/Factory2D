@@ -60,7 +60,10 @@ export function browserStorageFixture(
   if (name === "populated") {
     const solutions = populatedSolutions();
     return {
-      values: { [PUZZLE_SOLUTIONS_STORAGE_KEY]: solutions.serialize() },
+      values: {
+        [PUZZLE_PROGRESS_STORAGE_KEY]: progressValue(new Set<PuzzleId>(["click-to-test"])),
+        [PUZZLE_SOLUTIONS_STORAGE_KEY]: solutions.serialize(),
+      },
       solutionIds: ["solution-1", "solution-2"],
       editedBoard: null,
     };
@@ -70,7 +73,13 @@ export function browserStorageFixture(
     return {
       values: {
         [PUZZLE_PROGRESS_STORAGE_KEY]: progressValue(
-          new Set<PuzzleId>(["stone-drop", "sand-fall", "puzzle-infrastructure"]),
+          new Set<PuzzleId>([
+            "click-to-test",
+            "stone-drop",
+            "sand-fall",
+            "basic-runelore",
+            "puzzle-infrastructure",
+          ]),
         ),
       },
       solutionIds: [],
@@ -81,12 +90,15 @@ export function browserStorageFixture(
   if (name === "edited-board") {
     const puzzle = puzzleById("stone-drop");
     const world = puzzle.createInitialWorld();
-    world.place(8, 3, TileKind.Stone);
+    world.place(4, 4, TileKind.Stone);
     const board = serializeBoard(world, 0);
     const solutions = PuzzleSolutions.empty();
     const solution = solutions.create(puzzle.id, board);
     return {
-      values: { [PUZZLE_SOLUTIONS_STORAGE_KEY]: solutions.serialize() },
+      values: {
+        [PUZZLE_PROGRESS_STORAGE_KEY]: progressValue(new Set<PuzzleId>(["click-to-test"])),
+        [PUZZLE_SOLUTIONS_STORAGE_KEY]: solutions.serialize(),
+      },
       solutionIds: [solution.id],
       editedBoard: board,
     };
