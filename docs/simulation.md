@@ -48,6 +48,8 @@ Each tick collects intents throughout the root/nested-board tree, resolves circu
 
 Dedicated `*-resolver.ts` files own machine intent collection and commits. `MotionWorkspace` shares conveyor/thruster force collection and dependency/conflict resolution; reuse that machinery rather than introducing order-dependent pushing.
 
+An empty rotator grip turns without anchoring its base or competing with body turns. Commit these grip-only direction changes before accepted cell rotations, so a carrier transforms the updated direction along with the carried rotator's orientation. Nonempty competing turns still jam.
+
 Mirrored assemblers swap control/output sides and match a separately precomputed reflected recipe set. Recipe geometry, weld ownership, component handedness, and product orientations reflect before rotation. Pending outputs retain their own handedness through subsequent machine transforms and emission.
 
 Before gravity, `MotionWorkspace` probes powered sources and their contact chains through the shared driven resolver, using the summed machinery forces on each source body. Reserved chains hold against gravity even when jammed; successful destinations also exclude falling bodies. Magnetic gravity groups containing reserved bodies remain supported, then ordinary welded axes are restored for the final driven solve. Conveyor-only bodies retain the old gravity-first rules. Reservation scratch allocates only when thrusters or projected commands occur, remains cached, and is cleared when power disappears. No geometry commits during reservation, and force sums are reused rather than observed twice.

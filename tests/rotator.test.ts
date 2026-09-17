@@ -218,6 +218,42 @@ describe("rotators", () => {
     }
   });
 
+  it.each([Direction.Up, Direction.Down])(
+    "carries an active empty-grip rotator during reaction facing %s",
+    (orientation) => {
+      const world = new World(7, 7);
+      const dy = directionY(orientation);
+      const carriedOrientation = ((orientation + 2) & 3) as Direction;
+      world.place(3, 3, TileKind.Rotator, orientation);
+      const grip = world.place(3, 3 + dy, TileKind.Platform);
+      const carried = world.place(3, 3 - dy, TileKind.Rotator, carriedOrientation);
+      world.setWeld(3, 3, 3, 3 - dy, true);
+      chargeRotator(world, 3, 3, 1);
+      chargeRotator(world, 3, 3 - dy, 1);
+      const resolver = new RotatorResolver(world);
+      const destinationX = 3 - dy;
+      const destination = 3 * world.width + destinationX;
+
+      // Both scan orders must combine the empty grip's turn with the base's turn.
+      expect(resolver.resolve()).toBe(2);
+      expect(world.idAt(destinationX, 3)).toBe(carried);
+      expect(world.idAt(3, 3 + dy)).toBe(grip);
+      expect(world.orientationAt(destinationX, 3)).toBe((carriedOrientation + 3) & 3);
+      expect(world.rotatorDirectionAtIndex(destination)).toBe(carriedOrientation);
+      expect(world.isWelded(3, 3, destinationX, 3)).toBe(true);
+
+      chargeRotator(world, 3, 3, -1);
+      chargeRotator(world, destinationX, 3, -1);
+      expect(resolver.resolve()).toBe(2);
+      expect(world.idAt(3, 3 - dy)).toBe(carried);
+      expect(world.orientationAt(3, 3)).toBe(orientation);
+      expect(world.orientationAt(3, 3 - dy)).toBe(carriedOrientation);
+      expect(world.rotatorDirectionAtIndex((3 - dy) * world.width + 3)).toBe(carriedOrientation);
+      expect(world.rotatorDirectionAtIndex(24)).toBe(orientation);
+      expect(world.isWelded(3, 3, 3, 3 - dy)).toBe(true);
+    },
+  );
+
   it("reacts when a movable grip hits terrain, without carrying the grip", () => {
     const world = new World(7, 7);
     world.place(3, 3, TileKind.Rotator, Direction.Up);

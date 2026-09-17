@@ -90,10 +90,18 @@ export class RotatorResolver {
     }
 
     this.markConflicts();
+    // Empty grips turn freely, even when another proposal carries their base.
+    // Commit them before cell movement so the carrier transforms the new direction.
+    for (let proposalIndex = 0; proposalIndex < this.proposalCount; proposalIndex += 1) {
+      const proposal = expectDefined(this.proposals[proposalIndex], "rotation proposal");
+      if (proposal.selected.length === 0 && !proposal.blocked && !proposal.jammed) {
+        this.world.setRotatorDirectionAtIndex(proposal.pivot, proposal.nextDirection);
+      }
+    }
     let rotatedCellCount = 0;
     for (let proposalIndex = 0; proposalIndex < this.proposalCount; proposalIndex += 1) {
       const proposal = expectDefined(this.proposals[proposalIndex], "rotation proposal");
-      if (proposal.blocked || proposal.jammed) {
+      if (proposal.blocked || proposal.jammed || proposal.selected.length === 0) {
         continue;
       }
       this.selected.fill(0);
@@ -317,7 +325,7 @@ export class RotatorResolver {
     this.pivotOwners.fill(-1);
     for (let index = 0; index < this.proposalCount; index += 1) {
       const proposal = expectDefined(this.proposals[index], "rotation proposal");
-      if (!proposal.blocked) {
+      if (!proposal.blocked && proposal.selected.length > 0) {
         this.pivotOwners[proposal.pivot] = index;
       }
     }
