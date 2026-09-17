@@ -38,7 +38,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 # UI
 
 * Implement undo and redo when editing in the sandbox and puzzle solutions.
-* Allow mirroring components with some hotkey. (Rotation currently uses WASD, Q picks blocks, E configures. Could use E when not over a block, or R.) Mirroring is stored and selection reflection works; a direct placement shortcut remains to be added.
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
 
 # Visuals

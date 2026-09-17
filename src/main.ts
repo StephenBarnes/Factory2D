@@ -2389,6 +2389,20 @@ document.addEventListener("keydown", (event) => {
   }
 
   if (
+    event.code === "KeyM" &&
+    selectedTool === "tile" &&
+    TILE_DEFINITIONS[selectedKind].usesMirroring === true &&
+    surface.session.editingState.editable
+  ) {
+    event.preventDefault();
+    if (!event.repeat) {
+      selectedMirrored = !selectedMirrored;
+      refreshPointerHover();
+    }
+    return;
+  }
+
+  if (
     selectedTool === "tile" &&
     TILE_DEFINITIONS[selectedKind].usesOrientation &&
     surface.session.editingState.editable
