@@ -20,7 +20,7 @@ export default defineConfig({
     deviceScaleFactor: 1.25,
   },
   webServer: {
-    command: "npm run build && npm exec vite preview -- --host 127.0.0.1 --port 4174 --strictPort",
+    command: "npm run build && npm exec vite build -- --config tools/benchmark/vite.config.ts && npm exec vite preview -- --host 127.0.0.1 --port 4174 --strictPort",
     url: "http://127.0.0.1:4174",
     reuseExistingServer: false,
     timeout: 120_000,

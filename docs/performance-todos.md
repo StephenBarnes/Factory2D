@@ -1,6 +1,6 @@
 # Performance status and remaining work
 
-Updated **2026-09-17**. The isolated spot measurements and source-status table below remain against revision `35a9bbc0b7dff729199001c17401350c869222dc`. The production workshop comparison uses `a00c9409fac594e87e3f174bb373e2a5f7715c8c`; each runner result records its own source identity and dirty-tree hashes.
+Updated **2026-09-17**. The isolated spot measurements and source-status table below remain against revision `35a9bbc0b7dff729199001c17401350c869222dc`. The large-board production comparison uses `a00c9409fac594e87e3f174bb373e2a5f7715c8c`; the geode measurements use `867c6ad2190d3a21b5f563369df72f5cb3404dc1` plus benchmark-only changes. Each runner result records its own source identity and dirty-tree hashes.
 
 This is the active plan, not an optimization changelog. The [original investigation and Updates 1–14](performance-history.md) are archived unchanged. Their timings, hotspot percentages, memory totals, and recommendations describe earlier revisions; do not use them as current baselines or add their memory savings together.
 
@@ -9,7 +9,7 @@ This is the active plan, not an optimization changelog. The [original investigat
 * **Do not restart the original optimization list.** LOD, culling, geometry caching, sparse feature discovery, cached circuit connectivity, and most lazy-allocation work are implemented. See the status table below.
 * **Separate software rasterization from hardware-GPU costs.** The production comparison below identifies a large main-thread Canvas-resource cost on SwiftShader, absent on the RTX 4060 capture. Hardware fitted falling cases have near-refresh RAF cadence, but dense welded cases still reach roughly 50 ms RAF p95. Neither proves low-end readiness or the isolated render budget.
 * **Empty/static-platform simulation is no longer a board-size blocker in isolation.** Dense stationary and moving workloads still cost milliseconds to tens of milliseconds. A 5-tick/s throughput budget does not ensure smooth 60 FPS: a synchronous tick can interrupt a frame.
-* **The largest evidence gap remains representative complete-workshop coverage.** A production browser runner now measures workshop RAF cadence, long tasks, and thresholded event timing for a deterministic initial subset (usage below). The isolated measurements below still exclude snapshot copying, signal capture, much of the UI, case transitions, and persistence. Current low-end-device performance and total retained browser memory are not established.
+* **The largest evidence gap remains representative complete-workshop coverage.** A production browser runner measures workshop RAF cadence, long tasks, and thresholded event timing. The saved small geode factory now also has a 50-tick isolated snapshot/simulation/render replay (below); the earlier 400×300 spot measurements still exclude snapshots and UI work. Current low-end-device performance and total retained browser memory are not established.
 
 The product direction remains up to 400×300 tiles, 5 simulation ticks/s, and 60 FPS animation on low-end hardware. Treat maximum-size 60-tick/s playback as a separate requirement: the dense simulation cases below already exceed its 16.7 ms interval, but that does not mean every maximum-size workload does.
 
@@ -84,9 +84,10 @@ These are profiling/implementation tasks, not assertions that every candidate sh
 
 ### 1. Establish a repeatable end-to-end baseline
 
-- [ ] Extend the maintained browser runner below to the remaining workload matrix, repeated cold-start distributions, and isolated/attributed call timings. Its initial seven fixtures cover root-board occupancy, falling stones, dense welded stone/conduits, and a small puzzle scene; they do not complete this priority's exit criteria.
+- [ ] Extend the maintained browser runner below to the remaining workload matrix, repeated cold-start distributions, and isolated/attributed call timings. Its eight fixtures cover root-board occupancy, falling stones, dense welded stone/conduits, a small puzzle control, and the saved geode factory. The geode replay separates snapshot, step, and render calls, but does not complete this priority's exit criteria.
 - [ ] Extend the production GPU measurements below to the remaining workshop matrix and representative low-end hardware. Use 4× CPU throttling only as a labeled relative proxy, not low-end certification. Collect frame intervals, long tasks, interaction latency, and CPU/GC/raster traces alongside isolated call durations.
 - [ ] Attribute complete tick/frame cost: `previousWorld.copyFrom`, simulation, signal sampling, signal-panel derivation/drawing, interpolation/cache preparation, Canvas work, and DOM/layout. Exercise 5 and 60 ticks/s, animation on/off, manual steps, automatic puzzle tests, and fast verification. Fast mode's 8 ms/100-tick cooperative budget checks between indivisible ticks; it is not an enforced maximum frame time.
+- [ ] Capture the reported geode slowdown under the affected browser/session conditions. The fitted production baseline below does not expose a tick/render bottleneck. Compare viewport/DPR, graphics backend, playback/animation settings, and a real session trace before choosing an optimization; do not treat this workstation result as disproving the observation.
 
 Minimum workload matrix: 400×300 at 0%, 1%, 5%, and 10% occupancy; continuous falling material; dense stationary welded stone and circuits; representative mixed moving factory; nested arrays; fitted and zoomed views. Include visual-only changes, local edits, giant-body split/merge, sustained movement/rotation, first render, zoom/remount, and unchanged idle frames. Vary board area separately from visible area and occupied/body counts. Keep at least one current small puzzle as a control.
 
@@ -94,9 +95,9 @@ Minimum workload matrix: 400×300 at 0%, 1%, 5%, and 10% occupancy; continuous f
 
 #### Running the workshop baseline
 
-`npm run benchmark` builds production assets, starts an isolated Vite preview on port 4174, and drives the real workshop through Playwright. Install its Chromium with `npx playwright install chromium`, or set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` as for the browser suite. No benchmark hooks enter the production bundle. Only workload validity fails the run (browser errors, failed imports/steps, no active tick advancement, or a falling fixture reaching its settling bound); unstable timings are never assertions.
+`npm run benchmark` builds production assets and a separate benchmark-only replay page, starts an isolated Vite preview on port 4174, and drives the real workshop through Playwright. Install its Chromium with `npx playwright install chromium`, or set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` as for the browser suite. No benchmark hooks enter the application bundle; ordinary `npm run build` does not build the replay page. Only workload validity fails the run (browser errors, failed imports/steps, no active tick advancement, divergent replays, or a falling fixture reaching its settling bound); unstable timings are never assertions.
 
-The default is one worker, fresh browser context per fixture, a 1280×800 viewport at DPR 1.25, fitted view, animations enabled, 5 ticks/s, 15 RAF warmups, and 120 requested frame intervals per idle/active window. Seven deterministic fixtures live in `tools/benchmark/fixtures.ts`: `empty`, `falling-1`, `falling-5`, `falling-10`, `welded-stone`, `welded-conduit`, and `stone-drop`. Falling stones occupy upper checkerboard rows with documented clearance; **these placements differ from the earlier spot checks**. The small puzzle solution runs as a sandbox scene, not as an automatic puzzle test.
+The default is one worker, fresh browser context per fixture, a 1280×800 viewport at DPR 1.25, fitted view, animations enabled, 5 ticks/s, 15 RAF warmups, and 120 requested frame intervals per idle/active window. Eight deterministic fixtures live in `tools/benchmark/fixtures.ts`: `empty`, `falling-1`, `falling-5`, `falling-10`, `welded-stone`, `welded-conduit`, `stone-drop`, and `geode`. **Geode's active window advances 50 ticks instead of counting frames**, followed by its isolated replay. Falling stones occupy upper checkerboard rows with documented clearance; **these placements differ from the earlier spot checks**. The small puzzle scenes run as sandboxes, not automatic puzzle tests.
 
 Each fixture writes `result.json` and `workshop.png` under `test-results/benchmark/`. JSON includes raw samples, nearest-rank p50/p95/max, actual sample counts, first-import/manual-step action latency, separate idle/retained-active windows, source revision and dirty-tree hashes, scene hash, browser/version, CDP graphics backend, host CPU, throttle, canvas CSS/backing sizes, and initial root occupancy/body-size metadata. First use means the fixture's first import/step **after shell startup**, not a cold browser or cold-JIT distribution. Warmup counts are RAF callbacks, not simulation ticks.
 
@@ -107,9 +108,15 @@ npm run benchmark
 BENCH_FIXTURES=falling-5,falling-10 BENCH_TRACE=1 npm run benchmark -- --output temp/fitted-trace
 BENCH_FIXTURES=empty BENCH_SAMPLES=30 BENCH_SPEED=60 BENCH_ANIMATE=0 BENCH_VIEW=zoomed BENCH_THROTTLE=4 npm run benchmark -- --output temp/options-smoke
 BENCH_HEADED=1 npm run benchmark -- --output temp/headed-baseline
+BENCH_FIXTURES=geode npm run benchmark -- --output temp/geode-baseline
+BENCH_FIXTURES=geode BENCH_HEADED=1 npm run benchmark -- --output temp/geode-gpu
 ```
 
 `BENCH_SAMPLES` and `BENCH_WARMUP` override frame counts; use enough samples to observe committed ticks. `BENCH_SPEED` accepts 5/60, `BENCH_THROTTLE` accepts 1/4, and `BENCH_VIEW` accepts fitted/zoomed (requests 8× center zoom, subject to the normal cell-size cap). A 4× throttle is only a relative proxy. Headed mode does not guarantee hardware acceleration: inspect `environment.graphics`. Playwright clears the selected output directory on the next run; use distinct `--output` paths to preserve comparisons.
+
+For `geode`, `BENCH_TICKS` defaults to 50 and controls both the active workshop tick advancement and the isolated replay length; `BENCH_RUNS` defaults to 3 fresh tick-zero replay pairs. These are positive integers. `BENCH_SAMPLES` still controls geode's idle window. The isolated page uses the workshop's canvas CSS dimensions, DPR, view and animation/speed settings, recording its results under `result.json.isolated` and a final `isolated.png` screenshot.
+
+Each isolated pair first times simulation-only `step()` calls synchronously, then reimports the original scene and separately times `previousWorld.copyFrom`, `step(previousWorld)`, and synchronous `render()` submission. Animated 5-tick/s replay samples 12 smoothstep progress values per tick, one per RAF; animations off or 60 ticks/s uses one committed frame per tick. Slow backends stretch wall time rather than skipping ticks/frames. This is a fixed replay, **not the workshop scheduler or raster-completion timing**. Raw per-call samples, totals, p50/p95/max, first fitted render, RAF intervals, wall time and per-tick movement counts are retained. Import/construction/serialization are untimed. No tick warmup consumes the scene: all passes start at zero with fresh world/runtime/renderer caches; later passes retain browser/JIT state, and simulation-only precedes rendered replay. Every pair must agree on final serialized state and every tick's movement count, as must repeated final states. Timer-resolution zeros do not mean no work. There are no timing pass/fail thresholds.
 
 High-speed or heavily throttled falling runs can exhaust their finite clearances before the requested frames finish. Completed windows are saved with `validity.valid: false` and reasons before failing the run; do not treat them as continuous-falling measurements. Reduce frame counts or select a stationary workload. The empty-fixture command above is an option smoke check, not a loaded 60-tick/s performance result.
 
@@ -145,7 +152,41 @@ npm run benchmark:trace -- temp/fitted-before-trace/workshop.bench.ts-falling-10
 npm run benchmark:trace -- temp/fitted-headed-trace/workshop.bench.ts-falling-10/result.json
 ```
 
-Local raw results, screenshots, traces, and generated summaries remain in those output directories; they are not checked-in timing gates. Headed GPU availability depends on the display/driver environment: verify `environment.graphics` on every run. Mixed factories, nested arrays, dirty split/merge frames, rotation, remounts, puzzle verification/case transitions, repeated cold starts, memory retention, and isolated tick-phase attribution remain open. **Next measured target:** trace the dense welded cases on hardware to distinguish synchronous tick/snapshot work from Canvas cost; do not infer that split from the sparse traces.
+Local raw results, screenshots, traces, and generated summaries remain in those output directories; they are not checked-in timing gates. Headed GPU availability depends on the display/driver environment: verify `environment.graphics` on every run. Large mixed factories, nested arrays, targeted dirty split/merge frames, rotation, remounts, puzzle verification/case transitions, repeated cold starts, memory retention, and full tick-phase attribution remain open. The small geode factory below adds snapshot/step/render attribution separately. **Next large-board target:** trace dense welded cases on hardware to distinguish synchronous tick/snapshot work from Canvas cost; do not infer that split from sparse traces.
+
+#### Saved geode factory: 50-tick baseline
+
+Measured 2026-09-17 at `867c6ad2190d3a21b5f563369df72f5cb3404dc1` plus the new benchmark tooling, with no simulation/rendering changes. The original `temp/geode-bench-scene.json` is preserved byte-for-byte as `tools/benchmark/fixtures/geode.json` (scene SHA-256 `470c27d45a27d83f02f021f907301ee6b63598c4be043a21050996be22c38711`). It is **11×12**, initially **86 occupied cells**, **3 welded bodies**, largest **80 cells**: conveyors, drills, duplicators, delivery and circuits, with geometry changing during extraction. This is a small detailed-rendering workload, not another fitted low-detail large board.
+
+Untraced production Chromium **151.0.7922.34**, Ryzen 9 5900X, no CPU throttle, fitted view, dark theme/default bevels, animations on, 5 ticks/s. Viewport 1280×800 at DPR 1.25; canvas 1008×728 CSS / 1260×910 backing pixels. CDP confirmed headless SwiftShader and headed NVIDIA RTX 4060/OpenGL (580.173.02). Each backend ran one workshop window advancing ticks **2→52** after its first step/warmup, then **three fresh 0→50 isolated replay pairs**. Each rendered replay made 600 timed calls. These are single-session observations, not cold-start distributions or low-end certification.
+
+| Measurement | SwiftShader | RTX 4060 |
+|---|---:|---:|
+| Simulation-only, 50 ticks total, passes 1 / 2 / 3 (ms) | 14.6 / 5.2 / 4.6 | 25.4 / 6.5 / 5.5 |
+| Snapshot copies, total per 50-tick rendered pass (ms) | 1.0 | 0.4–0.8 |
+| Simulation with interpolation source, total per rendered pass (ms) | 7.8–9.5 | 7.1–9.1 |
+| First fitted render, passes 1 / 2 / 3 (ms) | 7.7 / 0.8 / 0.5 | 8.0 / 0.9 / 0.7 |
+| 600 synchronous render calls, total per pass (ms) | 223.6–265.0 | 233.2–268.4 |
+| Synchronous render p95 / worst call across passes (ms) | 0.6–0.7 / 1.6 | 0.6–0.7 / 1.8 |
+| Workshop active RAF p50 / p95 / max (ms) | 16.7 / 16.8 / 16.8 | 16.7 / 16.7 / 16.8 |
+| Workshop active long tasks | 0 | 0 |
+
+Both workshop windows collected 596 RAF intervals over about 9.95 seconds. Each isolated animated pass took about 10 seconds because it was RAF-paced; **that wall time is not ten seconds of simulation/render CPU work**. All replay state/movement equivalence checks passed, with 278 tile movements over each 50-tick replay. Rendering is the larger accumulated synchronous cost here, but the observed call times and workshop cadence do not explain the reported slow session. No optimization or claim that the original slowdown is resolved follows from this baseline. Capture the affected environment/session next, rather than extending the old large-board hotspot attribution to this scene.
+
+Reproduction and retained local artifacts:
+
+```sh
+BENCH_FIXTURES=geode BENCH_RUNS=3 BENCH_SAMPLES=90 npm run benchmark -- --output temp/geode-software-50
+BENCH_FIXTURES=geode BENCH_RUNS=1 BENCH_SAMPLES=90 BENCH_HEADED=1 BENCH_TRACE=1 npm run benchmark -- --output temp/geode-hardware-trace
+npm run benchmark:trace -- temp/geode-hardware-trace/workshop.bench.ts-geode/result.json
+BENCH_FIXTURES=geode BENCH_RUNS=3 BENCH_SAMPLES=90 BENCH_HEADED=1 npm run benchmark -- --output temp/geode-hardware
+```
+
+The final `result.json` contains raw call timings and serialized final state; screenshots show the real workshop and isolated replay. Source/diff hashes distinguish the runner revisions used in each capture. The earlier `temp/geode-software` smoke capture used only 90 active workshop frames; it is **not** the 50-tick workshop baseline tabulated here.
+
+A separate hardware trace passed with workshop RAF p95 **16.8 ms**, max **33.3 ms**, and zero long tasks. In its active window, `FireAnimationFrame` slices covered 549.3 ms (max 4.7 ms), Canvas resource production 193.5 ms (max 1.1 ms), and recorded major/minor GC slices 7.0/5.6 ms. These groups overlap and are not exclusive render/CPU totals; tracing perturbs timings. The offline summary covers workshop windows, while raw `benchmark:isolated-*` marks locate the replay in the full trace. This capture likewise does not identify a sustained stall.
+
+Option smoke coverage also passed for `empty,geode` with `BENCH_SPEED=60 BENCH_ANIMATE=0 BENCH_VIEW=zoomed BENCH_THROTTLE=4 BENCH_RUNS=1 BENCH_SAMPLES=30`, saved under `temp/geode-options-smoke`. It exercises the single-committed-frame replay and existing fixture path; its throttled zoomed timings are not the fitted 5-tick/s baseline above.
 
 ### 2. Investigate fitted active rendering
 

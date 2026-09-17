@@ -22,7 +22,7 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 # Performance
 
 * Follow the current performance plan `docs/performance-todos.md`: refresh end-to-end browser measurements, investigate active fitted rendering, and measure retained session memory before choosing further optimizations. The original profile and completed optimization log are archived in `performance-history.md`.
-* Add a benchmark for the scene in `temp/geode-bench-scene.json`, measuring time needed to simulate it for around 50 ticks and rendering. Currently this feels slow in the browser despite the board being small.
+* Figure out why our game has high CPU usage currently, and whether we can reduce that (e.g. for battery life on laptop and mobile). The geode bench scene currently uses around 100% CPU while running, on Firefox.
 
 # Circuit network
 
@@ -39,6 +39,8 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 * Implement undo and redo when editing in the sandbox and puzzle solutions.
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
+* Improve naming for duplicated solutions. Currently when trying to optimize a solution we often end up with names like "Solution 1 Copy Copy Copy Copy Copy Copy Copy 2 Copy Copy 2" (real example) because one correct solution is duplicated and then tweaked to improve scores, then duplicated again for further improvements, etc. Figure out a more concise numbering/naming schema, maybe incrementing a suffixed number or letter on copy.
+* On the palette, on mouseover, show the price on the palette icon, the same way we currently show it on mouseover on the total cost.
 
 # Visuals
 

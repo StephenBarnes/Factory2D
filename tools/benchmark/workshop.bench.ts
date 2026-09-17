@@ -5,6 +5,7 @@ import { readFile, writeFile, open } from "node:fs/promises";
 import { test, expect, type Page, type CDPSession } from "@playwright/test";
 import { benchmarkFixtures } from "./fixtures";
 import { installMeasurements, startMeasurement, finishMeasurement } from "./measurements";
+import type { ReplayOptions } from "./isolated";
 
 function integerOption(name: string, fallback: number, minimum: number): number {
   const value = Number(process.env[name] ?? fallback);
@@ -16,6 +17,8 @@ function integerOption(name: string, fallback: number, minimum: number): number 
 
 const samples = integerOption("BENCH_SAMPLES", 120, 2);
 const warmup = integerOption("BENCH_WARMUP", 15, 0);
+const replayTicks = integerOption("BENCH_TICKS", 50, 1);
+const replayRuns = integerOption("BENCH_RUNS", 3, 1);
 const speed = integerOption("BENCH_SPEED", 5, 1);
 const throttle = integerOption("BENCH_THROTTLE", 1, 1);
 if (speed !== 5 && speed !== 60) throw new Error("BENCH_SPEED must be 5 or 60");
@@ -167,17 +170,49 @@ for (const fixture of selected) {
       await frames(page, warmup);
       const initialTick = await tick(page);
       await startWindow(page, "retained-active");
-      await frames(page, samples + 1);
+      if (fixture.id === "geode") {
+        await page.waitForFunction((target) => {
+          const text = document.getElementById("tick-counter")?.textContent ?? "";
+          const match = /^TICK (\d+)$/.exec(text);
+          return match?.[1] !== undefined && Number(match[1]) >= target;
+        }, initialTick + replayTicks, { polling: "raf", timeout: 120_000 });
+      } else {
+        await frames(page, samples + 1);
+      }
       windows.push({ phase: "retained-active", measurement: await finishMeasurement(page) });
       const finalTick = await tick(page);
       await page.locator("#play-button").click();
       const invalidReasons = [...errors];
       if (finalTick <= initialTick) invalidReasons.push("No active simulation ticks advanced");
+      if (fixture.id === "geode" && finalTick - initialTick < replayTicks) {
+        invalidReasons.push("Geode workshop window did not advance the requested ticks");
+      }
       if (fixture.metadata.continuousMotionTickLimit !== null &&
           finalTick >= fixture.metadata.continuousMotionTickLimit) {
         invalidReasons.push("Falling fixture settled: reduce sample/warmup counts");
       }
       await page.screenshot({ path: testInfo.outputPath("workshop.png") });
+      let isolated;
+      if (fixture.id === "geode") {
+        const bounds = await page.locator("#game-canvas").boundingBox();
+        if (bounds === null) throw new Error("Canvas has no bounds");
+        await page.goto("/benchmark/");
+        await page.waitForFunction(() => typeof window.runSceneBenchmark === "function");
+        const options: ReplayOptions = {
+          scene: fixture.scene, ticks: replayTicks, runs: replayRuns,
+          cssWidth: bounds.width, cssHeight: bounds.height,
+          speed, animate: animate === "1", zoomed: view === "zoomed",
+        };
+        isolated = await page.evaluate((options) => window.runSceneBenchmark(options), options);
+        await page.screenshot({ path: testInfo.outputPath("isolated.png") });
+        expect(errors, "Isolated replay browser errors").toEqual([]);
+        for (const run of isolated.runs) {
+          console.log(`${fixture.id} replay ${run.run}: ${run.finalTick} ticks; ` +
+            `step-only total ${run.simulationOnly.step.totalMs.toFixed(1)} ms; ` +
+            `render p50/p95 ${run.rendered.render.p50Ms.toFixed(1)}/${run.rendered.render.p95Ms.toFixed(1)} ms; ` +
+            `RAF p95 ${run.rendered.rafCadence.p95Ms.toFixed(1)} ms`);
+        }
+      }
       const result = {
         schemaVersion: 1,
         recordedAt: new Date().toISOString(),
@@ -195,16 +230,21 @@ for (const fixture of selected) {
           ticksPerSecond: speed, animations: animate === "1", initialTick, finalTick },
         method: {
           requestedFrameIntervals: samples, warmupRafs: warmup,
+          activeWindow: fixture.id === "geode"
+            ? { unit: "ticks", requested: replayTicks }
+            : { unit: "frame-intervals", requested: samples },
           percentile: "nearest-rank: sorted[ceil(p*n)-1]", tracingEnabled: captureTrace,
           scope: "Real workshop RAF cadence, long tasks and Event Timing; not isolated calls or displayed FPS",
           coldScope: "First fixture import and simulation step in a fresh browser context, after shell/palette startup; not a cold browser/JIT distribution",
           retainedScope: "Same mounted session after first step and RAF warmup; no reload/reset/forced GC",
           latencyScope: "Host action start through automation, import persistence or tick-label observation, and two RAF callbacks; not input-to-photon latency",
-          limitations: ["No isolated tick/frame phase instrumentation", "No total retained-memory measurement",
+          limitations: ["Workshop windows have no isolated tick/frame phase instrumentation; geode adds a separate replay",
+            "No total retained-memory measurement",
             "No hardware-GPU or low-end guarantee; inspect graphics backend", "Tracing/profiling changes timings; compare untraced runs",
             "Small puzzle scene runs in sandbox, not automatic puzzle verification"],
         },
         windows,
+        isolated,
       };
       await writeFile(testInfo.outputPath("result.json"), JSON.stringify(result, null, 2) + "\n");
       expect(invalidReasons, "Benchmark workload validity").toEqual([]);

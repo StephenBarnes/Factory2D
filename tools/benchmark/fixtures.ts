@@ -132,5 +132,13 @@ export function benchmarkFixtures(): readonly BenchmarkFixture[] {
         "Its natural falling, delivery, and completion lifecycle is intentional; " +
         "it has no continuous-motion guarantee.",
     ),
+    fixture(
+      "geode",
+      deserializeBoard(readFileSync(new URL("./fixtures/geode.json", import.meta.url), "utf8")).world,
+      "11x12 geode extraction machine saved from a slow browser session in " +
+        "temp/geode-bench-scene.json; preserved in tools/benchmark/fixtures/geode.json. " +
+        "Includes conveyors, drills, duplication, delivery, and circuits. " +
+        "No continuous-motion guarantee.",
+    ),
   ];
 }
