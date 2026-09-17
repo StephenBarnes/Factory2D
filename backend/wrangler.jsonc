@@ -7,9 +7,7 @@
     {
       "binding": "DB",
       "database_name": "factory2d-community",
-      // Local development placeholder, not a provisioned Cloudflare database ID.
-      // Replace with the actual D1 UUID before remote migrations or deployment.
-      "database_id": "local-factory2d",
+      "database_id": "fd8b8bfe-5686-44c9-9843-2b78a807d11d",
       "migrations_dir": "migrations"
     }
   ]

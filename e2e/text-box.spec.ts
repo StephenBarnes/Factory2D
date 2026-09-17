@@ -3,7 +3,7 @@ import type { CanvasRenderer as CanvasRendererClass } from "../src/render/canvas
 import type { World as WorldClass } from "../src/simulation/world";
 
 test("auto-sized annotations paint every line inside their boxes", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/#/");
   const result = await page.evaluate(async () => {
     // Browser evaluation cannot capture Node imports; load Vite's browser modules in this realm.
     const rendererPath = "/src/render/canvas-renderer.ts";

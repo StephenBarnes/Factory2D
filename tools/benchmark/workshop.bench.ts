@@ -114,9 +114,9 @@ for (const fixture of selected) {
     await browserCdp.detach();
     const cdp = await page.context().newCDPSession(page);
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: throttle });
-    await page.goto("/sandbox");
+    await page.goto("/#/sandbox");
     await page.locator("#new-sandbox-button").click();
-    await expect(page).toHaveURL(/\/sandbox\/sandbox-\d+$/);
+    await expect(page).toHaveURL(/\/#\/sandbox\/sandbox-\d+$/);
     await installMeasurements(page);
     const windows: { phase: string; measurement: unknown; actionToTwoRafsMs?: number }[] = [];
     let tracing = false;

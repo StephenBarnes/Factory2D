@@ -22,9 +22,9 @@ async function diagnosticSnapshot(page: Page): Promise<DevelopmentDiagnosticSnap
 }
 
 async function openNewSandbox(page: Page): Promise<void> {
-  await page.goto("/sandbox");
+  await page.goto("/#/sandbox");
   await page.getByRole("button", { name: "+ NEW SANDBOX" }).click();
-  await expect(page).toHaveURL(/\/sandbox\/sandbox-\d+$/);
+  await expect(page).toHaveURL(/\/#\/sandbox\/sandbox-\d+$/);
 }
 
 

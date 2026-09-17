@@ -116,15 +116,15 @@ export class NavigationController {
   navigate(screen: AppScreen): void {
     const resolvedScreen = resolveAppScreen(screen, this.routeAccess);
     this.showScreen(resolvedScreen);
-    this.history.pushState(null, "", appScreenPath(resolvedScreen));
+    this.history.pushState(null, "", `#${appScreenPath(resolvedScreen)}`);
   }
 
-  navigatePath(pathname: string): void {
-    const screen = resolveAppPath(pathname, this.routeAccess);
+  navigateHash(hash: string): void {
+    const screen = resolveAppPath(hash.slice(1), this.routeAccess);
     this.showScreen(screen);
-    const canonicalPath = appScreenPath(screen);
-    if (pathname !== canonicalPath) {
-      this.history.replaceState(null, "", canonicalPath);
+    const canonicalHash = `#${appScreenPath(screen)}`;
+    if (hash !== canonicalHash) {
+      this.history.replaceState(null, "", canonicalHash);
     }
   }
 

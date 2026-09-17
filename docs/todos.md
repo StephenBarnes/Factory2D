@@ -2,11 +2,10 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 # Authoring tools, player-created puzzles, histograms
 
-* Provision the Cloudflare D1 database and deploy the community Worker; set the deployed API URL in the game build. Code, migrations, installation UUIDs, automatic successful-score submission, histogram requests, and confirmed puzzle-file publishing are implemented. Setup and rollback: [community backend](ui-lifecycle.md#community-backend-and-deployment). R2 is deferred until larger shared assets need it.
 * Add community puzzle browsing and solution-mode play of downloaded shared puzzles. Published files can currently be downloaded and imported into sandboxes.
 * Allow voting community-created puzzles up and down. We can assume users aren't malicious, this is a zero-stakes indie game; expect under 10 players per day. Use the existing installation UUID rather than email/auth. Browser-level site-data deletion can still create another identity, but the game's clear button preserves it and full player-data import/export transfers it. If popularity warrants it, upgrade to a more robust system.
 * Add histograms on the puzzle solution result modal. Rate solutions by percentile as coal, iron, gold, mithril. On the puzzle briefing screen, show the player's best score and percentile-mineral rank on each of the 4 metrics - for each metric, take the min/best over all their solutions. Also, if they have 2 or more solutions, the result modal should show their best score and the current solution's score for each metric, on each histogram. The backend already returns each installation's best-ever submitted metric frequencies without double-counting improvements; UI binning and ranks remain to be implemented.
-* Prepare an itch.io/GitHub Pages build: use relative/base-path assets and static-host-safe routing, then verify the uploaded game and its HTTPS community API in the actual host/iframe.
+* Upload the prepared itch.io ZIP and verify the game and HTTPS community API in itch.io's actual iframe before public release. Relative assets, hash routes, `npm run package:itch`, and the production endpoint are configured; local production iframe verification passes. Release steps: [itch.io release](ui-lifecycle.md#itchio-release).
 
 # New non-circuit components
 

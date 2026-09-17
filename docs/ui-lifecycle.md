@@ -15,7 +15,7 @@ Use these ownership boundaries rather than adding parallel session state to the 
 
 ## Navigation and persistence invariants
 
-Canonical routes are `/`, `/sandbox`, `/sandbox/:sandboxId`, `/puzzles/:puzzleId`, and `/puzzles/:puzzleId/solutions/:solutionId`. Both in-app navigation and browser Back/Forward pass through the same access checks. Unknown/malformed routes and locked puzzles resolve to `/`; missing sandboxes resolve to their briefing; missing or wrongly owned solutions resolve to the unlocked puzzle's briefing. Noncanonical paths are replaced, not added to history.
+Canonical internal routes are `/`, `/sandbox`, `/sandbox/:sandboxId`, `/puzzles/:puzzleId`, and `/puzzles/:puzzleId/solutions/:solutionId`. Browser URLs store them in the fragment, e.g. `index.html#/sandbox`; the hosting pathname and query string never change. In-app navigation pushes fragment URLs with the History API; `hashchange` handles direct fragment edits and browser Back/Forward through the same access checks. Unknown/malformed routes and locked puzzles resolve to `#/`; missing sandboxes resolve to their briefing; missing or wrongly owned solutions resolve to the unlocked puzzle's briefing. Empty/noncanonical fragments are replaced, not added to history. Pathname routing is not supported, and static hosts need no SPA fallback.
 
 Persist the active dirty workshop before every transition; `pagehide` is the final boundary. Creation, duplication, deletion, completed edit gestures, imports, property changes, case changes, and clearing persist immediately. Sandbox snapshots contain the complete authoring workspace and selected case; solutions contain the editable baseline and optional scores. Sessions are created lazily per saved ID and reused on return; deleting a record also forgets its session.
 
@@ -171,6 +171,8 @@ Wrangler prints the HTTPS `workers.dev` URL. Set `VITE_COMMUNITY_API_URL` to tha
 
 Cloudflare's [current pricing](https://developers.cloudflare.com/workers/platform/pricing/) lists 100,000 Worker requests/day and 10 ms CPU/request on Free; D1 includes 5 million rows read/day, 100,000 rows written/day, and 5 GB total storage. Monitor the dashboard; large authored puzzles can hit CPU limits before request quotas. R2 has a separate [usage-based plan/free allowance](https://developers.cloudflare.com/r2/pricing/) and is not enabled by this project.
 
+The D1 database and Worker are deployed. The public API base is `https://factory2d-community.factory2d.workers.dev` (Worker name plus account subdomain, not the bare `factory2d.workers.dev`). `.env.production` records this non-secret endpoint for production builds. Override it with an environment variable or ignored `.env.production.local`; set `VITE_COMMUNITY_API_URL=` explicitly for an offline production build. Development remains opt-in via `.env.local` or an environment variable.
+
 ### Backups and manual rollback
 
 Before a remote schema change, record a D1 bookmark and keep an exported backup outside the repository:
@@ -186,4 +188,23 @@ For a deliberate rollback, coordinate the Worker revision with the schema, stop 
 
 The API is host-independent: an HTTPS endpoint plus public CORS works with itch.io, GitHub Pages, and a personal website, without cross-site cookies. The UUID belongs to each browser storage origin, not the physical machine; different hosts/profiles get different IDs unless full player data is transferred. Browser-level site-data deletion can still erase it; the game's clear button deliberately does not.
 
-The game itself still uses pathname routes and Vite's root asset base. A root-hosted personal site can serve `index.html` for application routes. Before an itch.io ZIP or GitHub Pages subdirectory release, implement static-host-safe routing (for example hash routes) and relative/base-path assets; merely setting the API URL is not sufficient. [itch.io's HTML5 guide](https://itch.io/docs/creators/html5) requires a ZIP with `index.html`, relative asset paths, and HTTPS for external APIs. These frontend packaging changes and deployment to an actual game host have not been performed by the backend setup.
+The game uses hash routes and Vite's relative asset base (`./`). Serve the built files unchanged, including from a subdirectory; refreshing a saved workshop requests the same `index.html`, not a nonexistent application-route file. Use HTTPS in production (localhost works for development); opening `index.html` directly as a `file:` URL is unsupported.
+
+### itch.io release
+
+With Node/npm dependencies installed and Python 3 available:
+
+```sh
+npm run package:itch
+```
+
+This type-checks browser and Worker code, builds `dist/`, then uses Python's standard-library ZIP support to overwrite `release/factory2d-itch.zip`. Only the built files are included: `index.html` at the archive root and relative `assets/` JavaScript/CSS. Tile art and Web Audio effects are procedural; there are no separate image, font, or audio downloads. The Worker, database, source files, and environment files are not uploaded; only the public API URL is embedded in JavaScript. `release/` is ignored by Git.
+
+On the itch.io new/edit project page:
+
+1. Select **HTML** as the project kind and upload `release/factory2d-itch.zip`. Mark the upload as **This file will be played in the browser**.
+2. Prefer **Click to launch in fullscreen** for workshop space; alternatively embed at 1280×800 with the fullscreen button enabled. Keep click-to-play enabled. Leave **Mobile Friendly** unchecked: controls still require mouse/keyboard.
+3. Save as a draft and preview before making the page public. Check puzzle/sandbox navigation, editing, sound after interaction, reload, Back/Forward, downloads, and community score status. The production ZIP has been checked locally in a sandboxed cross-origin iframe on a nested static path, including a live community histogram GET; actual itch-hosted upload/preview verification remains a separate step.
+4. Tell players that saves live in their browser and recommend **Settings → Download Player Data** for backups/transfers. Moving from localhost to itch.io does not carry saves automatically; restrictive browser storage settings can also affect embedded games.
+
+See [itch.io's HTML5 guide](https://itch.io/docs/creators/html5) for upload limits and embed settings. A single HTML upload is not appropriate for this build: it also needs the bundled JavaScript and CSS.

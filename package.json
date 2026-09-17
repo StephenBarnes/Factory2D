@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && tsc -p backend/tsconfig.json && vite build",
+    "package:itch": "npm run build && python3 tools/package-itch.py",
     "test": "vitest run",
     "test:browser": "playwright test",
     "benchmark": "playwright test --config playwright.benchmark.config.ts",

@@ -25,10 +25,10 @@ async function diagnosticSnapshot(page: Page): Promise<DevelopmentDiagnosticSnap
 }
 
 async function openNewSandbox(page: Page): Promise<void> {
-  await page.goto("/sandbox");
+  await page.goto("/#/sandbox");
   await expect(page.getByRole("heading", { name: "Sandbox", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "+ NEW SANDBOX" }).click();
-  await expect(page).toHaveURL(/\/sandbox\/sandbox-\d+$/);
+  await expect(page).toHaveURL(/\/#\/sandbox\/sandbox-\d+$/);
 }
 
 
@@ -154,7 +154,7 @@ test("placement drags weld only their path, including fast diagonals", async ({ 
 for (const entering of [false, true]) {
   test(`placement drag welds ${entering ? "into" : "out of"} the puzzle region without replacing fixed tiles`, async ({ page }) => {
     await seedBrowserStorage(page, "unlocked");
-    await page.goto("/puzzles/sand-fall");
+    await page.goto("/#/puzzles/sand-fall");
     await page.getByRole("button", { name: "+ NEW SOLUTION" }).click();
     await page.getByRole("button", { name: /^Stone/ }).click();
     const before = JSON.parse((await diagnosticSnapshot(page)).serializedBoard);
@@ -177,13 +177,13 @@ for (const entering of [false, true]) {
 
 test("creates, persists, duplicates, and deletes saved sandboxes", async ({ page }) => {
   await seedBrowserStorage(page, "empty");
-  await page.goto("/");
+  await page.goto("/#/");
   await page.getByRole("button", { name: /Sandbox/ }).click();
-  await expect(page).toHaveURL(/\/sandbox$/);
+  await expect(page).toHaveURL(/\/#\/sandbox$/);
   await expect(page.getByText("No saved sandboxes. Create one to enter the workshop.")).toBeVisible();
 
   await page.getByRole("button", { name: "+ NEW SANDBOX" }).click();
-  await expect(page).toHaveURL(/\/sandbox\/sandbox-1$/);
+  await expect(page).toHaveURL(/\/#\/sandbox\/sandbox-1$/);
   await expect(page.locator("#screen-title")).toHaveText("SANDBOX 1");
   await placeStone(page, 0, 0);
   await page.getByRole("button", { name: "← SANDBOX" }).click();
@@ -221,28 +221,65 @@ test("selection shortcuts use occupied bounds and grid clicks unselect", async (
 
 test("routes only to accessible canonical screens", async ({ page }) => {
   await seedBrowserStorage(page, "empty");
-  await page.goto("/puzzles/click-to-test");
+  await page.goto("/#/puzzles/%63lick-to-test/");
   await expect(page.getByRole("heading", { name: "Click to Test" })).toBeVisible();
-  await expect(page).toHaveURL(/\/puzzles\/click-to-test$/);
-  expect((await diagnosticSnapshot(page)).screen).toEqual({
-    kind: "puzzle-info",
-    puzzleId: "click-to-test",
-  });
+  await expect(page).toHaveURL(/\/#\/puzzles\/click-to-test$/);
+  await page.goto("/#/puzzles/click-to-test/solutions/missing-solution");
+  await expect(page).toHaveURL(/\/#\/puzzles\/click-to-test$/);
+  await expect(page.getByRole("heading", { name: "Click to Test" })).toBeVisible();
+  await expect(page.locator("#empty-solutions")).toBeVisible();
 
-  await page.goto("/puzzles/stone-drop");
+  await page.goto("/#/sandbox/missing-sandbox");
+  await expect(page).toHaveURL(/\/#\/sandbox$/);
+  await expect(page.getByRole("heading", { name: "Sandbox", exact: true })).toBeVisible();
+  await expect(page.getByText("No saved sandboxes. Create one to enter the workshop.")).toBeVisible();
+
+  await page.goto("/#/puzzles/stone-drop");
   await expect(page.getByRole("heading", { name: "Factory 2D" })).toBeVisible();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/#\/$/);
 
-  await page.goto("/puzzles/crossed-channels");
-  await expect(page).toHaveURL(/\/$/);
+  await page.goto("/#/puzzles/crossed-channels");
+  await expect(page).toHaveURL(/\/#\/$/);
+  await expect(page.getByRole("heading", { name: "Factory 2D" })).toBeVisible();
 
-  await page.goto("/not-a-route");
-  await expect(page).toHaveURL(/\/$/);
+  await page.goto("/#/not-a-route");
+  await expect(page).toHaveURL(/\/#\/$/);
+  await expect(page.getByRole("heading", { name: "Factory 2D" })).toBeVisible();
+});
+
+test("manual hash navigation and browser history restore saved workshop edits", async ({ page }) => {
+  await seedBrowserStorage(page, "empty");
+  await openNewSandbox(page);
+  await placeStone(page, 0, 0);
+
+  await page.evaluate(() => {
+    window.location.hash = "/puzzles/click-to-test/";
+  });
+  await expect(page).toHaveURL(/\/#\/puzzles\/click-to-test$/);
+  await expect(page.getByRole("heading", { name: "Click to Test" })).toBeVisible();
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/#\/sandbox\/sandbox-1$/);
+  await expect(page.locator("#screen-title")).toHaveText("SANDBOX 1");
+  expect(JSON.parse((await diagnosticSnapshot(page)).serializedBoard).grid[0][0]).toBe("#");
+
+  await page.goForward();
+  await expect(page).toHaveURL(/\/#\/puzzles\/click-to-test$/);
+  await expect(page.getByRole("heading", { name: "Click to Test" })).toBeVisible();
+
+  await page.evaluate(() => {
+    window.location.hash = "/sandbox/sandbox-1";
+  });
+  await expect(page.locator("#screen-title")).toHaveText("SANDBOX 1");
+  await page.reload();
+  await expect(page).toHaveURL(/\/#\/sandbox\/sandbox-1$/);
+  await expect(page.locator("#screen-title")).toHaveText("SANDBOX 1");
+  expect(JSON.parse((await diagnosticSnapshot(page)).serializedBoard).grid[0][0]).toBe("#");
 });
 
 test("opens settings and about from the main menu", async ({ page }) => {
   await seedBrowserStorage(page, "empty");
-  await page.goto("/");
+  await page.goto("/#/");
 
   await page.getByRole("button", { name: "SETTINGS" }).click();
   const settings = page.getByRole("dialog", { name: "SETTINGS" });
@@ -266,7 +303,7 @@ test("opens settings and about from the main menu", async ({ page }) => {
 
 test("exports, clears, and imports all player data", async ({ page }) => {
   const fixture = await seedBrowserStorage(page, "unlocked");
-  await page.goto("/");
+  await page.goto("/#/");
   await page.evaluate(() => {
     window.localStorage.setItem("factory2d.test-setting", "custom value");
   });
@@ -398,7 +435,7 @@ test("edge panels reserve a non-overlapping canvas region", async ({ page }) => 
 
 test("workshop identity exposes information and live puzzle metrics", async ({ page }) => {
   await seedBrowserStorage(page, "populated");
-  await page.goto("/puzzles/stone-drop/solutions/solution-1");
+  await page.goto("/#/puzzles/stone-drop/solutions/solution-1");
 
   const controls = page.locator("#bottom-controls");
   const identity = controls.locator(".workshop-identity");
@@ -540,7 +577,7 @@ test("tile inspector follows palette, tool, and occupied-board hover", async ({ 
 
 test("puzzle groups expose locked progression and can be expanded", async ({ page }) => {
   await seedBrowserStorage(page, "empty");
-  await page.goto("/");
+  await page.goto("/#/");
 
   const gemstoneCount = page.locator(".gemstone-count");
   const basics = page.locator(".puzzle-group").filter({
@@ -565,7 +602,7 @@ test("puzzle groups expose locked progression and can be expanded", async ({ pag
 
 test("unlocked fixture opens a gemstone-gated group and puzzle", async ({ page }) => {
   await seedBrowserStorage(page, "unlocked");
-  await page.goto("/");
+  await page.goto("/#/");
 
   const basics = page.locator(".puzzle-group").filter({
     has: page.locator(".puzzle-group-heading strong", { hasText: /^Tutorial$/ }),
@@ -580,14 +617,14 @@ test("unlocked fixture opens a gemstone-gated group and puzzle", async ({ page }
   const crossedChannels = runelore.getByRole("button", { name: /Binary crossed channels/ });
   await expect(crossedChannels).toBeEnabled();
   await crossedChannels.click();
-  await expect(page).toHaveURL(/\/puzzles\/crossed-channels$/);
+  await expect(page).toHaveURL(/\/#\/puzzles\/crossed-channels$/);
 });
 
 test("creates, edits, persists, and restores a solution on reload", async ({ page }) => {
   await seedBrowserStorage(page, "unlocked");
-  await page.goto("/puzzles/stone-drop");
+  await page.goto("/#/puzzles/stone-drop");
   await page.getByRole("button", { name: "+ NEW SOLUTION" }).click();
-  await expect(page).toHaveURL(/\/puzzles\/stone-drop\/solutions\/solution-1$/);
+  await expect(page).toHaveURL(/\/#\/puzzles\/stone-drop\/solutions\/solution-1$/);
 
   const initial = await diagnosticSnapshot(page);
   expect(initial.activeSolutionId).toBe("solution-1");
@@ -644,7 +681,7 @@ test("sandbox painting and erasure continue across simulation ticks", async ({ p
 
 test("commits multi-event tile drags once on pointer up or cancellation", async ({ page }) => {
   await seedBrowserStorage(page, "populated");
-  await page.goto("/puzzles/stone-drop/solutions/solution-1");
+  await page.goto("/#/puzzles/stone-drop/solutions/solution-1");
   await page.getByRole("button", { name: /^Stone/ }).click();
 
   const canvas = page.locator("#game-canvas");
@@ -722,7 +759,7 @@ test("commits multi-event tile drags once on pointer up or cancellation", async 
 
 test("renders puzzle cases and leaves the failed case paused on the board", async ({ page }) => {
   await seedBrowserStorage(page, "populated");
-  await page.goto("/puzzles/stone-drop/solutions/solution-1");
+  await page.goto("/#/puzzles/stone-drop/solutions/solution-1");
   const testCase = expectDefined(
     puzzleById("stone-drop").testCases[0],
     "Stone Drop must have a test case",
@@ -797,7 +834,7 @@ test("renders puzzle cases and leaves the failed case paused on the board", asyn
 
 test("persists successful solution scores on the puzzle briefing", async ({ page }) => {
   await seedBrowserStorage(page, "populated");
-  await page.goto("/puzzles/stone-drop/solutions/solution-1");
+  await page.goto("/#/puzzles/stone-drop/solutions/solution-1");
   await placeStone(page, 4, 4);
   await page.getByRole("button", { name: "▶ TEST" }).click();
   await page.getByRole("button", { name: /FAST/ }).click();
@@ -830,7 +867,7 @@ test("persists successful solution scores on the puzzle briefing", async ({ page
 
 test("highlights every confirmed solution tied for the lowest combined score", async ({ page }) => {
   await seedBrowserStorage(page, "populated");
-  await page.goto("/puzzles/stone-drop");
+  await page.goto("/#/puzzles/stone-drop");
   await page.evaluate((storageKey) => {
     const serialized = window.localStorage.getItem(storageKey);
     if (serialized === null) {
@@ -886,7 +923,7 @@ test("highlights every confirmed solution tied for the lowest combined score", a
 
 test("duplicates an edited board into an independent restorable solution", async ({ page }) => {
   const fixture = await seedBrowserStorage(page, "edited-board");
-  await page.goto("/puzzles/stone-drop");
+  await page.goto("/#/puzzles/stone-drop");
   const firstSolution = page.locator("#solution-list").getByRole("listitem").filter({
     hasText: "Solution 1",
   });
@@ -908,7 +945,7 @@ test("duplicates an edited board into an independent restorable solution", async
 test("deletes a solution from its row and keeps it deleted after reload", async ({ page }) => {
   await seedBrowserStorage(page, "populated");
   page.on("dialog", (dialog) => dialog.accept());
-  await page.goto("/puzzles/stone-drop");
+  await page.goto("/#/puzzles/stone-drop");
   const solutionRows = page.locator("#solution-list").getByRole("listitem");
   await expect(solutionRows).toHaveCount(2);
   const firstSolution = solutionRows.filter({ hasText: "Solution 1" });
@@ -923,10 +960,10 @@ test("deletes a solution from its row and keeps it deleted after reload", async 
 
 test("malformed storage falls back to a usable empty state", async ({ page }) => {
   await seedBrowserStorage(page, "malformed-storage");
-  await page.goto("/puzzles/click-to-test");
+  await page.goto("/#/puzzles/click-to-test");
   await expect(page.locator("#empty-solutions")).toBeVisible();
   await page.getByRole("button", { name: "+ NEW SOLUTION" }).click();
-  await expect(page).toHaveURL(/\/solutions\/solution-1$/);
+  await expect(page).toHaveURL(/\/#\/puzzles\/click-to-test\/solutions\/solution-1$/);
 });
 
 test("export dropup exposes scene actions and sandbox puzzle authoring", async ({ page }) => {
@@ -1053,7 +1090,7 @@ test("export dropup exposes scene actions and sandbox puzzle authoring", async (
   await propertiesDialog.getByRole("button", { name: "CANCEL" }).click();
 
 
-  await page.goto("/puzzles/click-to-test");
+  await page.goto("/#/puzzles/click-to-test");
   await page.getByRole("button", { name: "+ NEW SOLUTION" }).click();
   await exportButton.click();
   await expect(page.getByRole("button", { name: "Editable region tool" })).toHaveCount(0);
@@ -1073,7 +1110,7 @@ test("export dropup exposes scene actions and sandbox puzzle authoring", async (
 
   await exportButton.click();
   await page.getByRole("button", { name: "OPEN PUZZLE IN SANDBOX" }).click();
-  await expect(page).toHaveURL(/\/sandbox\/sandbox-\d+$/);
+  await expect(page).toHaveURL(/\/#\/sandbox\/sandbox-\d+$/);
   await page.reload();
   await page.getByRole("button", { name: "Puzzle properties" }).click();
   await expect(propertiesDialog.getByRole("textbox", { name: "ID" })).toHaveValue("click-to-test");
@@ -1085,7 +1122,7 @@ test("export dropup exposes scene actions and sandbox puzzle authoring", async (
 test("puzzle info remains horizontally contained and vertically reachable", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 640 });
   await seedBrowserStorage(page, "populated");
-  await page.goto("/puzzles/stone-drop");
+  await page.goto("/#/puzzles/stone-drop");
 
   const overflow = await page.evaluate(() => {
     const screen = document.querySelector<HTMLElement>("#puzzle-info-screen");

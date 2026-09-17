@@ -2523,8 +2523,8 @@ window.addEventListener("blur", () => {
   finalizeActivePointerGesture();
   releaseTemporaryWeld();
 });
-window.addEventListener("popstate", () => {
-  navigation.navigatePath(window.location.pathname);
+window.addEventListener("hashchange", () => {
+  navigation.navigateHash(window.location.hash);
 });
 window.addEventListener("pagehide", () => {
   if (!finalizeActivePointerGesture()) {
@@ -2581,7 +2581,7 @@ function frame(currentTime: number): void {
 }
 
 updateTransportState();
-navigation.navigatePath(window.location.pathname);
+navigation.navigateHash(window.location.hash);
 initializePaletteResize(
   gameScreen,
   sidebarControls,
