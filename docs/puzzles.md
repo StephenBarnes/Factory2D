@@ -25,8 +25,9 @@ Our current set of non-tutorial puzzles is very small: three mechanical puzzles 
 ## Mining operations
 
 * Vehicle: build a self-propelled vehicle in a small left-hand bay and reach the fixed sensors on the right. This introduces conveyor reaction forces without adding another tutorial.
-* Climber: build a vehicle that can climb up 1-high steps to reach the goal. This is significantly more difficult than the Vehicle puzzle; reference solution uses a back wheel (conveyor belt) plus a second front wheel which is pushed down with a piston when a sensor detects a step.
+* Climber: build a vehicle that can climb up 1-high steps to reach the goal. This is harder than the Vehicle puzzle; reference solution uses a back wheel (conveyor belt) plus an elevated front wheel which is pushed down with a piston when a sensor detects a step. Could instead just jostle the front wheel up and down. Other solutions are possible, e.g. creating multiple vehicles and using each as a platform for the one above, abandoning each layer at each step.
 * Geode Extractor: requires triggering a duplicator to create geodes, some drills to carve away the stone, and conveyors to move the center ruby block to the delivery box. There's 2 separate duplicators in different directions, so players can solve it via different layouts, or use both for faster throughput. Most circuit and mechanical components (welder, splitter, rotator, magnet, grinder) are enabled; the reference solution uses drills and conveyors. More intermediate puzzles could introduce drills before this puzzle.
+* Iron Plates: duplicate iron ore, smelt to iron, and weld together 3 of them to make an iron plate; deliver 10 iron plates to the delivery box. There are 2 duplicators, so deciding whether to use one or both and in what amount trades cycles against footprint, cost, and complexity. There are definitely also exploits possible, e.g. using the drill to remove a duplicator and duplicate entire plates.
 
 ## Runelore
 

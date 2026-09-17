@@ -1,0 +1,222 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 5,
+  "width": 9,
+  "height": 11,
+  "id": "iron-plates",
+  "group": "mining",
+  "order": 3,
+  "name": "Iron Plates",
+  "difficulty": 2,
+  "description": "Use furnaces to smelt iron ore to iron blocks. Weld together 3 iron blocks in a row to create an iron plate.",
+  "goal": "Create and deliver 10 iron plates.",
+  "components": [
+    {
+      "code": "F",
+      "price": 15
+    },
+    {
+      "code": "B",
+      "price": 5
+    },
+    {
+      "code": "C",
+      "price": 2
+    },
+    {
+      "code": "S",
+      "price": 10
+    },
+    {
+      "code": "1",
+      "price": 5
+    },
+    {
+      "code": "K",
+      "price": 3
+    },
+    {
+      "code": "I",
+      "price": 10
+    },
+    {
+      "code": "+",
+      "price": 10
+    },
+    {
+      "code": "R",
+      "price": 15
+    },
+    {
+      "code": "*",
+      "price": 10
+    },
+    {
+      "code": "-",
+      "price": 15
+    },
+    {
+      "code": "Q",
+      "price": 15
+    },
+    {
+      "code": "T",
+      "price": 10
+    },
+    {
+      "code": "e",
+      "price": 10
+    },
+    {
+      "code": "<",
+      "price": 10
+    },
+    {
+      "code": ">",
+      "price": 10
+    },
+    {
+      "code": "M",
+      "price": 10
+    },
+    {
+      "code": "P",
+      "price": 10
+    },
+    {
+      "code": "Z",
+      "price": 30
+    },
+    {
+      "code": "N",
+      "price": 20
+    },
+    {
+      "code": "U",
+      "price": 30
+    },
+    {
+      "code": "J",
+      "price": 10
+    },
+    {
+      "code": "r",
+      "price": 15
+    },
+    {
+      "code": "?",
+      "price": 15
+    },
+    {
+      "code": "m",
+      "price": 0
+    },
+    {
+      "code": "#",
+      "price": 1
+    },
+    {
+      "code": "f",
+      "price": 15
+    },
+    {
+      "code": "n",
+      "price": 20
+    },
+    {
+      "code": "p",
+      "price": 20
+    },
+    {
+      "code": "W",
+      "price": 10
+    },
+    {
+      "code": ";",
+      "price": 3
+    },
+    {
+      "code": "@",
+      "price": 10
+    }
+  ],
+  "editableRegions": [
+    {
+      "x": 1,
+      "y": 2,
+      "width": 7,
+      "height": 7
+    }
+  ],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 15,
+    "width": 9,
+    "height": 11,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "###O#O###",
+      "##QY#YQ##",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "####DNV##",
+      "###iii###"
+    ],
+    "orientations": [
+      {
+        "x": 2,
+        "y": 1,
+        "direction": "down"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "direction": "down"
+      },
+      {
+        "x": 5,
+        "y": 1,
+        "direction": "down"
+      },
+      {
+        "x": 6,
+        "y": 1,
+        "direction": "down"
+      },
+      {
+        "x": 5,
+        "y": 9,
+        "direction": "right"
+      }
+    ],
+    "components": [
+      {
+        "x": 5,
+        "y": 9,
+        "type": "counter",
+        "threshold": 10,
+        "count": 0
+      }
+    ],
+    "welds": [
+      "++|.|.++|",
+      "+-------|",
+      "|.......|",
+      "|.......|",
+      "|.......|",
+      "|.......|",
+      "|.......|",
+      "|.......|",
+      "|.......|",
+      "+++---++|",
+      "--.--.--."
+    ]
+  },
+  "testCases": []
+}
