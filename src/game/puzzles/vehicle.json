@@ -1,0 +1,102 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 5,
+  "width": 18,
+  "height": 8,
+  "id": "vehicle",
+  "group": "mining",
+  "order": 0,
+  "name": "Vehicle",
+  "difficulty": 1,
+  "description": "Build a self-propelled vehicle to drive along the stone floor.",
+  "goal": "Activate all 3 sensors.",
+  "cycleLimit": 80,
+  "components": [
+    {
+      "code": "B",
+      "price": 10
+    },
+    {
+      "code": "C",
+      "price": 2
+    },
+    {
+      "code": "1",
+      "price": 10
+    },
+    {
+      "code": "#",
+      "price": 1
+    }
+  ],
+  "editableRegions": [
+    {
+      "x": 1,
+      "y": 3,
+      "width": 5,
+      "height": 4
+    }
+  ],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 15,
+    "width": 18,
+    "height": 8,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "..................",
+      "................V.",
+      "................C.",
+      "................CC",
+      "...............SCC",
+      "...............S<C",
+      "...............SC#",
+      "##################"
+    ],
+    "orientations": [
+      {
+        "x": 15,
+        "y": 4,
+        "direction": "left"
+      },
+      {
+        "x": 15,
+        "y": 5,
+        "direction": "left"
+      },
+      {
+        "x": 16,
+        "y": 5,
+        "direction": "right"
+      },
+      {
+        "x": 15,
+        "y": 6,
+        "direction": "left"
+      }
+    ],
+    "textBoxes": [
+      {
+        "id": "cart-destination",
+        "x": 13.841375713200613,
+        "y": 3.2714005811904348,
+        "width": 1.9500000000000002,
+        "height": 0.48000000000000004,
+        "text": "Touch all 3 sensors.",
+        "owner": "author"
+      }
+    ],
+    "welds": [
+      "..................",
+      "................|.",
+      "................|.",
+      "................-|",
+      "...............-||",
+      "...............-+|",
+      "...............-+|",
+      "-----------------."
+    ]
+  },
+  "testCases": []
+}
