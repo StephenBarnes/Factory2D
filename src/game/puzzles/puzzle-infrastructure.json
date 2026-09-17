@@ -8,7 +8,7 @@
   "order": 3,
   "name": "Puzzle Infrastructure",
   "difficulty": "tutorial",
-  "description": "A puzzle's victory conditions are determined by blocks in the puzzle itself. To win a puzzle, a +1 charge must get to a Judgment Stone. If it receives a -1 charge instead, you will lose the puzzle. You can create your own puzzles using the sandbox.",
+  "description": "A puzzle's victory conditions are determined by blocks in the puzzle itself. To win a puzzle, a +1 charge must get to a judgment stone. If it receives a -1 charge instead, you lose the puzzle. You can create your own puzzles using the sandbox.",
   "goal": "Place a judgment stone and give it a positive charge",
   "cycleLimit": 10,
   "components": [

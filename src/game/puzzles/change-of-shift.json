@@ -8,8 +8,8 @@
   "order": 5,
   "name": "Change of Shift",
   "difficulty": 2,
-  "description": "The mine's warning line should report changes, not steady readings. Build a circuit that compares each INPUT value with the previous tick: emit +1 if it increased, -1 if it decreased, and 0 if it stayed the same. Treat the value before the sequence as 0; a jump directly from -1 to +1 still produces only +1 (and the reverse produces -1). Only conduits, inverters, and combiners are available. A fixed processing delay is allowed: the checker starts at your first nonzero output, then checks every tick, including zeros. Pass all three test cases.",
-  "goal": "Output the sign of the change from the previous input value.",
+  "description": "Compare the input to its previous value.",
+  "goal": "Emit +1 if the input increased, -1 if it decreased, and 0 if it stayed the same.",
   "cycleLimit": 100,
   "components": [
     {

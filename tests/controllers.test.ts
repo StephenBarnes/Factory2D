@@ -24,7 +24,7 @@ function createStorage(): Pick<Storage, "getItem" | "setItem"> {
 
 describe("workshop session controller", () => {
   it("prices editable starter blocks and preserves their removal and replacement across cases, reset, and reload", () => {
-    const shipped = puzzleById("first-shift");
+    const shipped = puzzleById("stone-drop");
     const dimensions = shipped.createInitialWorld();
     const initial = new World(dimensions.width, dimensions.height);
     initial.place(0, 1, TileKind.Platform);
@@ -93,7 +93,7 @@ describe("workshop session controller", () => {
   });
 
   it("retains independent sandbox and saved-solution sessions", () => {
-    const puzzle = puzzleById("first-shift");
+    const puzzle = puzzleById("stone-drop");
     const initialWorld = puzzle.createInitialWorld();
     const solution = {
       id: "solution-1",
@@ -186,7 +186,7 @@ describe("saved solution controller", () => {
   it("owns dirty-board persistence, duplication, and deletion", () => {
     const storage = createStorage();
     const controller = new SavedSolutionController(storage);
-    const puzzle = puzzleById("first-shift");
+    const puzzle = puzzleById("stone-drop");
     const solution = controller.create(puzzle);
 
 

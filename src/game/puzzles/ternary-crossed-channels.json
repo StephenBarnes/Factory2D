@@ -8,7 +8,7 @@
   "order": 11,
   "name": "Ternary crossed channels",
   "difficulty": 4,
-  "description": "Cross two full ternary signals, using -1, 0, and +1, without a crossing rune. Transmit one value per tick once each output begins; the sequence checkers allow an initial delay. Your circuit must pass every test case. Rune arrays provide room for a larger circuit.",
+  "description": "Cross two full ternary signals, using -1, 0, and +1, without a crossing rune. Rune arrays provide room for a larger circuit.",
   "goal": "Transmit the top-left input to bottom-right, and bottom-left to top-right",
   "cycleLimit": 50,
   "components": [

@@ -218,12 +218,12 @@ test("selection shortcuts use occupied bounds and grid clicks unselect", async (
 
 test("routes only to accessible canonical screens", async ({ page }) => {
   await seedBrowserStorage(page, "empty");
-  await page.goto("/puzzles/first-shift");
-  await expect(page.getByRole("heading", { name: "First Shift" })).toBeVisible();
-  await expect(page).toHaveURL(/\/puzzles\/first-shift$/);
+  await page.goto("/puzzles/stone-drop");
+  await expect(page.getByRole("heading", { name: "Stone Drop" })).toBeVisible();
+  await expect(page).toHaveURL(/\/puzzles\/stone-drop$/);
   expect((await diagnosticSnapshot(page)).screen).toEqual({
     kind: "puzzle-info",
-    puzzleId: "first-shift",
+    puzzleId: "stone-drop",
   });
 
   await page.goto("/puzzles/beltworks");
@@ -386,7 +386,7 @@ test("edge panels reserve a non-overlapping canvas region", async ({ page }) => 
 
 test("workshop identity exposes information and live puzzle metrics", async ({ page }) => {
   await seedBrowserStorage(page, "populated");
-  await page.goto("/puzzles/first-shift/solutions/solution-1");
+  await page.goto("/puzzles/stone-drop/solutions/solution-1");
 
   const controls = page.locator("#bottom-controls");
   const identity = controls.locator(".workshop-identity");
@@ -394,7 +394,7 @@ test("workshop identity exposes information and live puzzle metrics", async ({ p
   const footprint = identity.locator("#puzzle-footprint");
   const price = identity.locator("#puzzle-price");
   const palette = page.locator("#component-palette");
-  await expect(header.locator("#screen-title")).toHaveText("FIRST SHIFT");
+  await expect(header.locator("#screen-title")).toHaveText("STONE DROP");
   await expect(price).toHaveText("0⚙");
   await expect(footprint).toHaveText("0×0");
   await expect(page.locator("#screen-description")).toHaveCount(0);
@@ -402,7 +402,7 @@ test("workshop identity exposes information and live puzzle metrics", async ({ p
   await header.getByRole("button", { name: "Puzzle information" }).click();
   const dialog = page.locator("#workshop-info-dialog");
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole("heading", { name: "First Shift" })).toBeVisible();
+  await expect(dialog.getByRole("heading", { name: "Stone Drop" })).toBeVisible();
   await dialog.getByRole("button", { name: "CLOSE" }).click();
 
   await price.hover();
@@ -542,7 +542,7 @@ test("puzzle groups show gemstone progression and default collapse states", asyn
   await expect(runelore).toHaveJSProperty("open", false);
   await runelore.locator("summary").click();
   await expect(runelore).toHaveJSProperty("open", true);
-  await expect(page.getByRole("button", { name: /First Shift/ })).toBeEnabled();
+  await expect(page.getByRole("button", { name: /Stone Drop/ })).toBeEnabled();
   const runeloreButtons = runelore.locator("button");
   await expect(runeloreButtons).not.toHaveCount(0);
   for (const button of await runeloreButtons.all()) {
@@ -564,7 +564,7 @@ test("unlocked fixture opens a gemstone-gated group and puzzle", async ({ page }
   await expect(basics).toHaveJSProperty("open", false);
   await expect(runelore).toHaveJSProperty("open", true);
 
-  const conduits = page.getByRole("button", { name: /Conduits/ });
+  const conduits = page.getByRole("button", { name: /Conduits Tutorial/ });
   await expect(conduits).toBeEnabled();
   await conduits.click();
   await expect(page).toHaveURL(/\/puzzles\/conduits$/);
@@ -572,9 +572,9 @@ test("unlocked fixture opens a gemstone-gated group and puzzle", async ({ page }
 
 test("creates, edits, persists, and restores a solution on reload", async ({ page }) => {
   await seedBrowserStorage(page, "empty");
-  await page.goto("/puzzles/first-shift");
+  await page.goto("/puzzles/stone-drop");
   await page.getByRole("button", { name: "+ NEW SOLUTION" }).click();
-  await expect(page).toHaveURL(/\/puzzles\/first-shift\/solutions\/solution-1$/);
+  await expect(page).toHaveURL(/\/puzzles\/stone-drop\/solutions\/solution-1$/);
 
   const initial = await diagnosticSnapshot(page);
   expect(initial.activeSolutionId).toBe("solution-1");
@@ -631,7 +631,7 @@ test("sandbox painting and erasure continue across simulation ticks", async ({ p
 
 test("commits multi-event tile drags once on pointer up or cancellation", async ({ page }) => {
   await seedBrowserStorage(page, "populated");
-  await page.goto("/puzzles/first-shift/solutions/solution-1");
+  await page.goto("/puzzles/stone-drop/solutions/solution-1");
   await page.getByRole("button", { name: /^Stone/ }).click();
 
   const canvas = page.locator("#game-canvas");
@@ -709,7 +709,7 @@ test("commits multi-event tile drags once on pointer up or cancellation", async 
 
 test("renders puzzle cases and leaves the failed case paused on the board", async ({ page }) => {
   await seedBrowserStorage(page, "populated");
-  await page.goto("/puzzles/first-shift/solutions/solution-1");
+  await page.goto("/puzzles/stone-drop/solutions/solution-1");
 
   const testButton = page.getByRole("button", { name: "▶ TEST" });
   const fastForwardButton = page.getByRole("button", { name: /FAST/ });
@@ -751,7 +751,7 @@ test("renders puzzle cases and leaves the failed case paused on the board", asyn
   await expect(page.locator("#tick-counter")).toHaveText("TICK 0010");
 
   await page.locator("#menu-button").click();
-  await expect(page).toHaveURL(/\/puzzles\/first-shift$/);
+  await expect(page).toHaveURL(/\/puzzles\/stone-drop$/);
 
   await openNewSandbox(page);
   await expect(page.getByRole("button", { name: "▶ RUN" })).toBeVisible();
@@ -761,7 +761,7 @@ test("renders puzzle cases and leaves the failed case paused on the board", asyn
 
 test("persists successful solution scores on the puzzle briefing", async ({ page }) => {
   await seedBrowserStorage(page, "populated");
-  await page.goto("/puzzles/first-shift/solutions/solution-1");
+  await page.goto("/puzzles/stone-drop/solutions/solution-1");
   await placeStone(page, 9, 3);
   await page.getByRole("button", { name: "▶ TEST" }).click();
   await page.getByRole("button", { name: /FAST/ }).click();
@@ -787,7 +787,7 @@ test("persists successful solution scores on the puzzle briefing", async ({ page
 
 test("highlights every confirmed solution tied for the lowest combined score", async ({ page }) => {
   await seedBrowserStorage(page, "populated");
-  await page.goto("/puzzles/first-shift");
+  await page.goto("/puzzles/stone-drop");
   await page.evaluate((storageKey) => {
     const serialized = window.localStorage.getItem(storageKey);
     if (serialized === null) {
@@ -843,7 +843,7 @@ test("highlights every confirmed solution tied for the lowest combined score", a
 
 test("duplicates an edited board into an independent restorable solution", async ({ page }) => {
   const fixture = await seedBrowserStorage(page, "edited-board");
-  await page.goto("/puzzles/first-shift");
+  await page.goto("/puzzles/stone-drop");
   const firstSolution = page.locator("#solution-list").getByRole("listitem").filter({
     hasText: "Solution 1",
   });
@@ -865,7 +865,7 @@ test("duplicates an edited board into an independent restorable solution", async
 test("deletes a solution from its row and keeps it deleted after reload", async ({ page }) => {
   await seedBrowserStorage(page, "populated");
   page.on("dialog", (dialog) => dialog.accept());
-  await page.goto("/puzzles/first-shift");
+  await page.goto("/puzzles/stone-drop");
   const solutionRows = page.locator("#solution-list").getByRole("listitem");
   await expect(solutionRows).toHaveCount(2);
   const firstSolution = solutionRows.filter({ hasText: "Solution 1" });
@@ -880,7 +880,7 @@ test("deletes a solution from its row and keeps it deleted after reload", async 
 
 test("malformed storage falls back to a usable empty state", async ({ page }) => {
   await seedBrowserStorage(page, "malformed-storage");
-  await page.goto("/puzzles/first-shift");
+  await page.goto("/puzzles/stone-drop");
   await expect(page.getByText("No saved solutions. Create one to enter the workshop.")).toBeVisible();
   await page.getByRole("button", { name: "+ NEW SOLUTION" }).click();
   await expect(page).toHaveURL(/\/solutions\/solution-1$/);
@@ -1010,7 +1010,7 @@ test("export dropup exposes scene actions and sandbox puzzle authoring", async (
   await propertiesDialog.getByRole("button", { name: "CANCEL" }).click();
 
 
-  await page.goto("/puzzles/first-shift");
+  await page.goto("/puzzles/stone-drop");
   await page.getByRole("button", { name: "+ NEW SOLUTION" }).click();
   await exportButton.click();
   await expect(page.getByRole("button", { name: "Editable region tool" })).toHaveCount(0);
@@ -1020,12 +1020,12 @@ test("export dropup exposes scene actions and sandbox puzzle authoring", async (
   const originalDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "DOWNLOAD PUZZLE FILE" }).click();
   const originalDownload = await originalDownloadPromise;
-  expect(originalDownload.suggestedFilename()).toBe("first-shift.json");
+  expect(originalDownload.suggestedFilename()).toBe("stone-drop.json");
   const originalPath = await originalDownload.path();
   if (originalPath === null) {
     throw new Error("Original puzzle download is missing");
   }
-  const shippedPuzzle = JSON.parse(await readFile("src/game/puzzles/first-shift.json", "utf8"));
+  const shippedPuzzle = JSON.parse(await readFile("src/game/puzzles/stone-drop.json", "utf8"));
   expect(JSON.parse(await readFile(originalPath, "utf8"))).toEqual(shippedPuzzle);
 
   await exportButton.click();
@@ -1033,7 +1033,7 @@ test("export dropup exposes scene actions and sandbox puzzle authoring", async (
   await expect(page).toHaveURL(/\/sandbox\/sandbox-\d+$/);
   await page.reload();
   await page.getByRole("button", { name: "Puzzle properties" }).click();
-  await expect(propertiesDialog.getByRole("textbox", { name: "ID" })).toHaveValue("first-shift");
+  await expect(propertiesDialog.getByRole("textbox", { name: "ID" })).toHaveValue("stone-drop");
   await propertiesDialog.getByRole("button", { name: "CANCEL" }).click();
   await exportButton.click();
   await expect(page.getByRole("button", { name: "OPEN PUZZLE IN SANDBOX" })).toHaveCount(0);
@@ -1042,7 +1042,7 @@ test("export dropup exposes scene actions and sandbox puzzle authoring", async (
 test("puzzle info remains horizontally contained and vertically reachable", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 640 });
   await seedBrowserStorage(page, "populated");
-  await page.goto("/puzzles/first-shift");
+  await page.goto("/puzzles/stone-drop");
 
   const overflow = await page.evaluate(() => {
     const screen = document.querySelector<HTMLElement>("#puzzle-info-screen");

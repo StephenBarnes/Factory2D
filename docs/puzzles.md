@@ -7,22 +7,29 @@ Use the text box component we've added.
 **Before adding more tutorial puzzles, first figure out a good sequence of tutorials that are actually needed, and write them here.** Figure out what concepts we need to teach - that components are directional and can be rotated, that the possible signals are -1, 0, and +1, that there's a 1-tick delay on gates, etc. We want to avoid excessive trivial tutorial puzzles; cover each topic once only. Be sparing with explanations, let the player figure some of it out for themselves. Assume they've played games like Factorio, Minecraft, Zachtronics games, etc., and know what basic logic gates are or can figure it out from the descriptions given in the inspector.
 
 Current tutorial puzzles:
-* First shift: drop one stone block on the delivery box. Teaches gravity, placing blocks, player-modifiable region, testing a solution.
+* Stone drop: drop one stone block on the delivery box. Teaches gravity, placing blocks, player-modifiable region, testing a solution.
 * Sand fall: build a ramp for sand to fall diagonally down. Teaches diagonal gravity, and welding maybe (though they could click-and-drag and not pay attention to welds).
 * Puzzle infrastructure: place a judgment stone / victory block, and an inverter. Teaches welding, inverter, charges, directional components, judgement stone, and the general concept that a puzzle's win condition is defined on the game board rather than via metadata.
 * Conduits: place channel/wire blocks. Teaches welding, welding at edges of the player-modifiable region, signed ternary charges.
-* Opposite charges: place inverter and conduit. Teaches directionality, signed ternary charges. We should maybe remove this if other puzzles teach the same stuff.
-* One beat later: place conduit and one delay gate. Teaches delays. We should maybe remove this and add a better puzzle that requires more understanding to solve, specifically ensuring that the player understands that different branches of a computation may require delays to synchronize the branches before values are combined. Maybe replace this with a puzzle that requires adding together the most recent 3 values in a sequence, since that naturally requires delays.
+* Conduits II: similar, but with a more complex board layout and some opportunities for optimization.
 
-We should move the conduits and opposite charges puzzles to the "basics" section, and rename that section to "tutorial".
+We should move several puzzles (conduits, conduits 2, opposite charges) to the "basics" section, and rename that section to "tutorial". The runelore section should be for things that are actual puzzles, not tutorials, e.g. rectifier and crossed channels puzzles.
+
 
 Things we are not teaching yet:
 * Gates delay signals by one tick; branches must be time-equalized with delay gates. Necessary for solving the rectifier puzzle, binary crossed channels, and other puzzles we add later.
-* How to use conveyors, pistons, rotators.
+* Conveyors, pistons, rotators.
 * Magnets.
 * Transformation machines: furnaces, grinders, assemblers.
 * Machines that weld and unweld.
-* Charge sensors.
+* Charge sensors, the fact that they can sense at a distance, and their interaction with glass.
+
+Specific todos:
+* Rename "basics" puzzle group to "tutorial".
+* Add a first puzzle with no editable region. Player only clicks "test" and runs it. We'll build some contraption that they can watch.
+* Rework the "conduits" puzzle to also teach inverters. Give the player only a -1 input. They have to invert it and then feed it to the victory block. Potentially also teach directionality / WASD rotation, by letting them only place in a 1-by-N column, so they have to rotate the inverter from default orientation.
+* Add a tutorial puzzle teaching delays: give an input signal, and require them to output the most recent 5 values to different output ports.
+* Maybe unify the stone-drop and sand-fall puzzles on one board. Require both delivery boxes to give positive answers.
 
 # Current non-tutorial puzzles
 
@@ -60,3 +67,4 @@ Our current set of non-tutorial puzzles is very small, and only has fairly simpl
 * Puzzle where a gemstone is entangled in differently-shaped stone pieces; must build pistons to shift the pieces in a specific way so the gemstone can drop down into a delivery box.
 * Puzzle where you receive one stone block and must move it to one of N different output chutes depending on which one has a +1 signal nearby. Each test case only expects one single stone block delivered. As a follow-up, add a variant where the board has a complex shape, e.g. an S-shaped empty region surrounded by stone, with various delivery spots along the S.
 * Add some puzzles in the style of very hard minimal puzzle games like Magicube, Jelly No Puzzle, Snakebird, Baba Is You - specifically minimal puzzles that seem impossible at first glance. Minimal meaning the puzzle is small, the player-modifiable region is small, and the set of allowed components is small.
+* Give an input signal with say 8 values. Require outputting all 8 values to 8 different output ports, at the same time. Requires some basic delays, or potentially a falling charge sensor that feeds into different latches made from delay gates, or similar.

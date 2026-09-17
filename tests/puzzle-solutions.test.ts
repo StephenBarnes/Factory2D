@@ -18,7 +18,7 @@ function createStorage(): Pick<Storage, "getItem" | "setItem"> {
   };
 }
 
-function initialBoard(puzzleId: "first-shift" | "sand-fall" = "first-shift"): string {
+function initialBoard(puzzleId: "stone-drop" | "sand-fall" = "stone-drop"): string {
   return serializeBoard(puzzleById(puzzleId).createInitialWorld(), 0);
 }
 
@@ -26,20 +26,20 @@ describe("puzzle solutions", () => {
   it("starts empty when no solutions have been stored", () => {
     const solutions = loadPuzzleSolutions(createStorage());
 
-    expect(solutions.forPuzzle("first-shift")).toEqual([]);
+    expect(solutions.forPuzzle("stone-drop")).toEqual([]);
   });
 
   it("creates, duplicates, updates, deletes, and persists independent solutions", () => {
     const storage = createStorage();
     const solutions = PuzzleSolutions.empty();
-    const first = solutions.create("first-shift", initialBoard());
+    const first = solutions.create("stone-drop", initialBoard());
     solutions.recordTestResult(first.id, initialBoard(), {
       price: 1,
       cycles: 2.5,
       footprint: 3,
       combined: 6.5,
     });
-    const second = solutions.create("first-shift", initialBoard());
+    const second = solutions.create("stone-drop", initialBoard());
     const sandFall = solutions.create("sand-fall", initialBoard("sand-fall"));
     const duplicate = solutions.duplicate(first.id);
 
@@ -56,7 +56,7 @@ describe("puzzle solutions", () => {
       combined: 6.5,
     });
 
-    const editedWorld = puzzleById("first-shift").createInitialWorld();
+    const editedWorld = puzzleById("stone-drop").createInitialWorld();
     editedWorld.place(8, 2, TileKind.Stone);
     const editedBoard = serializeBoard(editedWorld, 0);
     solutions.updateBoard(duplicate.id, editedBoard);
@@ -64,7 +64,7 @@ describe("puzzle solutions", () => {
     savePuzzleSolutions(storage, solutions);
 
     const loaded = loadPuzzleSolutions(storage);
-    expect(loaded.forPuzzle("first-shift").map(({ id, name }) => ({ id, name }))).toEqual([
+    expect(loaded.forPuzzle("stone-drop").map(({ id, name }) => ({ id, name }))).toEqual([
       { id: first.id, name: "Solution 1" },
       { id: duplicate.id, name: "Solution 1 Copy" },
     ]);
@@ -83,7 +83,7 @@ describe("puzzle solutions", () => {
   it("discards scores from a different scoring contract without losing designs", () => {
     const solutions = PuzzleSolutions.empty();
     const board = initialBoard();
-    const solution = solutions.create("first-shift", board);
+    const solution = solutions.create("stone-drop", board);
     solutions.recordTestResult(solution.id, board, { price: 1, cycles: 9, footprint: 1, combined: 11 });
     const stored = JSON.parse(solutions.serialize()) as { scoringVersion?: number };
     delete stored.scoringVersion;
@@ -106,7 +106,7 @@ describe("puzzle solutions", () => {
         nextSolutionId: 1,
         solutions: [{
           id: "solution-1",
-          puzzleId: "first-shift",
+          puzzleId: "stone-drop",
           name: "Solution 1",
           board,
           scores: null,
@@ -114,7 +114,7 @@ describe("puzzle solutions", () => {
       }),
     );
 
-    const created = loadPuzzleSolutions(storage).create("first-shift", board);
+    const created = loadPuzzleSolutions(storage).create("stone-drop", board);
 
     expect(created.id).toBe("solution-2");
     expect(created.name).toBe("Solution 2");
@@ -127,7 +127,7 @@ describe("puzzle solutions", () => {
     '{"version":2,"nextSolutionId":0,"solutions":[]}',
     '{"version":2,"nextSolutionId":1,"solutions":"invalid"}',
     '{"version":2,"nextSolutionId":1,"solutions":[{"id":"one","puzzleId":"missing","name":"Solution 1","board":"invalid","scores":null}]}',
-    `{"version":2,"nextSolutionId":1,"solutions":[{"id":"one","puzzleId":"first-shift","name":"Solution 1","board":${JSON.stringify(initialBoard())},"scores":{"price":1,"cycles":2,"footprint":3,"combined":7}}]}`,
+    `{"version":2,"nextSolutionId":1,"solutions":[{"id":"one","puzzleId":"stone-drop","name":"Solution 1","board":${JSON.stringify(initialBoard())},"scores":{"price":1,"cycles":2,"footprint":3,"combined":7}}]}`,
   ])("rejects malformed stored solutions: %s", (serialized) => {
     const storage = createStorage();
     storage.setItem(PUZZLE_SOLUTIONS_STORAGE_KEY, serialized);

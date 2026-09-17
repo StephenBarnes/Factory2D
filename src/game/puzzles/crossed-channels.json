@@ -8,8 +8,8 @@
   "order": 10,
   "name": "Binary crossed channels",
   "difficulty": 3,
-  "description": "Cross two binary signals, using only 0 and +1, without a crossing rune. Transmit one value per tick once each output begins; the sequence checkers allow an initial delay. Your circuit must pass every test case.",
-  "goal": "Transmit the top-left input to bottom-right, and bottom-left to top-right",
+  "description": "Cross two binary signals, containing only 0 and +1 values, without a crossing rune. Transmit one value per tick once each output begins; the sequence checkers allow an initial delay.",
+  "goal": "Transmit the top-left input to bottom-right, and bottom-left to top-right.",
   "cycleLimit": 50,
   "components": [
     {

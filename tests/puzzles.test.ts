@@ -40,7 +40,7 @@ describe("puzzle definitions", () => {
     expect(isPuzzleGroupUnlocked(runelore, new Set())).toBe(false);
     expect(isPuzzleGroupUnlocked(
       runelore,
-      new Set<PuzzleId>(["first-shift", "sand-fall"]),
+      new Set<PuzzleId>(["stone-drop", "sand-fall"]),
     )).toBe(true);
   });
 

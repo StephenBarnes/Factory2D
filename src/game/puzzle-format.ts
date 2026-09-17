@@ -166,7 +166,7 @@ function parsePuzzleFileValue(value: unknown, requireVictory: boolean): ParsedPu
   const order = requireFiniteNumber(puzzle.order, "Puzzle order");
   const name = requireNonEmptyString(puzzle.name, "Puzzle name");
   const difficulty = parsePuzzleDifficulty(puzzle.difficulty === undefined ? 1 : puzzle.difficulty);
-  const description = requireNonEmptyString(puzzle.description, "Puzzle description");
+  const description = requireString(puzzle.description, "Puzzle description");
   const goal = requireNonEmptyString(puzzle.goal, "Puzzle goal");
   const cycleLimit = parseCycleLimit(puzzle.cycleLimit, "Puzzle cycleLimit");
 
@@ -420,6 +420,13 @@ function requireSparseObject(
 function requireArray(value: unknown, label: string): readonly unknown[] {
   if (!Array.isArray(value)) {
     throw new Error(`${label} must be an array`);
+  }
+  return value;
+}
+
+function requireString(value: unknown, label: string): string {
+  if (typeof value !== "string") {
+    throw new Error(`${label} must be a string`);
   }
   return value;
 }

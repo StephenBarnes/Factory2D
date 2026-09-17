@@ -8,8 +8,8 @@
   "order": 1,
   "name": "Sand fall",
   "difficulty": "tutorial",
-  "description": "Tutorial puzzle teaching diagonal gravity and welding",
-  "goal": "Guide one sand block to the goal",
+  "description": "Tutorial puzzle teaching diagonal gravity and welding.",
+  "goal": "Guide one sand block to the goal.",
   "cycleLimit": 20,
   "components": [ { "code": "#", "price": 1 } ],
   "editableRegions": [

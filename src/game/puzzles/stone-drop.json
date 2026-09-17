@@ -3,13 +3,13 @@
   "version": 5,
   "width": 20,
   "height": 14,
-  "id": "first-shift",
+  "id": "stone-drop",
   "group": "basics",
   "order": 0,
-  "name": "First Shift",
+  "name": "Stone Drop",
   "difficulty": "tutorial",
-  "description": "Tutorial puzzle teaching block placement",
-  "goal": "Drop one stone block into the delivery box",
+  "description": "Tutorial puzzle teaching block placement and solution testing.",
+  "goal": "Drop one stone block into the delivery box.",
   "cycleLimit": 10,
   "components": [
     { "code": "#", "price": 1 }

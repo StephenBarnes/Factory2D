@@ -42,7 +42,7 @@ function playerData(entries: readonly unknown[]): string {
 describe("player data transfer", () => {
   it("exports every storage entry deterministically and restores an exact replacement", () => {
     const source = new MemoryStorage();
-    source.setItem("factory2d.puzzle-progress", '{"completed":["first-shift"]}');
+    source.setItem("factory2d.puzzle-progress", '{"completed":["stone-drop"]}');
     source.setItem("custom-setting", "enabled");
 
     const serialized = serializePlayerData(source);
@@ -51,7 +51,7 @@ describe("player data transfer", () => {
       version: PLAYER_DATA_VERSION,
       entries: [
         { key: "custom-setting", value: "enabled" },
-        { key: "factory2d.puzzle-progress", value: '{"completed":["first-shift"]}' },
+        { key: "factory2d.puzzle-progress", value: '{"completed":["stone-drop"]}' },
       ],
     });
 
@@ -60,7 +60,7 @@ describe("player data transfer", () => {
     replacePlayerData(destination, serialized);
     expect(Object.fromEntries(destination.values)).toEqual({
       "custom-setting": "enabled",
-      "factory2d.puzzle-progress": '{"completed":["first-shift"]}',
+      "factory2d.puzzle-progress": '{"completed":["stone-drop"]}',
     });
   });
 

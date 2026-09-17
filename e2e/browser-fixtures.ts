@@ -42,7 +42,7 @@ function progressValue(completedPuzzleIds: ReadonlySet<PuzzleId>): string {
 }
 
 function populatedSolutions(): PuzzleSolutions {
-  const puzzle = puzzleById("first-shift");
+  const puzzle = puzzleById("stone-drop");
   const solutions = PuzzleSolutions.empty();
   const board = serializeBoard(puzzle.createInitialWorld(), 0);
   solutions.create(puzzle.id, board);
@@ -70,7 +70,7 @@ export function browserStorageFixture(
     return {
       values: {
         [PUZZLE_PROGRESS_STORAGE_KEY]: progressValue(
-          new Set<PuzzleId>(["first-shift", "sand-fall", "puzzle-infrastructure"]),
+          new Set<PuzzleId>(["stone-drop", "sand-fall", "puzzle-infrastructure"]),
         ),
       },
       solutionIds: [],
@@ -79,7 +79,7 @@ export function browserStorageFixture(
   }
 
   if (name === "edited-board") {
-    const puzzle = puzzleById("first-shift");
+    const puzzle = puzzleById("stone-drop");
     const world = puzzle.createInitialWorld();
     world.place(8, 3, TileKind.Stone);
     const board = serializeBoard(world, 0);
