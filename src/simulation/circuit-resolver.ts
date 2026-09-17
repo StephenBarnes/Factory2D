@@ -1,6 +1,7 @@
 import { expectDefined } from "../util/assert";
 import { chargeFromSum, type Charge } from "./circuit";
 import { furnaceNeighborsPresent, isProcessingMachine, processingRecipeFor } from "./furnace";
+import { magicLinksFor } from "./magic-link";
 import { PuzzleResult } from "./puzzle-result";
 import { runeArrayPortCellIndex } from "./rune-array";
 import {
@@ -40,6 +41,30 @@ export class CircuitResolver {
   private readonly topologyParentIndices: number[] = [];
   private hasWinIntent = false;
   private hasLossIntent = false;
+
+  /** Freeze link controls before any observer collects mechanical bodies. */
+  observeMagicLinks(runtimes: readonly WorldRuntime[]): void {
+    for (const runtime of runtimes) {
+      const world = runtime.world;
+      const links = magicLinksFor(world);
+      if (links === undefined) {
+        continue;
+      }
+      links.beginControls();
+      for (
+        let index = world.firstFeatureIndex(WorldFeature.MagicLink);
+        index >= 0;
+        index = world.nextFeatureIndex(WorldFeature.MagicLink, index)
+      ) {
+        const rear = oppositeDirection(world.orientationAtIndex(index));
+        if (this.hasConnectedNeighbor(runtime, index, rear) &&
+            this.neighborPortCharge(runtime, index, rear) === -1) {
+          links.disable(index);
+        }
+      }
+      links.commitControls();
+    }
+  }
 
   /** `runtimes[0]` must be the root; every other runtime's `parent` must precede it. */
   resolve(tick: number, runtimes: readonly WorldRuntime[]): void {
@@ -342,6 +367,10 @@ export class CircuitResolver {
 
       const orientation = world.orientationAtIndex(index);
       const mirrored = world.mirroredAtIndex(index);
+      if (kind === TileKind.MagicLink) {
+        // Already observed before body-dependent production/matching intents.
+        continue;
+      }
       if (kind === TileKind.ChargeSensor) {
         const outputCharge = this.sensorObservedCharge(runtime, index, orientation);
         this.driveOutputs(

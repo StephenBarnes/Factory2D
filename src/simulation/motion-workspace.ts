@@ -1,4 +1,5 @@
 import { expectDefined } from "../util/assert";
+import { magicLinksFor } from "./magic-link";
 import { recordShatterAnimation } from "./shatter-animation";
 import {
   Direction,
@@ -27,6 +28,7 @@ export class MotionWorkspace {
   private readonly bodyRoots: Int32Array;
   private readonly weldedBodyRoots: Int32Array;
   private weldedGeometryRevision = -1;
+  private weldedLinkRevision = -1;
   private readonly bodyHeads: Int32Array;
   private readonly nextBodyMember: Int32Array;
   private readonly bodyFalls: Uint8Array;
@@ -226,7 +228,11 @@ export class MotionWorkspace {
   }
 
   private collectWeldedBodies(): void {
-    if (this.weldedGeometryRevision === this.world.geometryRevision) {
+    const links = magicLinksFor(this.world);
+    links?.collect();
+    const linkRevision = links?.revision ?? 0;
+    if (this.weldedGeometryRevision === this.world.geometryRevision &&
+        this.weldedLinkRevision === linkRevision) {
       // Magnetic grouping mutates bodyRoots, not this cache.
       this.bodyRoots.set(this.weldedBodyRoots);
       return;
@@ -258,6 +264,17 @@ export class MotionWorkspace {
         this.unionBodies(index, index + this.world.width);
       }
     }
+    if (links !== undefined) {
+      for (
+        let index = this.world.firstFeatureIndex(WorldFeature.MagicLink);
+        index >= 0;
+        index = this.world.nextFeatureIndex(WorldFeature.MagicLink, index)
+      ) {
+        for (let edge = links.firstEdgeAt(index); edge >= 0; edge = links.nextEdge(edge)) {
+          this.unionBodies(index, links.targetAt(edge));
+        }
+      }
+    }
 
     for (
       let index = this.world.firstFeatureIndex(WorldFeature.Occupied);
@@ -272,6 +289,7 @@ export class MotionWorkspace {
       this.weldedBodyRoots[index] = root;
     }
     this.weldedGeometryRevision = this.world.geometryRevision;
+    this.weldedLinkRevision = linkRevision;
   }
 
   /**

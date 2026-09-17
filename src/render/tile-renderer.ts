@@ -497,6 +497,7 @@ function drawDecoration(
       definition.decorationStyle === TileDecorationStyle.Assembler ||
       definition.decorationStyle === TileDecorationStyle.ForceProjector ||
       definition.decorationStyle === TileDecorationStyle.LevitationProjector ||
+      definition.decorationStyle === TileDecorationStyle.MagicLink ||
       definition.decorationStyle === TileDecorationStyle.Furnace ||
       definition.decorationStyle === TileDecorationStyle.Drill ||
       definition.decorationStyle === TileDecorationStyle.Grinder ||
@@ -773,6 +774,43 @@ function drawDecoration(
       context.moveTo(size * 0.13, -size * 0.07);
       context.lineTo(size * 0.2, size * 0.01);
       context.lineTo(size * 0.27, -size * 0.07);
+      context.stroke();
+      context.restore();
+      drawPortArrows(context, left, top, size, orientation,
+        WeldSide.Down, WeldSide.None, circuitPortCharges);
+      break;
+    case TileDecorationStyle.MagicLink:
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.lineWidth = Math.max(1.5, size * 0.045);
+      context.lineCap = "round";
+      context.lineJoin = "miter";
+      // Two forged, angular chain links beneath a forward-pointing rune.
+      context.beginPath();
+      context.moveTo(0, -size * 0.22);
+      context.lineTo(size * 0.13, -size * 0.15);
+      context.lineTo(size * 0.13, size * 0.01);
+      context.lineTo(0, size * 0.08);
+      context.lineTo(-size * 0.13, size * 0.01);
+      context.lineTo(-size * 0.13, -size * 0.15);
+      context.closePath();
+      context.stroke();
+      context.beginPath();
+      context.moveTo(0, -size * 0.04);
+      context.lineTo(size * 0.13, size * 0.03);
+      context.lineTo(size * 0.13, size * 0.19);
+      context.lineTo(0, size * 0.26);
+      context.lineTo(-size * 0.13, size * 0.19);
+      context.lineTo(-size * 0.13, size * 0.03);
+      context.closePath();
+      context.stroke();
+      context.beginPath();
+      context.moveTo(0, -size * 0.27);
+      context.lineTo(0, -size * 0.4);
+      context.moveTo(-size * 0.08, -size * 0.32);
+      context.lineTo(0, -size * 0.4);
+      context.lineTo(size * 0.08, -size * 0.32);
       context.stroke();
       context.restore();
       drawPortArrows(context, left, top, size, orientation,

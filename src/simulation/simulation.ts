@@ -34,6 +34,7 @@ export class Simulation {
       clearRotationAnimation(runtime.world);
     }
     this.collectRuntimes(interpolationSource);
+    this.circuitResolver.observeMagicLinks(this.runtimes);
     let hasCircuit = false;
     for (const runtime of this.runtimes) {
       beginRotationAnimation(runtime.world, runtime.interpolationSource);

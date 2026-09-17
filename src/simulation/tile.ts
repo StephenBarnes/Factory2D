@@ -69,6 +69,7 @@ export const enum TileKind {
   ForceProjector = 67,
   DelayGate = 68,
   BlockComparer = 69,
+  MagicLink = 70,
 }
 
 export const enum Direction {
@@ -146,6 +147,7 @@ export const enum TileDecorationStyle {
   LevitationProjector = 55,
   ForceProjector = 56,
   DelayGate = 57,
+  MagicLink = 58,
 }
 
 export const enum PaletteCategory {
@@ -399,6 +401,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#805f45",
     decorationStyle: TileDecorationStyle.ForceProjector,
     decorationColor: "#ffe0a3",
+  },
+  [TileKind.MagicLink]: {
+    name: "Magic Link",
+    boardCode: "}",
+    defaultPrice: 20,
+    palette: {
+      order: 73,
+      category: PaletteCategory.Motion,
+      description: "Joins distant facing links into one body; rear -1 disables it.",
+      extendedDescription: ["Looks forward through gaps, ordinary blocks, and differently oriented magic links to the first opposite-facing magic link. A disabled opposing link still stops the ray, but makes no connection.", "A rear input of -1 disables every connection involving this link. Both endpoints must be enabled to create a link.", "Each link joins both bodies into one mechanical body. Multiple incoming links and chains merge transitively, sharing movement, support, and movement restrictions."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Down,
+    circuitInputPorts: WeldSide.Down,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#69557e",
+    decorationStyle: TileDecorationStyle.MagicLink,
+    decorationColor: "#f2d49a",
   },
   [TileKind.Fastener]: {
     name: "Fastener",

@@ -1756,7 +1756,8 @@ export class CanvasRenderer {
         this.drawSensorObservation(orientation, true, false);
         break;
       case TileKind.LevitationProjector:
-        this.drawLevitationBeam(orientation);
+      case TileKind.MagicLink:
+        this.drawFacingRay(kind, orientation);
         break;
       case TileKind.Rotator:
         this.drawRotatorReach(orientation, mirrored);
@@ -1764,7 +1765,10 @@ export class CanvasRenderer {
     }
   }
 
-  private drawLevitationBeam(orientation: Direction): void {
+  private drawFacingRay(
+    kind: TileKind.LevitationProjector | TileKind.MagicLink,
+    orientation: Direction,
+  ): void {
     const dx = directionX(orientation);
     const dy = directionY(orientation);
     const startX = this.hoverX + 0.5 + dx / 2;
@@ -1778,7 +1782,7 @@ export class CanvasRenderer {
       x += dx, y += dy
     ) {
       if (
-        this.world.kindAt(x, y) === TileKind.LevitationProjector &&
+        this.world.kindAt(x, y) === kind &&
         this.world.orientationAt(x, y) === opposingDirection
       ) {
         endX = x + 0.5 - dx / 2;
@@ -1788,13 +1792,17 @@ export class CanvasRenderer {
     }
     const { context, cellSize } = this;
     context.save();
-    context.strokeStyle = "#bdeeff";
-    context.globalAlpha = 0.18;
-    context.lineWidth = cellSize * 0.8;
+    context.strokeStyle = TILE_DEFINITIONS[kind].decorationColor;
     context.beginPath();
     context.moveTo(this.originX + startX * cellSize, this.originY + startY * cellSize);
     context.lineTo(this.originX + endX * cellSize, this.originY + endY * cellSize);
-    context.stroke();
+    if (kind === TileKind.LevitationProjector) {
+      context.globalAlpha = 0.18;
+      context.lineWidth = cellSize * 0.8;
+      context.stroke();
+    } else {
+      context.setLineDash([cellSize * 0.12, cellSize * 0.1]);
+    }
     context.globalAlpha = 0.8;
     context.lineWidth = Math.max(1, cellSize * 0.035);
     context.stroke();

@@ -34,6 +34,8 @@ Floatstone uses a blue slab with a pale suspended diamond above two horizontal l
 
 Levitation projectors use a blue slab with a pale suspended crystal, projecting dish, and forward arrow. A charge-colored inward caret marks the isolated rear circuit input; connected traces stop at the marker. The shared glyph rotates with the beam on the board, palette, and previews. Hover/placement overlays show the potential beam extent: a translucent one-cell-wide strip and bright centerline from the front face to the front face of the first oppositely facing levitation projector, or the local board boundary. Other tiles and projector orientations do not stop the overlay.
 
+Magic links use a violet slab with two golden angular chain links, a forward arrow, and a charge-colored rear input caret. The shared board/palette/preview glyph rotates with the link. Hover/placement overlays draw a thin dashed golden ray to the first oppositely facing magic link or local board boundary, including disabled endpoints as potential targets. This is not a solid bridge; body outlines continue to merge only across physical weld seams.
+
 Sliders use a green-grey slab with two pale rails, a dark central carriage, and opposing arrows along the permitted axis. The shared glyph rotates with the tile on the board, palette, and previews.
 
 Thrusters use a copper-brown slab with a pointed pale housing, flared rear nozzle, and orange exhaust. The shared glyph rotates toward the thrust direction on the board, palette, and previews; ordinary stable-ID interpolation animates movement.

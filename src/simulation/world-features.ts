@@ -31,7 +31,8 @@ export const enum WorldFeature {
   Thruster = 19,
   MovementSensor = 20,
   LevitationProjector = 21,
-  Count = 22,
+  MagicLink = 22,
+  Count = 23,
 }
 
 const FEATURE_MASKS = new Uint32Array(
@@ -110,6 +111,9 @@ for (const kind of TILE_KINDS) {
   }
   if (kind === TileKind.LevitationProjector) {
     mask |= 1 << WorldFeature.LevitationProjector;
+  }
+  if (kind === TileKind.MagicLink) {
+    mask |= 1 << WorldFeature.MagicLink;
   }
   if (kind === TileKind.RuneArray) {
     mask |= 1 << WorldFeature.RuneArray;

@@ -1,4 +1,5 @@
 import { expectDefined } from "../util/assert";
+import { magicLinksFor } from "./magic-link";
 import { recordShatterAnimation } from "./shatter-animation";
 import { Direction, directionX, directionY, oppositeDirection, TILE_DEFINITIONS, TileKind } from "./tile";
 import { World } from "./world";
@@ -144,6 +145,8 @@ export class PistonResolver {
 
   /** Carried pistons stay rigid; matching actuators on a shared load cooperate. */
   private propose(stroke: Stroke): boolean {
+    const links = magicLinksFor(this.world);
+    links?.collect();
     stroke.cells.length = 0;
     stroke.partners.length = 0;
     this.visit = (this.visit + 1) >>> 0;
@@ -188,6 +191,11 @@ export class PistonResolver {
           continue;
         }
         this.enqueue(stroke, other);
+      }
+      if (links !== undefined && this.world.kindAtIndex(cell) === TileKind.MagicLink) {
+        for (let edge = links.firstEdgeAt(cell); edge >= 0; edge = links.nextEdge(edge)) {
+          this.enqueue(stroke, links.targetAt(edge));
+        }
       }
       const destination = this.neighbor(cell, direction);
       if (destination < 0) {

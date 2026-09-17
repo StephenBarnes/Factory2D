@@ -1,4 +1,5 @@
 import { expectDefined } from "../util/assert";
+import { magicLinksFor } from "./magic-link";
 import { TILE_DEFINITIONS } from "./tile";
 import type { World } from "./world";
 import { WorldFeature } from "./world-features";
@@ -16,6 +17,7 @@ export class WeldedBodyIndex {
   private readonly bodyMinYs: Int32Array;
   private readonly bodyMemberCounts: Int32Array;
   private collectedGeometryRevision = -1;
+  private collectedLinkRevision = -1;
 
   constructor(world: World) {
     this.world = world;
@@ -28,7 +30,11 @@ export class WeldedBodyIndex {
   }
 
   collect(): void {
-    if (this.collectedGeometryRevision === this.world.geometryRevision) {
+    const links = magicLinksFor(this.world);
+    links?.collect();
+    const linkRevision = links?.revision ?? 0;
+    if (this.collectedGeometryRevision === this.world.geometryRevision &&
+        this.collectedLinkRevision === linkRevision) {
       return;
     }
     this.bodyRoots.fill(-1);
@@ -53,6 +59,17 @@ export class WeldedBodyIndex {
       }
       if (this.world.hasDownWeldAtIndex(index)) {
         this.unionBodies(index, index + this.world.width);
+      }
+    }
+    if (links !== undefined) {
+      for (
+        let index = this.world.firstFeatureIndex(WorldFeature.MagicLink);
+        index >= 0;
+        index = this.world.nextFeatureIndex(WorldFeature.MagicLink, index)
+      ) {
+        for (let edge = links.firstEdgeAt(index); edge >= 0; edge = links.nextEdge(edge)) {
+          this.unionBodies(index, links.targetAt(edge));
+        }
       }
     }
     for (
@@ -87,6 +104,7 @@ export class WeldedBodyIndex {
       this.bodyMemberCounts[root] = count + 1;
     }
     this.collectedGeometryRevision = this.world.geometryRevision;
+    this.collectedLinkRevision = linkRevision;
   }
 
   rootAt(index: number): number {
