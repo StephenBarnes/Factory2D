@@ -5,7 +5,7 @@
   "height": 9,
   "id": "crossed-channels",
   "group": "runelore",
-  "order": 10,
+  "order": 3,
   "name": "Binary crossed channels",
   "difficulty": 3,
   "description": "Cross two binary signals, containing only 0 and +1 values, without a crossing rune. Transmit one value per tick once each output begins; the sequence checkers allow an initial delay.",

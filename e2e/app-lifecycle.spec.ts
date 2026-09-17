@@ -614,10 +614,10 @@ test("unlocked fixture opens a gemstone-gated group and puzzle", async ({ page }
   await expect(basics).toHaveAttribute("data-state", "completed");
   await expect(runelore).toHaveAttribute("data-state", "unlocked");
 
-  const crossedChannels = runelore.getByRole("button", { name: /Binary crossed channels/ });
-  await expect(crossedChannels).toBeEnabled();
-  await crossedChannels.click();
-  await expect(page).toHaveURL(/\/#\/puzzles\/crossed-channels$/);
+  const comparer = runelore.getByRole("button", { name: /Comparer/ });
+  await expect(comparer).toBeEnabled();
+  await comparer.click();
+  await expect(page).toHaveURL(/\/#\/puzzles\/comparer$/);
 });
 
 test("creates, edits, persists, and restores a solution on reload", async ({ page }) => {

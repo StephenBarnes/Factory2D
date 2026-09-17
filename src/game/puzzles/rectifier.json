@@ -5,7 +5,7 @@
   "height": 3,
   "id": "rectifier",
   "group": "runelore",
-  "order": 4,
+  "order": 2,
   "name": "Rectifier",
   "difficulty": 2,
   "description": "Use simple components to build a \"rectifier\" that converts red -1 signals to zero while leaving zero and blue +1 signals unchanged. The signals panel shows the input and your output as well as the expected sequence. The solution is tested using a sequence checker block which starts comparing at your first nonzero output. There are multiple test cases; all test inputs are guaranteed to begin with a +1 value.",
@@ -45,9 +45,9 @@
     "tick": 0,
     "result": "in-progress",
     "grid": [
-      "====.......====",
+      "####.......####",
       "1UmC.......CmEV",
-      "====.......==g="
+      "####.......##g#"
     ],
     "mirrored": [
       { "x": 1, "y": 1 }

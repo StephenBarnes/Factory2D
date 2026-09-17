@@ -5,7 +5,7 @@
   "height": 9,
   "id": "ternary-crossed-channels",
   "group": "runelore",
-  "order": 11,
+  "order": 4,
   "name": "Ternary crossed channels",
   "difficulty": 4,
   "description": "Cross two full ternary signals, using -1, 0, and +1, without a crossing rune. Rune arrays provide room for a larger circuit.",

@@ -2,11 +2,11 @@
   "format": "factory2d-puzzle",
   "version": 5,
   "width": 15,
-  "height": 7,
-  "id": "change-of-shift",
+  "height": 5,
+  "id": "comparer",
   "group": "runelore",
-  "order": 5,
-  "name": "Change of Shift",
+  "order": 0,
+  "name": "Comparer",
   "difficulty": 2,
   "description": "Compare the input to its previous value.",
   "goal": "Emit +1 if the input increased, -1 if it decreased, and 0 if it stayed the same.",
@@ -28,7 +28,7 @@
   "editableRegions": [
     {
       "x": 4,
-      "y": 2,
+      "y": 1,
       "width": 7,
       "height": 3
     }
@@ -37,41 +37,43 @@
     "format": "factory2d-board",
     "version": 15,
     "width": 15,
-    "height": 7,
+    "height": 5,
     "tick": 0,
     "result": "in-progress",
     "grid": [
-      "...............",
-      "...............",
-      "====.......====",
+      "###############",
+      "####.......####",
       "1UmC.......CmEV",
-      "====.......==g=",
-      "...............",
-      "..............."
+      "####.......##g#",
+      "###############"
     ],
     "orientations": [
       {
         "x": 1,
-        "y": 3,
+        "y": 2,
         "direction": "right"
       },
       {
         "x": 13,
-        "y": 3,
+        "y": 2,
         "direction": "right"
       }
     ],
     "mirrored": [
-      { "x": 1, "y": 3 }
+      {
+        "x": 1,
+        "y": 2
+      }
     ],
     "components": [
       {
         "x": 1,
-        "y": 3,
+        "y": 2,
         "type": "rom",
         "width": 6,
         "height": 4,
         "cursor": 0,
+        "wrapX": true,
         "wrapY": false,
         "values": [
           1,
@@ -102,24 +104,25 @@
       },
       {
         "x": 2,
-        "y": 3,
+        "y": 2,
         "type": "monitor",
         "label": "INPUT"
       },
       {
         "x": 12,
-        "y": 3,
+        "y": 2,
         "type": "monitor",
         "label": "OUTPUT"
       },
       {
         "x": 13,
-        "y": 3,
+        "y": 2,
         "type": "checker",
         "width": 6,
         "height": 4,
         "cursor": 0,
         "failed": false,
+        "ignoreZeros": false,
         "values": [
           1,
           0,
@@ -149,39 +152,17 @@
       },
       {
         "x": 13,
-        "y": 4,
+        "y": 3,
         "type": "grapher",
         "label": "EXPECTED"
       }
     ],
     "welds": [
-      "...............",
-      "...............",
+      "++++-------+++|",
       "+++|.......+++|",
       "+++|.......+++|",
-      "---........---.",
-      "...............",
-      "..............."
-    ],
-    "textBoxes": [
-      {
-        "id": "change-rule",
-        "x": 0,
-        "y": 0,
-        "width": 15,
-        "height": 2,
-        "owner": "author",
-        "text": "CHANGE OF SHIFT\nRising input: +1. Falling input: -1. Unchanged: 0."
-      },
-      {
-        "id": "change-timing",
-        "x": 0,
-        "y": 5,
-        "width": 15,
-        "height": 2,
-        "owner": "author",
-        "text": "The input starts from 0. A processing delay is allowed.\nAfter the first nonzero output, every tick counts."
-      }
+      "+++|.......+++|",
+      "--------------."
     ]
   },
   "testCases": [
@@ -193,11 +174,12 @@
           "components": [
             {
               "x": 1,
-              "y": 3,
+              "y": 2,
               "type": "rom",
               "width": 6,
               "height": 4,
               "cursor": 0,
+              "wrapX": true,
               "wrapY": false,
               "values": [
                 -1,
@@ -228,24 +210,25 @@
             },
             {
               "x": 2,
-              "y": 3,
+              "y": 2,
               "type": "monitor",
               "label": "INPUT"
             },
             {
               "x": 12,
-              "y": 3,
+              "y": 2,
               "type": "monitor",
               "label": "OUTPUT"
             },
             {
               "x": 13,
-              "y": 3,
+              "y": 2,
               "type": "checker",
               "width": 6,
               "height": 4,
               "cursor": 0,
               "failed": false,
+              "ignoreZeros": false,
               "values": [
                 -1,
                 0,
@@ -275,7 +258,7 @@
             },
             {
               "x": 13,
-              "y": 4,
+              "y": 3,
               "type": "grapher",
               "label": "EXPECTED"
             }
@@ -291,11 +274,12 @@
           "components": [
             {
               "x": 1,
-              "y": 3,
+              "y": 2,
               "type": "rom",
               "width": 6,
               "height": 4,
               "cursor": 0,
+              "wrapX": true,
               "wrapY": false,
               "values": [
                 1,
@@ -326,24 +310,25 @@
             },
             {
               "x": 2,
-              "y": 3,
+              "y": 2,
               "type": "monitor",
               "label": "INPUT"
             },
             {
               "x": 12,
-              "y": 3,
+              "y": 2,
               "type": "monitor",
               "label": "OUTPUT"
             },
             {
               "x": 13,
-              "y": 3,
+              "y": 2,
               "type": "checker",
               "width": 6,
               "height": 4,
               "cursor": 0,
               "failed": false,
+              "ignoreZeros": false,
               "values": [
                 1,
                 0,
@@ -373,7 +358,7 @@
             },
             {
               "x": 13,
-              "y": 4,
+              "y": 3,
               "type": "grapher",
               "label": "EXPECTED"
             }

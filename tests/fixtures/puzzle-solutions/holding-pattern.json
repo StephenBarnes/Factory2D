@@ -2,59 +2,55 @@
   "format": "factory2d-board",
   "version": 15,
   "width": 19,
-  "height": 11,
+  "height": 7,
   "tick": 0,
   "result": "in-progress",
   "grid": [
     "...................",
     "...................",
-    "...................",
-    ".....CZICCC........",
-    "====.C....C....====",
+    "====....CZI....====",
     "1UmCCCCCCC+CCCCCmEV",
-    "====......C.C..==g=",
-    "..........CCC......",
-    "...................",
+    "====......CC...==g=",
     "...................",
     "..................."
   ],
   "orientations": [
     {
-      "x": 6,
-      "y": 3,
-      "direction": "right"
-    },
-    {
-      "x": 7,
-      "y": 3,
-      "direction": "right"
-    },
-    {
-      "x": 1,
-      "y": 5,
+      "x": 9,
+      "y": 2,
       "direction": "right"
     },
     {
       "x": 10,
-      "y": 5,
+      "y": 2,
+      "direction": "down"
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "direction": "right"
+    },
+    {
+      "x": 10,
+      "y": 3,
       "direction": "right"
     },
     {
       "x": 17,
-      "y": 5,
+      "y": 3,
       "direction": "right"
     }
   ],
   "mirrored": [
     {
       "x": 1,
-      "y": 5
+      "y": 3
     }
   ],
   "components": [
     {
-      "x": 6,
-      "y": 3,
+      "x": 9,
+      "y": 2,
       "type": "delay",
       "length": 8,
       "cursor": 0,
@@ -71,7 +67,7 @@
     },
     {
       "x": 1,
-      "y": 5,
+      "y": 3,
       "type": "rom",
       "width": 8,
       "height": 6,
@@ -79,11 +75,7 @@
       "wrapX": true,
       "wrapY": false,
       "values": [
-        1,
-        0,
-        0,
-        0,
-        0,
+        -1,
         0,
         0,
         0,
@@ -111,12 +103,16 @@
         0,
         0,
         0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
         1,
-        0,
-        0,
-        0,
-        0,
-        0,
         0,
         0,
         0,
@@ -131,19 +127,19 @@
     },
     {
       "x": 2,
-      "y": 5,
+      "y": 3,
       "type": "monitor",
       "label": "INPUT"
     },
     {
       "x": 16,
-      "y": 5,
+      "y": 3,
       "type": "monitor",
       "label": "OUTPUT"
     },
     {
       "x": 17,
-      "y": 5,
+      "y": 3,
       "type": "checker",
       "width": 8,
       "height": 6,
@@ -151,20 +147,16 @@
       "failed": false,
       "ignoreZeros": false,
       "values": [
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        0,
-        0,
-        0,
-        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
         0,
         0,
         -1,
@@ -183,63 +175,42 @@
         0,
         0,
         0,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
         0,
         0,
         0,
         0,
         0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
         0
       ]
     },
     {
       "x": 17,
-      "y": 6,
+      "y": 4,
       "type": "grapher",
       "label": "EXPECTED"
-    }
-  ],
-  "textBoxes": [
-    {
-      "id": "holding-rule",
-      "x": 0,
-      "y": 0,
-      "width": 19,
-      "height": 2,
-      "owner": "author",
-      "text": "HOLDING PATTERN\nHold each one-tick input for exactly ten ticks, then return to 0."
-    },
-    {
-      "id": "holding-timing",
-      "x": 0,
-      "y": 9,
-      "width": 19,
-      "height": 2,
-      "owner": "author",
-      "text": "Keep the input sign. Pulses are at least ten ticks apart.\nA fixed processing delay is allowed; after the first output, every tick counts."
     }
   ],
   "welds": [
     "...................",
     "...................",
-    "...................",
-    ".....+----|........",
-    "+++|.|....|....+++|",
-    "++++------+-+--+++|",
-    "---.......|.|..---.",
-    "..........--.......",
-    "...................",
+    "+++|....+-|....+++|",
+    "++++------++---+++|",
+    "---.......-....---.",
     "...................",
     "..................."
   ]
 }
-

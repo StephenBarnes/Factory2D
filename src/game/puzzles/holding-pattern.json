@@ -2,19 +2,27 @@
   "format": "factory2d-puzzle",
   "version": 5,
   "width": 19,
-  "height": 11,
+  "height": 7,
   "id": "holding-pattern",
   "group": "runelore",
-  "order": 6,
+  "order": 1,
   "name": "Holding Pattern",
   "difficulty": 2,
-  "description": "The gatekeepers need more time to read the mine signals. Stretch each one-tick pulse into ten ticks of the same sign, then return to zero. Pulses are at least ten ticks apart; a new pulse may arrive exactly when the previous hold ends. A fixed processing delay is allowed. The checker starts at your first nonzero output and then checks every tick, including silence.",
-  "goal": "For every +1 or -1 input pulse, output that value for exactly ten consecutive ticks.",
+  "description": "The gatekeepers need more time to read the mine signals. Stretch each one-tick pulse into ten ticks of the same sign, then return to zero. Pulses are at least ten ticks apart; a new pulse may arrive exactly when the previous hold ends. An initial processing delay is allowed. The checker starts at your first nonzero output and then checks every tick, including silence.",
+  "goal": "For every +1 or -1 input pulse, output that value for exactly 10 consecutive ticks.",
   "cycleLimit": 120,
   "components": [
     {
       "code": "C",
       "price": 2
+    },
+    {
+      "code": "1",
+      "price": 5
+    },
+    {
+      "code": "K",
+      "price": 3
     },
     {
       "code": "I",
@@ -25,81 +33,105 @@
       "price": 10
     },
     {
-      "code": ";",
-      "price": 5
+      "code": "*",
+      "price": 10
+    },
+    {
+      "code": "-",
+      "price": 15
+    },
+    {
+      "code": "T",
+      "price": 10
+    },
+    {
+      "code": "e",
+      "price": 10
+    },
+    {
+      "code": "<",
+      "price": 10
+    },
+    {
+      "code": ">",
+      "price": 10
     },
     {
       "code": "Z",
       "price": 30
+    },
+    {
+      "code": "N",
+      "price": 20
+    },
+    {
+      "code": "m",
+      "price": 0
+    },
+    {
+      "code": "A",
+      "price": 10
+    },
+    {
+      "code": "W",
+      "price": 10
+    },
+    {
+      "code": ";",
+      "price": 5
     }
   ],
   "editableRegions": [
     {
       "x": 4,
-      "y": 2,
+      "y": 1,
       "width": 11,
-      "height": 7
+      "height": 5
     }
   ],
   "initialBoard": {
     "format": "factory2d-board",
     "version": 15,
     "width": 19,
-    "height": 11,
+    "height": 7,
     "tick": 0,
     "result": "in-progress",
     "grid": [
-      "...................",
-      "...................",
-      "...................",
-      "...................",
-      "====...........====",
+      "###################",
+      "####...........####",
+      "####...........####",
       "1UmC...........CmEV",
-      "====...........==g=",
-      "...................",
-      "...................",
-      "...................",
-      "..................."
+      "####...........##g#",
+      "####...........####",
+      "###################"
     ],
     "orientations": [
       {
         "x": 1,
-        "y": 5,
+        "y": 3,
         "direction": "right"
       },
       {
         "x": 17,
-        "y": 5,
+        "y": 3,
         "direction": "right"
       }
     ],
     "mirrored": [
       {
         "x": 1,
-        "y": 5
+        "y": 3
       }
-    ],
-    "welds": [
-      "...................",
-      "...................",
-      "...................",
-      "...................",
-      "+++|...........+++|",
-      "+++|...........+++|",
-      "---............---.",
-      "...................",
-      "...................",
-      "...................",
-      "..................."
     ],
     "components": [
       {
         "x": 1,
-        "y": 5,
+        "y": 3,
         "type": "rom",
         "width": 8,
         "height": 6,
         "cursor": 0,
+        "wrapX": true,
         "wrapY": false,
         "values": [
           1,
@@ -154,24 +186,25 @@
       },
       {
         "x": 2,
-        "y": 5,
+        "y": 3,
         "type": "monitor",
         "label": "INPUT"
       },
       {
         "x": 16,
-        "y": 5,
+        "y": 3,
         "type": "monitor",
         "label": "OUTPUT"
       },
       {
         "x": 17,
-        "y": 5,
+        "y": 3,
         "type": "checker",
         "width": 8,
         "height": 6,
         "cursor": 0,
         "failed": false,
+        "ignoreZeros": false,
         "values": [
           1,
           1,
@@ -225,30 +258,19 @@
       },
       {
         "x": 17,
-        "y": 6,
+        "y": 4,
         "type": "grapher",
         "label": "EXPECTED"
       }
     ],
-    "textBoxes": [
-      {
-        "id": "holding-rule",
-        "x": 0,
-        "y": 0,
-        "width": 19,
-        "height": 2,
-        "owner": "author",
-        "text": "HOLDING PATTERN\nHold each one-tick input for exactly ten ticks, then return to 0."
-      },
-      {
-        "id": "holding-timing",
-        "x": 0,
-        "y": 9,
-        "width": 19,
-        "height": 2,
-        "owner": "author",
-        "text": "Keep the input sign. Pulses are at least ten ticks apart.\nA fixed processing delay is allowed; after the first output, every tick counts."
-      }
+    "welds": [
+      "++++-----------+++|",
+      "+++|...........+++|",
+      "+++|...........+++|",
+      "+++|...........+++|",
+      "+++|...........+++|",
+      "+++|...........+++|",
+      "------------------."
     ]
   },
   "testCases": [
@@ -260,11 +282,12 @@
           "components": [
             {
               "x": 1,
-              "y": 5,
+              "y": 3,
               "type": "rom",
               "width": 8,
               "height": 6,
               "cursor": 0,
+              "wrapX": true,
               "wrapY": false,
               "values": [
                 -1,
@@ -319,24 +342,25 @@
             },
             {
               "x": 2,
-              "y": 5,
+              "y": 3,
               "type": "monitor",
               "label": "INPUT"
             },
             {
               "x": 16,
-              "y": 5,
+              "y": 3,
               "type": "monitor",
               "label": "OUTPUT"
             },
             {
               "x": 17,
-              "y": 5,
+              "y": 3,
               "type": "checker",
               "width": 8,
               "height": 6,
               "cursor": 0,
               "failed": false,
+              "ignoreZeros": false,
               "values": [
                 -1,
                 -1,
@@ -390,7 +414,7 @@
             },
             {
               "x": 17,
-              "y": 6,
+              "y": 4,
               "type": "grapher",
               "label": "EXPECTED"
             }
@@ -406,11 +430,12 @@
           "components": [
             {
               "x": 1,
-              "y": 5,
+              "y": 3,
               "type": "rom",
               "width": 8,
               "height": 6,
               "cursor": 0,
+              "wrapX": true,
               "wrapY": false,
               "values": [
                 1,
@@ -465,24 +490,25 @@
             },
             {
               "x": 2,
-              "y": 5,
+              "y": 3,
               "type": "monitor",
               "label": "INPUT"
             },
             {
               "x": 16,
-              "y": 5,
+              "y": 3,
               "type": "monitor",
               "label": "OUTPUT"
             },
             {
               "x": 17,
-              "y": 5,
+              "y": 3,
               "type": "checker",
               "width": 8,
               "height": 6,
               "cursor": 0,
               "failed": false,
+              "ignoreZeros": false,
               "values": [
                 1,
                 1,
@@ -536,7 +562,7 @@
             },
             {
               "x": 17,
-              "y": 6,
+              "y": 4,
               "type": "grapher",
               "label": "EXPECTED"
             }
@@ -552,11 +578,12 @@
           "components": [
             {
               "x": 1,
-              "y": 5,
+              "y": 3,
               "type": "rom",
               "width": 8,
               "height": 6,
               "cursor": 0,
+              "wrapX": true,
               "wrapY": false,
               "values": [
                 -1,
@@ -611,24 +638,25 @@
             },
             {
               "x": 2,
-              "y": 5,
+              "y": 3,
               "type": "monitor",
               "label": "INPUT"
             },
             {
               "x": 16,
-              "y": 5,
+              "y": 3,
               "type": "monitor",
               "label": "OUTPUT"
             },
             {
               "x": 17,
-              "y": 5,
+              "y": 3,
               "type": "checker",
               "width": 8,
               "height": 6,
               "cursor": 0,
               "failed": false,
+              "ignoreZeros": false,
               "values": [
                 -1,
                 -1,
@@ -682,7 +710,7 @@
             },
             {
               "x": 17,
-              "y": 6,
+              "y": 4,
               "type": "grapher",
               "label": "EXPECTED"
             }
