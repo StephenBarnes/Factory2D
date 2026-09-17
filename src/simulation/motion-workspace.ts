@@ -779,11 +779,13 @@ export class MotionWorkspace {
         : forceY < 0 && (this.bodyFalls[root] === 0 || this.reservingPoweredMotion)
           ? -1
           : 0;
-      if (moveX !== 0 && moveY !== 0) {
-        const horizontal = this.canPushAlongAxis(
+      // Discard braced forces before they can compete with a viable push.
+      // Reservation retains jammed single-axis powered chains against gravity.
+      if (!this.reservingPoweredMotion || moveX !== 0 && moveY !== 0) {
+        const horizontal = moveX === 0 || this.canPushAlongAxis(
           root, moveX < 0 ? Direction.Left : Direction.Right,
         );
-        const vertical = this.canPushAlongAxis(
+        const vertical = moveY === 0 || this.canPushAlongAxis(
           root, moveY < 0 ? Direction.Up : Direction.Down,
         );
         if (!horizontal) moveX = 0;

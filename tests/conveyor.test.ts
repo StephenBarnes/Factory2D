@@ -165,6 +165,37 @@ describe("conveyor belt forces", () => {
     expect(world.idAt(4, 2)).toBe(targetId);
   });
 
+  it("pushes a stone despite its blocked downward belt force, then stops at the boundary", () => {
+    const { world } = deserializeBoard(JSON.stringify({
+      format: "factory2d-board",
+      version: 15,
+      width: 6,
+      height: 6,
+      tick: 0,
+      result: "in-progress",
+      grid: ["......", "......", "......", ".1....", ".B.#..", "######"],
+      welds: ["......", "......", "......", ".|....", "......", "-----."],
+    }));
+    const conveyorId = world.idAt(1, 4);
+    const chargeId = world.idAt(1, 3);
+    const stoneId = world.idAt(3, 4);
+    const simulation = new Simulation(world);
+
+    expect(simulation.step()).toBe(2);
+    expect(world.idAt(2, 4)).toBe(conveyorId);
+    expect(world.idAt(3, 4)).toBe(stoneId);
+    for (const x of [3, 4]) {
+      expect(simulation.step()).toBe(3);
+      expect(world.idAt(x, 4)).toBe(conveyorId);
+      expect(world.idAt(x, 3)).toBe(chargeId);
+      expect(world.isWelded(x, 3, x, 4)).toBe(true);
+      expect(world.idAt(x + 1, 4)).toBe(stoneId);
+    }
+    expect(simulation.step()).toBe(0);
+    expect(world.idAt(4, 4)).toBe(conveyorId);
+    expect(world.idAt(5, 4)).toBe(stoneId);
+  });
+
   it("lets an unsupported powered assembly fall instead of gripping a ceiling", () => {
     const world = new World(8, 7);
     for (let x = 1; x <= 6; x += 1) {
