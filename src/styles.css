@@ -329,6 +329,7 @@ body:has(dialog[open]) .tool-cursor {
   flex: none;
   width: 0.85em;
   height: 0.85em;
+  translate: 0.05em 0.08em;
 }
 
 .sandbox-node,

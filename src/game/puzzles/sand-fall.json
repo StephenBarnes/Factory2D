@@ -8,7 +8,7 @@
   "order": 2,
   "name": "Sand fall",
   "difficulty": "tutorial",
-  "description": "Learn about gravity and sand.",
+  "description": "Learn about gravity and welding.",
   "goal": "Guide one sand block to the delivery box.",
   "cycleLimit": 20,
   "components": [
@@ -47,11 +47,11 @@
     "textBoxes": [
       {
         "id": "4247b3de-c949-44cc-83e6-053b1b36a83d",
-        "x": 0.9093761444091797,
-        "y": 0.44479095935821533,
-        "width": 5.53,
-        "height": 1.26,
-        "text": "Place stone blocks to guide the sand into the delivery box below.\nClick and drag to WELD placed blocks together.\nYou can also use control-click to weld and unweld, or shift-click\nto place a block welded on all sides. Sand cannot be welded.",
+        "x": 1.0780102084901237,
+        "y": 0.6876239087087106,
+        "width": 5.550000000000001,
+        "height": 1.52,
+        "text": "Place stone blocks to guide the sand into the delivery box below.\n\nClick and drag to WELD placed blocks together.\n\nYou can also use control-click or shift-click.",
         "owner": "author"
       }
     ],

@@ -13,6 +13,10 @@
   "cycleLimit": 10,
   "components": [
     {
+      "code": "d",
+      "price": 1
+    },
+    {
       "code": "#",
       "price": 1
     }

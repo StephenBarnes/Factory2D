@@ -87,3 +87,6 @@ The fixed ROM signal sources in these five runelore puzzles face right and are m
 * Simpler manufacturing puzzles before the current iron plates puzzle:
 	* Smelt a single iron block, and deliver it. Put delivery block some distance away, and make the terrain a bit complex, so it's not trivial (just a furnace block pointing at cell above delivery box).
 	* Weld together two stone blocks into 1x2 bodies, and deliver that.
+* Puzzle where there's 3 circuit inputs; in each test case, one is +1 while the rest are zero. The player must manufacture one specific item dependent on the signal, and get it to a delivery box (which accepts a different item in each test case, matching the circuit input). The 3 possible products are similar, made from mostly the same blocks but with slightly different configurations - maybe pickaxes, hammers, and swords. So the key to keeping footprint small is reusing as much of the production system as possible between the 3 possibilities.
+	* Add variants: different sets of products, different degree of overlap, different number of options.
+	* Variant with 2-dimensional signals, e.g. "make a {gold, silver, copper} ring with a {ruby, diamond, sapphire, nothing} on top".
