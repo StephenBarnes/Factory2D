@@ -177,6 +177,80 @@ describe("welder and splitter operations", () => {
   });
 });
 
+describe("dismantler operations", () => {
+  it.each([Direction.Up, Direction.Right, Direction.Down, Direction.Left])(
+    "cuts all four target welds, including its own front weld, facing %s",
+    (orientation) => {
+      const world = new World(5, 5);
+      world.place(2, 2, TileKind.Floatstone);
+      for (const side of [Direction.Up, Direction.Right, Direction.Down, Direction.Left]) {
+        world.place(2 + directionX(side), 2 + directionY(side), TileKind.Platform);
+      }
+      const [x, y] = operatorPosition(orientation);
+      world.place(x, y, TileKind.Dismantler, orientation);
+      const rear = oppositeDirection(orientation);
+      world.place(x + directionX(rear), y + directionY(rear), TileKind.Platform);
+      world.setWeld(x, y, x + directionX(rear), y + directionY(rear), true);
+      for (const side of [Direction.Up, Direction.Right, Direction.Down, Direction.Left]) {
+        expect(world.setWeld(2, 2, 2 + directionX(side), 2 + directionY(side), true)).toBe(true);
+      }
+      const simulation = new Simulation(world);
+
+      simulation.step();
+
+      for (const side of [Direction.Up, Direction.Right, Direction.Down, Direction.Left]) {
+        expect(world.isWelded(2, 2, 2 + directionX(side), 2 + directionY(side))).toBe(false);
+      }
+      expect(world.kindAt(2, 2)).toBe(TileKind.Floatstone);
+      expect(world.isWelded(x, y, x + directionX(rear), y + directionY(rear))).toBe(true);
+      expect(world.chargeAtPort(x, y, rear)).toBe(1);
+      simulation.step();
+      expect(world.chargeAtPort(x, y, rear)).toBe(0);
+    },
+  );
+
+  it("preserves disable and isolated output across saving, then resumes when neutral", () => {
+    const world = new World(3, 3);
+    world.place(1, 0, TileKind.Platform);
+    world.place(1, 1, TileKind.Floatstone);
+    world.place(1, 2, TileKind.Dismantler);
+    world.setWeld(1, 0, 1, 1, true);
+    world.setCharge(1, 2, -1);
+    world.setIsolatedOutputCharge(1, 2, 1);
+    const loaded = deserializeBoard(serializeBoard(world, 0)).world;
+    expect(loaded.chargeAtPort(1, 2, Direction.Down)).toBe(1);
+    const simulation = new Simulation(loaded);
+
+    simulation.step();
+    expect(loaded.isWelded(1, 0, 1, 1)).toBe(true);
+    expect(loaded.chargeAtPort(1, 2, Direction.Down)).toBe(0);
+
+    simulation.step();
+    expect(loaded.isWelded(1, 0, 1, 1)).toBe(false);
+    expect(loaded.chargeAtPort(1, 2, Direction.Down)).toBe(1);
+  });
+
+  it("jams only the edge contested by a welder, cutting uncontested edges", () => {
+    const world = new World(5, 5);
+    world.place(2, 2, TileKind.Floatstone);
+    world.place(2, 1, TileKind.Platform);
+    world.place(3, 2, TileKind.Platform);
+    world.place(2, 3, TileKind.Dismantler);
+    world.place(2, 4, TileKind.Platform);
+    world.place(1, 1, TileKind.Welder, Direction.Right);
+    world.place(1, 2, TileKind.Platform);
+    world.setWeld(2, 2, 2, 1, true);
+    world.setWeld(2, 2, 3, 2, true);
+
+    new Simulation(world).step();
+
+    expect(world.isWelded(2, 2, 2, 1)).toBe(true);
+    expect(world.isWelded(2, 2, 3, 2)).toBe(false);
+    expect(world.chargeAtPort(2, 3, Direction.Down)).toBe(1);
+    expect(world.chargeAtPort(1, 1, Direction.Left)).toBe(0);
+  });
+});
+
 describe("laser splitter operations", () => {
   it.each(
     [Direction.Up, Direction.Right, Direction.Down, Direction.Left].flatMap((orientation) =>
@@ -270,7 +344,7 @@ describe("laser splitter operations", () => {
 });
 
 describe("protected runtime weld edges", () => {
-  it.each([TileKind.Welder, TileKind.Splitter, TileKind.LaserSplitter])(
+  it.each([TileKind.Welder, TileKind.Splitter, TileKind.LaserSplitter, TileKind.Dismantler])(
     "preserves protected edges without pulsing, but permits manual edits for operator %s",
     (kind) => {
       const world = new World(5, 3);

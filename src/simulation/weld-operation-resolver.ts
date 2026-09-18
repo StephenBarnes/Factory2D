@@ -19,7 +19,7 @@ const enum EdgeIntent {
 }
 
 /**
- * Collects welder and splitter requests from one stable topology, rejects
+ * Collects weld operator requests from one stable topology, rejects
  * opposing requests for the same edge, then commits every accepted edge as one
  * phase. Scratch buffers are retained across ticks.
  */
@@ -132,12 +132,15 @@ export class WeldOperationResolver {
       return;
     }
     const laser = kind === TileKind.LaserSplitter;
+    const dismantler = kind === TileKind.Dismantler;
+    const sideCount = laser ? 1 : dismantler ? 4 : 2;
+    const sideStep = dismantler ? 1 : 2;
     const intent = kind === TileKind.Welder ? EdgeIntent.Weld : EdgeIntent.Split;
     let target = this.neighborIndex(index, orientation);
     while (target >= 0) {
       if (laser || this.world.kindAtIndex(target) !== TileKind.Empty) {
-        for (let side = 0; side < (laser ? 1 : 2); side += 1) {
-          const direction = ((leftSide + side * 2) & 3) as Direction;
+        for (let side = 0; side < sideCount; side += 1) {
+          const direction = ((leftSide + side * sideStep) & 3) as Direction;
           const neighbor = this.neighborIndex(target, direction);
           if (neighbor < 0) {
             continue;

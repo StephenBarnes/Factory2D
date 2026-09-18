@@ -1748,6 +1748,7 @@ export class CanvasRenderer {
     switch (kind) {
       case TileKind.Welder:
       case TileKind.Splitter:
+      case TileKind.Dismantler:
       case TileKind.LaserSplitter:
         this.drawWeldOperationPreview(kind, orientation, mirrored);
         break;
@@ -1859,25 +1860,31 @@ export class CanvasRenderer {
       context.restore();
       return;
     }
-    // The operator changes the two transverse edges of its forward neighbor.
-    for (let side = -1; side <= 1; side += 2) {
-      const neighborX = targetX - forwardY * side;
-      const neighborY = targetY + forwardX * side;
+    // Ordinary operators cut transverse edges; dismantlers cut every target edge.
+    const dismantler = kind === TileKind.Dismantler;
+    const sideCount = dismantler ? 4 : 2;
+    const sideStep = dismantler ? 1 : 2;
+    for (let side = 0; side < sideCount; side += 1) {
+      const direction = ((orientation + Direction.Left + side * sideStep) & 3) as Direction;
+      const sideX = directionX(direction);
+      const sideY = directionY(direction);
+      const neighborX = targetX + sideX;
+      const neighborY = targetY + sideY;
       if (
         neighborX < 0 || neighborX >= this.world.width ||
         neighborY < 0 || neighborY >= this.world.height
       ) {
         continue;
       }
-      const centerX = this.originX + (targetX + 0.5 - forwardY * side / 2) * cellSize;
-      const centerY = this.originY + (targetY + 0.5 + forwardX * side / 2) * cellSize;
+      const centerX = this.originX + (targetX + 0.5 + sideX / 2) * cellSize;
+      const centerY = this.originY + (targetY + 0.5 + sideY / 2) * cellSize;
       context.moveTo(
-        centerX - forwardX * cellSize * 0.38,
-        centerY - forwardY * cellSize * 0.38,
+        centerX - sideY * cellSize * 0.38,
+        centerY + sideX * cellSize * 0.38,
       );
       context.lineTo(
-        centerX + forwardX * cellSize * 0.38,
-        centerY + forwardY * cellSize * 0.38,
+        centerX + sideY * cellSize * 0.38,
+        centerY - sideX * cellSize * 0.38,
       );
     }
     context.stroke();

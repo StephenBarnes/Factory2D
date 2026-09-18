@@ -348,7 +348,7 @@ function exportBoardContents(world: World): ExportedBoardContents {
         }
       }
       if (kind === TileKind.Welder || kind === TileKind.Splitter || kind === TileKind.LaserSplitter ||
-          kind === TileKind.Assembler || isProcessingMachine(kind)) {
+          kind === TileKind.Dismantler || kind === TileKind.Assembler || isProcessingMachine(kind)) {
         const outputCharge = world.chargeAtPort(
           x,
           y,
@@ -736,7 +736,7 @@ function importBoardContents(
     }
     const kind = expectDefined(kinds[cellIndex], `tile kind at (${x}, ${y})`) as TileKind;
     if (kind !== TileKind.Welder && kind !== TileKind.Splitter && kind !== TileKind.LaserSplitter &&
-        kind !== TileKind.Assembler && !isProcessingMachine(kind)) {
+        kind !== TileKind.Dismantler && kind !== TileKind.Assembler && !isProcessingMachine(kind)) {
       throw new Error(`${chargeLabel} targets a tile without a separate isolated output`);
     }
     const charge = requireInteger(state.charge, `${chargeLabel} value`, -1, 1) as Charge;

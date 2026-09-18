@@ -71,6 +71,7 @@ export const enum TileKind {
   BlockComparer = 69,
   MagicLink = 70,
   IndestructibleConduit = 71,
+  Dismantler = 72,
 }
 
 export const enum Direction {
@@ -150,6 +151,7 @@ export const enum TileDecorationStyle {
   DelayGate = 57,
   MagicLink = 58,
   IndestructibleConduit = 59,
+  Dismantler = 60,
 }
 
 export const enum PaletteCategory {
@@ -1715,6 +1717,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#625669",
     decorationStyle: TileDecorationStyle.Splitter,
     decorationColor: "#e0b7ee",
+  },
+  [TileKind.Dismantler]: {
+    name: "Dismantler",
+    boardCode: "2",
+    defaultPrice: 15,
+    palette: {
+      order: 75,
+      category: PaletteCategory.Transformation,
+      description: "Removes all four welds of the block ahead; -1 side charge disables it.",
+      extendedDescription: ["Removes every weld around the cell ahead, including a weld to the dismantler itself. Shared side -1 disables it; the isolated rear output pulses +1 only when a weld changes. Opposing welder commands jam only the contested edges.", "Cannot cut an edge between two weld-protected blocks, such as platforms, delivery blocks, or judgment stones."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Right | WeldSide.Down | WeldSide.Left,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.Down,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#705064",
+    decorationStyle: TileDecorationStyle.Dismantler,
+    decorationColor: "#f4bdd5",
   },
   [TileKind.LaserSplitter]: {
     usesMirroring: true,

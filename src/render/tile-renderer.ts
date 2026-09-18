@@ -958,6 +958,7 @@ function drawDecoration(
       break;
     case TileDecorationStyle.Welder:
     case TileDecorationStyle.Splitter:
+    case TileDecorationStyle.Dismantler:
     case TileDecorationStyle.LaserSplitter: {
       context.save();
       context.translate(left + size / 2, top + size / 2);
@@ -991,6 +992,16 @@ function drawDecoration(
         context.moveTo(-size * 0.36, -size * 0.26);
         context.lineTo(-size * 0.28, -size * 0.36);
         context.lineTo(-size * 0.2, -size * 0.26);
+      } else if (definition.decorationStyle === TileDecorationStyle.Dismantler) {
+        context.rect(-size * 0.07, -size * 0.29, size * 0.14, size * 0.14);
+        context.moveTo(-size * 0.15, -size * 0.22);
+        context.lineTo(-size * 0.29, -size * 0.22);
+        context.moveTo(size * 0.15, -size * 0.22);
+        context.lineTo(size * 0.29, -size * 0.22);
+        context.moveTo(0, -size * 0.36);
+        context.lineTo(0, -size * 0.43);
+        context.moveTo(0, -size * 0.08);
+        context.lineTo(0, 0);
       } else {
         context.moveTo(-size * 0.25, -size * 0.26);
         context.lineTo(0, -size * 0.1);

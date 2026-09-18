@@ -291,7 +291,7 @@ export class CircuitResolver {
         continue;
       }
       if (kind === TileKind.Welder || kind === TileKind.Splitter ||
-          kind === TileKind.LaserSplitter || kind === TileKind.Assembler) {
+          kind === TileKind.LaserSplitter || kind === TileKind.Dismantler || kind === TileKind.Assembler) {
         const outputCharge = (kind === TileKind.Assembler
           ? runtime.assemblerResolver.willEmit(index)
           : runtime.weldOperationResolver.successfulOperationIndices[index] === 1) ? 1 : 0;

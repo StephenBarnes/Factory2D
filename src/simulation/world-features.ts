@@ -60,6 +60,7 @@ for (const kind of TILE_KINDS) {
     kind === TileKind.Welder ||
     kind === TileKind.Splitter ||
     kind === TileKind.LaserSplitter ||
+    kind === TileKind.Dismantler ||
     isProcessingMachine(kind)
   ) {
     mask |= 1 << WorldFeature.CircuitSource;
@@ -82,7 +83,8 @@ for (const kind of TILE_KINDS) {
   if (kind === TileKind.Assembler) {
     mask |= 1 << WorldFeature.Assembler | 1 << WorldFeature.WeldedBodyObserver;
   }
-  if (kind === TileKind.Welder || kind === TileKind.Splitter || kind === TileKind.LaserSplitter) {
+  if (kind === TileKind.Welder || kind === TileKind.Splitter ||
+      kind === TileKind.LaserSplitter || kind === TileKind.Dismantler) {
     mask |= 1 << WorldFeature.WeldOperator;
   }
   if (kind === TileKind.Furnace || kind === TileKind.Grinder) {
