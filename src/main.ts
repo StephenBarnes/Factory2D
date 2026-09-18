@@ -1573,6 +1573,11 @@ const navigation = new NavigationController(
       configureComponentPalette();
       refreshPuzzleMetrics();
       const screen = navigation.screen;
+      resetButton.title = screen.kind === "puzzle" ? "Reset (R / Escape)" : "Reset (R)";
+      resetButton.setAttribute("aria-keyshortcuts", screen.kind === "puzzle" ? "R Escape" : "R");
+      nestedViewBackButton.title = screen.kind === "puzzle"
+        ? "Leave this rune array"
+        : "Leave this rune array (Escape)";
       puzzleTests.configure(screen.kind === "puzzle" ? puzzleById(screen.puzzleId) : null);
       if (screen.kind === "sandbox") {
         configureSandboxTestCaseMenu();
@@ -2507,7 +2512,13 @@ document.addEventListener("keydown", (event) => {
     return;
   }
   if (event.key === "Escape") {
-    if (exitRuneArray()) {
+    if (navigation.screen.kind === "puzzle") {
+      if (event.defaultPrevented || event.repeat || event.shiftKey) return;
+      event.preventDefault();
+      if (!resetButton.hidden && !resetButton.disabled) {
+        resetButton.click();
+      }
+    } else if (exitRuneArray()) {
       event.preventDefault();
     }
     return;

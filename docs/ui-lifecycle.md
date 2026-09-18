@@ -70,7 +70,7 @@ Accepted sandbox edits copy the current world to baseline. Puzzle edits transfer
 
 Keep keyboard shortcuts isolated from text entry, modal editing, IME composition, inappropriate modifiers, and held-key repeats. Transport shortcuts respect availability. Menus retain keyboard navigation and Escape/focus-leave/outside-click dismissal. Inspect current event wiring and `e2e/` for exact bindings rather than duplicating shortcut logic.
 
-Escape returns from a puzzle briefing to the main menu and opens Settings from the main menu. Open dialogs retain Escape dismissal without triggering navigation or opening another dialog. These navigation shortcuts ignore text entry, IME composition, modifiers, consumed events, and held-key repeats; workshop Escape behavior is unchanged.
+Escape returns from a puzzle briefing to the main menu and opens Settings from the main menu. In puzzle workshops, Escape invokes the same reset action as R or the Reset button, including from nested-array views; use the nested Back button to leave an array without resetting. Sandbox Escape still leaves nested arrays without resetting simulation. Open dialogs retain Escape dismissal without resetting, triggering navigation, or opening another dialog. These Escape shortcuts ignore text entry, IME composition, modifiers, consumed events, and held-key repeats in puzzle workshops, briefings, and the main menu.
 
 F1 opens About from the main menu and the existing information dialog from a workshop (puzzle information for solutions, puzzle properties for sandboxes). It uses the same text-entry, composition, modifier, consumed-event, repeat, and modal guards. Open dialogs block underlying workshop keyboard edits.
 
