@@ -7,7 +7,7 @@
   "group": "transport",
   "order": 5,
   "name": "Crystal stalactite",
-  "difficulty": 2,
+  "difficulty": 3,
   "description": "A precious ruby has formed on the tip of a stalactite hanging from the roof of this cave.",
   "goal": "Retrieve the ruby and move it to the delivery box.",
   "components": [
@@ -149,7 +149,7 @@
     },
     {
       "code": "}",
-      "price": 30
+      "price": 15
     }
   ],
   "editableRegions": [

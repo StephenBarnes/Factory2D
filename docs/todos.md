@@ -45,6 +45,7 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
 * Implement limited undo/redo in the workshops (when editing puzzle solutions, or editing a sandbox). Probably keep a few previous states in memory. Running/testing should not write to these; it's for undoing modifications. (For sandbox running while editing, it's a bit unclear what the behavior should be. Maybe just advance the ring buffer / list of previous states whenever they edit.) Ideally click-and-drag should count as one action, so can be undone all at once.
 * Add a favicon. Maybe a simple gear character, or `link rel="icon"` to `w3.org/2000/svg` rendering the character, or similar.
+* Investigate what determines the first selected palette block or tool when a new solution is created. Modify behavior to always select the topmost block (not tool) which is enabled, or the selection tool if no blocks are enabled in the palette. Topmost block should be stone for almost all current puzzles. Current behavior causes confusion in the default tutorial flow, because first puzzle has no blocks, weld tool is selected by default, and then in stone-drop the weld tool is still selected despite not being useful in that puzzle.
 
 # Visuals
 

@@ -410,7 +410,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
   [TileKind.MagicLink]: {
     name: "Magic Link",
     boardCode: "}",
-    defaultPrice: 30,
+    defaultPrice: 15,
     palette: {
       order: 73,
       category: PaletteCategory.Motion,
