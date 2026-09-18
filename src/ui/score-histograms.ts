@@ -184,7 +184,7 @@ export function renderScoreHistograms(
   const content = document.createDocumentFragment();
   const heading = element("div", "score-histograms-heading");
   const title = element("h3", "", "Community scores");
-  if (headingStatus !== undefined) title.append(" — ", headingStatus);
+  if (headingStatus !== undefined) title.append(headingStatus);
   heading.append(title);
   const legend = element("div", "score-histograms-legend");
   if (best !== null) legend.append(markerKey("best", "Local best"));

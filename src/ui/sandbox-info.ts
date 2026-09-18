@@ -31,7 +31,7 @@ export class SandboxInfoView {
   }
 
   render(options: SandboxInfoOptions): void {
-    const rows = options.sandboxes.map((sandbox) => this.createSandboxRow(sandbox, options));
+    const rows = options.sandboxes.map((sandbox) => this.createSandboxRow(sandbox, options)).reverse();
     this.sandboxList.replaceChildren(...rows);
     this.emptySandboxes.hidden = rows.length !== 0;
     this.backButton.onclick = options.onBack;

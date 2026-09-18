@@ -40,7 +40,7 @@ import { watchShatterAnimation, type ShatterAnimation } from "../simulation/shat
 import { drawShatterParticles } from "./shatter-particles";
 
 
-const MAX_TILE_SIZE = 64;
+const MAX_TILE_SIZE = 128;
 const MIN_MANUAL_TILE_SIZE = 2;
 const GRID_EDGE_EPSILON = 1e-6;
 const EDITABLE_REGION_DASH_PATTERN = [4, 4];

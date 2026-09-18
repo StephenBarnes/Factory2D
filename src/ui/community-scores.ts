@@ -27,10 +27,10 @@ export class CommunityScoresView {
     onHistogramsLoaded(null);
     this.briefing.hidden = false;
     if (this.client === null) {
-      this.briefing.textContent = "not configured";
+      this.briefing.textContent = " — not configured";
       return;
     }
-    this.briefing.textContent = "loading";
+    this.briefing.textContent = " — loading...";
     try {
       const data = await this.client.histograms(puzzleId);
       if (request === this.briefingRequest) {
@@ -40,7 +40,7 @@ export class CommunityScoresView {
       }
     } catch (error) {
       if (request === this.briefingRequest) {
-        this.briefing.textContent = "unavailable";
+        this.briefing.textContent = " — unavailable";
       }
       console.warn("Could not load community scores:", error);
     }
@@ -89,5 +89,5 @@ export class CommunityScoresView {
 }
 
 function playerCount(players: number): string {
-  return `${players} ${players === 1 ? "player" : "players"}`;
+  return ` — ${players} ${players === 1 ? "player" : "players"}`;
 }

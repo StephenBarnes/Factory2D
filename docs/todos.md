@@ -39,10 +39,10 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 # UI
 
-* Implement undo and redo when editing in the sandbox and puzzle solutions.
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
 * Implement limited undo/redo in the workshops (when editing puzzle solutions, or editing a sandbox). Probably keep a few previous states in memory. Running/testing should not write to these; it's for undoing modifications. (For sandbox running while editing, it's a bit unclear what the behavior should be. Maybe just advance the ring buffer / list of previous states whenever they edit.) Ideally click-and-drag should count as one action, so can be undone all at once.
 * Modify saved puzzle solutions. Currently if the player tests a solution, and succeeds, and presses "back to briefing", and then tries to edit the solution again, it starts in the finished reset state. So they have to click reset before doing anything. We should instead store the state before they started testing. If they duplicate their solution and then click edit, it starts correctly before the run.
+* Currently we name puzzle solutions concisely even when they're repeatedly duplicated, in a way that preserves the lineage, e.g. "Solution 2.1b.2". Apply the same system to sandbox names - currently they have verbose names like "Sandbox 2 Copy Copy 2 Copy" which gets worse the more the player works on a given sandbox. Change it to use the same naming schema we have for puzzle solutions.
 
 # Visuals
 

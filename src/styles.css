@@ -480,7 +480,7 @@ body:has(dialog[open]) .tool-cursor {
 .puzzle-group-list {
   padding: 0 10px 10px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(max(32%, min(100%, 20rem)), 1fr));
   gap: 7px;
 }
 
@@ -3059,8 +3059,7 @@ kbd {
 
 .community-status {
   color: var(--text-muted);
-  font-size: 0.8rem;
-  line-height: 1.5;
+  font-style: italic
 }
 
 #report-community-status {
