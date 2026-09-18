@@ -5,6 +5,7 @@ import { expectDefined } from "../src/util/assert";
 import { Simulation } from "../src/simulation/simulation";
 import { Direction, TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
+import { deserializeBoard } from "../src/simulation/board-export";
 
 interface PoweredPiston {
   y: number;
@@ -57,6 +58,144 @@ function geometry(world: World) {
 }
 
 describe("dependency-ordered piston strokes", () => {
+  it.each(["#..1P##", "#.C1P##", "#1CCP##"])(
+    "extends both chamber pistons vertically first with wiring %s",
+    (wiring) => {
+      const { world } = deserializeBoard(JSON.stringify({
+        format: "factory2d-board", version: 15, width: 7, height: 7,
+        tick: 0, result: "in-progress",
+        grid: ["#######", "#....##", "#.....#", wiring, "#..P..#", "#..#..#", "#######"],
+        orientations: [{ x: 4, y: 3, direction: "right" }, { x: 3, y: 4, direction: "down" }],
+        welds: ["+-----|", "|....-|", "|.....|",
+          wiring === "#..1P##" ? "|..+.-|" : wiring === "#.C1P##" ? "|.-+.-|" : "|--+.-|",
+          "|.....|", "|..|..|", "------."],
+      }));
+      const horizontalId = world.idAt(4, 3);
+      const verticalId = world.idAt(3, 4);
+      const simulation = new Simulation(world);
+      const baseline = world.clone();
+
+      for (let run = 0; run < 2; run += 1) {
+        simulation.step();
+
+        expect(world.kindAt(4, 2)).toBe(TileKind.PistonBase);
+        expect(world.tileAt(5, 2)).toEqual({ kind: TileKind.PistonArm, id: horizontalId });
+        expect(world.kindAt(3, 3)).toBe(TileKind.PistonBase);
+        expect(world.tileAt(3, 4)).toEqual({ kind: TileKind.PistonArm, id: verticalId });
+        expect(world.isWelded(3, 2, 4, 2)).toBe(true);
+        expect(world.isWelded(3, 2, 3, 3)).toBe(true);
+        expect(world.isWelded(4, 2, 5, 2)).toBe(true);
+        expect(world.isWelded(3, 3, 3, 4)).toBe(true);
+        const extended = geometry(world);
+        simulation.step();
+        expect(geometry(world)).toEqual(extended);
+        simulation.resetTo(baseline);
+      }
+    },
+  );
+
+  it.each([false, true])("breaks recoil cycles vertically with vertical reflection %s, either horizontal facing, and either placement order", (flipY) => {
+    for (const reflected of [false, true]) {
+      for (const reversed of [false, true]) {
+        const world = new World(7, 7);
+        const x = (column: number) => reflected ? 6 - column : column;
+        const yAt = (row: number) => flipY ? 6 - row : row;
+        const placements: [number, number, TileKind, Direction][] = [
+          [3, 3, TileKind.FixedCharge, Direction.Up],
+          [4, 3, TileKind.Piston, reflected ? Direction.Left : Direction.Right],
+          [3, 4, TileKind.Piston, flipY ? Direction.Up : Direction.Down],
+          [5, 3, TileKind.Platform, Direction.Up],
+          [3, 5, TileKind.Platform, Direction.Up],
+          [3, 2, TileKind.Floatstone, Direction.Up],
+        ];
+        if (reversed) placements.reverse();
+        for (const [column, y, kind, direction] of placements) {
+          world.place(x(column), yAt(y), kind, direction);
+        }
+        world.setWeld(x(3), 3, x(4), 3, true);
+        world.setWeld(x(3), 3, x(3), yAt(4), true);
+        world.setWeld(x(3), 3, x(3), yAt(2), true);
+        const horizontalId = world.idAt(x(4), 3);
+        const verticalId = world.idAt(x(3), yAt(4));
+
+        new Simulation(world).step();
+
+        expect(world.kindAt(x(4), yAt(2))).toBe(TileKind.PistonBase);
+        expect(world.tileAt(x(5), yAt(2))).toEqual({ kind: TileKind.PistonArm, id: horizontalId });
+        expect(world.kindAt(x(3), 3)).toBe(TileKind.PistonBase);
+        expect(world.tileAt(x(3), yAt(4))).toEqual({ kind: TileKind.PistonArm, id: verticalId });
+      }
+    }
+  });
+
+  it("keeps an acyclic horizontal stroke ahead of the vertical piston carrying it", () => {
+    const world = new World(7, 7);
+    world.place(3, 3, TileKind.FixedCharge);
+    const horizontalId = world.place(4, 3, TileKind.Piston, Direction.Right);
+    const verticalId = world.place(3, 4, TileKind.Piston, Direction.Down);
+    world.place(3, 5, TileKind.Platform);
+    world.place(5, 2, TileKind.Platform);
+    world.setWeld(3, 3, 4, 3, true);
+    world.setWeld(3, 3, 3, 4, true);
+
+    new Simulation(world).step();
+
+    // The horizontal stroke is not cyclic. Its extended arm then blocks upward recoil.
+    expect(world.kindAt(4, 3)).toBe(TileKind.PistonBase);
+    expect(world.tileAt(5, 3)).toEqual({ kind: TileKind.PistonArm, id: horizontalId });
+    expect(world.tileAt(3, 4)).toEqual({ kind: TileKind.Piston, id: verticalId });
+    expect(world.chargeAt(3, 4)).toBe(1);
+  });
+
+  it("leaves same-axis carrying cycles jammed without choosing a scan-order winner", () => {
+    const world = new World(7, 6);
+    world.place(3, 3, TileKind.FixedCharge);
+    for (const x of [2, 4]) {
+      world.place(x, 3, TileKind.Piston, Direction.Down);
+      world.place(x, 4, TileKind.Platform);
+      world.setWeld(x, 3, 3, 3, true);
+    }
+    const before = geometry(world);
+
+    new Simulation(world).step();
+
+    expect(geometry(world)).toEqual(before);
+    expect(world.chargeAt(2, 3)).toBe(1);
+    expect(world.chargeAt(4, 3)).toBe(1);
+  });
+
+  it("does not let a cycle-breaking vertical stroke bypass ordinary collision jams", () => {
+    const world = new World(7, 7);
+    world.place(3, 3, TileKind.FixedCharge);
+    world.place(4, 3, TileKind.Piston, Direction.Right);
+    world.place(3, 4, TileKind.Piston, Direction.Down);
+    world.place(5, 3, TileKind.Platform);
+    world.place(3, 5, TileKind.Platform);
+    world.setWeld(3, 3, 4, 3, true);
+    world.setWeld(3, 3, 3, 4, true);
+    // Both independent heads claim (3, 2), which the vertical recoil also needs.
+    world.place(2, 2, TileKind.Piston, Direction.Right);
+    world.place(1, 2, TileKind.FixedCharge);
+    world.place(0, 2, TileKind.Platform);
+    world.setWeld(2, 2, 1, 2, true);
+    world.setWeld(1, 2, 0, 2, true);
+    world.place(3, 1, TileKind.Piston, Direction.Down);
+    world.place(3, 0, TileKind.FixedCharge);
+    world.place(4, 0, TileKind.Platform);
+    world.setWeld(3, 1, 3, 0, true);
+    world.setWeld(3, 0, 4, 0, true);
+    const before = geometry(world);
+
+    const simulation = new Simulation(world);
+    simulation.step();
+    simulation.step();
+
+    expect(geometry(world)).toEqual(before);
+    for (const [x, y] of [[4, 3], [3, 4], [2, 2], [3, 1]] as const) {
+      expect(world.chargeAt(x, y)).toBe(1);
+    }
+  });
+
   it("extends all three upward strokes in one tick while carrying their sources and identities", () => {
     const world = new World(4, 8);
     const stack = placeUpStack(world, 1, 5, 3);

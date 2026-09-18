@@ -18,6 +18,11 @@ interface Stroke {
   jammed: boolean;
   cells: number[];
   partners: number[];
+  dependencies: number[];
+  dependencyIndex: number;
+  dependencyLow: number;
+  dependencyComponent: number;
+  dependencyCursor: number;
 }
 
 /** One-cell strokes in dependency-ordered rounds; circuits and gravity are not substepped. */
@@ -37,6 +42,8 @@ export class PistonResolver {
   private readonly headWelds: Uint8Array;
   private readonly armIds: Uint32Array;
   private readonly breakingFasteners: number[] = [];
+  private readonly dependencyPath: number[] = [];
+  private readonly dependencyStack: number[] = [];
 
   constructor(private readonly world: World) {
     this.strokeAt = new Int32Array(world.cellCount);
@@ -61,7 +68,13 @@ export class PistonResolver {
       }
       this.chooseReadyStrokes();
       this.resolveConflicts();
-      const progress = this.commit();
+      let progress = this.commit();
+      if (progress === 0) {
+        // Only break carrying cycles after the ordinary dependency rounds stall.
+        this.chooseReadyStrokes(true);
+        this.resolveConflicts();
+        progress = this.commit();
+      }
       if (progress === 0) {
         return movementCount;
       }
@@ -96,7 +109,9 @@ export class PistonResolver {
       let stroke = this.strokes[index];
       if (stroke === undefined) {
         stroke = { base, arm, action, direction, recoil: false, headWelded: false,
-          valid: false, ready: false, parent: index, jammed: false, cells: [], partners: [] };
+          valid: false, ready: false, parent: index, jammed: false, cells: [], partners: [],
+          dependencies: [], dependencyIndex: -1, dependencyLow: -1,
+          dependencyComponent: -1, dependencyCursor: 0 };
         this.strokes.push(stroke);
       }
       stroke.base = base;
@@ -105,8 +120,6 @@ export class PistonResolver {
       stroke.direction = action === 1 ? direction : oppositeDirection(direction);
       stroke.recoil = false;
       stroke.headWelded = this.world.hasWeldAtIndex(action === 1 ? base : arm, direction);
-      stroke.parent = index;
-      stroke.jammed = false;
       stroke.ready = false;
       this.strokeAt[base] = index;
     }
@@ -246,7 +259,10 @@ export class PistonResolver {
     }
   }
 
-  private chooseReadyStrokes(): void {
+  private chooseReadyStrokes(breakCycles = false): void {
+    if (breakCycles) {
+      this.labelDependencyCycles();
+    }
     for (let index = 0; index < this.strokeCount; index += 1) {
       const stroke = expectDefined(this.strokes[index], "piston stroke");
       stroke.ready = stroke.valid;
@@ -255,11 +271,21 @@ export class PistonResolver {
       }
       for (const cell of stroke.cells) {
         const carried = expectDefined(this.strokeAt[cell], "carried piston stroke");
-        if (carried >= 0 && carried !== index &&
-            expectDefined(this.strokes[carried], "carried piston proposal").valid) {
-          stroke.ready = false;
-          break;
+        if (carried < 0 || carried === index) {
+          continue;
         }
+        const dependency = expectDefined(this.strokes[carried], "carried piston proposal");
+        if (!dependency.valid) {
+          continue;
+        }
+        // Remove only vertical-to-horizontal carrying edges inside a cycle.
+        // Acyclic dependencies, same-axis ties, and required partners still wait.
+        if (breakCycles && (stroke.direction & 1) === 0 && (dependency.direction & 1) === 1 &&
+            stroke.dependencyComponent === dependency.dependencyComponent) {
+          continue;
+        }
+        stroke.ready = false;
+        break;
       }
     }
     // Shared-load bundles must be ready together; propagate deferral across
@@ -281,13 +307,85 @@ export class PistonResolver {
         }
       }
     } while (changed);
-    // No ready node in a dependency cycle: conservatively leave that mechanism still.
-    // A blocked carried piston is rigid cargo, not a dependency that must succeed.
+  }
+
+  /** Iterative Tarjan traversal: linear in the stalled dependency graph, without recursion. */
+  private labelDependencyCycles(): void {
+    this.dependencyPath.length = 0;
+    this.dependencyStack.length = 0;
+    for (let index = 0; index < this.strokeCount; index += 1) {
+      const stroke = expectDefined(this.strokes[index], "piston dependency node");
+      stroke.dependencies.length = 0;
+      stroke.dependencyIndex = -1;
+      stroke.dependencyLow = -1;
+      stroke.dependencyComponent = -1;
+      stroke.dependencyCursor = 0;
+      if (!stroke.valid) {
+        continue;
+      }
+      for (const cell of stroke.cells) {
+        const carried = expectDefined(this.strokeAt[cell], "piston dependency index");
+        if (carried >= 0 && carried !== index &&
+            expectDefined(this.strokes[carried], "piston dependency target").valid) {
+          stroke.dependencies.push(carried);
+        }
+      }
+      for (const partner of stroke.partners) {
+        if (expectDefined(this.strokes[partner], "piston dependency partner").valid) {
+          stroke.dependencies.push(partner);
+        }
+      }
+    }
+    let discovery = 0;
+    for (let start = 0; start < this.strokeCount; start += 1) {
+      const root = expectDefined(this.strokes[start], "piston dependency root");
+      if (!root.valid || root.dependencyIndex >= 0) {
+        continue;
+      }
+      this.dependencyPath.push(start);
+      while (this.dependencyPath.length > 0) {
+        const index = expectDefined(this.dependencyPath[this.dependencyPath.length - 1], "piston DFS node");
+        const stroke = expectDefined(this.strokes[index], "piston DFS stroke");
+        if (stroke.dependencyIndex < 0) {
+          stroke.dependencyIndex = discovery++;
+          stroke.dependencyLow = stroke.dependencyIndex;
+          this.dependencyStack.push(index);
+        }
+        if (stroke.dependencyCursor < stroke.dependencies.length) {
+          const target = expectDefined(stroke.dependencies[stroke.dependencyCursor++], "piston DFS edge");
+          const dependency = expectDefined(this.strokes[target], "piston DFS target");
+          if (dependency.dependencyIndex < 0) {
+            this.dependencyPath.push(target);
+          } else if (dependency.dependencyComponent < 0) {
+            stroke.dependencyLow = Math.min(stroke.dependencyLow, dependency.dependencyIndex);
+          }
+          continue;
+        }
+        this.dependencyPath.pop();
+        if (stroke.dependencyLow === stroke.dependencyIndex) {
+          let member: number;
+          do {
+            member = expectDefined(this.dependencyStack.pop(), "piston cycle member");
+            expectDefined(this.strokes[member], "piston cycle stroke").dependencyComponent = index;
+          } while (member !== index);
+        }
+        if (this.dependencyPath.length > 0) {
+          const parent = expectDefined(this.dependencyPath[this.dependencyPath.length - 1], "piston DFS parent");
+          const parentStroke = expectDefined(this.strokes[parent], "piston DFS parent stroke");
+          parentStroke.dependencyLow = Math.min(parentStroke.dependencyLow, stroke.dependencyLow);
+        }
+      }
+    }
   }
 
   private resolveConflicts(): void {
     this.sweepOwners.fill(-1);
     this.destinationOwners.fill(-1);
+    for (let index = 0; index < this.strokeCount; index += 1) {
+      const stroke = expectDefined(this.strokes[index], "piston conflict group");
+      stroke.parent = index;
+      stroke.jammed = false;
+    }
     for (let index = 0; index < this.strokeCount; index += 1) {
       const stroke = expectDefined(this.strokes[index], "piston conflict proposal");
       if (!stroke.ready) {
