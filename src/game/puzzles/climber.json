@@ -6,7 +6,7 @@
   "id": "climber",
   "group": "transport",
   "order": 1,
-  "name": "Climber",
+  "name": "Hill Climber",
   "difficulty": 2,
   "description": "Build a vehicle that can climb over steps.",
   "goal": "Activate the sensor on the right.",

@@ -1430,7 +1430,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 8,
       category: PaletteCategory.Motion,
       description: "Charged roller: +1 clockwise, -1 counterclockwise, 0 stopped.",
-      extendedDescription: ["Moves unwelded neighbors tangentially and applies the opposite reaction to its own body. Gravity takes priority: brace the belt and support its load. Blocked motion can push other movable bodies, but not fixed terrain.", "Mirroring reverses the roller: +1 counterclockwise, -1 clockwise. Mirrored belts show counterclockwise chevrons even when stopped."],
+      extendedDescription: ["Moves unwelded neighbors tangentially and applies the opposite reaction to its own body. Cannot move bodies upwards against gravity. Blocked motion can push other movable bodies.", "Mirroring reverses the roller: +1 counterclockwise, -1 clockwise. Mirrored belts show counterclockwise chevrons even when stopped."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,
