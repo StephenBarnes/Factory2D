@@ -673,6 +673,7 @@ body:has(dialog[open]) .tool-cursor {
   color: var(--gold);
   font-size: 0.85rem;
   line-height: 1.5;
+  font-family: var(--font-display);
 }
 
 .puzzle-info-description {
@@ -707,8 +708,7 @@ body:has(dialog[open]) .tool-cursor {
 
 .puzzle-goal strong {
   color: var(--text-body);
-  font-family: var(--font-display);
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   line-height: 1.5;
 }
 

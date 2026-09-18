@@ -16,6 +16,9 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 * Modify the assembler to add a pushing force for output: When it has a pending output, but no space to output, attempt to push the blocks away so that it can produce output; failing that, try to push the assembler itself in its forwards direction, so the product can be emitted out the back (at assembler's pre-movement position) in the same tick.
 * Modify the duplicator in the same way as assembler above - make it also attempt to push itself away from the output side, if it's trying to duplicate a single-tile body but there's something blocking the output. When duplicating multi-tile bodies, don't do this - require already empty space for the whole body.
+* Adjust piston physics. If a downward-facing piston is extended, with its arm on the ground and the body one block above, and then retracts, the piston should try to move its body downward onto the arm, rather than moving the arm upward (which leaves the contraption levitating for one tick, only falling back down on the next tick).
+* Allow welding blocks to the front face of a rotator block. When it rotates, it should treat the body there the same way it currently treats a non-welded body, rotating it around the rotator itself (unless it's joined to the rotator's own body via some other path, in which case we should prevent rotating).
+* Potentially allow configuring the initial state of stateful blocks like the rotator (initial head facing) and piston (whether to start expanded or retracted), maybe using some hotkey to toggle. Would require other changes: for the rotator, once we allow welding to the front/head this initial rotation determines which side can be welded to; for the piston, things like the cost of all placed components is a bit weird; may have to add a special case like piston heads and bodies each having half the price of ordinary retracted body-and-head piston blocks, but still hide body and arm separate blocks from the palette.
 
 # Performance
 
@@ -38,12 +41,15 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 * Implement undo and redo when editing in the sandbox and puzzle solutions.
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
+* In the puzzle briefing screen, draw the score colors by their mineral rank. So for example if price is mithril tier while combined score is coal, draw those with different colors. Use the current color for coal tier so it's still visible, in dark mode; use silver/gold/blue for iron/gold/mithril.
+* On the main menu, color completed puzzles' buttons by the grade of the player's best solution. Ideally do this without making a get request for each puzzle every time we load the main menu.
 
 # Visuals
 
 ## Animations
 
 * Add animation for the delivery box, assembler, duplicator, lock gate. When they consume a body, animate the body shrinking, moving towards the block, and lowering opacity until it vanishes. When they produce a body, animate the opposite.
+* Improve the animation when a piston extends and retracts. Currently when retracting, the background of the arm block disappears instantly, which looks like a gap for a split-second until the arm reaches back into the base. Also, when extending, the arm block is drawn as unwelded to the base, until the animation completes; this also looks like a gap appears and then vanishes.
 
 # Content
 

@@ -164,48 +164,62 @@ describe("dependency-ordered piston strokes", () => {
     expect(world.chargeAt(4, 3)).toBe(1);
   });
 
-  it("alternates head-welded downward pistons instead of deadlocking a pull against recoil", () => {
+  it.each([false, true])("alternates head-welded downward pistons with a welded head load: %s", (headLoad) => {
+    const offset = headLoad ? 1 : 0;
     const { world } = deserializeBoard(JSON.stringify({
-      format: "factory2d-board", version: 15, width: 5, height: 7, tick: 0, result: "in-progress",
-      grid: [".....", ".....", ".....", "..1U.", "...P.", ".1UP.", "#####"],
+      format: "factory2d-board", version: 15, width: 5, height: headLoad ? 9 : 7, tick: 0, result: "in-progress",
+      grid: headLoad
+        ? [".....", ".....", ".....", ".....", "..1U.", "...P.", ".1UP.", "...#.", "#####"]
+        : [".....", ".....", ".....", "..1U.", "...P.", ".1UP.", "#####"],
       orientations: [
-        { x: 3, y: 3, direction: "right" }, { x: 3, y: 4, direction: "down" },
-        { x: 2, y: 5, direction: "right" }, { x: 3, y: 5, direction: "down" },
+        { x: 3, y: 3 + offset, direction: "right" }, { x: 3, y: 4 + offset, direction: "down" },
+        { x: 2, y: 5 + offset, direction: "right" }, { x: 3, y: 5 + offset, direction: "down" },
       ],
       components: [
-        { x: 3, y: 3, type: "rom", width: 2, height: 1, cursor: 0,
+        { x: 3, y: 3 + offset, type: "rom", width: 2, height: 1, cursor: 0,
           wrapX: true, wrapY: true, values: [1, -1] },
-        { x: 2, y: 5, type: "rom", width: 2, height: 1, cursor: 0,
+        { x: 2, y: 5 + offset, type: "rom", width: 2, height: 1, cursor: 0,
           wrapX: true, wrapY: true, values: [-1, 1] },
       ],
-      welds: [".....", ".....", ".....", "..-|.", "...|.", ".--..", "----."],
+      welds: headLoad
+        ? [".....", ".....", ".....", ".....", "..-|.", "...|.", ".--|.", ".....", "----."]
+        : [".....", ".....", ".....", "..-|.", "...|.", ".--..", "----."],
     }));
-    const upperId = world.idAt(3, 4);
-    const lowerId = world.idAt(3, 5);
-    const upperRomId = world.idAt(3, 3);
-    const lowerRomId = world.idAt(2, 5);
+    const upperId = world.idAt(3, 4 + offset);
+    const lowerId = world.idAt(3, 5 + offset);
+    const upperRomId = world.idAt(3, 3 + offset);
+    const lowerRomId = world.idAt(2, 5 + offset);
+    const headId = headLoad ? world.idAt(3, 7) : 0;
     const simulation = new Simulation(world);
 
     for (let cycle = 0; cycle < 3; cycle += 1) {
       simulation.step();
       // Later cycles briefly lose floor contact; gravity settles them next tick.
-      const lift = cycle === 0 ? 0 : 1;
+      const lift = (cycle === 0 ? 0 : 1) - offset;
       expect(world.kindAt(3, 3 - lift)).toBe(TileKind.PistonBase);
       expect(world.tileAt(3, 4 - lift)).toEqual({ kind: TileKind.PistonArm, id: upperId });
       expect(world.tileAt(3, 5 - lift)).toEqual({ kind: TileKind.Piston, id: lowerId });
       expect(world.idAt(3, 2 - lift)).toBe(upperRomId);
       expect(world.idAt(2, 5 - lift)).toBe(lowerRomId);
       expect(world.isWelded(3, 4 - lift, 3, 5 - lift)).toBe(true);
+      if (headLoad) {
+        expect(world.tileAt(3, 6 - lift)).toEqual({ kind: TileKind.Stone, id: headId });
+        expect(world.isWelded(3, 5 - lift, 3, 6 - lift)).toBe(true);
+      }
 
       simulation.step();
-      expect(world.tileAt(3, 3)).toEqual({ kind: TileKind.Piston, id: upperId });
-      expect(world.kindAt(3, 4)).toBe(TileKind.PistonBase);
-      expect(world.tileAt(3, 5)).toEqual({ kind: TileKind.PistonArm, id: lowerId });
-      expect(world.idAt(3, 2)).toBe(upperRomId);
-      expect(world.idAt(2, 4)).toBe(lowerRomId);
-      expect(world.isWelded(3, 3, 3, 4)).toBe(true);
-      expect(world.isWelded(3, 4, 3, 5)).toBe(true);
-      expect(world.isWelded(2, 4, 3, 4)).toBe(true);
+      expect(world.tileAt(3, 3 + offset)).toEqual({ kind: TileKind.Piston, id: upperId });
+      expect(world.kindAt(3, 4 + offset)).toBe(TileKind.PistonBase);
+      expect(world.tileAt(3, 5 + offset)).toEqual({ kind: TileKind.PistonArm, id: lowerId });
+      expect(world.idAt(3, 2 + offset)).toBe(upperRomId);
+      expect(world.idAt(2, 4 + offset)).toBe(lowerRomId);
+      expect(world.isWelded(3, 3 + offset, 3, 4 + offset)).toBe(true);
+      expect(world.isWelded(3, 4 + offset, 3, 5 + offset)).toBe(true);
+      expect(world.isWelded(2, 4 + offset, 3, 4 + offset)).toBe(true);
+      if (headLoad) {
+        expect(world.tileAt(3, 7)).toEqual({ kind: TileKind.Stone, id: headId });
+        expect(world.isWelded(3, 6, 3, 7)).toBe(true);
+      }
     }
   });
 
@@ -225,7 +239,8 @@ describe("dependency-ordered piston strokes", () => {
           [0, 0, TileKind.PistonBase, direction],
           [1, 0, TileKind.PistonArm, direction],
           [2, 0, TileKind.Piston, direction],
-          [3, 0, TileKind.Platform, Direction.Up],
+          [3, 0, TileKind.Stone, Direction.Up],
+          [4, 0, TileKind.Platform, Direction.Up],
           [0, 1, TileKind.Inverter, (direction + 3) % 4],
           [0, 2, TileKind.FixedCharge, Direction.Up],
           [0, -1, TileKind.Floatstone, Direction.Up],
@@ -237,6 +252,7 @@ describe("dependency-ordered piston strokes", () => {
         }
         world.setWeld(...point(0), ...point(1), true);
         world.setWeld(...point(1), ...point(2), true);
+        world.setWeld(...point(2), ...point(3), true);
         world.setWeld(...point(0), ...point(0, 1), true);
         world.setWeld(...point(0, 1), ...point(0, 2), true);
         world.setWeld(...point(0), ...point(0, -1), true);
@@ -245,6 +261,7 @@ describe("dependency-ordered piston strokes", () => {
         const pullingId = world.idAt(...point(1));
         const extendingId = world.idAt(...point(2));
         const carriedSourceId = world.idAt(...point(2, 1));
+        const loadId = world.idAt(...point(3));
 
         new Simulation(world).step();
 
@@ -255,8 +272,48 @@ describe("dependency-ordered piston strokes", () => {
         expect(world.isWelded(...point(0), ...point(1))).toBe(true);
         expect(world.isWelded(...point(1), ...point(2))).toBe(true);
         expect(world.isWelded(...point(1), ...point(1, 1))).toBe(true);
+        expect(world.tileAt(...point(3))).toEqual({ kind: TileKind.Stone, id: loadId });
+        expect(world.isWelded(...point(2), ...point(3))).toBe(true);
       }
     }
+  });
+
+  it("still jams cargo collisions after prioritizing a nested pull over recoil", () => {
+    const world = new World(9, 7);
+    world.place(4, 3, TileKind.PistonBase, Direction.Right);
+    world.place(5, 3, TileKind.PistonArm, Direction.Right);
+    world.place(6, 3, TileKind.Piston, Direction.Right);
+    world.place(7, 3, TileKind.Stone);
+    world.place(8, 3, TileKind.Platform);
+    world.place(4, 2, TileKind.Inverter, Direction.Down);
+    world.place(4, 1, TileKind.FixedCharge);
+    world.place(3, 3, TileKind.Floatstone);
+    world.place(6, 4, TileKind.FixedCharge);
+    for (const [x, y, otherX, otherY] of [
+      [4, 3, 5, 3], [5, 3, 6, 3], [6, 3, 7, 3], [4, 3, 4, 2],
+      [4, 2, 4, 1], [4, 3, 3, 3], [6, 3, 6, 4],
+    ] as const) {
+      world.setWeld(x, y, otherX, otherY, true);
+    }
+    world.setCharge(4, 1, 1);
+    // Two independent extensions contest (5, 4), where the pull carries its source.
+    world.place(5, 5, TileKind.Piston, Direction.Up);
+    world.place(5, 6, TileKind.FixedCharge);
+    world.place(6, 5, TileKind.Platform);
+    world.setWeld(5, 5, 5, 6, true);
+    world.setWeld(5, 5, 6, 5, true);
+    world.place(4, 4, TileKind.Piston, Direction.Right);
+    world.place(3, 4, TileKind.FixedCharge);
+    world.place(3, 5, TileKind.Platform);
+    world.setWeld(4, 4, 3, 4, true);
+    world.setWeld(3, 4, 3, 5, true);
+    const before = geometry(world);
+
+    new Simulation(world).step();
+
+    expect(geometry(world)).toEqual(before);
+    expect(world.chargeAt(4, 3)).toBe(-1);
+    expect(world.chargeAt(6, 3)).toBe(1);
   });
 
   it("does not let a cycle-breaking vertical stroke bypass ordinary collision jams", () => {

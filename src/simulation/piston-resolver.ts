@@ -263,21 +263,33 @@ export class PistonResolver {
     }
   }
 
-  /** A strictly nested translation can finish before its rigid carrier moves. */
-  private movesStrictSubset(stroke: Stroke, carrier: Stroke): boolean {
-    if (stroke.direction !== carrier.direction || stroke.cells.length >= carrier.cells.length) {
+  /** Order nested pending actuators, not their passive cargo, before a rigid carrier. */
+  private carriesStrictSubset(stroke: Stroke, carrier: Stroke): boolean {
+    if (stroke.direction !== carrier.direction) {
       return false;
     }
     this.beginVisit();
+    let carrierCount = 0;
     for (const cell of carrier.cells) {
-      this.visited[cell] = this.visit;
+      const index = expectDefined(this.strokeAt[cell], "carrier piston index");
+      if (index >= 0 && expectDefined(this.strokes[index], "carrier piston stroke").valid) {
+        this.visited[cell] = this.visit;
+        carrierCount += 1;
+      }
     }
+    let carriedCount = 0;
     for (const cell of stroke.cells) {
+      const index = expectDefined(this.strokeAt[cell], "nested piston index");
+      if (index < 0 || !expectDefined(this.strokes[index], "nested piston stroke").valid) {
+        continue;
+      }
       if (this.visited[cell] !== this.visit) {
         return false;
       }
+      carriedCount += 1;
     }
-    return true;
+    // Include an actuator's own base when recoil moves it, unlike a stationary-base pull.
+    return carriedCount < carrierCount;
   }
 
   private chooseReadyStrokes(breakCycles = false): void {
@@ -300,10 +312,10 @@ export class PistonResolver {
           continue;
         }
         // Inside a cycle, finish nested same-direction motion before its carrier.
-        // Equal/overlapping loads still tie; perpendicular ties retain vertical priority.
+        // Equal/overlapping actuator sets tie; perpendicular ties retain vertical priority.
         // Acyclic dependencies and required partners always remain binding.
         if (breakCycles && stroke.dependencyComponent === dependency.dependencyComponent &&
-            (this.movesStrictSubset(stroke, dependency) ||
+            (this.carriesStrictSubset(stroke, dependency) ||
               (stroke.direction & 1) === 0 && (dependency.direction & 1) === 1)) {
           continue;
         }

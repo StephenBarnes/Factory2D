@@ -44,8 +44,6 @@
 
 ## Puzzle briefing screen
 
-* DEFER Later instead of a gold highlight, choose color according to a grade decided by percentile on the histogram - iron, gold, diamond, mithril. Also, on the main menu, color completed puzzles' buttons by the grade of the player's best solution.
-* DEFER Also style the 4 scores of each solution according to their grade in the histogram for that specific metric.
 * DEFER Add text and art in the puzzle briefing - write a story to explain why the player is solving this puzzle.
 
 # Visuals
