@@ -11,7 +11,7 @@ import { CommunityClient } from "./game/community-client";
 import { getInstallationId } from "./game/installation-id";
 import { parsePuzzleFile } from "./game/puzzle-format";
 import { CommunityScoresView } from "./ui/community-scores";
-import { bestPuzzleScores } from "./game/score-histogram";
+import { bestPuzzleScores, scoreStanding } from "./game/score-histogram";
 import {
   clearPlayerData,
   replacePlayerData,
@@ -101,7 +101,7 @@ const sessions = new WorkshopSessionController(createSandboxWorld());
 const installationId = getInstallationId(window.localStorage);
 const communityApiUrl = import.meta.env.VITE_COMMUNITY_API_URL?.trim();
 const community = communityApiUrl
-  ? new CommunityClient(communityApiUrl, installationId)
+  ? new CommunityClient(communityApiUrl, installationId, window.localStorage)
   : null;
 const communityScores = new CommunityScoresView(
   community,
@@ -1546,6 +1546,12 @@ const navigation = new NavigationController(
   },
   {
     stopSimulation: stopWorkshopActivity,
+    getCachedPuzzleStanding: async (puzzleId) => {
+      const best = bestPuzzleScores(savedSolutions.forPuzzle(puzzleId).map((solution) => solution.scores));
+      if (community === null || best === null) return null;
+      const data = await community.cachedHistograms(puzzleId);
+      return data === null ? null : scoreStanding(data.metrics.combined, best.combined);
+    },
     onPuzzleInfoShown: (puzzleId, onHistogramsLoaded) => {
       const best = bestPuzzleScores(savedSolutions.forPuzzle(puzzleId).map((solution) => solution.scores));
       void communityScores.showBriefing(puzzleId, best, onHistogramsLoaded);

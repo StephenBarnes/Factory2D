@@ -17,7 +17,7 @@ import type { SandboxPuzzleProperties } from "./sandbox-puzzle-authoring";
 import type { SavedSandboxController } from "./saved-sandbox-controller";
 import type { SavedSolutionController } from "./saved-solution-controller";
 import type { PuzzleScores } from "./puzzle-scores";
-import { bestPuzzleScores } from "./score-histogram";
+import { bestPuzzleScores, type ScoreStanding } from "./score-histogram";
 import type { WorkshopSessionController } from "./workshop-session";
 import { populatePuzzleMap } from "../ui/main-menu";
 import { PuzzleInfoView } from "../ui/puzzle-info";
@@ -44,6 +44,7 @@ export interface NavigationElements {
 
 export interface NavigationCallbacks {
   readonly stopSimulation: () => void;
+  readonly getCachedPuzzleStanding: (puzzleId: PuzzleId) => Promise<ScoreStanding | null>;
   readonly onWorkshopSessionChanged: () => void;
   readonly onWorkshopShown: () => void;
   readonly onSandboxPropertiesChanged: (properties: SandboxPuzzleProperties) => void;
@@ -153,6 +154,7 @@ export class NavigationController {
         puzzles: PUZZLES,
         completedPuzzleIds: this.completedPuzzleIds,
         allPuzzlesUnlocked: this.allPuzzlesUnlocked,
+        getCachedStanding: this.callbacks.getCachedPuzzleStanding,
         onSelectPuzzle: (puzzleId) => {
           this.navigate({ kind: "puzzle-info", puzzleId });
         },

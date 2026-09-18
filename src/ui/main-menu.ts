@@ -6,12 +6,15 @@ import {
 } from "../game/puzzles";
 import { PUZZLE_GROUPS } from "../game/puzzle-groups";
 import { PUZZLE_DIFFICULTIES } from "../game/puzzle-difficulty";
+import { formatPuzzleScore } from "./puzzle-score-format";
+import type { ScoreStanding } from "../game/score-histogram";
 
 export interface MainMenuOptions {
   readonly puzzles: readonly PuzzleDefinition[];
   readonly completedPuzzleIds: ReadonlySet<PuzzleId>;
   readonly allPuzzlesUnlocked: boolean;
   readonly onSelectPuzzle: (id: PuzzleId) => void;
+  readonly getCachedStanding: (id: PuzzleId) => Promise<ScoreStanding | null>;
 }
 
 export function populatePuzzleMap(container: HTMLElement, options: MainMenuOptions): void {
@@ -107,6 +110,16 @@ export function populatePuzzleMap(container: HTMLElement, options: MainMenuOptio
           : "🔒 LOCKED";
 
       button.append(name, difficulty, status);
+      if (completed) {
+        void options.getCachedStanding(puzzle.id).then((standing) => {
+          if (standing === null) return;
+          button.dataset.scoreMineral = standing.mineral;
+          status.textContent = `✓ ${standing.mineral.toUpperCase()}`;
+          button.title = `Complete · Best combined score: ${standing.mineral} · Percentile ${formatPuzzleScore(standing.percentile)}${standing.players < 10 ? " · provisional" : ""}. Based on the last loaded community scores; open the briefing to refresh.`;
+        }).catch((error: unknown) => {
+          console.error("Could not load puzzle menu grade:", error);
+        });
+      }
       if (puzzleUnlocked) {
         button.addEventListener("click", () => options.onSelectPuzzle(puzzle.id));
       }

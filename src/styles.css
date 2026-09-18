@@ -554,6 +554,18 @@ body:has(dialog[open]) .tool-cursor {
   border-color: var(--bronze);
 }
 
+.puzzle-node[data-state="completed"][data-score-mineral] {
+  border-color: var(--score-mineral-color, var(--text-muted));
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--score-mineral-color, var(--text-muted)) 12%, var(--panel-bg)),
+    var(--panel-bg) 70%);
+}
+
+.puzzle-node[data-state="completed"][data-score-mineral] .puzzle-name,
+.puzzle-node[data-state="completed"][data-score-mineral] .puzzle-status {
+  color: var(--score-mineral-color, var(--text-muted));
+}
+
 .main-menu-actions {
   margin-bottom: 32px;
   padding-right: 100px;

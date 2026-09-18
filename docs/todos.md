@@ -41,7 +41,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 * Implement undo and redo when editing in the sandbox and puzzle solutions.
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
-* On the main menu, color completed puzzles' buttons by the grade of the player's best solution. Ideally do this without making a get request for each puzzle every time we load the main menu.
 
 # Visuals
 

@@ -13,7 +13,11 @@ export class CommunityClient {
   private readonly baseUrl: string;
   private readonly revisions = new Map<string, Promise<string>>();
 
-  constructor(baseUrl: string, private readonly installationId: string) {
+  constructor(
+    baseUrl: string,
+    private readonly installationId: string,
+    private readonly storage: Pick<Storage, "getItem" | "setItem">,
+  ) {
     const url = new URL(baseUrl);
     if (url.protocol !== "https:" && !(url.protocol === "http:" &&
       ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname))) {
@@ -29,6 +33,37 @@ export class CommunityClient {
     const puzzleRevision = await this.revision(puzzleId);
     const query = new URLSearchParams({ revision: puzzleRevision, scoringVersion: String(API_SCORING_VERSION) });
     const value = await this.request(`/v1/puzzles/${encodeURIComponent(puzzleId)}/histograms?${query}`);
+    const data = this.parseHistograms(value, puzzleId, puzzleRevision);
+    try {
+      this.storage.setItem(this.histogramCacheKey(puzzleId), JSON.stringify(data));
+    } catch (error) {
+      console.warn("Could not cache community scores:", error);
+    }
+    return data;
+  }
+
+  /** Menu grades reuse the last fetched cohort without issuing any HTTP requests. */
+  async cachedHistograms(puzzleId: string): Promise<PuzzleHistograms | null> {
+    const puzzleRevision = await this.revision(puzzleId);
+    try {
+      const cached = this.storage.getItem(this.histogramCacheKey(puzzleId));
+      if (cached === null) return null;
+      const value = requireObject(JSON.parse(cached));
+      if (value.puzzleRevision !== puzzleRevision || value.scoringVersion !== API_SCORING_VERSION) {
+        return null;
+      }
+      return this.parseHistograms(value, puzzleId, puzzleRevision);
+    } catch (error) {
+      console.warn("Could not read cached community scores:", error);
+      return null;
+    }
+  }
+
+  private histogramCacheKey(puzzleId: string): string {
+    return `factory2d.community-histograms:${encodeURIComponent(this.baseUrl)}:${encodeURIComponent(puzzleId)}`;
+  }
+
+  private parseHistograms(value: unknown, puzzleId: string, puzzleRevision: string): PuzzleHistograms {
     const data = requireObject(value);
     const metrics = requireObject(data.metrics);
     if (data.puzzleId !== puzzleId || data.puzzleRevision !== puzzleRevision ||
