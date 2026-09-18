@@ -48,6 +48,8 @@ Each tick collects intents throughout the root/nested-board tree, resolves circu
 
 Dedicated `*-resolver.ts` files own machine intent collection and commits. `MotionWorkspace` shares conveyor/thruster force collection and dependency/conflict resolution; reuse that machinery rather than introducing order-dependent pushing.
 
+`TileDefinition.runtimeWeldProtected` marks platforms, indestructible channels, and delivery boxes. Welders, splitters, and laser splitters cannot create or remove an edge when both endpoints carry this flag; an edge with only one protected endpoint remains eligible. Rejected edges produce no change pulse, and laser beams continue past them. This restriction lives in the machine resolver, not `World.canWeld`/`setWeld`, so manual sandbox/solution editing remains unrestricted by the flag. Protection is tile-kind metadata, independent of destruction immunity, with no serialized state.
+
 An empty rotator grip turns without anchoring its base or competing with body turns. Commit these grip-only direction changes before accepted cell rotations, so a carrier transforms the updated direction along with the carried rotator's orientation. Nonempty competing turns still jam.
 
 Mirrored assemblers swap control/output sides and match a separately precomputed reflected recipe set. Recipe geometry, weld ownership, component handedness, and product orientations reflect before rotation. Pending outputs retain their own handedness through subsequent machine transforms and emission.

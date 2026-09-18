@@ -11,8 +11,8 @@ import {
 } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
 
-function placeTransversePlatforms(world: World, orientation: Direction): void {
-  world.place(2, 2, TileKind.Platform);
+function placeTransverseTargets(world: World, orientation: Direction): void {
+  world.place(2, 2, TileKind.Floatstone);
   if (orientation === Direction.Up || orientation === Direction.Down) {
     world.place(1, 2, TileKind.Platform);
     world.place(3, 2, TileKind.Platform);
@@ -43,7 +43,7 @@ describe("welder and splitter operations", () => {
     Direction.Left,
   ])("welds both edges transverse to orientation %s", (orientation) => {
     const world = new World(5, 5);
-    placeTransversePlatforms(world, orientation);
+    placeTransverseTargets(world, orientation);
     const [operatorX, operatorY] = operatorPosition(orientation);
     world.place(operatorX, operatorY, TileKind.Welder, orientation);
 
@@ -60,7 +60,7 @@ describe("welder and splitter operations", () => {
 
   it("splits both transverse welds", () => {
     const world = new World(5, 5);
-    placeTransversePlatforms(world, Direction.Up);
+    placeTransverseTargets(world, Direction.Up);
     world.place(2, 3, TileKind.Splitter, Direction.Up);
     world.place(2, 4, TileKind.Platform);
     world.setWeld(1, 2, 2, 2, true);
@@ -75,7 +75,7 @@ describe("welder and splitter operations", () => {
 
   it("rejects opposing requests for the same edge and pulses neither operator", () => {
     const world = new World(5, 4);
-    world.place(2, 2, TileKind.Platform);
+    world.place(2, 2, TileKind.Floatstone);
     world.place(3, 2, TileKind.Platform);
     world.place(2, 3, TileKind.Welder, Direction.Up);
     world.place(3, 1, TileKind.Splitter, Direction.Down);
@@ -102,7 +102,7 @@ describe("welder and splitter operations", () => {
 
   it("reads one shared side network and disables only on -1", () => {
     const disabled = new World(5, 4);
-    placeTransversePlatforms(disabled, Direction.Up);
+    placeTransverseTargets(disabled, Direction.Up);
     disabled.place(2, 3, TileKind.Welder, Direction.Up);
     disabled.setCharge(2, 3, -1);
 
@@ -130,7 +130,7 @@ describe("welder and splitter operations", () => {
     world.place(0, 3, TileKind.Conduit);
     world.place(1, 3, TileKind.Welder, Direction.Right);
     world.place(2, 2, TileKind.Platform);
-    world.place(2, 3, TileKind.Platform);
+    world.place(2, 3, TileKind.Stone);
     world.setWeld(0, 3, 1, 3, true);
     const simulation = new Simulation(world);
 
@@ -183,7 +183,7 @@ describe("laser splitter operations", () => {
       [false, true].map((mirrored) => ({ orientation, mirrored })),
     ),
   )(
-    "cuts only local-left welds through gaps facing $orientation, mirrored $mirrored",
+    "cuts local-left welds through gaps and protected edges facing $orientation, mirrored $mirrored",
     ({ orientation, mirrored }) => {
       const world = new World(9, 9);
       const dx = directionX(orientation);
@@ -197,7 +197,7 @@ describe("laser splitter operations", () => {
       for (const distance of [1, 3, 4]) {
         const x = 4 + dx * distance;
         const y = 4 + dy * distance;
-        world.place(x, y, TileKind.Platform);
+        world.place(x, y, distance === 3 ? TileKind.Platform : TileKind.Floatstone);
         world.place(x + lx, y + ly, TileKind.Platform);
         world.place(x - lx, y - ly, TileKind.Platform);
         world.setWeld(x, y, x + lx, y + ly, true);
@@ -208,9 +208,9 @@ describe("laser splitter operations", () => {
       for (const distance of [1, 3, 4]) {
         const x = 4 + dx * distance;
         const y = 4 + dy * distance;
-        expect(world.isWelded(x, y, x + lx, y + ly)).toBe(false);
+        expect(world.isWelded(x, y, x + lx, y + ly)).toBe(distance === 3);
         expect(world.isWelded(x, y, x - lx, y - ly)).toBe(true);
-        expect(world.kindAt(x, y)).toBe(TileKind.Platform);
+        expect(world.kindAt(x, y)).toBe(distance === 3 ? TileKind.Platform : TileKind.Floatstone);
       }
       expect(world.isWelded(4, 4, 4 - dx, 4 - dy)).toBe(true);
       expect(world.chargeAtPort(4, 4, oppositeDirection(orientation))).toBe(1);
@@ -222,7 +222,7 @@ describe("laser splitter operations", () => {
   it("jams contested edges without blocking the rest of overlapping beams", () => {
     const world = new World(5, 8);
     for (const y of [0, 1]) {
-      world.place(2, y, TileKind.Platform);
+      world.place(2, y, TileKind.Floatstone);
       world.place(3, y, TileKind.Platform);
       world.setWeld(2, y, 3, y, true);
     }
@@ -249,7 +249,7 @@ describe("laser splitter operations", () => {
 
   it("preserves independent disable and output charges on import, then resumes cutting", () => {
     const world = new World(4, 4);
-    world.place(1, 0, TileKind.Platform);
+    world.place(1, 0, TileKind.Floatstone);
     world.place(2, 0, TileKind.Platform);
     world.setWeld(1, 0, 2, 0, true);
     world.place(2, 3, TileKind.LaserSplitter, Direction.Up);
@@ -267,6 +267,36 @@ describe("laser splitter operations", () => {
     expect(imported.isWelded(1, 0, 2, 0)).toBe(false);
     expect(imported.chargeAtPort(2, 3, Direction.Down)).toBe(1);
   });
+});
+
+describe("protected runtime weld edges", () => {
+  it.each([TileKind.Welder, TileKind.Splitter, TileKind.LaserSplitter])(
+    "preserves protected edges without pulsing, but permits manual edits for operator %s",
+    (kind) => {
+      const world = new World(5, 3);
+      world.place(1, 1, TileKind.Platform);
+      world.place(2, 1, TileKind.IndestructibleConduit);
+      world.place(3, 1, TileKind.Delivery, Direction.Right);
+      world.place(3, 2, TileKind.Platform);
+      world.place(2, 2, kind, Direction.Up);
+      const initiallyWelded = kind !== TileKind.Welder;
+      for (const neighborX of [1, 3]) {
+        expect(world.setWeld(2, 1, neighborX, 1, true)).toBe(true);
+        expect(world.setWeld(2, 1, neighborX, 1, false)).toBe(true);
+        if (initiallyWelded) {
+          world.setWeld(2, 1, neighborX, 1, true);
+        }
+      }
+
+      new Simulation(world).step();
+
+      expect(world.isWelded(1, 1, 2, 1)).toBe(initiallyWelded);
+      expect(world.isWelded(2, 1, 3, 1)).toBe(initiallyWelded);
+      expect(world.chargeAtPort(2, 2, Direction.Down)).toBe(0);
+      expect(world.setWeld(1, 1, 2, 1, !initiallyWelded)).toBe(true);
+      expect(world.isWelded(1, 1, 2, 1)).toBe(!initiallyWelded);
+    },
+  );
 });
 
 describe("weld operator attachment", () => {

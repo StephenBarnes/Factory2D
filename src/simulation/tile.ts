@@ -186,6 +186,8 @@ export interface TileDefinition {
   readonly invisibleToSensor?: boolean;
   /** Immune to destructive tools such as drills; omitted means destructible. */
   readonly indestructible?: boolean;
+  /** Machinery cannot create or cut an edge when both endpoints are protected; editing is unaffected. */
+  readonly runtimeWeldProtected?: boolean;
   /** Unwelded tiles break when a gravity fall longer than one cell stops. */
   readonly fragile?: boolean;
   readonly weldableSides: WeldSide;
@@ -314,11 +316,12 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 43,
       category: PaletteCategory.PuzzleTools,
       description: "Fixed indestructible block not affected by gravity.",
-      extendedDescription: ["Anchors its entire welded body: it cannot fall or be pushed. Indestructible: drills cannot remove it. Use it as a foundation or to brace a moving machine."],
+      extendedDescription: ["Anchors its entire welded body: it cannot fall or be pushed. Indestructible: drills cannot remove it. Use it as a foundation or to brace a moving machine. Weld-protected - cannot be welded/split at runtime at sides shared with other weld-protected blocks."],
     },
     affectedByGravity: false,
     immovable: true,
     indestructible: true,
+    runtimeWeldProtected: true,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
@@ -604,11 +607,12 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 74,
       category: PaletteCategory.PuzzleTools,
-      description: "Shares charge across welded circuit blocks; drills cannot destroy it.",
-      extendedDescription: ["Carries charge like a channel: every connected port shares the sign of the total driver charge. Positive and negative drivers cancel, and an undriven network is neutral.", "Indestructible, but not fixed: falls and moves with its welded body like an ordinary channel. Weld it to a platform to anchor protected puzzle wiring."],
+      description: "Shares charge across welded circuit blocks. Indestructible and weld-protected.",
+      extendedDescription: ["Carries charge like a channel: every connected port shares the sign of the total driver charge. Positive and negative drivers cancel, and an undriven network is neutral.", "Indestructible, but not fixed: falls and moves with its welded body like an ordinary channel.", "Weld-protected - cannot be welded/split at runtime at sides shared with other weld-protected blocks."],
     },
     affectedByGravity: true,
     indestructible: true,
+    runtimeWeldProtected: true,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
@@ -1449,11 +1453,12 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 24,
       category: PaletteCategory.PuzzleTools,
-      description: "Absorbs a front welded body exactly matching the body behind it and pulses +1 sideways. Indestructible.",
-      extendedDescription: ["Matches complete bodies by tile kinds, directional orientations, and weld layout, allowing translation but not rotation or reflection. Configuration does not affect the match.", "The rear body remains as the template. Bodies welded to the box do not match; competing consumption claims jam rather than consuming only part of a body."],
+      description: "Absorbs a front welded body exactly matching the body behind it and pulses +1 sideways. Indestructible and weld-protected.",
+      extendedDescription: ["Matches complete bodies by tile kinds, directional orientations, and weld layout, allowing translation but not rotation or reflection. Configuration does not affect the match.", "The rear body remains as the template. Bodies welded to the box do not match; competing consumption claims jam rather than consuming only part of a body.", "Cannot be destroyed by drills, or welded/split on sides shared with other weld-protected blocks."],
     },
     affectedByGravity: true,
     indestructible: true,
+    runtimeWeldProtected: true,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
@@ -1522,11 +1527,12 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 25,
       category: PaletteCategory.PuzzleTools,
-      description: "Wins on +1 input or loses on -1 input; opposing inputs jam. Indestructible.",
-      extendedDescription: ["The result latches once triggered. In a puzzle, manual steps do not record completion: the full test must succeed on every case. A victory block inside a rune array affects the whole puzzle."],
+      description: "Wins on +1 input or loses on -1 input; opposing inputs jam. Indestructible and weld-protected.",
+      extendedDescription: ["The result latches once triggered. In a puzzle, manual steps do not record completion: the full test must succeed on every case. A victory block inside a rune array affects the whole puzzle. Cannot be destroyed by drills, or welded/split at sides shared with other weld-protected blocks."],
     },
     affectedByGravity: true,
     indestructible: true,
+    runtimeWeldProtected: true,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
@@ -1670,7 +1676,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 30,
       category: PaletteCategory.Transformation,
       description: "Welds both transverse edges of the block ahead; -1 side charge disables it.",
-      extendedDescription: ["For an upward-facing welder, joins the left and right edges of the cell ahead when both adjacent tiles permit welds. Shared side -1 disables it; the isolated rear output pulses +1 only when a weld changes."],
+      extendedDescription: ["For an upward-facing welder, joins the left and right edges of the cell ahead when both adjacent tiles permit welds. Shared side -1 disables it; the isolated rear output pulses +1 only when a weld changes.", "Cannot weld together two weld-protected blocks, such as platforms, delivery blocks, or judgment stones."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -1694,7 +1700,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 31,
       category: PaletteCategory.Transformation,
       description: "Splits both transverse edges of the block ahead; -1 side charge disables it.",
-      extendedDescription: ["For an upward-facing splitter, removes the left and right welds of the cell ahead. Shared side -1 disables it; the isolated rear output pulses +1 only when a weld changes. Opposing weld and split commands on one edge jam."],
+      extendedDescription: ["For an upward-facing splitter, removes the left and right welds of the cell ahead. Shared side -1 disables it; the isolated rear output pulses +1 only when a weld changes. Opposing weld and split commands on one edge jam.", "Cannot weld together two weld-protected blocks, such as platforms, delivery blocks, or judgment stones."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -1719,7 +1725,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 58,
       category: PaletteCategory.Transformation,
       description: "Cuts the left edge of every cell ahead, through blocks and gaps; -1 side charge disables it.",
-      extendedDescription: ["Cuts one straight line of welds to the board boundary. For an upward-facing laser splitter, cuts the left edge of every cell above it, starting with the cell immediately ahead; rotate to change the cutting side.", "The beam passes through blocks and empty cells without destroying tiles. Shared side -1 disables it; the isolated rear output pulses +1 only when at least one weld changes. Opposing welder commands jam only the contested edges."],
+      extendedDescription: ["Cuts one straight line of welds to the board boundary. For an upward-facing laser splitter, cuts the left edge of every cell above it, starting with the cell immediately ahead; rotate to change the cutting side.", "The beam passes through blocks and empty cells without destroying tiles. Shared side -1 disables it; the isolated rear output pulses +1 only when at least one weld changes. Opposing welder commands jam only the contested edges.", "Can be mirrored with the M key.", "Cannot weld together two weld-protected blocks, such as platforms, delivery blocks, or judgment stones."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,

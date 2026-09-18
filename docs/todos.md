@@ -17,7 +17,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 * Modify the assembler to add a pushing force for output: When it has a pending output, but no space to output, attempt to push the blocks away so that it can produce output; failing that, try to push the assembler itself in its forwards direction, so the product can be emitted out the back (at assembler's pre-movement position) in the same tick.
 * Modify the duplicator in the same way as assembler above - make it also attempt to push itself away from the output side, if it's trying to duplicate a single-tile body but there's something blocking the output. When duplicating multi-tile bodies, don't do this - require already empty space for the whole body.
-* Add flags to ban runtime welding and splitting of certain blocks, such as platforms, indestructible conduits, and delivery boxes. We still allow welding and splitting while creating a solution, or while editing the grid in the sandbox; but the welder, splitter, and laser-splitter blocks should not be able to weld/split any edges where both blocks have these flags set. (If only one has it set, still allow welding/splitting.) This would help to prevent some exploit solutions to puzzles.
 
 # Performance
 

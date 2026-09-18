@@ -4,6 +4,7 @@ import {
   directionX,
   directionY,
   orientedDirection,
+  TILE_DEFINITIONS,
   TileKind,
 } from "./tile";
 import type { World } from "./world";
@@ -67,6 +68,12 @@ export class WeldOperationResolver {
         continue;
       }
       const { firstX, firstY, secondX, secondY } = this.edgeCoordinates(edge);
+      if (
+        TILE_DEFINITIONS[this.world.kindAt(firstX, firstY)].runtimeWeldProtected &&
+        TILE_DEFINITIONS[this.world.kindAt(secondX, secondY)].runtimeWeldProtected
+      ) {
+        continue;
+      }
       const welded = this.world.isWelded(firstX, firstY, secondX, secondY);
       if (
         (intent === EdgeIntent.Weld &&
