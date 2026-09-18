@@ -53,7 +53,7 @@ describe("saved sandboxes", () => {
     const first = SavedSandboxes.empty();
     const sandbox = first.create(authoring.serialize(new GridRegion([])), "standard");
     const duplicate = first.duplicate(sandbox.id);
-    expect([sandbox.name, duplicate.name]).toEqual(["Sandbox 1", "Sandbox 1 Copy"]);
+    expect([sandbox.name, duplicate.name]).toEqual(["Sandbox 1", "Sandbox 1.1"]);
 
     const resized = createSandboxWorld();
     resized.place(0, 0, TileKind.Stone);
@@ -66,6 +66,29 @@ describe("saved sandboxes", () => {
     expect(loaded.entries.map(({ id }) => id)).toEqual([sandbox.id]);
     expect(loaded.byId(sandbox.id).width).toBe(resized.width);
     expect(loaded.byId(sandbox.id).height).toBe(resized.height);
+  });
+
+  it("reserves deleted lineage names after reload while allowing new branches", () => {
+    const authoring = SandboxPuzzleAuthoringState.createDefault(createSandboxWorld());
+    const snapshot = authoring.serialize(new GridRegion([]));
+    const sandboxes = SavedSandboxes.empty();
+    const root = sandboxes.create(snapshot, "standard");
+    const first = sandboxes.duplicate(root.id);
+    const second = sandboxes.duplicate(first.id);
+    const branch = sandboxes.duplicate(first.id);
+    const continuation = sandboxes.duplicate(branch.id);
+    expect([first.name, second.name, branch.name, continuation.name]).toEqual([
+      "Sandbox 1.1", "Sandbox 1.2", "Sandbox 1.1a.1", "Sandbox 1.1a.2",
+    ]);
+    sandboxes.duplicate(second.id);
+    sandboxes.delete(root.id);
+    sandboxes.delete(second.id);
+    sandboxes.delete(branch.id);
+
+    const loaded = SavedSandboxes.deserialize(sandboxes.serialize());
+    expect(loaded.duplicate(first.id).name).toBe("Sandbox 1.1b.1");
+    expect(loaded.duplicate(continuation.id).name).toBe("Sandbox 1.1a.3");
+    expect(loaded.create(snapshot, "standard").name).toBe("Sandbox 2");
   });
 
   it("rejects a selected test case missing from the snapshot", () => {

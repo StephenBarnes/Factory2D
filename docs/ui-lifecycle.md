@@ -23,6 +23,8 @@ Persist the active dirty workshop before every transition; `pagehide` is the fin
 
 Duplicated puzzle solutions use numeric revisions along a straight chain: `Solution 1` → `Solution 1.1` → `Solution 1.2`. Copying an earlier revision with an existing continuation starts a lettered branch at that exact source: another copy of `Solution 1.1` becomes `Solution 1.1a.1`, then continues as `Solution 1.1a.2`; further branches from `Solution 1.1` use `b`, `c`, …, `z`, `aa`, etc. A branch from the root is `Solution 1a.1`. Nested forks add another branch marker, so names grow with branching depth rather than every duplication. Surviving descendants reserve deleted ancestors' names and family prefixes within the puzzle, including after reload. No separate ancestry metadata is stored; fully deleted lineages may reuse names, and existing names are not rewritten or assigned a reconstructed history.
 
+Sandboxes use the same algorithm from `saved-design-names.ts`, with `Sandbox` in place of `Solution` and names reserved across the entire sandbox collection rather than per puzzle. For example, a straight chain is `Sandbox 1` → `Sandbox 1.1` → `Sandbox 1.2`, and another copy of `Sandbox 1.1` becomes `Sandbox 1.1a.1`. Existing saved names remain unchanged.
+
 Puzzle briefing solution rows display newest-created first, including duplicates. Editing an existing solution does not move it; stored model order is unchanged.
 
 A session has four related runtime references:

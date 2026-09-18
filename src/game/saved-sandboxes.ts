@@ -1,4 +1,5 @@
 import { parseSandboxSnapshot } from "./sandbox-puzzle-authoring";
+import { duplicateDesignName, nextDesignName } from "./saved-design-names";
 
 export const SAVED_SANDBOXES_STORAGE_KEY = "factory2d.saved-sandboxes";
 const SAVED_SANDBOXES_VERSION = 1;
@@ -108,11 +109,7 @@ export class SavedSandboxes {
   }
 
   create(snapshot: string, selectedTestCaseId: string): SavedSandbox {
-    const usedNames = new Set(this.sandboxes.map(({ name }) => name));
-    let nameNumber = 1;
-    while (usedNames.has(`Sandbox ${nameNumber}`)) {
-      nameNumber += 1;
-    }
+    const name = nextDesignName(this.sandboxes.map(({ name }) => name), "Sandbox");
 
     let id = `sandbox-${this.nextSandboxId}`;
     while (this.sandboxes.some((sandbox) => sandbox.id === id)) {
@@ -124,7 +121,7 @@ export class SavedSandboxes {
     const imported = parseSandboxSnapshot(snapshot, `Saved sandbox ${id}`, selectedTestCaseId);
     const sandbox: SavedSandbox = {
       id,
-      name: `Sandbox ${nameNumber}`,
+      name,
       snapshot,
       selectedTestCaseId,
       width: imported.world.width,
@@ -136,14 +133,7 @@ export class SavedSandboxes {
 
   duplicate(id: string): SavedSandbox {
     const source = this.byId(id);
-    const usedNames = new Set(this.sandboxes.map(({ name }) => name));
-    const baseName = `${source.name} Copy`;
-    let name = baseName;
-    let copyNumber = 2;
-    while (usedNames.has(name)) {
-      name = `${baseName} ${copyNumber}`;
-      copyNumber += 1;
-    }
+    const name = duplicateDesignName(this.sandboxes.map(({ name }) => name), source.name);
 
     const duplicate = this.create(source.snapshot, source.selectedTestCaseId);
     const renamed = { ...duplicate, name };

@@ -2,7 +2,7 @@ import { puzzleById, PUZZLES, type PuzzleId } from "./puzzles";
 import { deserializeBoard } from "../simulation/board-export";
 import { PuzzleResult } from "../simulation/puzzle-result";
 import { parsePuzzleScores, type PuzzleScores } from "./puzzle-scores";
-import { expectDefined } from "../util/assert";
+import { duplicateDesignName, nextDesignName } from "./saved-design-names";
 import { API_SCORING_VERSION } from "./community-api";
 
 export const PUZZLE_SOLUTIONS_STORAGE_KEY = "factory2d.puzzle-solutions";
@@ -23,26 +23,6 @@ interface StoredPuzzleSolutions {
   readonly scoringVersion: typeof API_SCORING_VERSION;
   readonly nextSolutionId: number;
   readonly solutions: readonly SavedPuzzleSolution[];
-}
-
-// A later revision or a nested branch also reserves its missing ancestors.
-function hasRevision(names: readonly string[], baseName: string, minimum: bigint): boolean {
-  const prefix = `${baseName}.`;
-  return names.some((name) => {
-    if (!name.startsWith(prefix)) return false;
-    const suffix = /^(\d+)(?:[a-z]+\.\d+)*$/.exec(name.slice(prefix.length));
-    return suffix !== null
-      && BigInt(expectDefined(suffix[1], "Solution revision suffix is missing")) >= minimum;
-  });
-}
-
-function branchLetters(index: number): string {
-  let letters = "";
-  do {
-    letters = String.fromCharCode(97 + index % 26) + letters;
-    index = Math.floor(index / 26) - 1;
-  } while (index >= 0);
-  return letters;
 }
 
 export class PuzzleSolutions {
@@ -146,15 +126,7 @@ export class PuzzleSolutions {
   create(puzzleId: PuzzleId, board: string): SavedPuzzleSolution {
     puzzleById(puzzleId);
     const usedNames = this.forPuzzle(puzzleId).map((solution) => solution.name);
-    let nameNumber = 1;
-    while (usedNames.some((name) => {
-      const candidate = `Solution ${nameNumber}`;
-      return name === candidate
-        || (name.startsWith(candidate)
-          && /^[a-z]*\.\d+(?:[a-z]+\.\d+)*$/.test(name.slice(candidate.length)));
-    })) {
-      nameNumber += 1;
-    }
+    const name = nextDesignName(usedNames, "Solution");
 
     let id = `solution-${this.nextSolutionId}`;
     while (this.solutions.some((solution) => solution.id === id)) {
@@ -166,7 +138,7 @@ export class PuzzleSolutions {
     const solution: SavedPuzzleSolution = {
       id,
       puzzleId,
-      name: `Solution ${nameNumber}`,
+      name,
       board,
       scores: null,
     };
@@ -177,21 +149,7 @@ export class PuzzleSolutions {
   duplicate(id: string): SavedPuzzleSolution {
     const source = this.byId(id);
     const usedNames = this.forPuzzle(source.puzzleId).map((solution) => solution.name);
-    const suffix = /\.(\d+)$/.exec(source.name);
-    const baseName = suffix === null ? source.name : source.name.slice(0, suffix.index);
-    const copyNumber = suffix === null
-      ? 1n
-      : BigInt(expectDefined(suffix[1], "Solution revision suffix is missing")) + 1n;
-    let name = `${baseName}.${copyNumber}`;
-    if (hasRevision(usedNames, baseName, copyNumber)) {
-      let branchIndex = 0;
-      let branchName = `${source.name}${branchLetters(branchIndex)}`;
-      while (hasRevision(usedNames, branchName, 1n)) {
-        branchIndex += 1;
-        branchName = `${source.name}${branchLetters(branchIndex)}`;
-      }
-      name = `${branchName}.1`;
-    }
+    const name = duplicateDesignName(usedNames, source.name);
 
     const duplicate = this.create(source.puzzleId, source.board);
     const renamedDuplicate = { ...duplicate, name, scores: source.scores };
