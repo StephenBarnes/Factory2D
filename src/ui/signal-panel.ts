@@ -29,8 +29,8 @@ const MONITOR_LABEL_COLOR = "#e0d5bd";
 const GRAPHER_LABEL_COLOR = "#78dcca";
 const CURRENT_TICK_COLOR = "rgba(226, 179, 87, 0.75)";
 const CURSOR_COLOR = "#f1cc38";
-const LABEL_FONT = "700 10px SFMono-Regular, Consolas, monospace";
-const TICK_FONT = "600 9px SFMono-Regular, Consolas, monospace";
+const LABEL_FONT = '700 10px "Noto Sans Mono", monospace';
+const TICK_FONT = '600 9px "Noto Sans Mono", monospace';
 
 export interface SignalPanelElements {
   readonly root: HTMLElement;

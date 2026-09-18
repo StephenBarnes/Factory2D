@@ -11,8 +11,8 @@
       <section class="main-menu-screen" id="main-menu-screen" aria-labelledby="main-menu-title" hidden>
         <div class="main-menu-content">
           <nav class="main-menu-actions" aria-label="Game information">
-            <button id="settings-button" type="button"><span aria-hidden="true">⚙</span> SETTINGS</button>
-            <button id="about-button" type="button"><span aria-hidden="true">🛈</span> ABOUT</button>
+            <button id="settings-button" type="button"><span class="main-menu-action-icon" aria-hidden="true">⚙</span><span class="main-menu-action-label">SETTINGS</span></button>
+            <button id="about-button" type="button" title="About (F1)" aria-keyshortcuts="F1"><span class="main-menu-action-icon" aria-hidden="true">🛈</span><span class="main-menu-action-label">ABOUT</span></button>
           </nav>
           <header class="main-menu-header">
             <h1 id="main-menu-title">Dwarfworks</h1>
@@ -79,7 +79,6 @@
                 <span>OBJECTIVE</span>
                 <strong id="puzzle-info-goal"></strong>
               </div>
-              <p class="community-status" id="briefing-community-status" role="status" hidden></p>
             </section>
             <section class="solutions-panel" aria-labelledby="solutions-title">
               <div class="solutions-heading">
@@ -93,7 +92,9 @@
               <p class="empty-solutions" id="empty-solutions">No saved solutions. Create one to enter the workshop.</p>
             </section>
           </div>
-          <section id="briefing-score-histograms" aria-label="Personal bests and community scores"></section>
+          <section id="briefing-score-histograms" aria-label="Personal bests and community scores">
+            <span class="community-status" id="briefing-community-status" role="status" hidden></span>
+          </section>
         </div>
       </section>
 
@@ -137,6 +138,7 @@
             aria-label="Puzzle information"
             aria-haspopup="dialog"
             aria-controls="workshop-info-dialog"
+            aria-keyshortcuts="F1"
             title="Puzzle information"
           >i</button>
         </header>
@@ -314,7 +316,9 @@
 
       <footer class="controls edge-panel" id="bottom-controls">
         <div class="workshop-identity">
-            <button id="workshop-theme-button" type="button" aria-label="Switch to light mode" title="Switch to light mode">☀</button>
+            <button id="workshop-theme-button" class="workshop-preference-button" type="button" aria-label="Switch to light mode" title="Switch to light mode">☀</button>
+            <button id="workshop-settings-button" class="workshop-preference-button" type="button" aria-label="Settings" title="Settings" aria-haspopup="dialog" aria-controls="settings-dialog">⚙</button>
+            <button id="workshop-mute-button" class="workshop-preference-button" type="button" aria-label="Mute sound effects" title="Mute sound effects" aria-pressed="false">♪</button>
             <div class="puzzle-metrics" id="puzzle-metrics" hidden>
               <span class="puzzle-price-feedback">
                 <span class="puzzle-price-change" id="puzzle-price-change" aria-hidden="true"></span>

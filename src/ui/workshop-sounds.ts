@@ -15,9 +15,15 @@ export class WorkshopSounds {
   private output: GainNode | null = null;
   private lastEditTime = -Infinity;
 
-  constructor(button: HTMLButtonElement) {
-    button.setAttribute("aria-pressed", String(this.enabled));
-    button.addEventListener("click", () => {
+  constructor(button: HTMLButtonElement, muteButton: HTMLButtonElement) {
+    const syncButtons = (): void => {
+      button.setAttribute("aria-pressed", String(this.enabled));
+      muteButton.setAttribute("aria-pressed", String(!this.enabled));
+      muteButton.textContent = this.enabled ? "♪" : "×";
+      muteButton.title = this.enabled ? "Mute sound effects" : "Unmute sound effects";
+    };
+    syncButtons();
+    const toggle = (): void => {
       const enabled = !this.enabled;
       try {
         window.localStorage.setItem(STORAGE_KEY, String(enabled));
@@ -27,12 +33,14 @@ export class WorkshopSounds {
         return;
       }
       this.enabled = enabled;
-      button.setAttribute("aria-pressed", String(enabled));
+      syncButtons();
       if (this.output !== null && this.context !== null) {
         this.output.gain.setValueAtTime(enabled ? 0.12 : 0, this.context.currentTime);
       }
       if (enabled) this.unlock();
-    });
+    };
+    button.addEventListener("click", toggle);
+    muteButton.addEventListener("click", toggle);
     // Resume during an actual user gesture, before edits or automatic test ticks.
     document.addEventListener("pointerdown", () => this.unlock(), { capture: true });
     document.addEventListener("keydown", () => this.unlock(), { capture: true });

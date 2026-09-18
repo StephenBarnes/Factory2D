@@ -118,13 +118,17 @@ const puzzleInfoScreen = requiredElement<HTMLElement>("puzzle-info-screen");
 const puzzleMap = requiredElement<HTMLElement>("puzzle-map");
 const sandboxButton = requiredElement<HTMLButtonElement>("sandbox-button");
 const settingsButton = requiredElement<HTMLButtonElement>("settings-button");
+const workshopSettingsButton = requiredElement<HTMLButtonElement>("workshop-settings-button");
 const settingsDialog = requiredElement<HTMLDialogElement>("settings-dialog");
 const theme = initializeTheme(
   requiredElement<HTMLButtonElement>("light-theme-button"),
   requiredElement<HTMLButtonElement>("workshop-theme-button"),
 );
 initializeBevelSetting(requiredElement<HTMLButtonElement>("bevels-button"), renderPalettePreviews);
-const sounds = new WorkshopSounds(requiredElement<HTMLButtonElement>("sounds-button"));
+const sounds = new WorkshopSounds(
+  requiredElement<HTMLButtonElement>("sounds-button"),
+  requiredElement<HTMLButtonElement>("workshop-mute-button"),
+);
 const exportPlayerDataButton = requiredElement<HTMLButtonElement>("export-player-data-button");
 const importPlayerDataButton = requiredElement<HTMLButtonElement>("import-player-data-button");
 const importPlayerDataFile = requiredElement<HTMLInputElement>("import-player-data-file");
@@ -1676,9 +1680,12 @@ unlockAllPuzzlesButton.addEventListener("click", () => {
     window.alert(`Could not save puzzle unlock setting: ${message}`);
   }
 });
-settingsButton.addEventListener("click", () => {
+function openSettings(): void {
+  if (document.querySelector("dialog[open]") !== null) return;
   settingsDialog.showModal();
-});
+}
+settingsButton.addEventListener("click", openSettings);
+workshopSettingsButton.addEventListener("click", openSettings);
 exportPlayerDataButton.addEventListener("click", () => {
   try {
     downloadBlob(
@@ -2315,20 +2322,38 @@ document.addEventListener("keydown", (event) => {
     event.target instanceof HTMLTextAreaElement ||
     event.target instanceof HTMLSelectElement ||
     (event.target instanceof HTMLElement && event.target.isContentEditable);
+  if (document.querySelector("dialog[open]") !== null) return;
+  if (event.key === "F1") {
+    if (
+      event.defaultPrevented ||
+      event.repeat ||
+      event.ctrlKey || event.metaKey || event.altKey || event.shiftKey ||
+      textEntryTarget
+    ) {
+      return;
+    }
+    if (navigation.screen.kind === "main-menu") {
+      event.preventDefault();
+      aboutDialog.showModal();
+    } else if (navigation.screen.kind === "puzzle" || navigation.screen.kind === "sandbox") {
+      event.preventDefault();
+      workshopInfoButton.click();
+    }
+    return;
+  }
   if (navigation.screen.kind === "main-menu" || navigation.screen.kind === "puzzle-info") {
     if (
       event.key !== "Escape" ||
       event.defaultPrevented ||
       event.repeat ||
       event.ctrlKey || event.metaKey || event.altKey || event.shiftKey ||
-      textEntryTarget ||
-      document.querySelector("dialog[open]") !== null
+      textEntryTarget
     ) {
       return;
     }
     event.preventDefault();
     if (navigation.screen.kind === "main-menu") {
-      settingsDialog.showModal();
+      openSettings();
     } else {
       navigation.navigate({ kind: "main-menu" });
     }

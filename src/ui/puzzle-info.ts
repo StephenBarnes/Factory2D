@@ -66,7 +66,7 @@ export class PuzzleInfoView {
     this.rankedScores.length = 0;
     const solutionRows = options.solutions.map((solution) =>
       this.createSolutionRow(solution, solution.scores?.combined === bestCombinedScore, options),
-    );
+    ).reverse();
     this.solutionList.replaceChildren(...solutionRows);
     this.emptySolutions.hidden = solutionRows.length !== 0;
 

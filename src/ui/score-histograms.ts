@@ -178,11 +178,14 @@ export function renderScoreHistograms(
   data: PuzzleHistograms | null,
   best: PuzzleScores | null,
   current: PuzzleScores | null,
+  headingStatus?: HTMLElement,
 ): void {
   root.classList.add("score-histograms");
   const content = document.createDocumentFragment();
   const heading = element("div", "score-histograms-heading");
-  heading.append(element("h3", "", "Community scores"));
+  const title = element("h3", "", "Community scores");
+  if (headingStatus !== undefined) title.append(" — ", headingStatus);
+  heading.append(title);
   const legend = element("div", "score-histograms-legend");
   if (best !== null) legend.append(markerKey("best", "Local best"));
   if (current !== null) legend.append(markerKey("current", "This run"));

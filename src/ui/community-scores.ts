@@ -23,24 +23,24 @@ export class CommunityScoresView {
     onHistogramsLoaded: (data: PuzzleHistograms | null) => void,
   ): Promise<void> {
     const request = ++this.briefingRequest;
-    renderScoreHistograms(this.briefingCharts, null, best, null);
+    renderScoreHistograms(this.briefingCharts, null, best, null, this.briefing);
     onHistogramsLoaded(null);
     this.briefing.hidden = false;
     if (this.client === null) {
-      this.briefing.textContent = "Community scores are not configured. Personal bests are saved locally.";
+      this.briefing.textContent = "not configured";
       return;
     }
-    this.briefing.textContent = "Loading community scores…";
+    this.briefing.textContent = "loading";
     try {
       const data = await this.client.histograms(puzzleId);
       if (request === this.briefingRequest) {
         this.briefing.textContent = playerCount(data.players);
-        renderScoreHistograms(this.briefingCharts, data, best, null);
+        renderScoreHistograms(this.briefingCharts, data, best, null, this.briefing);
         onHistogramsLoaded(data);
       }
     } catch (error) {
       if (request === this.briefingRequest) {
-        this.briefing.textContent = "Community scores unavailable. Local play is unaffected.";
+        this.briefing.textContent = "unavailable";
       }
       console.warn("Could not load community scores:", error);
     }
@@ -76,7 +76,7 @@ export class CommunityScoresView {
     try {
       const data = await this.client.histograms(puzzleId);
       if (request === this.reportRequest) {
-        this.report.textContent = `${status} ${playerCount(data.players)}`;
+        this.report.textContent = `${status} Community scores: ${playerCount(data.players)}.`;
         renderScoreHistograms(this.reportCharts, data, best, current);
       }
     } catch (error) {
@@ -89,5 +89,5 @@ export class CommunityScoresView {
 }
 
 function playerCount(players: number): string {
-  return `Community scores: ${players} ${players === 1 ? "player" : "players"}.`;
+  return `${players} ${players === 1 ? "player" : "players"}`;
 }
