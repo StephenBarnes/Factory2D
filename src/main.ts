@@ -652,29 +652,36 @@ function positionSelectionActions(): void {
 
 
 
-function configureComponentPalette(): void {
+function configureComponentPalette(resetSelection = false): void {
   surface.hoveredPaletteButton = null;
   if (selectedTool === "editable-region" && surface.editableRegionAuthoring === null) {
     selectedTool = "tile";
   }
   const availableComponents = surface.session.availableComponents;
-  if (availableComponents !== null && !availableComponents.has(selectedKind)) {
-    const firstComponent = availableComponents.entries[0];
-    if (firstComponent === undefined) {
-      selectedTool = "weld";
-    } else {
-      selectedKind = firstComponent.kind;
-      selectedMirrored = false;
-    }
-  }
-  if (availableComponents !== null && !availableComponents.has(previousSelectedKind)) {
-    previousSelectedKind = selectedKind;
-  }
   tileKindsByShortcut = populateComponentPalette(
     componentPalette,
     selectedTool === "tile" ? selectedKind : null,
     availableComponents,
   );
+  if (resetSelection || (availableComponents !== null && !availableComponents.has(selectedKind))) {
+    const firstKind = tileKindsByShortcut.Digit1;
+    if (firstKind === undefined) {
+      selectedTool = "selection";
+    } else {
+      selectedKind = firstKind;
+      selectedMirrored = false;
+      if (resetSelection) selectedTool = "tile";
+    }
+  }
+  if (resetSelection) {
+    selectedOrientation = Direction.Up;
+    previousSelectionTool = "tile";
+    temporaryWeldTool = null;
+    paletteTab = "components";
+  }
+  if (resetSelection || (availableComponents !== null && !availableComponents.has(previousSelectedKind))) {
+    previousSelectedKind = selectedKind;
+  }
   const references: (InspectorComponentReference | undefined)[] = [];
   for (const button of componentPalette.querySelectorAll<HTMLButtonElement>("[data-tile]")) {
     const kind = Number(button.dataset.tile);
@@ -682,6 +689,7 @@ function configureComponentPalette(): void {
       throw new Error("Component palette button has invalid tile metadata");
     }
     references[kind] = inspectorReferenceFromButton(button);
+    button.classList.toggle("selected", selectedTool === "tile" && kind === selectedKind);
   }
   componentInspectorReferences = references;
   const weldButton = sidebarControls.querySelector<HTMLButtonElement>("[data-tool=\"weld\"]");
@@ -1568,9 +1576,10 @@ const navigation = new NavigationController(
     },
     onWorkshopSessionChanged: () => {
       surface.mountActiveSession({ fitBoard: true, cancelInteraction: true });
+      configureComponentPalette(true);
+      refreshPointerHover();
     },
     onWorkshopShown: () => {
-      configureComponentPalette();
       refreshPuzzleMetrics();
       const screen = navigation.screen;
       resetButton.title = screen.kind === "puzzle" ? "Reset (R / Escape)" : "Reset (R)";
