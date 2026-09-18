@@ -20,13 +20,15 @@ The theme is dwarven engineering: lodestones, glowing runes, mineral processing,
 
 ## Task-specific references
 
-Read the relevant reference before changing its subsystem; most tasks do not need all three. These describe current architecture and important contracts, not a feature-by-feature changelog. Source and tests define exact behavior.
+Read the relevant reference before changing its subsystem; most tasks need only one or two. These describe current architecture and important contracts, not a feature-by-feature changelog. Source and tests define exact behavior.
 
 | Task | Reference |
 | --- | --- |
 | Physics, circuits, components, nested boards, board serialization | `docs/simulation.md` |
 | Tile appearance, Canvas rendering, animation, camera, visual performance | `docs/rendering.md` |
-| Controls, tools, dialogs, navigation, persistence, puzzle authoring/testing, community API/deployment | `docs/ui-lifecycle.md` |
+| Controls, tools, dialogs, navigation, persistence, puzzle authoring/testing | `docs/ui-lifecycle.md` |
+| Community integration, HTTP API, backend trust boundaries, local Worker/D1 development | `docs/community-backend.md` |
+| Production configuration, Cloudflare operations, static hosting, itch.io releases | `docs/deployment.md` |
 | Planned features and priorities | `docs/todos.md` |
 | Current puzzles and ideas for more puzzles | `docs/puzzles.md` |
 | Performance investigations and proposed optimizations | `docs/performance-todos.md` |

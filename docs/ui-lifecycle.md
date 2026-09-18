@@ -2,6 +2,8 @@
 
 For tools, controls, dialogs, routing, saved designs, puzzle authoring, and verification. See [rendering](rendering.md) for Canvas drawing and [simulation](simulation.md) for world behavior and scene serialization.
 
+Community integration, HTTP contracts, and local backend development are covered in [community backend](community-backend.md). Production configuration, Cloudflare operations, static hosting, and itch.io releases belong in [deployment](deployment.md).
+
 ## Ownership and entry points
 
 * `src/main.ts` wires DOM events, active controllers, and the animation loop. `index.html` and `src/styles.css` define the framework-free shell and responsive layout.
@@ -115,97 +117,3 @@ Focused model/controller tests live in `tests/` alongside subsystem names. Playw
 The `geode` benchmark additionally replays a checked-in saved factory from tick zero in a separately built browser page. It times snapshots, simulation, and Canvas submission independently, compares rendered/unrendered final state and movement counts, and retains first-use versus repeated-pass samples. This page imports the real simulation/renderer but not the workshop entry point; it is built only by the benchmark configuration and never adds hooks to normal production assets.
 
 Shipped puzzles may have optional tick-zero reference scenes in `tests/fixtures/puzzle-solutions/<puzzle-id>.json`, serialized with the browser's scene exporter. `tests/puzzle-reference-solutions.test.ts` discovers existing fixtures, requires each to identify a current shipped puzzle, imports each scene, and verifies every current test case through `runPuzzleTests`. Missing fixtures do not fail the suite. Fixed machinery comes from the current puzzle definition; only allowed solution edits transfer from the fixture. To add or update a reference, save a solved design with simulation reset using **EXPORT → DOWNLOAD SCENE FILE**, store its fixture, and run `npm test -- tests/puzzle-reference-solutions.test.ts`. These are valid solutions, not claims of optimal scores.
-
-## Community backend and deployment
-
-The browser game remains a static Vite application; `backend/worker.ts` is a separately deployed Cloudflare Worker with a D1 binding named `DB`. This is roughly Lambda plus a managed SQLite database, without an API Gateway service to configure. D1 stores both score minima and bounded puzzle JSON; R2 is unnecessary until larger assets such as images or replays are needed. There are no account credentials in the browser bundle.
-
-`src/game/community-api.ts` defines the versioned wire contracts. `CommunityClient` owns HTTP requests and cached shipped-puzzle SHA-256 revisions. `CommunityScoresView` loads histograms on briefings and after successful submission, displays connection/player-count status, and ignores superseded responses. Local all-case success is persisted before any network work; failed/manual runs never submit. Each successful submission merges the current result with each metric's minimum across previously confirmed saved solutions for that puzzle, including the active solution's prior result. This uploads better saved results even if their earlier submission failed or they were imported; combined remains the best actual combined score, not the sum of independent minima. The current solution retains its own scores locally. Requests time out after ten seconds. There is no background retry queue or startup upload of historical saves: another successful test run retries a failed submission. Unset/blank `VITE_COMMUNITY_API_URL` disables community requests and sharing without disabling local play.
-
-The service intentionally trusts clients. Installation IDs are pseudonymous identifiers, **not authentication**; scores are structurally validated, not re-simulated, and submitted puzzle IDs/revisions are not checked against a server-side shipped registry. Public CORS permits every origin, including iframe origins, without credentials/cookies. It is not an anti-abuse boundary. Server schema changes use numbered SQL migrations in `backend/migrations/`; retain old migration files and add new ones. The schema and accepted HTTP API version are distinct from scoring version.
-
-### HTTP contracts
-
-All write requests use `Content-Type: application/json`. Bodies are capped at 1 MiB of UTF-8 bytes, including the wrapper; streaming bodies have the same cap. Invalid requests get JSON `{ error: string }` with HTTP 400, 404, 405, 413, or 415. Unexpected failures return generic 500 responses, with details only in Worker logs. No installation IDs are returned in public responses.
-
-* `POST /v1/scores`: `{ installationId, puzzleId, puzzleRevision, scoringVersion: 1, scores: { price, cycles, footprint, combined } }`; returns `{ ok: true }`. `puzzleRevision` is lowercase SHA-256 of the exact `serializeShippedPuzzle` JSON. The atomic upsert stores each metric's minimum independently, keyed by puzzle ID, revision, scoring version, and installation UUID. Repeated/concurrent submissions never add another player. Combined is the minimum of submitted combined scores, not the sum of the other stored minima. These are best-ever submitted scores; deleting/editing local solutions does not erase them.
-* `GET /v1/puzzles/:puzzleId/histograms?revision=<sha256>&scoringVersion=1`: returns `{ puzzleId, puzzleRevision, scoringVersion, players, metrics }`, where each of `price`, `cycles`, `footprint`, and `combined` in `metrics` is an ascending array of `{ value, count }`. These are exact frequencies, retaining fractional mean cycles, not display bins or percentiles. Each installation contributes once per metric. An empty cohort returns zero players and empty arrays. All metrics use one database snapshot. Deriving counts from current minima avoids separate decrement/increment bookkeeping.
-* `POST /v1/puzzles`: `{ installationId, puzzle }`; returns `{ id }`. The existing `parsePuzzleFile` validates the entire authored puzzle, including cases and victory blocks. The ID is SHA-256 of `JSON.stringify(puzzle)`, preserving property order; identical payloads are idempotent. Published copies are immutable; edits produce a new link.
-* `GET /v1/puzzles/:id`: downloads the original puzzle JSON with an attachment filename. The sandbox's **EXPORT → SHARE PUZZLE** validates locally, asks for public-publication confirmation, then displays this URL. Recipients can download/import it into a sandbox. Community browsing, normal solution-mode play of shared puzzles, voting, histogram charts, and mineral ranks remain separate roadmap items.
-
-`API_SCORING_VERSION` is also the saved-solution scoring version: bump it when score semantics change to invalidate local confirmations and separate remote cohorts. Shipped puzzle-content changes automatically produce a different remote revision. HTTP routes stay under `/v1` until their contract changes.
-
-### Local development
-
-Install with `npm install`. No Cloudflare login is needed for local Workers/D1:
-
-```sh
-npm run db:migrate:local
-npm run dev:backend
-```
-
-In another terminal:
-
-```sh
-VITE_COMMUNITY_API_URL=http://localhost:8787 npm run dev
-```
-
-Alternatively put the public endpoint in `.env.local` using `.env.example` as a guide. Vite reads it at startup/build time; restart Vite after changing it. Local Worker/D1 state lives under `backend/.wrangler/` and is ignored by Git. `npm run build` checks both browser and Worker TypeScript and builds only the static game into `dist/`. `npx wrangler deploy --config backend/wrangler.jsonc --dry-run` separately checks the Worker bundle without creating remote resources.
-
-### First Cloudflare deployment
-
-Stay on the Workers Free plan. These commands provision remote resources; local verification does not do so:
-
-```sh
-npx wrangler login
-npx wrangler d1 create factory2d-community --config backend/wrangler.jsonc --update-config=false
-```
-
-Replace the explicitly local `database_id` in `backend/wrangler.jsonc` with the UUID printed by D1 creation, retaining the existing `DB` binding and migrations directory. Database IDs are configuration, not secrets. Then:
-
-```sh
-npm run db:migrate:remote
-npm run deploy:backend
-```
-
-Wrangler prints the HTTPS `workers.dev` URL. Set `VITE_COMMUNITY_API_URL` to that URL and rebuild the game with `npm run build`; do not append `/v1` to the configured base URL. Deploy `dist/` to the game host separately. Publishing a new Worker does not rebuild the game; rebuilding the game does not deploy the Worker or apply migrations. Cloudflare API tokens belong only in the deployment environment, never in `VITE_` variables, exported player data, or committed files. Wrangler OAuth is sufficient for interactive deployment; MCP servers are optional agent tooling, not a runtime dependency.
-
-Cloudflare's [current pricing](https://developers.cloudflare.com/workers/platform/pricing/) lists 100,000 Worker requests/day and 10 ms CPU/request on Free; D1 includes 5 million rows read/day, 100,000 rows written/day, and 5 GB total storage. Monitor the dashboard; large authored puzzles can hit CPU limits before request quotas. R2 has a separate [usage-based plan/free allowance](https://developers.cloudflare.com/r2/pricing/) and is not enabled by this project.
-
-The D1 database and Worker are deployed. The public API base is `https://factory2d-community.factory2d.workers.dev` (Worker name plus account subdomain, not the bare `factory2d.workers.dev`). `.env.production` records this non-secret endpoint for production builds. Override it with an environment variable or ignored `.env.production.local`; set `VITE_COMMUNITY_API_URL=` explicitly for an offline production build. Development remains opt-in via `.env.local` or an environment variable.
-
-### Backups and manual rollback
-
-Before a remote schema change, record a D1 bookmark and keep an exported backup outside the repository:
-
-```sh
-npx wrangler d1 time-travel info DB --config backend/wrangler.jsonc
-npx wrangler d1 export DB --remote --output /safe/backup/factory2d.sql --config backend/wrangler.jsonc
-```
-
-For a deliberate rollback, coordinate the Worker revision with the schema, stop writes, and use `wrangler d1 time-travel restore DB --bookmark <saved-bookmark> --config backend/wrangler.jsonc`. Restore overwrites the entire database, including scores/puzzles added since that bookmark; do not run it casually. D1 [Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/) retains seven days on Free (30 on Paid). For longer retention keep SQL exports. Wrangler tracks applied [migrations](https://developers.cloudflare.com/d1/reference/migrations/) in `d1_migrations`; do not edit already-applied migrations to simulate a rollback.
-
-### Static hosting boundaries
-
-The API is host-independent: an HTTPS endpoint plus public CORS works with itch.io, GitHub Pages, and a personal website, without cross-site cookies. The UUID belongs to each browser storage origin, not the physical machine; different hosts/profiles get different IDs unless full player data is transferred. Browser-level site-data deletion can still erase it; the game's clear button deliberately does not.
-
-The game uses hash routes and Vite's relative asset base (`./`). Serve the built files unchanged, including from a subdirectory; refreshing a saved workshop requests the same `index.html`, not a nonexistent application-route file. Use HTTPS in production (localhost works for development); opening `index.html` directly as a `file:` URL is unsupported.
-
-### itch.io release
-
-With Node/npm dependencies installed and Python 3 available:
-
-```sh
-npm run package:itch
-```
-
-This type-checks browser and Worker code, builds `dist/`, then uses Python's standard-library ZIP support to overwrite `release/factory2d-itch.zip`. Only the built files are included: `index.html` at the archive root and relative `assets/` JavaScript/CSS. Tile art and Web Audio effects are procedural; there are no separate image, font, or audio downloads. The Worker, database, source files, and environment files are not uploaded; only the public API URL is embedded in JavaScript. `release/` is ignored by Git.
-
-On the itch.io new/edit project page:
-
-1. Select **HTML** as the project kind and upload `release/factory2d-itch.zip`. Mark the upload as **This file will be played in the browser**.
-2. Prefer **Click to launch in fullscreen** for workshop space; alternatively embed at 1280×800 with the fullscreen button enabled. Keep click-to-play enabled. Leave **Mobile Friendly** unchecked: controls still require mouse/keyboard.
-3. Save as a draft and preview before making the page public. Check puzzle/sandbox navigation, editing, sound after interaction, reload, Back/Forward, downloads, and community score status. The production ZIP has been checked locally in a sandboxed cross-origin iframe on a nested static path, including a live community histogram GET; actual itch-hosted upload/preview verification remains a separate step.
-4. Tell players that saves live in their browser and recommend **Settings → Download Player Data** for backups/transfers. Moving from localhost to itch.io does not carry saves automatically; restrictive browser storage settings can also affect embedded games.
-
-See [itch.io's HTML5 guide](https://itch.io/docs/creators/html5) for upload limits and embed settings. A single HTML upload is not appropriate for this build: it also needs the bundled JavaScript and CSS.

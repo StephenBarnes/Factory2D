@@ -1,0 +1,43 @@
+# Community API and backend reference
+
+For browser/server integration, HTTP contracts, trust boundaries, and local backend development. See [UI/lifecycle](ui-lifecycle.md) for workshop sessions and local persistence, and [deployment](deployment.md) for production configuration, hosting, backups, and releases.
+
+## Architecture
+
+The browser game remains a static Vite application; `backend/worker.ts` is a separately deployed Cloudflare Worker with a D1 binding named `DB`. D1 stores both score minima and bounded puzzle JSON; R2 is unnecessary until larger assets such as images or replays are needed. There are no account credentials in the browser bundle.
+
+## Browser integration
+
+`src/game/community-api.ts` defines the versioned wire contracts. `CommunityClient` owns HTTP requests and cached shipped-puzzle SHA-256 revisions. `CommunityScoresView` loads histograms on briefings and after successful submission, displays connection/player-count status, and ignores superseded responses. Local all-case success is persisted before any network work; failed/manual runs never submit. Each successful submission merges the current result with each metric's minimum across previously confirmed saved solutions for that puzzle, including the active solution's prior result. This uploads better saved results even if their earlier submission failed or they were imported; combined remains the best actual combined score, not the sum of independent minima. The current solution retains its own scores locally. Requests time out after ten seconds. There is no background retry queue or startup upload of historical saves: another successful test run retries a failed submission. Unset/blank `VITE_COMMUNITY_API_URL` disables community requests and sharing without disabling local play.
+
+## Trust and data ownership
+
+The service intentionally trusts clients. Installation IDs are pseudonymous identifiers, **not authentication**; scores are structurally validated, not re-simulated, and submitted puzzle IDs/revisions are not checked against a server-side shipped registry. Public CORS permits every origin, including iframe origins, without credentials/cookies. It is not an anti-abuse boundary. Server schema changes use numbered SQL migrations in `backend/migrations/`; retain old migration files and add new ones. The schema and accepted HTTP API version are distinct from scoring version.
+
+## HTTP contracts
+
+All write requests use `Content-Type: application/json`. Bodies are capped at 1 MiB of UTF-8 bytes, including the wrapper; streaming bodies have the same cap. Invalid requests get JSON `{ error: string }` with HTTP 400, 404, 405, 413, or 415. Unexpected failures return generic 500 responses, with details only in Worker logs. No installation IDs are returned in public responses.
+
+* `POST /v1/scores`: `{ installationId, puzzleId, puzzleRevision, scoringVersion: 1, scores: { price, cycles, footprint, combined } }`; returns `{ ok: true }`. `puzzleRevision` is lowercase SHA-256 of the exact `serializeShippedPuzzle` JSON. The atomic upsert stores each metric's minimum independently, keyed by puzzle ID, revision, scoring version, and installation UUID. Repeated/concurrent submissions never add another player. Combined is the minimum of submitted combined scores, not the sum of the other stored minima. These are best-ever submitted scores; deleting/editing local solutions does not erase them.
+* `GET /v1/puzzles/:puzzleId/histograms?revision=<sha256>&scoringVersion=1`: returns `{ puzzleId, puzzleRevision, scoringVersion, players, metrics }`, where each of `price`, `cycles`, `footprint`, and `combined` in `metrics` is an ascending array of `{ value, count }`. These are exact frequencies, retaining fractional mean cycles, not display bins or percentiles. Each installation contributes once per metric. An empty cohort returns zero players and empty arrays. All metrics use one database snapshot. Deriving counts from current minima avoids separate decrement/increment bookkeeping.
+* `POST /v1/puzzles`: `{ installationId, puzzle }`; returns `{ id }`. The existing `parsePuzzleFile` validates the entire authored puzzle, including cases and victory blocks. The ID is SHA-256 of `JSON.stringify(puzzle)`, preserving property order; identical payloads are idempotent. Published copies are immutable; edits produce a new link.
+* `GET /v1/puzzles/:id`: downloads the original puzzle JSON with an attachment filename. The sandbox's **EXPORT → SHARE PUZZLE** validates locally, asks for public-publication confirmation, then displays this URL. Recipients can download/import it into a sandbox. Community browsing, normal solution-mode play of shared puzzles, voting, histogram charts, and mineral ranks remain separate roadmap items.
+
+`API_SCORING_VERSION` is also the saved-solution scoring version: bump it when score semantics change to invalidate local confirmations and separate remote cohorts. Shipped puzzle-content changes automatically produce a different remote revision. HTTP routes stay under `/v1` until their contract changes.
+
+## Local development
+
+Install with `npm install`. No Cloudflare login is needed for local Workers/D1:
+
+```sh
+npm run db:migrate:local
+npm run dev:backend
+```
+
+In another terminal:
+
+```sh
+VITE_COMMUNITY_API_URL=http://localhost:8787 npm run dev
+```
+
+Alternatively put the public endpoint in `.env.local` using `.env.example` as a guide. Vite reads it at startup/build time; restart Vite after changing it. Local Worker/D1 state lives under `backend/.wrangler/` and is ignored by Git. `npm run build` checks both browser and Worker TypeScript and builds only the static game into `dist/`. `npx wrangler deploy --config backend/wrangler.jsonc --dry-run` separately checks the Worker bundle without creating remote resources.
