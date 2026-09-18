@@ -17,6 +17,7 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 * Modify the assembler to add a pushing force for output: When it has a pending output, but no space to output, attempt to push the blocks away so that it can produce output; failing that, try to push the assembler itself in its forwards direction, so the product can be emitted out the back (at assembler's pre-movement position) in the same tick.
 * Modify the duplicator in the same way as assembler above - make it also attempt to push itself away from the output side, if it's trying to duplicate a single-tile body but there's something blocking the output. When duplicating multi-tile bodies, don't do this - require already empty space for the whole body.
+* Add flags to ban runtime welding and splitting of certain blocks, such as platforms, indestructible conduits, and delivery boxes. We still allow welding and splitting while creating a solution, or while editing the grid in the sandbox; but the welder, splitter, and laser-splitter blocks should not be able to weld/split any edges where both blocks have these flags set. (If only one has it set, still allow welding/splitting.) This would help to prevent some exploit solutions to puzzles.
 
 # Performance
 
@@ -27,7 +28,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 ## New circuit components
 
-* Add an indestructible variant of the channel/conduit block. Use the platform block's visuals with circuit lines on top. (This is useful to prevent easy exploit solutions to puzzles by e.g. drilling a block adjacent to the victory stone and welding a fixed +1 source to it. We're generally in favor of allowing exploits like this, but we don't want them to be easy.)
 * Add a "rune engine" component that's like a programmable gate array. Take 2 inputs and produce 2 outputs. The block should be configurable to determine the I/O relation from some possible set. Details TBD. Could include an internal latch for feedback, like the PGA in Shenzhen IO. Visualize the engine block as a variation on the existing "rune array" component, but with a specific pattern of pre-set runes inside it, which cannot be modified except by toggling them between some specific states on click e.g. conduit vs stone block, or rotating by 90-degree increments.
 * Add a stack block with push/pop to store data up to some max size. One input for value to push - always push if it's +1 or -1, but ignore zero. One input to trigger a push on +1, pop on -1. One output for popped value. One input to rotate it forwards or backwards on +1 or -1.
 * Add a queue block, similar to the stack block.
@@ -38,6 +38,7 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 # UI
 
+* When the mouse is over a block in the grid (to show tile inspector), if the alt key is held, also show extended description, same as we currently show on mouseover on the palette.
 * Implement undo and redo when editing in the sandbox and puzzle solutions.
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
 

@@ -145,6 +145,33 @@ describe("drills", () => {
     expect(world.idAt(2, 2)).toBe(stoneId);
   });
 
+  it("keeps protected channel wiring powered and welded under repeated drilling after save/load", () => {
+    const original = new World(4, 3);
+    original.place(0, 1, TileKind.Drill, Direction.Right);
+    original.place(0, 2, TileKind.Platform);
+    original.place(1, 1, TileKind.IndestructibleConduit);
+    original.place(1, 2, TileKind.Platform);
+    original.place(1, 0, TileKind.FixedCharge);
+    original.place(2, 1, TileKind.Conduit);
+    original.setWeld(1, 1, 1, 2, true);
+    original.setWeld(1, 1, 1, 0, true);
+    original.setWeld(1, 1, 2, 1, true);
+    const { world } = deserializeBoard(serializeBoard(original, 0));
+    const channelId = world.idAt(1, 1);
+    const simulation = new Simulation(world);
+
+    for (let tick = 0; tick < 8; tick += 1) simulation.step();
+
+    expect(world.kindAt(1, 1)).toBe(TileKind.IndestructibleConduit);
+    expect(world.idAt(1, 1)).toBe(channelId);
+    expect(world.isWelded(1, 1, 1, 2)).toBe(true);
+    expect(world.isWelded(1, 1, 1, 0)).toBe(true);
+    expect(world.isWelded(1, 1, 2, 1)).toBe(true);
+    expect(world.chargeAt(1, 1)).toBe(1);
+    expect(world.chargeAt(2, 1)).toBe(1);
+    expect(world.chargeAtPort(0, 1, Direction.Left)).toBe(0);
+  });
+
   it("isolates rear activity from side control and resumes saved partial progress", () => {
     const world = new World(5, 3);
     world.place(2, 0, TileKind.Stone);

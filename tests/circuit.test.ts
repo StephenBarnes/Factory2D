@@ -54,6 +54,36 @@ describe("circuit networks", () => {
     expect(world.chargeAt(3, 1)).toBe(0);
   });
 
+  it("joins all four protected channel ports without anchoring the falling circuit", () => {
+    const world = new World(5, 4);
+    world.place(2, 1, TileKind.IndestructibleConduit);
+    world.place(2, 0, TileKind.FixedCharge);
+    world.place(1, 1, TileKind.Conduit);
+    world.place(3, 1, TileKind.Conduit);
+    world.place(2, 2, TileKind.Conduit);
+    world.setWeld(2, 1, 2, 0, true);
+    world.setWeld(2, 1, 1, 1, true);
+    world.setWeld(2, 1, 3, 1, true);
+    world.setWeld(2, 1, 2, 2, true);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+
+    expect(world.kindAt(2, 2)).toBe(TileKind.IndestructibleConduit);
+    expect(world.chargeAt(2, 2)).toBe(1);
+    expect(world.chargeAt(1, 2)).toBe(1);
+    expect(world.chargeAt(3, 2)).toBe(1);
+    expect(world.chargeAt(2, 3)).toBe(1);
+
+    world.setWeld(2, 2, 2, 1, false);
+    simulation.step();
+
+    expect(world.chargeAt(2, 2)).toBe(0);
+    expect(world.chargeAt(1, 2)).toBe(0);
+    expect(world.chargeAt(3, 2)).toBe(0);
+    expect(world.chargeAt(2, 3)).toBe(0);
+  });
+
   it("activates circuits after empty ticks and reuses the runtime across resets", () => {
     const world = new World(3, 1);
     const empty = world.clone();

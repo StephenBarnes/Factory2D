@@ -70,6 +70,7 @@ export const enum TileKind {
   DelayGate = 68,
   BlockComparer = 69,
   MagicLink = 70,
+  IndestructibleConduit = 71,
 }
 
 export const enum Direction {
@@ -148,6 +149,7 @@ export const enum TileDecorationStyle {
   ForceProjector = 56,
   DelayGate = 57,
   MagicLink = 58,
+  IndestructibleConduit = 59,
 }
 
 export const enum PaletteCategory {
@@ -594,6 +596,31 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#69727b",
     decorationStyle: TileDecorationStyle.Conduit,
     decorationColor: "#162f4b",
+  },
+  [TileKind.IndestructibleConduit]: {
+    name: "Indestructible Channel",
+    boardCode: "{",
+    defaultPrice: 10,
+    palette: {
+      order: 74,
+      category: PaletteCategory.PuzzleTools,
+      description: "Shares charge across welded circuit blocks; drills cannot destroy it.",
+      extendedDescription: ["Carries charge like a channel: every connected port shares the sign of the total driver charge. Positive and negative drivers cancel, and an undriven network is neutral.", "Indestructible, but not fixed: falls and moves with its welded body like an ordinary channel. Weld it to a platform to anchor protected puzzle wiring."],
+    },
+    affectedByGravity: true,
+    indestructible: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.All,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#595f7d",
+    decorationStyle: TileDecorationStyle.IndestructibleConduit,
+    decorationColor: "#2f2b43",
   },
   [TileKind.DelayGate]: {
     name: "Delay Gate",

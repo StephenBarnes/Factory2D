@@ -485,6 +485,10 @@ function drawDecoration(
   pistonTransitionProgress: number,
   rotatorTurnOffset: number,
 ): void {
+  if (definition.decorationStyle === TileDecorationStyle.IndestructibleConduit) {
+    context.fillStyle = definition.decorationColor;
+    drawRivets(context, left, top, size);
+  }
   if (circuitConnections !== WeldSide.None) {
     const hasComponentDisplay =
       definition.decorationStyle === TileDecorationStyle.Delay ||
@@ -949,17 +953,9 @@ function drawDecoration(
       context.lineTo(left + size * 0.61, top + size * 0.21);
       context.stroke();
       break;
-    case TileDecorationStyle.Iron: {
-      const rivetOffset = size * 0.26;
-      const rivetRadius = Math.max(1, size * 0.05);
-      context.beginPath();
-      drawDot(context, left + rivetOffset, top + rivetOffset, rivetRadius);
-      drawDot(context, left + size - rivetOffset, top + rivetOffset, rivetRadius);
-      drawDot(context, left + rivetOffset, top + size - rivetOffset, rivetRadius);
-      drawDot(context, left + size - rivetOffset, top + size - rivetOffset, rivetRadius);
-      context.fill();
+    case TileDecorationStyle.Iron:
+      drawRivets(context, left, top, size);
       break;
-    }
     case TileDecorationStyle.Welder:
     case TileDecorationStyle.Splitter:
     case TileDecorationStyle.LaserSplitter: {
@@ -1366,6 +1362,7 @@ function drawDecoration(
       break;
     }
     case TileDecorationStyle.Conduit:
+    case TileDecorationStyle.IndestructibleConduit:
       context.fillStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
       context.beginPath();
       drawDot(context, left + size / 2, top + size / 2, Math.max(2, size * 0.11));
@@ -2270,6 +2267,22 @@ function drawPortArrows(
     context.stroke();
   }
   context.restore();
+}
+
+function drawRivets(
+  context: CanvasRenderingContext2D,
+  left: number,
+  top: number,
+  size: number,
+): void {
+  const rivetOffset = size * 0.26;
+  const rivetRadius = Math.max(1, size * 0.05);
+  context.beginPath();
+  drawDot(context, left + rivetOffset, top + rivetOffset, rivetRadius);
+  drawDot(context, left + size - rivetOffset, top + rivetOffset, rivetRadius);
+  drawDot(context, left + rivetOffset, top + size - rivetOffset, rivetRadius);
+  drawDot(context, left + size - rivetOffset, top + size - rivetOffset, rivetRadius);
+  context.fill();
 }
 
 /** Adds one filled circle to the current path without a connecting chord from the previous subpath. */
