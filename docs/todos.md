@@ -47,6 +47,7 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * For the sandbox, add buttons on the sides of the block grid, or buttons in the puzzle properties modal, to add or remove rows or columns on each side of the canvas. Make these shift all blocks correctly, and shift the player-modifiable regions. (Currently just incrementing/decrementing width/height in the modal is fine when adding/removing on the right or bottom, but top/left requires moving everything and adjusting the player-modifiable regions.) The buttons on the sides of the grid would be ideal, better than buttons in puzzle-properties modal, but uncertain if they may be difficult to implement properly.
 * Allow right-click to remove blocks even when the selection tool is selected. Also right-click drag.
 * On the puzzle briefing screen, highlight all solutions that are optimal in any metric, not just the combined metric. Underline the numbers for whichever metrics they're optimal in.
+* Add a favicon. Maybe a simple gear character, or `<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙</text></svg>">`
 
 # Visuals
 

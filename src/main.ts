@@ -2463,6 +2463,8 @@ document.addEventListener("keydown", (event) => {
     event.preventDefault();
     if (surface.hoveredCell !== null) {
       pickTileAt(surface.hoveredCell);
+    } else {
+      selectTile(previousSelectedKind);
     }
     return;
   }
