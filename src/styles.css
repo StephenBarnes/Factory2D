@@ -313,6 +313,9 @@ body:has(dialog[open]) .tool-cursor {
 }
 
 .main-menu-header h1 {
+  display: flex;
+  align-items: center;
+  gap: 0.22em;
   margin: 0;
   color: var(--text-bright);
   font-family: var(--font-display);
@@ -320,6 +323,12 @@ body:has(dialog[open]) .tool-cursor {
   line-height: 0.95;
   letter-spacing: 0.03em;
   text-shadow: 0 2px 22px rgb(226 179 87 / 22%);
+}
+
+.main-menu-title-icon {
+  flex: none;
+  width: 0.85em;
+  height: 0.85em;
 }
 
 .sandbox-node,
