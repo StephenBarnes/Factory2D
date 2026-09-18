@@ -8,6 +8,8 @@ import {
   parseSandboxImport,
   resizeWorld,
 } from "../src/game/sandbox-puzzle-authoring";
+import { WorkshopSessionController } from "../src/game/workshop-session";
+import { serializeBoard } from "../src/simulation/board-export";
 import { Direction, TILE_DEFINITIONS, TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
 
@@ -301,6 +303,90 @@ describe("sandbox puzzle authoring", () => {
     expect(cropped.textBoxes).toEqual([
       { id: "overlap", x: 0, y: 0, width: 2, height: 2, text: "Clipped", owner: "author" },
     ]);
+  });
+
+  it("pads negative origins without losing state, nested boards, annotations, or boundary welds", () => {
+    const world = new World(3, 2);
+    world.place(0, 0, TileKind.Delay, Direction.Left, true);
+    world.configureNumericComponent(0, 0, 5);
+    world.advanceDelayAtIndex(0, -1);
+    world.setCharge(0, 0, 1);
+    world.place(1, 0, TileKind.Stone);
+    world.setWeld(0, 0, 1, 0, true);
+    world.place(0, 1, TileKind.Stone);
+    world.setWeld(0, 0, 0, 1, true);
+    world.place(2, 0, TileKind.RuneArray);
+    const inner = world.runeArrayWorldAt(2, 0);
+    inner.place(1, 1, TileKind.RuneArray);
+    inner.runeArrayWorldAt(1, 1).place(0, 0, TileKind.Selector, Direction.Down, true);
+    world.place(1, 1, TileKind.WireCrossing);
+    world.setCrossingCharges(1, 1, 1, -1);
+    world.place(2, 1, TileKind.Assembler);
+    world.setIsolatedOutputCharge(2, 1, -1);
+    world.setTextBoxes([
+      { id: "hint", x: 0.25, y: 0.5, width: 2, height: 1, text: "Hint", owner: "author" },
+    ]);
+
+    const padded = resizeWorld(world, 4, 3, -1, -1);
+    expect(JSON.parse(serializeBoard(padded, 0)).grid).toEqual([
+      "....",
+      `.${JSON.parse(serializeBoard(world, 0)).grid[0]}`,
+      `.${JSON.parse(serializeBoard(world, 0)).grid[1]}`,
+    ]);
+    expect(padded.componentStateSnapshotAt(1, 1)).toEqual(world.componentStateSnapshotAt(0, 0));
+    expect(padded.isWelded(1, 1, 2, 1)).toBe(true);
+    expect(padded.isWelded(1, 1, 1, 2)).toBe(true);
+    expect(serializeBoard(padded.runeArrayWorldAt(3, 1), 0)).toBe(serializeBoard(inner, 0));
+    expect(padded.textBoxes).toEqual([
+      { id: "hint", x: 1.25, y: 1.5, width: 2, height: 1, text: "Hint", owner: "author" },
+    ]);
+    expect(serializeBoard(resizeWorld(padded, 3, 2, 1, 1), 0)).toBe(serializeBoard(world, 0));
+  });
+
+  it("resizes every independent authored case and region while retaining metadata and current runtime edits", () => {
+    const source = JSON.parse(authoredPuzzleSource());
+    source.testCases[0].cycleLimit = 125;
+    const imported = parseSandboxImport(JSON.stringify(source), "cases.json");
+    const sessions = new WorkshopSessionController(imported.world);
+    sessions.replaceActiveSandboxImport(imported);
+    const authoring = imported.authoring;
+    const properties = authoring.properties(4, 3);
+    const standard = serializeBoard(sessions.active.world, 0);
+    sessions.selectActiveSandboxTestCase("alternate");
+    sessions.active.world.place(0, 0, TileKind.Delay, Direction.Down);
+    sessions.active.world.configureNumericComponent(0, 0, 7);
+    sessions.active.world.setTextBoxes([
+      { id: "alternate", x: 0, y: 0, width: 2, height: 2, text: "Alternate", owner: "author" },
+    ]);
+    sessions.active.simulation.tick = 13;
+    const alternate = serializeBoard(sessions.active.world, 0);
+
+    sessions.resizeActiveSandboxEdge("top", 1);
+    sessions.resizeActiveSandboxEdge("left", 1);
+
+    expect(sessions.active.simulation.tick).toBe(0);
+    expect(authoring.selectedTestCaseId).toBe("alternate");
+    expect(authoring.properties(4, 3)).toEqual(properties);
+    expect(sessions.active.world.componentStateSnapshotAt(1, 1)).toMatchObject({ type: "delay", length: 7 });
+    expect(sessions.active.editableRegionAuthoring?.region.rectangles).toEqual([
+      { x: 2, y: 2, width: 2, height: 1 },
+    ]);
+    sessions.active.world.place(1, 1, TileKind.Empty);
+    sessions.resetSimulation();
+    expect(sessions.active.world.kindAt(1, 1)).toBe(TileKind.Delay);
+
+    const snapshot = sessions.snapshotActiveSandbox();
+    const restored = parseSandboxImport(snapshot.source, "resized.json");
+    expect(restored.authoring.selectTestCase("standard").kindAt(1, 1)).toBe(TileKind.Empty);
+    expect(restored.authoring.selectTestCase("alternate").kindAt(1, 1)).toBe(TileKind.Delay);
+    expect(JSON.parse(snapshot.source).testCases[0].cycleLimit).toBe(125);
+
+    sessions.resizeActiveSandboxEdge("top", -1);
+    sessions.resizeActiveSandboxEdge("left", -1);
+    expect(serializeBoard(sessions.active.world, 0)).toBe(alternate);
+    sessions.selectActiveSandboxTestCase("standard");
+    expect(serializeBoard(sessions.active.world, 0)).toBe(standard);
+    expect(sessions.active.editableRegionAuthoring?.region.rectangles).toEqual(imported.editableRegion.rectangles);
   });
 
   it("continues importing scene files with fresh puzzle-authoring defaults", () => {

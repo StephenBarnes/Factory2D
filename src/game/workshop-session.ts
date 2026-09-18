@@ -6,6 +6,7 @@ import { EditableRegionAuthoringState } from "./editable-region-authoring";
 import type { PuzzleComponents } from "./puzzle-components";
 import {
   SandboxPuzzleAuthoringState,
+  type BoardEdge,
   type SandboxPuzzleImport,
   type SandboxPuzzleProperties,
 } from "./sandbox-puzzle-authoring";
@@ -160,6 +161,17 @@ export class WorkshopSessionController {
     }
     authoring.saveSelectedWorld(this.currentSession.world);
     authoring.crop(bounds);
+    regionAuthoring.resizeForBoard(bounds.width, bounds.height, bounds.x, bounds.y);
+    this.replaceRuntime(authoring.selectedWorld(), 0);
+  }
+
+  resizeActiveSandboxEdge(edge: BoardEdge, delta: 1 | -1): void {
+    const authoring = this.activeSandboxAuthoring();
+    const regionAuthoring = this.currentSession.editableRegionAuthoring;
+    if (regionAuthoring === null) {
+      throw new Error("Sandbox editable-region authoring state is missing");
+    }
+    const bounds = authoring.resizeEdge(edge, delta, this.currentSession.world);
     regionAuthoring.resizeForBoard(bounds.width, bounds.height, bounds.x, bounds.y);
     this.replaceRuntime(authoring.selectedWorld(), 0);
   }

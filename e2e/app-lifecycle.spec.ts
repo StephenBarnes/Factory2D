@@ -49,10 +49,11 @@ async function boardCellCenter(
       readonly width: number;
       readonly height: number;
     };
+    const inset = diagnostics.snapshot().screen.kind === "sandbox" ? 40 : 0;
     const cellSize = Math.min(
-      canvas.clientWidth / board.width,
-      canvas.clientHeight / board.height,
-      64,
+      (canvas.clientWidth - inset * 2) / board.width,
+      (canvas.clientHeight - inset * 2) / board.height,
+      128,
     );
     const originX = (canvas.clientWidth - board.width * cellSize) / 2;
     const originY = (canvas.clientHeight - board.height * cellSize) / 2;
@@ -77,17 +78,18 @@ async function canvasBlackSpacePoint(
       readonly width: number;
       readonly height: number;
     };
+    const inset = diagnostics.snapshot().screen.kind === "sandbox" ? 40 : 0;
     const cellSize = Math.min(
-      canvas.clientWidth / board.width,
-      canvas.clientHeight / board.height,
-      64,
+      (canvas.clientWidth - inset * 2) / board.width,
+      (canvas.clientHeight - inset * 2) / board.height,
+      128,
     );
     const horizontalMargin = (canvas.clientWidth - board.width * cellSize) / 2;
     const verticalMargin = (canvas.clientHeight - board.height * cellSize) / 2;
     if (horizontalMargin > 1) {
       return {
         x: canvasBounds.left + horizontalMargin / 2,
-        y: canvasBounds.top + canvas.clientHeight / 2,
+        y: canvasBounds.top + (verticalMargin > 1 ? verticalMargin / 2 : canvas.clientHeight / 2),
       };
     }
     if (verticalMargin > 1) {
@@ -198,10 +200,17 @@ test("creates, persists, duplicates, and deletes saved sandboxes", async ({ page
   await page.getByRole("button", { name: "← SANDBOX" }).click();
 
   await page.getByRole("button", { name: "Duplicate Sandbox 1" }).click();
-  await expect(page.getByText("Sandbox 1 Copy", { exact: true })).toBeVisible();
+  const duplicate = page.getByRole("listitem").filter({
+    hasNot: page.getByRole("button", { name: "Edit Sandbox 1", exact: true }),
+  });
+  await expect(duplicate).toBeVisible();
+  await duplicate.getByRole("button", { name: /^Edit / }).click();
+  expect(JSON.parse((await diagnosticSnapshot(page)).serializedBoard).grid).toEqual(board.grid);
+  await page.getByRole("button", { name: "← SANDBOX" }).click();
   page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "Delete Sandbox 1 Copy" }).click();
-  await expect(page.getByText("Sandbox 1 Copy", { exact: true })).toHaveCount(0);
+  await duplicate.getByRole("button", { name: /^Delete / }).click();
+  await expect(duplicate).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Edit Sandbox 1", exact: true })).toBeVisible();
 });
 
 test("selection shortcuts use occupied bounds and grid clicks unselect", async ({ page }) => {

@@ -43,10 +43,11 @@ async function viewCellCenter(
     const canvasBounds = canvas.getBoundingClientRect();
     const view = diagnostics.snapshot().view;
     const margin = view.depth === 0 ? 0 : 1;
+    const inset = view.depth === 0 && diagnostics.snapshot().screen.kind === "sandbox" ? 40 : 0;
     const cellSize = Math.min(
-      canvas.clientWidth / (view.width + margin * 2),
-      canvas.clientHeight / (view.height + margin * 2),
-      64,
+      (canvas.clientWidth - inset * 2) / (view.width + margin * 2),
+      (canvas.clientHeight - inset * 2) / (view.height + margin * 2),
+      128,
     );
     const originX = (canvas.clientWidth - view.width * cellSize) / 2;
     const originY = (canvas.clientHeight - view.height * cellSize) / 2;

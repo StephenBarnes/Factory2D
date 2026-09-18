@@ -106,6 +106,7 @@ export class CanvasRenderer {
   private readonly nestedView: NestedBoardView | null;
   /** Cells of margin kept around the board when fitting, so nested port conduits stay visible. */
   private readonly fitMargin: number;
+  private fitInset = 0;
   private authoredEditableRegion: GridRegion | null = null;
   private authoredEditableRegionDraft: GridRectangle | null = null;
   private tileSelectionOverlay: TileSelectionOverlay | null = null;
@@ -248,6 +249,16 @@ export class CanvasRenderer {
   }
 
 
+
+  /** Reserve CSS pixels for controls outside the board without disturbing a panned camera. */
+  setFitInset(pixels: number): void {
+    if (this.fitInset === pixels) return;
+    this.fitInset = pixels;
+    if (this.viewInitialized && !this.viewModified) {
+      this.fitViewToViewport();
+      this.renderInvalidated = true;
+    }
+  }
 
   fitBoardToViewport(): void {
     this.resizeBackingStore();
@@ -738,8 +749,8 @@ export class CanvasRenderer {
 
   private fitViewToViewport(): void {
     this.cellSize = Math.min(
-      this.viewportWidth / (this.world.width + this.fitMargin * 2),
-      this.viewportHeight / (this.world.height + this.fitMargin * 2),
+      Math.max(1, this.viewportWidth - this.fitInset * 2) / (this.world.width + this.fitMargin * 2),
+      Math.max(1, this.viewportHeight - this.fitInset * 2) / (this.world.height + this.fitMargin * 2),
       MAX_TILE_SIZE,
     );
     this.viewCenterX = this.world.width / 2;

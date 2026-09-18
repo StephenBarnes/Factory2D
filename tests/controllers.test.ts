@@ -9,8 +9,8 @@ import { SavedSolutionController } from "../src/game/saved-solution-controller";
 import { loadPuzzleSolutions } from "../src/game/puzzle-solutions";
 import { createSandboxWorld, puzzleById } from "../src/game/puzzles";
 import { WorkshopSessionController } from "../src/game/workshop-session";
-import { SandboxPuzzleAuthoringState } from "../src/game/sandbox-puzzle-authoring";
-import { serializeBoard } from "../src/simulation/board-export";
+import { SandboxPuzzleAuthoringState, type BoardEdge } from "../src/game/sandbox-puzzle-authoring";
+import { MAX_BOARD_HEIGHT, MAX_BOARD_WIDTH, serializeBoard } from "../src/simulation/board-export";
 import { TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
 import { expectDefined } from "../src/util/assert";
@@ -185,6 +185,95 @@ describe("workshop session controller", () => {
     expect(sessions.active.puzzleAuthoring?.selectedTestCaseId).toBe("standard");
     expect(sessions.active.puzzleAuthoring?.testCases).toHaveLength(1);
   });
+
+  it.each([
+    ["top", 1, ["...", "#..", "..i"]],
+    ["right", 1, ["#...", "..i."]],
+    ["bottom", 1, ["#..", "..i", "..."]],
+    ["left", 1, [".#..", "...i"]],
+    ["top", -1, ["..i"]],
+    ["right", -1, ["#.", ".."]],
+    ["bottom", -1, ["#.."]],
+    ["left", -1, ["..", ".i"]],
+  ] as const)("resizes only the %s edge by %s cells", (edge, delta, grid) => {
+    const world = new World(3, 2);
+    world.place(0, 0, TileKind.Stone);
+    world.place(2, 1, TileKind.Iron);
+    const sessions = new WorkshopSessionController(world);
+    sessions.resizeActiveSandboxEdge(edge, delta);
+    const resized = JSON.parse(serializeBoard(sessions.active.world, 0));
+    expect(resized.grid).toEqual(grid);
+    expect(resized.width).toBe(grid[0].length);
+    expect(resized.height).toBe(grid.length);
+  });
+
+  it("clips removed top and left contents, annotations, welds and editable rectangles across cases", () => {
+    const world = new World(3, 3);
+    world.place(0, 1, TileKind.Stone);
+    world.place(1, 1, TileKind.Stone);
+    world.place(2, 1, TileKind.Stone);
+    world.setWeld(0, 1, 1, 1, true);
+    world.setWeld(1, 1, 2, 1, true);
+    world.place(1, 0, TileKind.Iron);
+    world.setTextBoxes([
+      { id: "clip", x: 0.5, y: 0.5, width: 2, height: 2, text: "Clip", owner: "author" },
+      { id: "drop", x: 0, y: 0, width: 1, height: 1, text: "Drop", owner: "author" },
+    ]);
+    const sessions = new WorkshopSessionController(world);
+    sessions.active.editableRegionAuthoring?.replaceForBoard(3, 3, new GridRegion([
+      { x: 0, y: 0, width: 2, height: 3 },
+      { x: 0, y: 0, width: 1, height: 1 },
+    ]));
+    sessions.duplicateActiveSandboxTestCase();
+    sessions.active.world.place(2, 2, TileKind.Delay);
+    sessions.active.world.configureNumericComponent(2, 2, 6);
+
+    sessions.resizeActiveSandboxEdge("top", -1);
+    sessions.resizeActiveSandboxEdge("left", -1);
+
+    expect(sessions.active.world.componentStateSnapshotAt(1, 1)).toMatchObject({ type: "delay", length: 6 });
+    expect(sessions.active.editableRegionAuthoring?.region.rectangles).toEqual([
+      { x: 0, y: 0, width: 1, height: 2 },
+    ]);
+    for (const id of ["case-1", "standard"]) {
+      sessions.selectActiveSandboxTestCase(id);
+      expect(JSON.parse(serializeBoard(sessions.active.world, 0)).grid[0]).toBe("##");
+      expect(JSON.parse(serializeBoard(sessions.active.world, 0)).welds).toEqual(["-.", ".."]);
+      expect(sessions.active.world.textBoxes).toEqual([
+        { id: "clip", x: 0, y: 0, width: 1.5, height: 1.5, text: "Clip", owner: "author" },
+      ]);
+    }
+    expect(sessions.active.world.kindAt(1, 1)).toBe(TileKind.Empty);
+  });
+
+  it.each([
+    ["left", -1, 1, 2],
+    ["right", -1, 1, 2],
+    ["top", -1, 2, 1],
+    ["bottom", -1, 2, 1],
+    ["left", 1, MAX_BOARD_WIDTH, 2],
+    ["right", 1, MAX_BOARD_WIDTH, 2],
+    ["top", 1, 2, MAX_BOARD_HEIGHT],
+    ["bottom", 1, 2, MAX_BOARD_HEIGHT],
+  ] satisfies readonly (readonly [BoardEdge, 1 | -1, number, number])[])(
+    "rejects %s edge resize by %s at dimension limits without saving live changes",
+    (edge, delta, width, height) => {
+      const sessions = new WorkshopSessionController(new World(width, height));
+      const region = sessions.active.editableRegionAuthoring;
+      region?.replaceForBoard(width, height, new GridRegion([{ x: 0, y: 0, width: 1, height: 1 }]));
+      const authoring = sessions.active.puzzleAuthoring;
+      const before = authoring?.serialize(new GridRegion([]));
+      sessions.active.world.place(0, 0, TileKind.Stone);
+      sessions.active.simulation.tick = 9;
+      const world = sessions.active.world;
+      expect(() => sessions.resizeActiveSandboxEdge(edge, delta)).toThrow(RangeError);
+      expect(sessions.active.world).toBe(world);
+      expect(sessions.active.simulation.tick).toBe(9);
+      expect(sessions.active.baseline.kindAt(0, 0)).toBe(TileKind.Empty);
+      expect(authoring?.serialize(new GridRegion([]))).toBe(before);
+      expect(region?.region.rectangles).toEqual([{ x: 0, y: 0, width: 1, height: 1 }]);
+    },
+  );
 });
 
 describe("saved solution controller", () => {

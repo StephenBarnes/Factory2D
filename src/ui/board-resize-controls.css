@@ -1,0 +1,64 @@
+.board-resize-controls {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.board-resize-group {
+  position: absolute;
+  display: flex;
+  width: var(--board-resize-width);
+  height: var(--board-resize-height);
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--panel-border);
+  border-radius: 3px;
+  background: var(--panel-bg);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.board-resize-group[data-edge="left"],
+.board-resize-group[data-edge="right"] {
+  flex-direction: column;
+  width: var(--board-resize-height);
+  height: var(--board-resize-width);
+}
+
+.board-resize-controls[hidden],
+.board-resize-group[hidden] {
+  display: none;
+}
+
+.board-resize-group button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 2px;
+  background: var(--raised);
+  color: var(--text-body);
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  line-height: 1;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.board-resize-group button:hover:not(:disabled) {
+  border-color: var(--gold);
+  background: var(--raised-hover);
+  color: var(--gold-bright);
+}
+
+.board-resize-group button:focus-visible {
+  outline-offset: 1px;
+}
+
+.board-resize-group button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}

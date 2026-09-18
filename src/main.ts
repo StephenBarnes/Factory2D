@@ -78,6 +78,7 @@ import { initializeTheme } from "./ui/theme";
 import { initializeBevelSetting } from "./ui/bevel-setting";
 import { WorkshopSounds } from "./ui/workshop-sounds";
 import { initializePaletteResize } from "./ui/palette-resize";
+import { BoardResizeControls } from "./ui/board-resize-controls";
 
 const PALETTE_PREVIEW_SUPERSAMPLING = 2;
 const KEYBOARD_PAN_PIXELS = 64;
@@ -413,6 +414,9 @@ function setRunning(nextRunning: boolean): void {
 }
 
 surface.setMountListener(() => {
+  surface.renderer.setFitInset(
+    surface.session.puzzleAuthoring !== null && surface.viewDepth === 0 ? 40 : 0,
+  );
   resetFeedbackAnimation?.cancel();
   resetFeedbackAnimation = null;
   if (selectedTool === "editable-region" && surface.editableRegionAuthoring === null) {
@@ -1928,6 +1932,26 @@ selectionRotateButton.addEventListener("click", () => {
 });
 selectionSaveSnippetButton.addEventListener("click", saveSelectionAsSnippet);
 selectionDeleteButton.addEventListener("click", deleteTileSelection);
+const boardResizeControls = new BoardResizeControls(canvas, (edge, delta) => {
+  if (navigation.screen.kind !== "sandbox" || surface.viewDepth !== 0) return;
+  const dimension = edge === "top" || edge === "bottom" ? "row" : "column";
+  if (delta < 0 && !window.confirm(
+    `Remove the ${edge} ${dimension}? Its contents will be removed from all test cases.`,
+  )) return;
+  commitTileSelection();
+  stopWorkshopActivity();
+  surface.mountActiveSession({
+    fitBoard: true,
+    cancelInteraction: true,
+    updateSession: () => sessions.resizeActiveSandboxEdge(edge, delta),
+  });
+  navigation.markActiveWorkshopDirty();
+  navigation.persistActiveWorkshop();
+  configureComponentPalette();
+  updateTransportState();
+  refreshPointerHover();
+});
+
 selectionCropButton.addEventListener("click", () => {
   if (navigation.screen.kind !== "sandbox" || surface.viewDepth !== 0) return;
   const overlay = surface.selection.overlay(canEditCell, componentIsAvailable);
@@ -2656,6 +2680,10 @@ function frame(currentTime: number): void {
     animationToggle.checked,
   );
   positionSelectionActions();
+  boardResizeControls.update(
+    surface.renderer, surface.world,
+    navigation.screen.kind === "sandbox" && surface.viewDepth === 0,
+  );
   requestAnimationFrame(frame);
 }
 

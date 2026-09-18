@@ -33,6 +33,8 @@ import type { TextBox } from "../simulation/text-box";
 import { expectDefined } from "../util/assert";
 import { parsePuzzleDifficulty, type PuzzleDifficulty } from "./puzzle-difficulty";
 
+export type BoardEdge = "top" | "right" | "bottom" | "left";
+
 export interface SandboxPuzzleComponentProperty {
   readonly kind: TileKind;
   readonly enabled: boolean;
@@ -253,6 +255,31 @@ export class SandboxPuzzleAuthoringState {
     this.authoredTestCases.forEach((testCase, index) => {
       testCase.world = expectDefined(worlds[index], "Cropped test case is missing");
     });
+  }
+
+  resizeEdge(edge: BoardEdge, delta: 1 | -1, currentWorld: World): GridRectangle {
+    const horizontal = edge === "left" || edge === "right";
+    const bounds = {
+      x: edge === "left" ? -delta : 0,
+      y: edge === "top" ? -delta : 0,
+      width: currentWorld.width + (horizontal ? delta : 0),
+      height: currentWorld.height + (horizontal ? 0 : delta),
+    };
+    requireBoardDimensions(bounds.width, bounds.height);
+    const selected = this.testCase(this.selectedTestCaseIdValue);
+    if (currentWorld.width !== selected.world.width || currentWorld.height !== selected.world.height) {
+      throw new RangeError("Sandbox test case dimensions must match");
+    }
+    const worlds = this.authoredTestCases.map((testCase) =>
+      resizeWorld(
+        testCase === selected ? currentWorld : testCase.world,
+        bounds.width, bounds.height, bounds.x, bounds.y,
+      )
+    );
+    this.authoredTestCases.forEach((testCase, index) => {
+      testCase.world = expectDefined(worlds[index], "Resized test case is missing");
+    });
+    return bounds;
   }
 
   selectTestCase(testCaseId: string): World {
@@ -529,8 +556,8 @@ export function resizeWorld(
   source: World, width: number, height: number, originX = 0, originY = 0,
 ): World {
   requireBoardDimensions(width, height);
-  if (!Number.isSafeInteger(originX) || !Number.isSafeInteger(originY) || originX < 0 || originY < 0) {
-    throw new RangeError("Board resize origin must be non-negative integers");
+  if (!Number.isSafeInteger(originX) || !Number.isSafeInteger(originY)) {
+    throw new RangeError("Board resize origin must be safe integers");
   }
   if (source.width === width && source.height === height && originX === 0 && originY === 0) {
     return source.clone();
@@ -541,7 +568,7 @@ export function resizeWorld(
   board.height = height;
   board.tick = 0;
   board.result = "in-progress";
-  board.grid = resizeRows(board.grid.slice(originY).map((row) => row.slice(originX)), width, height, ".");
+  board.grid = resizeRows(board.grid, width, height, originX, originY);
   board.welds = resizedWorldWeldRows(source, width, height, originX, originY);
   const translate = <T extends CoordinateEntry>(entries: readonly T[]): T[] =>
     entries.map((entry) => ({ ...entry, x: entry.x - originX, y: entry.y - originY }));
@@ -579,12 +606,16 @@ function resizeRows(
   rows: readonly string[],
   width: number,
   height: number,
-  fill: string,
+  originX: number,
+  originY: number,
 ): string[] {
   const resized: string[] = [];
+  const padding = ".".repeat(Math.min(width, Math.max(0, -originX)));
+  const start = Math.max(0, originX);
+  const end = Math.max(0, originX + width);
   for (let y = 0; y < height; y += 1) {
-    const row = rows[y] ?? "";
-    resized.push(row.slice(0, width).padEnd(width, fill));
+    const row = rows[y + originY] ?? "";
+    resized.push((padding + row.slice(start, end)).padEnd(width, "."));
   }
   return resized;
 }
@@ -598,7 +629,7 @@ function resizedWorldWeldRows(
     for (let x = 0; x < width; x += 1) {
       const sx = x + originX;
       const sy = y + originY;
-      const inSource = sx < source.width && sy < source.height;
+      const inSource = sx >= 0 && sy >= 0 && sx < source.width && sy < source.height;
       const right = inSource && x + 1 < width && sx + 1 < source.width &&
         source.isWelded(sx, sy, sx + 1, sy);
       const down = inSource && y + 1 < height && sy + 1 < source.height &&

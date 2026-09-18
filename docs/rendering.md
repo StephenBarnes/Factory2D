@@ -65,6 +65,7 @@ Raw-material ordering is shared by the palette and authoring cost controls throu
 `src/render/canvas-renderer.ts` owns grid rendering, hit testing, pan/zoom, interpolation, previews, hover overlays, and editable-region/array framing.
 
 * The canvas occupies the region left after the palette and bottom controls. Fit the whole grid centered in the actual canvas, including subpixel tile sizes for maximum-size boards. Workshop entry and scene import reset the fit.
+* Root sandboxes reserve a 40 CSS-pixel fit inset for `src/ui/board-resize-controls.ts`. Its DOM buttons follow rendered edge bounds during pan/zoom, hide when their edge is offscreen, and clamp along visible edges to remain reachable. Only buttons intercept pointer events; the overlay and gaps leave canvas gestures intact. Puzzle fitting and nested port margins are unchanged.
 * Wheel zoom anchors under the pointer. Pan bounds keep the canvas center over the grid. Account for CSS size, backing-store density, pan, and zoom consistently in hit tests and drawing.
 * Body membership and `Path2D` outlines are cached by geometry revision and scale, with localized rebuilding after edits. Visual-only updates reuse paths. Detailed rendering culls offscreen cells; low-detail rendering batches work. Unchanged frames can be skipped, except ongoing animation such as active belts.
 * Palette and thumbnail backing stores are density-aware and supersampled. Palette previews redraw when display density/browser zoom changes or the resizable sidebar changes size; component icons scale with sidebar width.
