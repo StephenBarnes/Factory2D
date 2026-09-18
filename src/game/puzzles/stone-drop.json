@@ -6,7 +6,7 @@
   "id": "stone-drop",
   "group": "basics",
   "order": 1,
-  "name": "Stone Drop",
+  "name": "Stone drop",
   "difficulty": "tutorial",
   "description": "Learn how to place a block.",
   "goal": "Drop one stone block into the delivery box.",

@@ -222,11 +222,11 @@ test("selection shortcuts use occupied bounds and grid clicks unselect", async (
 test("routes only to accessible canonical screens", async ({ page }) => {
   await seedBrowserStorage(page, "empty");
   await page.goto("/#/puzzles/%63lick-to-test/");
-  await expect(page.getByRole("heading", { name: "Click to Test" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Click to test" })).toBeVisible();
   await expect(page).toHaveURL(/\/#\/puzzles\/click-to-test$/);
   await page.goto("/#/puzzles/click-to-test/solutions/missing-solution");
   await expect(page).toHaveURL(/\/#\/puzzles\/click-to-test$/);
-  await expect(page.getByRole("heading", { name: "Click to Test" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Click to test" })).toBeVisible();
   await expect(page.locator("#empty-solutions")).toBeVisible();
 
   await page.goto("/#/sandbox/missing-sandbox");
@@ -256,7 +256,7 @@ test("manual hash navigation and browser history restore saved workshop edits", 
     window.location.hash = "/puzzles/click-to-test/";
   });
   await expect(page).toHaveURL(/\/#\/puzzles\/click-to-test$/);
-  await expect(page.getByRole("heading", { name: "Click to Test" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Click to test" })).toBeVisible();
 
   await page.goBack();
   await expect(page).toHaveURL(/\/#\/sandbox\/sandbox-1$/);
@@ -265,7 +265,7 @@ test("manual hash navigation and browser history restore saved workshop edits", 
 
   await page.goForward();
   await expect(page).toHaveURL(/\/#\/puzzles\/click-to-test$/);
-  await expect(page.getByRole("heading", { name: "Click to Test" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Click to test" })).toBeVisible();
 
   await page.evaluate(() => {
     window.location.hash = "/sandbox/sandbox-1";
@@ -451,7 +451,7 @@ test("workshop identity exposes information and live puzzle metrics", async ({ p
   await header.getByRole("button", { name: "Puzzle information" }).click();
   const dialog = page.locator("#workshop-info-dialog");
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole("heading", { name: "Stone Drop" })).toBeVisible();
+  await expect(dialog.getByRole("heading", { name: "Stone drop" })).toBeVisible();
   await dialog.getByRole("button", { name: "CLOSE" }).click();
 
   await price.hover();
@@ -591,8 +591,8 @@ test("puzzle groups expose locked progression and can be expanded", async ({ pag
   await expect(runelore).toHaveAttribute("data-state", "locked");
   await runelore.locator("summary").click();
   await expect(runelore.locator(".puzzle-group-list")).toBeVisible();
-  await expect(page.getByRole("button", { name: /Click to Test/ })).toBeEnabled();
-  await expect(page.getByRole("button", { name: /Stone Drop/ })).toBeDisabled();
+  await expect(page.getByRole("button", { name: /Click to test/ })).toBeEnabled();
+  await expect(page.getByRole("button", { name: /Stone drop/ })).toBeDisabled();
   const runeloreButtons = runelore.locator("button");
   await expect(runeloreButtons).not.toHaveCount(0);
   for (const button of await runeloreButtons.all()) {
@@ -607,17 +607,17 @@ test("unlocked fixture opens a gemstone-gated group and puzzle", async ({ page }
   const basics = page.locator(".puzzle-group").filter({
     has: page.locator(".puzzle-group-heading strong", { hasText: /^Tutorial$/ }),
   });
-  const runelore = page.locator(".puzzle-group").filter({
-    has: page.getByText("Runelore", { exact: true }),
+  const manufacturing = page.locator(".puzzle-group").filter({
+    has: page.getByText("Manufacturing", { exact: true }),
   });
   await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^5 gemstones\b/);
   await expect(basics).toHaveAttribute("data-state", "completed");
-  await expect(runelore).toHaveAttribute("data-state", "unlocked");
+  await expect(manufacturing).toHaveAttribute("data-state", "unlocked");
 
-  const comparer = runelore.getByRole("button", { name: /Comparer/ });
-  await expect(comparer).toBeEnabled();
-  await comparer.click();
-  await expect(page).toHaveURL(/\/#\/puzzles\/comparer$/);
+  const ironPlates = manufacturing.getByRole("button", { name: /Iron plates/ });
+  await expect(ironPlates).toBeEnabled();
+  await ironPlates.click();
+  await expect(page).toHaveURL(/\/#\/puzzles\/iron-plates$/);
 });
 
 test("creates, edits, persists, and restores a solution on reload", async ({ page }) => {
@@ -762,7 +762,7 @@ test("renders puzzle cases and leaves the failed case paused on the board", asyn
   await page.goto("/#/puzzles/stone-drop/solutions/solution-1");
   const testCase = expectDefined(
     puzzleById("stone-drop").testCases[0],
-    "Stone Drop must have a test case",
+    "Stone drop must have a test case",
   );
   const terminalTick = `TICK ${String(testCase.cycleLimit).padStart(4, "0")}`;
   const baseline = (await diagnosticSnapshot(page)).serializedBoard;

@@ -6,7 +6,7 @@
   "id": "click-to-test",
   "group": "basics",
   "order": 0,
-  "name": "Click to Test",
+  "name": "Click to test",
   "difficulty": "tutorial",
   "description": "Learn how to test a solution.",
   "goal": "Press the \"new solution\" button to the right, then click on \"test\" to run the contraption.",

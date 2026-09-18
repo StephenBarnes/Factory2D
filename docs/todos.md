@@ -41,6 +41,21 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 * Implement undo and redo when editing in the sandbox and puzzle solutions.
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
+* Implement limited undo/redo in the workshops (when editing puzzle solutions, or editing a sandbox). Probably keep a few previous states in memory. Running/testing should not write to these; it's for undoing modifications. (For sandbox running while editing, it's a bit unclear what the behavior should be. Maybe just advance the ring buffer / list of previous states whenever they edit.) Ideally click-and-drag should count as one action, so can be undone all at once.
+* Modify saved puzzle solutions. Currently if the player tests a solution, and succeeds, and presses "back to briefing", and then tries to edit the solution again, it starts in the finished reset state. So they have to click reset before doing anything. We should instead store the state before they started testing. If they duplicate their solution and then click edit, it starts correctly before the run.
+
+Some small UI changes:
+
+* Add a small settings button (one character label, probably a settings/gear unicode character) in the workshop, next to the fast light/dark mode toggle. This should open the same settings modal that's currently opened from the main menu. Also add a small 1-character mute button there, as shortcut to the sound effects button in the settings modal.
+* Reverse the order of solutions to a puzzle that we show, so new solutions and duplicates go at the top of the list rather than the bottom. (Because otherwise repeated optimization means the player has to scroll down past 20 previous solutions every time they want to duplicate and improve their most recent solution.)
+* Currently the puzzle briefing screen displays text "Community scores: 10 players" or "Community scores are not configured. Personal bests are saved locally." Modify this to instead put it next to the "Community scores" heading, as "Community scores — 10 players" or "Community scores — not configured", etc.
+* In the puzzle briefing, pressing escape should go back to main menu. In the main menu, pressing escape (with no settings/about modal open) should open the settings modal.
+* Allow pressing F1 in main menu to open the about panel, and F1 in workshop to view the puzzle information modal.
+* Can we limit the max width of `.puzzle-node` so puzzle groups with only one puzzle don't have the one puzzle stretched out? Fixed pixel max-width doesn't work for all screens. Using `30vw` works, but if they zoom in then this makes puzzle groups with many puzzles look wrong, the puzzle-node shrinks.
+* The puzzle buttons' right section has `◆ AVAILABLE` which looks fine at some zoom levels, but at other zoom levels there's a line-break between the diamond and the `AVAILABLE`. Can we make them always on the same line? Could remove the space, which looks fine for "AVAILABLE" labels but wrong for "LOCKED". Also this causes "AVAILABLE" to overrun the right border on Chromium at 4k default zoom.
+* Currently the `.workshop-header` top-left bit in the workshop (showing the back-to-briefing button, puzzle title, and "i" info button) seems to have some extra padding on the right side, right of the info button, more than the padding on the left (left of the back-to-briefing button), making the header look asymmetrical. Fix this.
+* On my machine's Firefox, the settings and about buttons (and other all-caps text, e.g. puzzle buttons) use the font `DejaVu Sans Mono` or `Noto Sans Mono` or bold variants. On my Chromium it's displaying with a different font that looks worse; inspector says `SFMono-Regular, Consolas, monospace` though unclear which of those fonts it's using. Could make it pull from Google Fonts or something so that it looks consistent across machines and browsers?
+* In the main menu, the "SETTINGS" button's text is noticeably lower on the screen than the "ABOUT" text on the button right next to it. Present in both Firefox and Chromium.
 
 # Visuals
 

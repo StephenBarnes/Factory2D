@@ -6,7 +6,7 @@
   "id": "holding-pattern",
   "group": "runelore",
   "order": 1,
-  "name": "Holding Pattern",
+  "name": "Holding pattern",
   "difficulty": 2,
   "description": "The gatekeepers need more time to read the mine signals. Stretch each one-tick pulse into ten ticks of the same sign, then return to zero. Pulses are at least ten ticks apart; a new pulse may arrive exactly when the previous hold ends. An initial processing delay is allowed. The checker starts at your first nonzero output and then checks every tick, including silence.",
   "goal": "For every +1 or -1 input pulse, output that value for exactly 10 consecutive ticks.",

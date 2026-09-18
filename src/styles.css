@@ -284,7 +284,7 @@ body:has(dialog[open]) .tool-cursor {
 
 .main-menu-content {
   position: relative;
-  width: min(900px, calc(100% - 40px));
+  width: min(1000px, calc(100% - 40px));
   min-height: 100%;
   margin: 0 auto;
   padding: clamp(42px, 8vh, 92px) 0 54px;
@@ -311,17 +311,7 @@ body:has(dialog[open]) .tool-cursor {
   font-size: clamp(2.3rem, 7vw, 4.8rem);
   line-height: 0.95;
   letter-spacing: 0.03em;
-  text-transform: uppercase;
   text-shadow: 0 2px 22px rgb(226 179 87 / 22%);
-}
-
-.main-menu-header > p:last-child {
-  max-width: 570px;
-  margin: 20px 0 0;
-  color: var(--text-muted);
-  font-family: var(--font-display);
-  font-size: 1rem;
-  line-height: 1.6;
 }
 
 .sandbox-node,
@@ -637,7 +627,6 @@ body:has(dialog[open]) .tool-cursor {
   font-size: clamp(2.2rem, 6vw, 4.6rem);
   line-height: 0.95;
   letter-spacing: 0.03em;
-  text-transform: uppercase;
   text-shadow: 0 2px 22px rgb(226 179 87 / 22%);
 }
 
@@ -693,7 +682,7 @@ body:has(dialog[open]) .tool-cursor {
 }
 
 .puzzle-info-description {
-  margin: 18px 0 0;
+  margin: 0;
   color: var(--text-mid);
   font-family: var(--font-display);
   font-size: 1rem;

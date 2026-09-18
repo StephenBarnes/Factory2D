@@ -6,7 +6,7 @@
   "id": "chasm-climber",
   "group": "transport",
   "order": 2,
-  "name": "Chasm Climber",
+  "name": "Chasm climber",
   "difficulty": 2,
   "description": "Climb from the bottom of the chasm to reach the top.",
   "goal": "Touch any of the sensor blocks at the top.",
