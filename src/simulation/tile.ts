@@ -1871,7 +1871,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 39,
       category: PaletteCategory.CircuitComplex,
       description: "Holds a miniature board whose four edge-center cells connect to its sides with no delay. Press E to configure, Enter to open.",
-      extendedDescription: ["The inner board runs ordinary physics and circuits, including gravity. Its four edge-center cells connect to independent outer sides without an extra circuit tick.", "E configures an odd-sized board up to 15 by 15; Enter opens it. Arrays can contain arrays. Puzzle price includes inner components, while footprint counts the outer tile."],
+      extendedDescription: ["The inner board runs ordinary physics and circuits, including gravity. Its four edge-center cells connect to independent outer sides without an extra circuit tick.", "E configures an odd-sized board up to 15 by 15; Enter opens it. Arrays can contain arrays. Puzzle solution price includes inner components, but footprint does not count internal space."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,
