@@ -1,3 +1,4 @@
+import type { PuzzleHistograms } from "../game/community-api";
 import type { CommunityClient } from "../game/community-client";
 import type { PuzzleScores } from "../game/puzzle-scores";
 import { expectDefined } from "../util/assert";
@@ -16,9 +17,14 @@ export class CommunityScoresView {
     private readonly reportCharts: HTMLElement,
   ) {}
 
-  async showBriefing(puzzleId: string, best: PuzzleScores | null): Promise<void> {
+  async showBriefing(
+    puzzleId: string,
+    best: PuzzleScores | null,
+    onHistogramsLoaded: (data: PuzzleHistograms | null) => void,
+  ): Promise<void> {
     const request = ++this.briefingRequest;
     renderScoreHistograms(this.briefingCharts, null, best, null);
+    onHistogramsLoaded(null);
     this.briefing.hidden = false;
     if (this.client === null) {
       this.briefing.textContent = "Community scores are not configured. Personal bests are saved locally.";
@@ -30,6 +36,7 @@ export class CommunityScoresView {
       if (request === this.briefingRequest) {
         this.briefing.textContent = playerCount(data.players);
         renderScoreHistograms(this.briefingCharts, data, best, null);
+        onHistogramsLoaded(data);
       }
     } catch (error) {
       if (request === this.briefingRequest) {

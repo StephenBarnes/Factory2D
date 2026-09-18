@@ -1,3 +1,5 @@
+import type { PuzzleHistograms, ScoreMetric } from "../game/community-api";
+import { scoreStanding } from "../game/score-histogram";
 import { PUZZLE_DIFFICULTIES } from "../game/puzzle-difficulty";
 import type { SavedPuzzleSolution } from "../game/puzzle-solutions";
 import type { PuzzleDefinition } from "../game/puzzles";
@@ -30,6 +32,7 @@ export class PuzzleInfoView {
   private readonly emptySolutions: HTMLElement;
   private readonly backButton: HTMLButtonElement;
   private readonly newButton: HTMLButtonElement;
+  private readonly rankedScores: { element: HTMLElement; metric: ScoreMetric; value: number }[] = [];
 
   constructor(root: HTMLElement) {
     this.title = requiredDescendant(root, "#puzzle-info-title");
@@ -60,6 +63,7 @@ export class PuzzleInfoView {
       }
     }
 
+    this.rankedScores.length = 0;
     const solutionRows = options.solutions.map((solution) =>
       this.createSolutionRow(solution, solution.scores?.combined === bestCombinedScore, options),
     );
@@ -68,6 +72,19 @@ export class PuzzleInfoView {
 
     this.backButton.onclick = options.onBack;
     this.newButton.onclick = options.onCreate;
+  }
+
+  updateScoreRanks(data: PuzzleHistograms | null): void {
+    for (const { element, metric, value } of this.rankedScores) {
+      const standing = data === null ? null : scoreStanding(data.metrics[metric], value);
+      if (standing === null) {
+        delete element.dataset.scoreMineral;
+        element.removeAttribute("title");
+      } else {
+        element.dataset.scoreMineral = standing.mineral;
+        element.title = `${standing.mineral} · Percentile ${formatPuzzleScore(standing.percentile)}${standing.players < 10 ? " · provisional" : ""}`;
+      }
+    }
   }
 
   private createSolutionRow(
@@ -106,10 +123,10 @@ export class PuzzleInfoView {
     const scores = document.createElement("div");
     scores.className = "solution-scores";
     scores.append(
-      this.createScore("PRICE", solution.scores?.price),
-      this.createScore("AVG CYCLES", solution.scores?.cycles),
-      this.createScore("FOOTPRINT", solution.scores?.footprint),
-      this.createScore("COMBINED", solution.scores?.combined),
+      this.createScore("PRICE", "price", solution.scores?.price),
+      this.createScore("AVG CYCLES", "cycles", solution.scores?.cycles),
+      this.createScore("FOOTPRINT", "footprint", solution.scores?.footprint),
+      this.createScore("COMBINED", "combined", solution.scores?.combined),
     );
 
     const actions = document.createElement("div");
@@ -147,12 +164,15 @@ export class PuzzleInfoView {
     return button;
   }
 
-  private createScore(label: string, scoreValue: number | undefined): HTMLElement {
+  private createScore(label: string, metric: ScoreMetric, scoreValue: number | undefined): HTMLElement {
     const score = document.createElement("span");
     const heading = document.createElement("small");
     heading.textContent = label;
     const value = document.createElement("strong");
     value.textContent = scoreValue === undefined ? "—" : formatPuzzleScore(scoreValue);
+    if (scoreValue !== undefined) {
+      this.rankedScores.push({ element: value, metric, value: scoreValue });
+    }
     score.append(heading, value);
     return score;
   }

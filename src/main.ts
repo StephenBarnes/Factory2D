@@ -1546,9 +1546,9 @@ const navigation = new NavigationController(
   },
   {
     stopSimulation: stopWorkshopActivity,
-    onPuzzleInfoShown: (puzzleId) => {
+    onPuzzleInfoShown: (puzzleId, onHistogramsLoaded) => {
       const best = bestPuzzleScores(savedSolutions.forPuzzle(puzzleId).map((solution) => solution.scores));
-      void communityScores.showBriefing(puzzleId, best);
+      void communityScores.showBriefing(puzzleId, best, onHistogramsLoaded);
     },
     onWorkshopSessionChanged: () => {
       surface.mountActiveSession({ fitBoard: true, cancelInteraction: true });

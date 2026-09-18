@@ -41,11 +41,19 @@ function markerKey(kind: "best" | "current", label: string): HTMLElement {
   return key;
 }
 
-function appendLocalScore(list: HTMLDListElement, kind: "best" | "current", score: number): void {
+function appendLocalScore(
+  list: HTMLDListElement,
+  kind: "best" | "current",
+  score: number,
+  frequencies: readonly ScoreHistogramBucket[] | undefined,
+): void {
   const entry = element("div", `score-histogram-local score-histogram-local--${kind}`);
+  const value = element("dd", "", formatPuzzleScore(score));
+  const standing = frequencies === undefined ? null : scoreStanding(frequencies, score);
+  if (standing !== null) value.dataset.scoreMineral = standing.mineral;
   entry.append(
     element("dt", "", kind === "best" ? "Local best" : "This run"),
-    element("dd", "", formatPuzzleScore(score)),
+    value,
   );
   list.append(entry);
 }
@@ -186,8 +194,8 @@ export function renderScoreHistograms(
     const card = element("section", "score-histogram-card");
     card.append(element("h4", "score-histogram-title", METRIC_LABELS[metric]));
     const local = element("dl", "score-histogram-locals");
-    if (best !== null) appendLocalScore(local, "best", best[metric]);
-    if (current !== null) appendLocalScore(local, "current", current[metric]);
+    if (best !== null) appendLocalScore(local, "best", best[metric], data?.metrics[metric]);
+    if (current !== null) appendLocalScore(local, "current", current[metric], data?.metrics[metric]);
     if (best === null && current === null) {
       card.append(element("p", "score-histogram-unranked", "No confirmed local score."));
     } else {
@@ -202,7 +210,8 @@ export function renderScoreHistograms(
       const standing = score === undefined ? null : scoreStanding(frequencies, score);
       if (standing !== null) {
         const rank = element("div", "score-histogram-standing");
-        const badge = element("strong", `score-histogram-rank score-histogram-rank--${standing.mineral}`, standing.mineral);
+        const badge = element("strong", "score-histogram-rank", standing.mineral);
+        badge.dataset.scoreMineral = standing.mineral;
         const percentile = formatPuzzleScore(standing.percentile);
         const approximation = Number(percentile) === standing.percentile ? "" : "≈";
         const description = `${current !== null ? "This run" : "Local best"} · Percentile ${approximation}${percentile}${standing.players < 10 ? " · provisional" : ""}`;

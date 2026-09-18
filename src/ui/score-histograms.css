@@ -1,3 +1,15 @@
+[data-score-mineral="iron"] {
+  --score-mineral-color: var(--score-iron);
+}
+
+[data-score-mineral="gold"] {
+  --score-mineral-color: var(--gold);
+}
+
+[data-score-mineral="mithril"] {
+  --score-mineral-color: var(--score-mithril);
+}
+
 .score-histograms {
   min-width: 0;
   container-type: inline-size;
@@ -99,11 +111,11 @@
 }
 
 .score-histogram-local--best dd {
-  color: var(--gold);
+  color: var(--score-mineral-color, var(--gold));
 }
 
 .score-histogram-local--current dd {
-  color: var(--gem);
+  color: var(--score-mineral-color, var(--gem));
 }
 
 .score-histogram-standing {
@@ -123,26 +135,11 @@
   border: 1px solid currentColor;
   border-radius: 2px;
   background: var(--raised);
+  color: var(--score-mineral-color, var(--text-muted));
   font-family: var(--font-mono);
   font-size: 0.66rem;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-}
-
-.score-histogram-rank--coal {
-  color: var(--text-muted);
-}
-
-.score-histogram-rank--iron {
-  color: var(--text-bright);
-}
-
-.score-histogram-rank--gold {
-  color: var(--gold);
-}
-
-.score-histogram-rank--mithril {
-  color: var(--gem);
 }
 
 .score-histogram-figure {

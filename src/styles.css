@@ -18,6 +18,8 @@
   --gild: #c9a25a;
   --gold: #e2b357;
   --gold-bright: #f6cf7e;
+  --score-iron: #c4cbd4;
+  --score-mithril: #83bcff;
   --bronze: #8a6a3a;
   --ember: #ff8b4a;
   --gem: #78dcca;
@@ -80,6 +82,8 @@
   --gild: #80581c;
   --gold: #79500e;
   --gold-bright: #674009;
+  --score-iron: #505d6b;
+  --score-mithril: #245fa8;
   --bronze: #92713f;
   --ember: #a83e0b;
   --gem: #18675d;
@@ -843,7 +847,7 @@ body:has(dialog[open]) .tool-cursor {
 
 .solution-scores strong {
   margin-top: 5px;
-  color: var(--text-mid);
+  color: var(--score-mineral-color, var(--text-mid));
   font-family: var(--font-mono);
   font-size: 0.75rem;
 }

@@ -1,3 +1,4 @@
+import type { PuzzleHistograms } from "./community-api";
 import {
   appScreenPath,
   resolveAppPath,
@@ -46,7 +47,10 @@ export interface NavigationCallbacks {
   readonly onWorkshopSessionChanged: () => void;
   readonly onWorkshopShown: () => void;
   readonly onSandboxPropertiesChanged: (properties: SandboxPuzzleProperties) => void;
-  readonly onPuzzleInfoShown: (puzzleId: PuzzleId) => void;
+  readonly onPuzzleInfoShown: (
+    puzzleId: PuzzleId,
+    onHistogramsLoaded: (data: PuzzleHistograms | null) => void,
+  ) => void;
 }
 
 export class NavigationController {
@@ -339,6 +343,6 @@ export class NavigationController {
         this.renderPuzzleInfo(puzzleId);
       },
     });
-    this.callbacks.onPuzzleInfoShown(puzzleId);
+    this.callbacks.onPuzzleInfoShown(puzzleId, (data) => this.puzzleInfoView.updateScoreRanks(data));
   }
 }
