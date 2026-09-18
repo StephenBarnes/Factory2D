@@ -942,6 +942,46 @@ test("duplicates an edited board into an independent restorable solution", async
   expect((await diagnosticSnapshot(page)).serializedBoard).toBe(fixture.editedBoard);
 });
 
+test("reopens successful solutions and their duplicates as editable pre-test designs", async ({ page }) => {
+  const fixture = await seedBrowserStorage(page, "edited-board");
+  await page.goto("/#/puzzles/stone-drop/solutions/solution-1");
+  await page.getByRole("button", { name: /FAST/ }).click();
+  const report = page.locator("#test-report-dialog");
+  await expect(report.getByRole("heading", { name: "ALL TESTS PASSED" })).toBeVisible();
+  await report.getByRole("button", { name: "BACK TO BRIEFING" }).click();
+
+  await page.getByRole("button", { name: "Edit Solution 1", exact: true }).click();
+  const reopened = await diagnosticSnapshot(page);
+  expect(reopened.simulation).toMatchObject({ tick: 0, running: false, editable: true });
+  expect(reopened.serializedBoard).toBe(fixture.editedBoard);
+  await expect(page.getByRole("button", { name: /^Stone/ })).toBeEnabled();
+
+  await page.locator("#menu-button").click();
+  await page.getByRole("button", { name: "Duplicate Solution 1", exact: true }).click();
+  await page.getByRole("button", { name: "Edit Solution 1.1", exact: true }).click();
+  const duplicate = await diagnosticSnapshot(page);
+  expect(duplicate.simulation).toMatchObject({ tick: 0, running: false, editable: true });
+  expect(duplicate.serializedBoard).toBe(fixture.editedBoard);
+
+  await page.keyboard.press("n");
+  expect((await diagnosticSnapshot(page)).simulation.editable).toBe(false);
+  await page.locator("#menu-button").click();
+  await page.getByRole("button", { name: "Edit Solution 1.1", exact: true }).click();
+  const resumedDuplicate = await diagnosticSnapshot(page);
+  expect(resumedDuplicate.simulation).toMatchObject({ tick: 0, running: false, editable: true });
+  expect(resumedDuplicate.serializedBoard).toBe(fixture.editedBoard);
+
+  await page.reload();
+  const reloaded = await diagnosticSnapshot(page);
+  expect(reloaded.simulation).toMatchObject({ tick: 0, running: false, editable: true });
+  expect(reloaded.serializedBoard).toBe(fixture.editedBoard);
+  await placeStone(page, 5, 4);
+  expect((await diagnosticSnapshot(page)).serializedBoard).not.toBe(fixture.editedBoard);
+  await page.locator("#menu-button").click();
+  await page.getByRole("button", { name: "Edit Solution 1", exact: true }).click();
+  expect((await diagnosticSnapshot(page)).serializedBoard).toBe(fixture.editedBoard);
+});
+
 test("deletes a solution from its row and keeps it deleted after reload", async ({ page }) => {
   await seedBrowserStorage(page, "populated");
   page.on("dialog", (dialog) => dialog.accept());

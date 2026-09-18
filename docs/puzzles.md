@@ -8,7 +8,7 @@ Current tutorial puzzles:
 * Stone drop: teaches placing blocks, player-modifiable region, palette, gravity. Place one stone block and let it fall into the delivery box. The right half shows exactly what's needed.
 * Sand fall: build a ramp for sand to fall diagonally down. Teaches diagonal gravity and welding. Right side of the grid has an example showing how welded parts work and how sand falls.
 * Basic runelore: place conduits and an inverter in 3 steps to carry a signal to the output. Instructions on the grid in text boxes. We also enable placing the charge sensor which allows for a shortcut. Reinforces welding mechanics.
-* Puzzle infrastructure: place a judgment stone / victory block. Teaches the general concept that a puzzle's win condition is defined on the game board rather than via metadata.
+* Gordian knot: The stated task is impossible; solution requires cheating by welding a fixed +1 charge to the judgment stone. Teaches the general concept that a puzzle's win condition is defined on the game board rather than via metadata, that exploits are possible, and also shows a much larger collection of blocks in the palette than have been seen in previous tutorial puzzles.
 
 Things we are not teaching yet:
 * Gates delay signals by one tick; branches must be time-equalized with delay gates. Necessary for solving the rectifier puzzle, binary crossed channels, and other puzzles we add later.

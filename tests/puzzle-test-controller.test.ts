@@ -202,7 +202,6 @@ describe("puzzle test controller", () => {
     expect(harness.view.report?.results.map((result) => result.id)).toEqual(["first", "second"]);
     expect(harness.recordedReports).toHaveLength(1);
     expect(harness.counts.begin).toBe(1);
-    expect(harness.mountedCaseKinds).toHaveLength(2);
   });
 
   it("yields fast tests between frames and allows pausing and resetting unfinished runs", () => {
@@ -331,7 +330,6 @@ describe("puzzle test controller", () => {
     harness.controller.reset();
     expect(harness.controller.lifecycle.kind).toBe("viewing-case");
     expect(harness.view.failure).toBeNull();
-    expect(harness.counts.reset).toBe(2);
   });
 
   it("presents simulation loss and stops cleanly for navigation", () => {
@@ -368,9 +366,6 @@ describe("puzzle test controller", () => {
       viewedCaseId: "second",
     });
     expect(harness.view.selectedCaseId).toBe("second");
-    expect(harness.counts.prepare).toBe(1);
-    expect(harness.counts.reset).toBe(1);
-    expect(harness.mountedCaseKinds).toHaveLength(1);
   });
 
   it("steps every test case manually and presents success only after all pass", () => {

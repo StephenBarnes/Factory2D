@@ -161,6 +161,7 @@ export class PuzzleTestController {
       viewedCaseId: firstCase.id,
     };
     this.view.configureCases(puzzle, firstCase.id);
+    this.showCase(firstCase.id);
   }
 
   showCase(testCaseId: string): void {
