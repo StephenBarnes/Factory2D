@@ -139,6 +139,7 @@ export class TileInspector {
   private lastX = -2;
   private lastY = -2;
   private lastRevision = -1;
+  private lastExtended = false;
   private showingReference = false;
   private referenceKind: TileKind | null = null;
 
@@ -179,40 +180,19 @@ export class TileInspector {
   }
 
   showPalette(kind: TileKind, reference: InspectorComponentReference): void {
-    const definition = TILE_DEFINITIONS[kind];
-    const palette = definition.palette;
-    if (palette === null) {
-      throw new Error(`${definition.name} is missing palette metadata`);
-    }
+    this.updateDescription(kind);
 
     this.showingReference = true;
     this.root.classList.remove("tile-inspector-hidden");
     this.root.classList.add("tile-inspector-reference");
     this.root.setAttribute("aria-hidden", "false");
-    this.name.textContent = definition.name.toUpperCase();
+    this.name.textContent = TILE_DEFINITIONS[kind].name.toUpperCase();
     this.position.hidden = true;
     this.showComponentReference(reference);
     this.hint.hidden = true;
     this.properties.hidden = true;
     this.toolDetails.hidden = true;
     this.paletteDetails.hidden = false;
-    if (this.referenceKind === kind) {
-      return;
-    }
-    this.referenceKind = kind;
-    this.paletteDescription.replaceChildren(...[
-      palette.description,
-      "hr",
-      ...palette.extendedDescription,
-    ].map((text) => {
-      if (text === "hr") return document.createElement("hr");
-      const paragraph = document.createElement("p");
-      paragraph.textContent = text;
-      return paragraph;
-    }));
-    if (palette.category === PaletteCategory.CircuitGates) {
-      this.paletteDescription.append(gateTruthTable(kind));
-    }
   }
 
   showTool(name: string, description: string, controls: string): void {
@@ -235,23 +215,26 @@ export class TileInspector {
   update(
     position: GridPosition | null,
     reference: InspectorComponentReference | null,
+    extended: boolean,
   ): void {
     const wasShowingReference = this.showingReference;
     this.showingReference = false;
-    this.root.classList.remove("tile-inspector-reference");
-    this.paletteDetails.hidden = true;
     this.toolDetails.hidden = true;
     this.position.hidden = false;
     const x = position?.x ?? -1;
     const y = position?.y ?? -1;
     const kind = position === null ? TileKind.Empty : this.world.kindAt(x, y);
     const hidden = kind === TileKind.Empty;
+    const showExtended = extended && !hidden && TILE_DEFINITIONS[kind].palette !== null;
+    this.root.classList.toggle("tile-inspector-reference", showExtended);
+    this.paletteDetails.hidden = !showExtended;
     this.root.classList.toggle("tile-inspector-hidden", hidden);
     this.root.setAttribute("aria-hidden", String(hidden));
     if (
       !wasShowingReference &&
       x === this.lastX &&
       y === this.lastY &&
+      showExtended === this.lastExtended &&
       this.world.revision === this.lastRevision
     ) {
       return;
@@ -259,6 +242,7 @@ export class TileInspector {
     this.lastX = x;
     this.lastY = y;
     this.lastRevision = this.world.revision;
+    this.lastExtended = showExtended;
 
     if (position === null) {
       this.showMessage("NO CELL SELECTED", "X --   Y --", "Move the pointer over the grid.");
@@ -279,7 +263,8 @@ export class TileInspector {
     this.name.textContent = definition.name.toUpperCase();
     this.position.textContent = `${positionLabel}   ID #${id}`;
     this.hint.textContent = descriptionFor(kind);
-    this.hint.hidden = false;
+    this.hint.hidden = showExtended;
+    if (showExtended) this.updateDescription(kind);
     this.properties.hidden = false;
     this.showComponentReference(reference);
     const componentConfiguration = componentConfigurationForKind(kind);
@@ -386,6 +371,31 @@ export class TileInspector {
           `${isDrill ? "DESTROYED" : TILE_DEFINITIONS[recipe.output].name.toUpperCase()} · ` +
           `${progress}/${recipe.bakeTime} TICKS`;
       }
+    }
+  }
+
+  private updateDescription(kind: TileKind): void {
+    const definition = TILE_DEFINITIONS[kind];
+    const palette = definition.palette;
+    if (palette === null) {
+      throw new Error(`${definition.name} is missing palette metadata`);
+    }
+    if (this.referenceKind === kind) {
+      return;
+    }
+    this.referenceKind = kind;
+    this.paletteDescription.replaceChildren(...[
+      palette.description,
+      "hr",
+      ...palette.extendedDescription,
+    ].map((text) => {
+      if (text === "hr") return document.createElement("hr");
+      const paragraph = document.createElement("p");
+      paragraph.textContent = text;
+      return paragraph;
+    }));
+    if (palette.category === PaletteCategory.CircuitGates) {
+      this.paletteDescription.append(gateTruthTable(kind));
     }
   }
 

@@ -304,6 +304,7 @@ let selectedMirrored = false;
 let selectedTool: BuildTool = "tile";
 let previousSelectionTool: BuildTool = "tile";
 let temporaryWeldTool: BuildTool | null = null;
+let inspectorAltHeld = false;
 let previousFrameTime = performance.now();
 let renderedTick = -1;
 let renderedPaletteDevicePixelRatio = 0;
@@ -535,6 +536,12 @@ function showInspectorReference(button: HTMLButtonElement): void {
   surface.inspector.showTool(details.name, details.description, details.controls);
 }
 
+function updateInspectorAlt(held: boolean): void {
+  if (inspectorAltHeld === held) return;
+  inspectorAltHeld = held;
+  refreshTileInspector();
+}
+
 function refreshTileInspector(): void {
   if (surface.hoveredPaletteButton !== null) {
     showInspectorReference(surface.hoveredPaletteButton);
@@ -542,10 +549,14 @@ function refreshTileInspector(): void {
   }
   if (surface.hoveredCell !== null && selectedTool !== "text-box") {
     const kind = surface.world.kindAt(surface.hoveredCell.x, surface.hoveredCell.y);
-    surface.inspector.update(surface.hoveredCell, componentInspectorReferences[kind] ?? null);
+    surface.inspector.update(
+      surface.hoveredCell,
+      componentInspectorReferences[kind] ?? null,
+      inspectorAltHeld,
+    );
     return;
   }
-  surface.inspector.update(null, null);
+  surface.inspector.update(null, null, false);
 }
 
 function refreshPointerHover(): void {
@@ -2285,7 +2296,10 @@ canvas.addEventListener("wheel", (event) => {
   refreshPointerHover();
 }, { passive: false });
 
+canvas.addEventListener("pointermove", (event) => updateInspectorAlt(event.altKey));
+
 document.addEventListener("keydown", (event) => {
+  updateInspectorAlt(event.altKey);
   if (textBoxTool.open || event.isComposing || event.keyCode === 229) return;
   if (exportMenu.open) {
     if (event.key === "Escape") {
@@ -2522,10 +2536,12 @@ document.addEventListener("keydown", (event) => {
 });
 
 document.addEventListener("keyup", (event) => {
+  updateInspectorAlt(event.altKey);
   if (event.key === "Control") releaseTemporaryWeld();
 });
 
 window.addEventListener("blur", () => {
+  updateInspectorAlt(false);
   finalizeActivePointerGesture();
   releaseTemporaryWeld();
 });

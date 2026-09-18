@@ -38,7 +38,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 # UI
 
-* When the mouse is over a block in the grid (to show tile inspector), if the alt key is held, also show extended description, same as we currently show on mouseover on the palette.
 * Implement undo and redo when editing in the sandbox and puzzle solutions.
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
 
