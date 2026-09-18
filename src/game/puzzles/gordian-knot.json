@@ -1,19 +1,19 @@
 {
   "format": "factory2d-puzzle",
   "version": 5,
-  "width": 9,
-  "height": 11,
-  "id": "iron-plates",
-  "group": "manufacturing",
-  "order": 0,
-  "name": "Iron Plates",
-  "difficulty": 2,
-  "description": "Use furnaces to smelt iron ore to iron blocks. Weld together 3 iron blocks in a row to create an iron plate.",
-  "goal": "Create and deliver 10 iron plates.",
+  "width": 11,
+  "height": 12,
+  "id": "gordian-knot",
+  "group": "basics",
+  "order": 4,
+  "name": "Gordian Knot",
+  "difficulty": "tutorial",
+  "description": "A puzzle's victory conditions are determined by blocks in the puzzle itself. To win a puzzle, a blue +1 charge must get to a judgment stone. If it receives a red -1 charge, you lose the puzzle. You can create your own puzzles using the sandbox.",
+  "goal": "Deliver 1 sapphire to the delivery box.",
   "components": [
     {
-      "code": "F",
-      "price": 15
+      "code": "L",
+      "price": 10
     },
     {
       "code": "B",
@@ -45,7 +45,7 @@
     },
     {
       "code": "R",
-      "price": 15
+      "price": 10
     },
     {
       "code": "*",
@@ -53,11 +53,11 @@
     },
     {
       "code": "-",
-      "price": 15
+      "price": 10
     },
     {
       "code": "Q",
-      "price": 15
+      "price": 10
     },
     {
       "code": "T",
@@ -73,10 +73,6 @@
     },
     {
       "code": ">",
-      "price": 10
-    },
-    {
-      "code": "M",
       "price": 10
     },
     {
@@ -100,11 +96,11 @@
       "price": 10
     },
     {
-      "code": "r",
-      "price": 15
+      "code": "X",
+      "price": 10
     },
     {
-      "code": "?",
+      "code": "r",
       "price": 15
     },
     {
@@ -112,11 +108,27 @@
       "price": 0
     },
     {
+      "code": "g",
+      "price": 0
+    },
+    {
+      "code": "A",
+      "price": 10
+    },
+    {
       "code": "#",
       "price": 1
     },
     {
+      "code": "x",
+      "price": 15
+    },
+    {
       "code": "f",
+      "price": 15
+    },
+    {
+      "code": "k",
       "price": 15
     },
     {
@@ -134,88 +146,56 @@
     {
       "code": ";",
       "price": 3
-    },
-    {
-      "code": "@",
-      "price": 10
     }
   ],
   "editableRegions": [
     {
       "x": 1,
-      "y": 2,
-      "width": 7,
-      "height": 7
+      "y": 1,
+      "width": 9,
+      "height": 8
+    },
+    {
+      "x": 1,
+      "y": 9,
+      "width": 6,
+      "height": 2
     }
   ],
   "initialBoard": {
     "format": "factory2d-board",
     "version": 15,
-    "width": 9,
-    "height": 11,
+    "width": 11,
+    "height": 12,
     "tick": 0,
     "result": "in-progress",
     "grid": [
-      "###O#O###",
-      "##QY#YQ##",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "i.......O",
-      "i.......O",
-      "#.......#",
-      "#.......#",
-      "###=D{{==",
-      "###iii{NV"
-    ],
-    "orientations": [
-      {
-        "x": 2,
-        "y": 1,
-        "direction": "down"
-      },
-      {
-        "x": 3,
-        "y": 1,
-        "direction": "down"
-      },
-      {
-        "x": 5,
-        "y": 1,
-        "direction": "down"
-      },
-      {
-        "x": 6,
-        "y": 1,
-        "direction": "down"
-      },
-      {
-        "x": 7,
-        "y": 10,
-        "direction": "right"
-      }
-    ],
-    "components": [
-      {
-        "x": 7,
-        "y": 10,
-        "type": "counter",
-        "threshold": 10,
-        "count": 0
-      }
+      "###########",
+      "#.........#",
+      "#.........#",
+      "#.........#",
+      "#.........#",
+      "#.........#",
+      "#.........#",
+      "#.........#",
+      "#.........#",
+      "#......#DCC",
+      "#......#v#C",
+      "##########V"
     ],
     "welds": [
-      "++|.|.++|",
-      "+-------|",
-      "|.......|",
-      "|.......|",
-      "|.......|",
-      "|.......|",
-      "|.......|",
-      "|.......|",
-      "|.......|",
-      "+++---++|",
-      "--.--.--."
+      "+---------|",
+      "|.........|",
+      "|.........|",
+      "|.........|",
+      "|.........|",
+      "|.........|",
+      "|.........|",
+      "|.........|",
+      "|.........|",
+      "|......+-+|",
+      "|......|.+|",
+      "----------."
     ]
   },
   "testCases": []

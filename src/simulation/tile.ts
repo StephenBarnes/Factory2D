@@ -670,9 +670,9 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     circuitOutputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
-    fill: "#603886",
+    fill: "#526875",
     decorationStyle: TileDecorationStyle.Sensor,
-    decorationColor: "#d9c8ff",
+    decorationColor: "#9dcbe4",
   },
   [TileKind.FixedCharge]: {
     name: "Fixed Charge Rune",

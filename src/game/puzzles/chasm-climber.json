@@ -168,6 +168,12 @@
       "y": 28,
       "width": 8,
       "height": 1
+    },
+    {
+      "x": 2,
+      "y": 23,
+      "width": 8,
+      "height": 1
     }
   ],
   "initialBoard": {
