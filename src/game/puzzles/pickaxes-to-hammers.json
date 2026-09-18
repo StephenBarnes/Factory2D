@@ -1,0 +1,299 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 5,
+  "width": 18,
+  "height": 28,
+  "id": "pickaxes-to-hammers",
+  "group": "manufacturing",
+  "order": 1,
+  "name": "Pickaxes to hammers",
+  "difficulty": 3,
+  "description": "A large elven delegation is expected soon. We should prepare a welcoming committee.",
+  "goal": "Produce 5 warhammers by reforging pickaxes or smelting ore.",
+  "components": [
+    {
+      "code": "L",
+      "price": 10
+    },
+    {
+      "code": "F",
+      "price": 15
+    },
+    {
+      "code": "B",
+      "price": 5
+    },
+    {
+      "code": "C",
+      "price": 2
+    },
+    {
+      "code": "S",
+      "price": 10
+    },
+    {
+      "code": "1",
+      "price": 5
+    },
+    {
+      "code": "K",
+      "price": 3
+    },
+    {
+      "code": "I",
+      "price": 10
+    },
+    {
+      "code": "+",
+      "price": 10
+    },
+    {
+      "code": "R",
+      "price": 15
+    },
+    {
+      "code": "*",
+      "price": 10
+    },
+    {
+      "code": "-",
+      "price": 15
+    },
+    {
+      "code": "Q",
+      "price": 15
+    },
+    {
+      "code": "T",
+      "price": 10
+    },
+    {
+      "code": "e",
+      "price": 10
+    },
+    {
+      "code": "<",
+      "price": 10
+    },
+    {
+      "code": ">",
+      "price": 10
+    },
+    {
+      "code": "M",
+      "price": 10
+    },
+    {
+      "code": "P",
+      "price": 10
+    },
+    {
+      "code": "Z",
+      "price": 30
+    },
+    {
+      "code": "N",
+      "price": 20
+    },
+    {
+      "code": "U",
+      "price": 30
+    },
+    {
+      "code": "J",
+      "price": 10
+    },
+    {
+      "code": "X",
+      "price": 10
+    },
+    {
+      "code": "r",
+      "price": 15
+    },
+    {
+      "code": "?",
+      "price": 15
+    },
+    {
+      "code": "m",
+      "price": 0
+    },
+    {
+      "code": "g",
+      "price": 0
+    },
+    {
+      "code": "A",
+      "price": 10
+    },
+    {
+      "code": "#",
+      "price": 1
+    },
+    {
+      "code": "f",
+      "price": 15
+    },
+    {
+      "code": "n",
+      "price": 20
+    },
+    {
+      "code": "p",
+      "price": 20
+    },
+    {
+      "code": "W",
+      "price": 10
+    },
+    {
+      "code": ";",
+      "price": 3
+    },
+    {
+      "code": "@",
+      "price": 10
+    },
+    {
+      "code": "}",
+      "price": 30
+    }
+  ],
+  "editableRegions": [
+    {
+      "x": 7,
+      "y": 1,
+      "width": 4,
+      "height": 8
+    },
+    {
+      "x": 1,
+      "y": 9,
+      "width": 16,
+      "height": 12
+    },
+    {
+      "x": 6,
+      "y": 21,
+      "width": 6,
+      "height": 1
+    }
+  ],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 15,
+    "width": 18,
+    "height": 28,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "##################",
+      "#######....#OOOOO#",
+      "#######....#OOOOO#",
+      "#...ii#....#OOOOO#",
+      "#....i#....#OOOOO#",
+      "#wwwww#....#OOOOO#",
+      "#....i#....#OOOOO#",
+      "#...ii#....#OOOOO#",
+      "####QY#....#YQ####",
+      "#................#",
+      "#................#",
+      "#................#",
+      "#................#",
+      "#................#",
+      "#................#",
+      "#................#",
+      "#................#",
+      "#................#",
+      "#................#",
+      "#................#",
+      "#................#",
+      "###===......==####",
+      "###=={D=======####",
+      "###==Nii======####",
+      "###==Viiwwww==####",
+      "###===ii======####",
+      "###===========####",
+      "##################"
+    ],
+    "orientations": [
+      {
+        "x": 4,
+        "y": 8,
+        "direction": "down"
+      },
+      {
+        "x": 5,
+        "y": 8,
+        "direction": "down"
+      },
+      {
+        "x": 12,
+        "y": 8,
+        "direction": "down"
+      },
+      {
+        "x": 13,
+        "y": 8,
+        "direction": "down"
+      },
+      {
+        "x": 5,
+        "y": 23,
+        "direction": "down"
+      }
+    ],
+    "components": [
+      {
+        "x": 5,
+        "y": 23,
+        "type": "counter",
+        "threshold": 4,
+        "count": 0
+      }
+    ],
+    "textBoxes": [
+      {
+        "id": "242f028c-3fc2-4de5-b6d3-88ee585498b8",
+        "x": 8.450880500280325,
+        "y": 22.622164101697294,
+        "width": 3.5199999999999996,
+        "height": 0.7399999999999984,
+        "text": "The delivered hammers must match the\nrotation below, with head facing left.",
+        "owner": "author"
+      }
+    ],
+    "welds": [
+      "+++++++----+-----|",
+      "++++++|....|.....|",
+      "+-----|....|.....|",
+      "|...-||....|.....|",
+      "|....||....|.....|",
+      "|----||....|.....|",
+      "|....||....|.....|",
+      "|...-.|....|.....|",
+      "+-----.....------|",
+      "|................|",
+      "|................|",
+      "|................|",
+      "|................|",
+      "|................|",
+      "|................|",
+      "|................|",
+      "|................|",
+      "|................|",
+      "|................|",
+      "|................|",
+      "|................|",
+      "+++++|......+++++|",
+      "++++++--+++++++++|",
+      "+++++|+|----+++++|",
+      "+++++|++---.+++++|",
+      "+++++|-.+++++++++|",
+      "+++++++++++++++++|",
+      "-----------------."
+    ]
+  },
+  "testCases": []
+}

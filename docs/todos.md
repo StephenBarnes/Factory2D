@@ -7,11 +7,12 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 # New non-circuit components
 
-* Flipper: attaches to one block, then flips the entire connected/welded group of blocks around that line horizontally or vertically, if it would not collide/overlap other blocks. Similar to Kaizen game's rotation.
+* Add a flipper block. It modifies the body of the block it's facing, by flipping that entire body around that block horizontally or vertically, if doing so would not collide/overlap other blocks.
 * Add a bell block that plays a sound when it moves left/right (but not when moving up/down). Decide pitch by counting the blocks in the bell's body, so larger bells are lower pitch. Add a resonator rune that emits a charge when a bell with matching pitch rings, anywhere on the grid; decide resonator's pitch in the same way by counting its body's number of blocks. Constrain pitch to say one octave. Play audio in the browser when a bell block is triggered, maybe preventing it if sim rate is over 10 ticks per second.
 * Hole-puncher block that destroys any blocks moved onto its tile cell, in the same tick they attempt to move onto it. For example, a 5x5 body falling onto one of these blocks, or moved past it by a conveyor, should be cut in half. Once we have the flipper block, also allow flipping bodies onto this block, which destroys the blocks that overlap it. Unclear what behavior we should have when rotating bodies onto it; maybe count it as colliding / preventing rotation onto it, or find all tiles that would intersect the hole-punch's center when rotated through it.
 	* As follow-up, add a lava block that behaves the same way, for e.g. puzzles about crossing a lava chasm.
 * Add a dwarf block which is breakable - anything falling onto the dwarf block should destroy it. Anything pushing the dwarf block should push it, unless the push is blocked by something on the other side like a wall, in which case that should also crush the dwarf. Use the shattering animation for this.
+* Add a dismantler block. Similar to the current splitter, but it unwelds all 4 sides of the block it's facing, instead of only two.
 
 # Component behaviors
 
