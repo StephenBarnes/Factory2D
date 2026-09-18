@@ -282,7 +282,7 @@ const TOOL_INSPECTOR_DETAILS: Readonly<Record<InspectorTool, ToolInspectorDetail
   selection: {
     name: "Selection tool",
     description: "Selects, moves, copies, and transforms a grid-aligned group of tiles.",
-    controls: "LEFT DRAG SELECT / MOVE · DELETE · CTRL+C / X / V / A · WASD ROTATE · FLIP",
+    controls: "LEFT DRAG SELECT / MOVE · RIGHT DRAG ERASE · DELETE · CTRL+C / X / V / A · WASD ROTATE · FLIP",
   },
   "editable-region": {
     name: "Editable region tool",

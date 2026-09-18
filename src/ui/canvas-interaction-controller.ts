@@ -172,8 +172,12 @@ export class CanvasInteractionController {
       return;
     }
 
-    const tool = this.callbacks.getSelectedTool();
+    const selectedTool = this.callbacks.getSelectedTool();
     const erase = event.button === 2;
+    const tool = selectedTool === "selection" && erase ? "tile" : selectedTool;
+    if (selectedTool === "selection" && erase && this.surface.selection.active) {
+      this.callbacks.commitSelection();
+    }
     if (tool === "text-box") {
       this.active = { kind: "text-box", pointerId: event.pointerId, buttonMask, session };
       this.textBoxTool.begin(point, event.clientX, event.clientY, erase);
