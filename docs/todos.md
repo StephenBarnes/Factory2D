@@ -27,6 +27,7 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 ## New circuit components
 
+* Add an indestructible variant of the channel/conduit block. Use the platform block's visuals with circuit lines on top. (This is useful to prevent easy exploit solutions to puzzles by e.g. drilling a block adjacent to the victory stone and welding a fixed +1 source to it. We're generally in favor of allowing exploits like this, but we don't want them to be easy.)
 * Add a "rune engine" component that's like a programmable gate array. Take 2 inputs and produce 2 outputs. The block should be configurable to determine the I/O relation from some possible set. Details TBD. Could include an internal latch for feedback, like the PGA in Shenzhen IO. Visualize the engine block as a variation on the existing "rune array" component, but with a specific pattern of pre-set runes inside it, which cannot be modified except by toggling them between some specific states on click e.g. conduit vs stone block, or rotating by 90-degree increments.
 * Add a stack block with push/pop to store data up to some max size. One input for value to push - always push if it's +1 or -1, but ignore zero. One input to trigger a push on +1, pop on -1. One output for popped value. One input to rotate it forwards or backwards on +1 or -1.
 * Add a queue block, similar to the stack block.
