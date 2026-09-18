@@ -2310,6 +2310,30 @@ canvas.addEventListener("pointermove", (event) => updateInspectorAlt(event.altKe
 document.addEventListener("keydown", (event) => {
   updateInspectorAlt(event.altKey);
   if (textBoxTool.open || event.isComposing || event.keyCode === 229) return;
+  const textEntryTarget =
+    event.target instanceof HTMLInputElement ||
+    event.target instanceof HTMLTextAreaElement ||
+    event.target instanceof HTMLSelectElement ||
+    (event.target instanceof HTMLElement && event.target.isContentEditable);
+  if (navigation.screen.kind === "main-menu" || navigation.screen.kind === "puzzle-info") {
+    if (
+      event.key !== "Escape" ||
+      event.defaultPrevented ||
+      event.repeat ||
+      event.ctrlKey || event.metaKey || event.altKey || event.shiftKey ||
+      textEntryTarget ||
+      document.querySelector("dialog[open]") !== null
+    ) {
+      return;
+    }
+    event.preventDefault();
+    if (navigation.screen.kind === "main-menu") {
+      settingsDialog.showModal();
+    } else {
+      navigation.navigate({ kind: "main-menu" });
+    }
+    return;
+  }
   if (exportMenu.open) {
     if (event.key === "Escape") {
       event.preventDefault();
@@ -2328,11 +2352,6 @@ document.addEventListener("keydown", (event) => {
   ) {
     return;
   }
-  const textEntryTarget =
-    event.target instanceof HTMLInputElement ||
-    event.target instanceof HTMLTextAreaElement ||
-    event.target instanceof HTMLSelectElement ||
-    (event.target instanceof HTMLElement && event.target.isContentEditable);
   if (event.key === "Control") {
     if (!event.repeat && !textEntryTarget && selectedTool !== "weld" && temporaryWeldTool === null) {
       finalizeActivePointerGesture();

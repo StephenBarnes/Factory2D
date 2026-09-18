@@ -61,6 +61,8 @@ Accepted sandbox edits copy the current world to baseline. Puzzle edits transfer
 
 Keep keyboard shortcuts isolated from text entry, modal editing, IME composition, inappropriate modifiers, and held-key repeats. Transport shortcuts respect availability. Menus retain keyboard navigation and Escape/focus-leave/outside-click dismissal. Inspect current event wiring and `e2e/` for exact bindings rather than duplicating shortcut logic.
 
+Escape returns from a puzzle briefing to the main menu and opens Settings from the main menu. Open dialogs retain Escape dismissal without triggering navigation or opening another dialog. These navigation shortcuts ignore text entry, IME composition, modifiers, consumed events, and held-key repeats; workshop Escape behavior is unchanged.
+
 ## Nested views and signal traces
 
 `WorkshopSurfaceController` tracks array tile-ID paths from the root, following moved arrays and surviving resets. Enter/leave reuses the main canvas, palette, tools, inspector, and configuration UI. Editable arrays allow all inner cells; fixed arrays allow none. A breadcrumb climbs outward; the renderer receives the containing array's side charges for virtual ports.
