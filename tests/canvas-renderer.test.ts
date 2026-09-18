@@ -196,7 +196,7 @@ describe("CanvasRenderer viewport fitting", () => {
     const expectedPoint = original.gridPointFromClientPoint(123, 234);
 
     const replacement = new CanvasRenderer(canvas, new World(20, 10));
-    replacement.preserveViewFrom(original);
+    replacement.restoreView(original.captureView());
 
     const actualPoint = replacement.gridPointFromClientPoint(123, 234);
     expect(actualPoint.x).toBeCloseTo(expectedPoint.x);

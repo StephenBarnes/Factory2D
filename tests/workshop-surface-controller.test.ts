@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TileSelectionState } from "../src/game/tile-selection";
 import {
@@ -6,54 +6,43 @@ import {
   type WorkshopSurfaceFactories,
 } from "../src/game/workshop-surface-controller";
 import { WorkshopSessionController } from "../src/game/workshop-session";
-import type { CanvasRenderer } from "../src/render/canvas-renderer";
+import { CanvasRenderer } from "../src/render/canvas-renderer";
 import type { World } from "../src/simulation/world";
 import { World as MutableWorld } from "../src/simulation/world";
 import type { TileInspector } from "../src/ui/tile-inspector";
+import { TileKind } from "../src/simulation/tile";
 
-class FakeRenderer {
-  fitCount = 0;
-  preservedFrom: FakeRenderer | null = null;
-
-  fitBoardToViewport(): void {
-    this.fitCount += 1;
-  }
-
-  preserveViewFrom(renderer: CanvasRenderer): void {
-    this.preservedFrom = renderer as unknown as FakeRenderer;
-  }
-}
+afterEach(() => vi.unstubAllGlobals());
 
 interface SurfaceHarness {
   readonly sessions: WorkshopSessionController;
   readonly surface: WorkshopSurfaceController;
-  readonly renderers: FakeRenderer[];
-  readonly inspectorWorlds: World[];
 }
 
 function surfaceHarness(initialWorld: World): SurfaceHarness {
+  vi.stubGlobal("window", { devicePixelRatio: 1 });
+  const canvas = {
+    clientWidth: 640,
+    clientHeight: 480,
+    width: 0,
+    height: 0,
+    getContext: () => ({ setTransform: () => {} }),
+    getBoundingClientRect: () => ({ left: 0, top: 0 }),
+  } as unknown as HTMLCanvasElement;
   const sessions = new WorkshopSessionController(initialWorld);
-  const renderers: FakeRenderer[] = [];
-  const inspectorWorlds: World[] = [];
   const factories: WorkshopSurfaceFactories = {
-    createRenderer: () => {
-      const renderer = new FakeRenderer();
-      renderers.push(renderer);
-      return renderer as unknown as CanvasRenderer;
-    },
+    createRenderer: (canvas, world, region, nested) => new CanvasRenderer(canvas, world, region, nested),
     createSelection: (width, height) => new TileSelectionState(width, height),
-    createInspector: (_panel, world) => {
-      inspectorWorlds.push(world);
-      return {} as TileInspector;
-    },
+    createInspector: () => ({} as TileInspector),
   };
   const surface = new WorkshopSurfaceController(
     sessions,
-    {} as HTMLCanvasElement,
+    canvas,
     {} as HTMLElement,
     factories,
   );
-  return { sessions, surface, renderers, inspectorWorlds };
+  surface.renderer.fitBoardToViewport();
+  return { sessions, surface };
 }
 
 describe("workshop surface controller", () => {
@@ -91,13 +80,14 @@ describe("workshop surface controller", () => {
     expect(harness.surface.hoveredCell).toBeNull();
     expect(harness.surface.hoveredEdge).toBeNull();
     expect(harness.surface.simulation.tick).toBe(7);
-    expect(harness.renderers.at(-1)?.fitCount).toBe(1);
-    expect(harness.inspectorWorlds.at(-1)).toBe(replacementWorld);
   });
 
   it("uses the same mount path without fitting when only bindings need refresh", () => {
     const harness = surfaceHarness(new MutableWorld(2, 2));
     const runtime = new MutableWorld(2, 2);
+    harness.surface.renderer.zoomAtClientPoint(300, 200, 400);
+    harness.surface.renderer.panByPixels(50, 20);
+    const point = harness.surface.renderer.gridPointFromClientPoint(123, 234);
     let canceled = 0;
     let mounted = 0;
     harness.surface.setInteractionCanceler(() => {
@@ -116,7 +106,63 @@ describe("workshop surface controller", () => {
     expect(canceled).toBe(0);
     expect(mounted).toBe(1);
     expect(harness.surface.world).toBe(runtime);
-    expect(harness.renderers.at(-1)?.fitCount).toBe(0);
-    expect(harness.renderers.at(-1)?.preservedFrom).toBe(harness.renderers[0]);
+    expect(harness.surface.renderer.gridPointFromClientPoint(123, 234)).toEqual(point);
+  });
+
+  it("restores each parent's zoom and pan when leaving multiple nested arrays", () => {
+    const world = new MutableWorld(30, 20);
+    world.place(4, 4, TileKind.RuneArray);
+    world.runeArrayWorldAt(4, 4).place(2, 2, TileKind.RuneArray);
+    const { surface } = surfaceHarness(world);
+    surface.renderer.zoomAtClientPoint(300, 200, -250);
+    surface.renderer.panByPixels(80, -30);
+    const rootPoint = surface.renderer.gridPointFromClientPoint(123, 234);
+    surface.enterRuneArray({ x: 4, y: 4 });
+    surface.renderer.zoomAtClientPoint(300, 200, -150);
+    surface.renderer.panByPixels(-40, 20);
+    const innerPoint = surface.renderer.gridPointFromClientPoint(123, 234);
+    surface.enterRuneArray({ x: 2, y: 2 });
+    surface.renderer.panByPixels(60, 60);
+
+    surface.exitRuneArray();
+    expect(surface.renderer.gridPointFromClientPoint(123, 234)).toEqual(innerPoint);
+    surface.exitRuneArray();
+    expect(surface.renderer.gridPointFromClientPoint(123, 234)).toEqual(rootPoint);
+  });
+
+  it("restores the root camera when a remount leaves a nested view", () => {
+    const world = new MutableWorld(30, 20);
+    world.place(4, 4, TileKind.RuneArray);
+    const { surface, sessions } = surfaceHarness(world);
+    surface.renderer.panByPixels(80, -30);
+    const rootPoint = surface.renderer.gridPointFromClientPoint(123, 234);
+    surface.enterRuneArray({ x: 4, y: 4 });
+
+    surface.mountActiveSession({
+      fitBoard: false,
+      cancelInteraction: true,
+      updateSession: () => sessions.showActiveRuntime(world.clone()),
+    });
+    expect(surface.viewDepth).toBe(0);
+    expect(surface.renderer.gridPointFromClientPoint(123, 234)).toEqual(rootPoint);
+    surface.enterRuneArray({ x: 4, y: 4 });
+    surface.exitRuneArray();
+    expect(surface.renderer.gridPointFromClientPoint(123, 234)).toEqual(rootPoint);
+  });
+
+  it("restores the surviving ancestor's view when an entered array disappears", () => {
+    const world = new MutableWorld(30, 20);
+    world.place(4, 4, TileKind.RuneArray);
+    world.runeArrayWorldAt(4, 4).place(2, 2, TileKind.RuneArray);
+    const { surface } = surfaceHarness(world);
+    surface.renderer.panByPixels(80, -30);
+    const rootPoint = surface.renderer.gridPointFromClientPoint(123, 234);
+    surface.enterRuneArray({ x: 4, y: 4 });
+    surface.enterRuneArray({ x: 2, y: 2 });
+    world.place(4, 4, TileKind.Empty);
+
+    surface.refreshView();
+    expect(surface.viewDepth).toBe(0);
+    expect(surface.renderer.gridPointFromClientPoint(123, 234)).toEqual(rootPoint);
   });
 });

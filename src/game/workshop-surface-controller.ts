@@ -3,13 +3,14 @@ import type { EditableRegionAuthoringState } from "./editable-region-authoring";
 import { TileSelectionState } from "./tile-selection";
 import type { WorkshopSession } from "./workshop-session";
 import { WorkshopSessionController } from "./workshop-session";
-import { CanvasRenderer, type NestedBoardView } from "../render/canvas-renderer";
+import { CanvasRenderer, type CameraView, type NestedBoardView } from "../render/canvas-renderer";
 import type { GridCell, GridEdge } from "../render/grid-drag";
 import type { Direction } from "../simulation/tile";
 import { TileKind } from "../simulation/tile";
 import type { Simulation } from "../simulation/simulation";
 import type { World } from "../simulation/world";
 import { TileInspector } from "../ui/tile-inspector";
+import { expectDefined } from "../util/assert";
 
 export interface MountActiveSessionOptions {
   readonly fitBoard: boolean;
@@ -77,6 +78,7 @@ export class WorkshopSurfaceController {
   private cancelInteraction: InteractionCanceler | null = null;
   private mountListener: MountListener | null = null;
   private readonly viewPath: NestedViewLevel[] = [];
+  private readonly parentViews: Array<CameraView | null> = [];
   private viewEditable = true;
 
   hoveredCell: GridCell | null = null;
@@ -193,13 +195,17 @@ export class WorkshopSurfaceController {
       this.cancelInteraction?.();
     }
     options.updateSession?.();
+    const view = options.fitBoard ? null : this.parentViews.length > 0
+      ? expectDefined(this.parentViews[0], "Missing root camera view")
+      : this.currentRenderer.captureView();
 
     const session = this.sessions.active;
     this.currentSession = session;
     this.currentSimulation = session.simulation;
     this.viewPath.length = 0;
+    this.parentViews.length = 0;
     this.viewEditable = true;
-    this.mountView(session.world, options.fitBoard);
+    this.mountView(session.world, view);
   }
 
   /** Displays the inner board of the rune array at `cell` on the displayed board. */
@@ -212,12 +218,13 @@ export class WorkshopSurfaceController {
       ? this.currentSession.editableRegion?.contains(cell.x, cell.y) ?? true
       : this.viewEditable;
     this.cancelInteraction?.();
+    this.parentViews.push(this.currentRenderer.captureView());
     this.viewPath.push({
       id: world.idAt(cell.x, cell.y),
       index: cell.y * world.width + cell.x,
     });
     this.viewEditable = editable;
-    this.mountView(world.runeArrayWorldAt(cell.x, cell.y), true);
+    this.mountView(world.runeArrayWorldAt(cell.x, cell.y));
     return true;
   }
 
@@ -231,7 +238,7 @@ export class WorkshopSurfaceController {
     if (this.viewPath.length === 0) {
       this.viewEditable = true;
     }
-    this.mountView(this.resolveViewWorld(), true);
+    this.mountResolvedView(this.resolveViewWorld());
     return true;
   }
 
@@ -243,14 +250,14 @@ export class WorkshopSurfaceController {
   refreshView(): void {
     if (this.viewPath.length === 0) {
       if (this.currentWorld !== this.currentSession.world) {
-        this.mountView(this.currentSession.world, true);
+        this.mountView(this.currentSession.world);
       }
       return;
     }
     const world = this.resolveViewWorld();
     if (world !== this.currentWorld) {
       this.cancelInteraction?.();
-      this.mountView(world, true);
+      this.mountResolvedView(world);
     }
   }
 
@@ -271,8 +278,15 @@ export class WorkshopSurfaceController {
     return world;
   }
 
-  private mountView(world: World, fitBoard: boolean): void {
-    const previousRenderer = this.currentRenderer;
+  private mountResolvedView(world: World): void {
+    const view = this.parentViews.length > this.viewPath.length
+      ? expectDefined(this.parentViews[this.viewPath.length], "Missing parent camera view")
+      : null;
+    this.parentViews.length = this.viewPath.length;
+    this.mountView(world, view);
+  }
+
+  private mountView(world: World, view: CameraView | null = null): void {
     const nestedView = this.viewPath.length === 0 ? null : this.createNestedView();
     const renderer = this.factories.createRenderer(
       this.canvas,
@@ -288,10 +302,10 @@ export class WorkshopSurfaceController {
     this.hoveredEdge = null;
     this.hoveredPaletteButton = null;
 
-    if (fitBoard) {
+    if (view === null) {
       renderer.fitBoardToViewport();
     } else {
-      renderer.preserveViewFrom(previousRenderer);
+      renderer.restoreView(view);
     }
     this.mountListener?.();
   }

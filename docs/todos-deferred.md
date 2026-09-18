@@ -27,6 +27,13 @@
 * Add a leaf block, and fire blocks. Furnaces should convert leaf blocks to fire blocks. Fire blocks should convert neighboring leaf blocks to fire blocks, and convert themselves to empty blocks.
 	* Then add a system that allows trees to grow over time. Should be a deterministic but unpredictable process, e.g. base it on a hash of tick number and coordinate. Trees grow slowly, using simple rules that produce tree-like branching structures: if a leaf block neighbors empty space, and neighbors a wood block which has some welded pathway through wood to a dirt block, then there's a chance for the leaf block to create another leaf block in that empty space, and convert itself to a wood block.
 
+## Lines and rectangles
+
+Add some components that work with beams/lines of cells, and some that interact with enclosed rectangles. For example maybe grid splitter blocks, each facing in one diagonal direction (though we'll model it as 4 orthogonal directions), and when 4 of these grid splitters are oriented correctly and facing inward to create a rectangle, when they receive a charge they split all edges inside that enclosed rectangle.
+
+* Figure out what components are necessary to build a version of the 2D ROM that exists in-world. Given an NxM block of ruby and sapphire blocks, what components are needed to read or duplicate the block at a specific coordinate? Maybe add a light-beam block, and a beam reader block; then the beam reader reads the block in the row in front of it which has the light beam on it. So we have two arms which move to position the intersection at the necessary 2D coordinate. Reading could be by duplicating the block, or comparing it to an adjacent body like the existing body comparer block; or emit a signal based on the block's color (ruby is red so -1, sapphire is blue so +1).
+* Figure out what components are necessary to construct an in-world display where each block is one pixel. Maybe a similar beam system to the above, but with a beam transmuter that copies a neighboring block to the point where its beam crosses a separate light beam. It should be possible to have a ROM / lore rune with some pattern of ternary values, and then build a device that will write the ROM rune's values one-by-one to a 2D array of blocks by e.g. setting them to different gemstone types.
+
 ## Blocks we could add, but probably shouldn't, rather build from existing tools
 
 * Linear actuator or drive collar. Like a piston that can extend multiple tiles long - we have a rod below and above the drive collar, then a charge causes it to consume from one side and add on the other side. Don't add, because we can build this using a conveyor belt moving the rod.

@@ -70,6 +70,13 @@ export interface NestedBoardView {
   portCharge(side: Direction): Charge;
 }
 
+/** Camera values only; retaining a view must not retain a world or renderer caches. */
+export interface CameraView {
+  readonly cellSize: number;
+  readonly centerX: number;
+  readonly centerY: number;
+}
+
 
 interface CachedBodyGeometry {
   readonly cells: readonly BodyCell[];
@@ -268,18 +275,27 @@ export class CanvasRenderer {
     this.renderInvalidated = true;
   }
 
-  /** Carries the player's current camera across a renderer remount on the same canvas. */
-  preserveViewFrom(renderer: CanvasRenderer): void {
-    if (!renderer.viewInitialized) {
+  captureView(): CameraView | null {
+    return this.viewInitialized ? {
+      cellSize: this.cellSize,
+      centerX: this.viewCenterX,
+      centerY: this.viewCenterY,
+    } : null;
+  }
+
+  /** Restores a camera on this board, clamping its center to the current board bounds. */
+  restoreView(view: CameraView | null): void {
+    if (view === null) {
       return;
     }
-    this.cellSize = renderer.cellSize;
-    this.viewCenterX = renderer.viewCenterX;
-    this.viewCenterY = renderer.viewCenterY;
+    this.cellSize = view.cellSize;
+    this.viewCenterX = view.centerX;
+    this.viewCenterY = view.centerY;
     this.viewInitialized = true;
     // A preserved camera is now intentional, even if the source was the initial fitted view.
     this.viewModified = true;
     this.resizeBackingStore();
+    this.updateOrigin();
     this.renderInvalidated = true;
   }
 
