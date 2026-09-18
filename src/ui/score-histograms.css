@@ -1,0 +1,377 @@
+.score-histograms {
+  min-width: 0;
+  container-type: inline-size;
+  color: var(--text-body);
+}
+
+#briefing-score-histograms {
+  margin-top: 24px;
+}
+
+#report-score-histograms {
+  margin: 0 24px 24px;
+}
+
+.test-report-dialog.succeeded {
+  width: min(960px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.test-report-dialog.succeeded > * {
+  flex-shrink: 0;
+}
+
+.score-histograms-heading,
+.score-histograms-legend,
+.score-histogram-key {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.score-histograms-heading {
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.score-histograms-heading h3 {
+  margin: 0;
+  color: var(--gold);
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  letter-spacing: 0.03em;
+}
+
+.score-histograms-legend {
+  color: var(--text-mid);
+  font-size: 0.72rem;
+}
+
+.score-histogram-key {
+  gap: 7px;
+}
+
+.score-histograms-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.score-histogram-card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--panel-border);
+  border-top: 2px solid var(--bronze);
+  background: var(--inset);
+}
+
+.score-histogram-title {
+  margin: 0 0 10px;
+  color: var(--text-bright);
+  font-family: var(--font-mono);
+  font-size: 0.73rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.score-histogram-locals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 0 0 10px;
+}
+
+.score-histogram-local dt {
+  color: var(--text-muted);
+  font-size: 0.67rem;
+}
+
+.score-histogram-local dd {
+  margin: 3px 0 0;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.score-histogram-local--best dd {
+  color: var(--gold);
+}
+
+.score-histogram-local--current dd {
+  color: var(--gem);
+}
+
+.score-histogram-standing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 9px;
+  min-height: 25px;
+  margin-bottom: 12px;
+  color: var(--text-mid);
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.score-histogram-rank {
+  padding: 2px 6px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  background: var(--raised);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.score-histogram-rank--coal {
+  color: var(--text-muted);
+}
+
+.score-histogram-rank--iron {
+  color: var(--text-bright);
+}
+
+.score-histogram-rank--gold {
+  color: var(--gold);
+}
+
+.score-histogram-rank--mithril {
+  color: var(--gem);
+}
+
+.score-histogram-figure {
+  margin: 0;
+}
+
+.score-histogram-scale,
+.score-histogram-axis {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  line-height: 1.5;
+}
+
+.score-histogram-scale {
+  flex-wrap: wrap;
+}
+
+.score-histogram-plot {
+  position: relative;
+  height: 100px;
+  margin: 17px 6px;
+  border-bottom: 1px solid var(--border-strong);
+  background: repeating-linear-gradient(
+    to top,
+    transparent 0,
+    transparent calc(50% - 1px),
+    var(--border-faint) calc(50% - 1px),
+    var(--border-faint) 50%
+  );
+}
+
+.score-histogram-bars {
+  display: flex;
+  height: 100%;
+}
+
+.score-histogram-bucket {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  align-items: flex-end;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0 1px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  touch-action: manipulation;
+}
+
+.score-histogram-bar {
+  display: block;
+  width: 100%;
+  background: var(--bronze);
+  border-top: 1px solid var(--gild);
+}
+
+.score-histogram-bucket:hover,
+.score-histogram-bucket[aria-pressed="true"] {
+  background: var(--raised-hover);
+}
+
+.score-histogram-bucket:hover .score-histogram-bar,
+.score-histogram-bucket[aria-pressed="true"] .score-histogram-bar {
+  background: var(--gild);
+}
+
+.score-histogram-bucket:focus-visible {
+  z-index: 1;
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 1px;
+}
+
+.score-histogram-symbol {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border: 2px solid currentColor;
+  background: var(--inset);
+}
+
+.score-histogram-symbol--best {
+  color: var(--gold-bright);
+  transform: rotate(45deg);
+}
+
+.score-histogram-symbol--current {
+  color: var(--gem);
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.score-histogram-marker {
+  position: absolute;
+  z-index: 2;
+  width: 0;
+  pointer-events: none;
+}
+
+/* Separate lanes keep both markers visible when their scores are identical. */
+.score-histogram-marker--best {
+  top: 0;
+  bottom: 50%;
+  border-left: 2px dashed var(--gold-bright);
+}
+
+.score-histogram-marker--current {
+  top: 50%;
+  bottom: 0;
+  border-left: 2px solid var(--gem);
+}
+
+.score-histogram-marker > .score-histogram-symbol {
+  position: absolute;
+  left: -5px;
+}
+
+.score-histogram-marker--best > .score-histogram-symbol {
+  top: -11px;
+}
+
+.score-histogram-marker--current > .score-histogram-symbol {
+  bottom: -11px;
+}
+
+.score-histogram-axis > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.score-histogram-axis > span:last-child {
+  text-align: right;
+}
+
+.score-histogram-axis-direction {
+  flex-shrink: 0;
+  color: var(--text-mid);
+  text-align: center;
+}
+
+.score-histogram-inspection {
+  min-height: 3.1em;
+  margin-top: 9px;
+  color: var(--text-mid);
+  font-size: 0.68rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.score-histogram-record {
+  margin: 10px 0 0;
+  color: var(--text-body);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.score-histogram-record > span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+}
+
+.score-histogram-empty,
+.score-histogram-unranked {
+  margin: 0 0 12px;
+  color: var(--text-muted);
+  font-size: 0.73rem;
+  line-height: 1.5;
+}
+
+.score-histograms-policy {
+  margin-top: 12px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.6;
+}
+
+.score-histograms-policy > summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--text-mid);
+}
+
+.score-histograms-policy > summary:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
+.score-histograms-policy p {
+  margin: 4px 0 0;
+}
+
+@container (max-width: 500px) {
+  .score-histograms-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container (min-width: 1050px) {
+  .score-histograms-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  #report-score-histograms {
+    margin-right: 14px;
+    margin-left: 14px;
+  }
+}
+
+@media (forced-colors: active) {
+  .score-histogram-bar {
+    background: CanvasText;
+  }
+
+  .score-histogram-bucket[aria-pressed="true"] .score-histogram-bar {
+    background: Highlight;
+  }
+
+  .score-histogram-marker,
+  .score-histogram-symbol {
+    color: CanvasText;
+    border-color: CanvasText;
+  }
+}

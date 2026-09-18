@@ -105,6 +105,15 @@ describe("puzzle scores", () => {
     expect(parsePuzzleScores(JSON.parse(JSON.stringify(scores)), "Saved")).toEqual(scores);
   });
 
+  it("accepts independent submission minima without allowing impossible totals or weakening saved solutions", () => {
+    const minima = { price: 1, cycles: 3.5, footprint: 1, combined: 8.5 };
+    expect(parsePuzzleScores(minima, "Submitted", "independent-minima")).toEqual(minima);
+    expect(() => parsePuzzleScores(minima, "Saved")).toThrow();
+    expect(() => parsePuzzleScores(
+      { ...minima, combined: 5 }, "Submitted", "independent-minima",
+    )).toThrow();
+  });
+
   it.each([
     { cycles: NaN },
     { cycles: Infinity },

@@ -160,7 +160,7 @@ async function submitScores(request: Request, db: D1Database): Promise<Response>
   const scoringVersion = requireVersion(body.scoringVersion);
   let scores;
   try {
-    scores = parsePuzzleScores(body.scores, "Submitted");
+    scores = parsePuzzleScores(body.scores, "Submitted", "independent-minima");
   } catch (error) {
     throw new HttpError(400, error instanceof Error ? error.message : "Invalid scores");
   }

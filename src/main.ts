@@ -11,6 +11,7 @@ import { CommunityClient } from "./game/community-client";
 import { getInstallationId } from "./game/installation-id";
 import { parsePuzzleFile } from "./game/puzzle-format";
 import { CommunityScoresView } from "./ui/community-scores";
+import { bestPuzzleScores } from "./game/score-histogram";
 import {
   clearPlayerData,
   replacePlayerData,
@@ -106,6 +107,8 @@ const communityScores = new CommunityScoresView(
   community,
   requiredElement("briefing-community-status"),
   requiredElement("report-community-status"),
+  requiredElement("briefing-score-histograms"),
+  requiredElement("report-score-histograms"),
 );
 const canvas = requiredElement<HTMLCanvasElement>("game-canvas");
 const gameScreen = requiredElement<HTMLElement>("game-screen");
@@ -1428,13 +1431,10 @@ const puzzleTests = new PuzzleTestController(
       if (screen.kind !== "puzzle") {
         throw new Error("Cannot submit puzzle scores outside a puzzle workshop");
       }
-      const submissionScores = scores === null || previousBest === null ? scores : {
-        price: Math.min(previousBest.price, scores.price),
-        cycles: Math.min(previousBest.cycles, scores.cycles),
-        footprint: Math.min(previousBest.footprint, scores.footprint),
-        combined: Math.min(previousBest.combined, scores.combined),
-      };
-      void communityScores.recordResult(screen.puzzleId, submissionScores);
+      const submissionScores = scores === null ? null : bestPuzzleScores([previousBest, scores]);
+      const solutions = savedSolutions.forPuzzle(screen.puzzleId);
+      const savedBest = solutions.length < 2 ? null : bestPuzzleScores(solutions.map((solution) => solution.scores));
+      void communityScores.recordResult(screen.puzzleId, scores, submissionScores, savedBest);
       return previousBest;
     },
     refreshTransport: updateTransportState,
@@ -1546,7 +1546,10 @@ const navigation = new NavigationController(
   },
   {
     stopSimulation: stopWorkshopActivity,
-    onPuzzleInfoShown: (puzzleId) => { void communityScores.showBriefing(puzzleId); },
+    onPuzzleInfoShown: (puzzleId) => {
+      const best = bestPuzzleScores(savedSolutions.forPuzzle(puzzleId).map((solution) => solution.scores));
+      void communityScores.showBriefing(puzzleId, best);
+    },
     onWorkshopSessionChanged: () => {
       surface.mountActiveSession({ fitBoard: true, cancelInteraction: true });
     },

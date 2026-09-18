@@ -103,7 +103,11 @@ export function computePuzzleScores(
   return Object.freeze({ price: metrics.price, cycles, footprint, combined });
 }
 
-export function parsePuzzleScores(value: unknown, context: string): PuzzleScores {
+export function parsePuzzleScores(
+  value: unknown,
+  context: string,
+  kind: "solution" | "independent-minima" = "solution",
+): PuzzleScores {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new Error(`${context} scores must be an object`);
   }
@@ -114,7 +118,10 @@ export function parsePuzzleScores(value: unknown, context: string): PuzzleScores
       throw new Error(`${context} score ${field} must be non-negative and within the safe range; price and footprint must be integers`);
     }
   }
-  if (record.combined !== (record.price as number) + (record.cycles as number) + (record.footprint as number)) {
+  // Independent minima may come from different solutions; combined is still an
+  // actual solution's best total, never the sum of those independent minima.
+  const sum = (record.price as number) + (record.cycles as number) + (record.footprint as number);
+  if (kind === "solution" ? record.combined !== sum : (record.combined as number) < sum) {
     throw new Error(`${context} combined score is inconsistent`);
   }
 

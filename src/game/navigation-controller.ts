@@ -16,6 +16,7 @@ import type { SandboxPuzzleProperties } from "./sandbox-puzzle-authoring";
 import type { SavedSandboxController } from "./saved-sandbox-controller";
 import type { SavedSolutionController } from "./saved-solution-controller";
 import type { PuzzleScores } from "./puzzle-scores";
+import { bestPuzzleScores } from "./score-histogram";
 import type { WorkshopSessionController } from "./workshop-session";
 import { populatePuzzleMap } from "../ui/main-menu";
 import { PuzzleInfoView } from "../ui/puzzle-info";
@@ -254,18 +255,9 @@ export class NavigationController {
     if (this.currentScreen.kind !== "puzzle") {
       throw new Error("Cannot record a puzzle test result outside a puzzle workshop");
     }
-    let previousBest: PuzzleScores | null = null;
-    for (const solution of this.solutions.forPuzzle(this.currentScreen.puzzleId)) {
-      if (solution.scores === null) {
-        continue;
-      }
-      previousBest = previousBest === null ? solution.scores : {
-        price: Math.min(previousBest.price, solution.scores.price),
-        cycles: Math.min(previousBest.cycles, solution.scores.cycles),
-        footprint: Math.min(previousBest.footprint, solution.scores.footprint),
-        combined: Math.min(previousBest.combined, solution.scores.combined),
-      };
-    }
+    const previousBest = bestPuzzleScores(
+      this.solutions.forPuzzle(this.currentScreen.puzzleId).map((solution) => solution.scores),
+    );
     this.solutions.recordTestResult(
       this.currentScreen.solutionId,
       this.sessions.active.baseline,
