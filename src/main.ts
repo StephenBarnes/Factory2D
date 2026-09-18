@@ -894,6 +894,8 @@ function pickTileAt(cell: GridCell): void {
         (cell.y === Math.floor(height / 2) && (cell.x === -1 || cell.x === width)))
     ) {
       selectTile(TileKind.Conduit);
+    } else {
+      selectTile(previousSelectedKind);
     }
     return;
   }
