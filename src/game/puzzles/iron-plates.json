@@ -7,7 +7,7 @@
   "group": "manufacturing",
   "order": 0,
   "name": "Iron plates",
-  "difficulty": 2,
+  "difficulty": 3,
   "description": "Use furnaces to smelt iron ore to iron blocks. Weld together 3 iron blocks in a row to create an iron plate.",
   "goal": "Create and deliver 10 iron plates.",
   "components": [

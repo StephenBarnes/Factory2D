@@ -316,7 +316,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 43,
       category: PaletteCategory.PuzzleTools,
       description: "Fixed indestructible block not affected by gravity.",
-      extendedDescription: ["Anchors its entire welded body: it cannot fall or be pushed. Indestructible: drills cannot remove it. Use it as a foundation or to brace a moving machine. Weld-protected - cannot be welded/split at runtime at sides shared with other weld-protected blocks."],
+      extendedDescription: ["Anchors its entire welded body: it cannot fall or be pushed. Indestructible: drills cannot remove it. Weld-protected - cannot be welded/split at runtime at sides shared with other weld-protected blocks."],
     },
     affectedByGravity: false,
     immovable: true,

@@ -84,3 +84,6 @@ The fixed ROM signal sources in these five runelore puzzles face right and are m
 * Puzzle where you have to build a vehicle that travels over a chasm, building its own path. Allow duplicator and welder; so you need a moving vehicle that duplicates stone blocks and welds them to the head of the path, then advances.
 	* As follow-up, add a harder version where you have dispensers that output e.g. iron ore, and you have to smelt that and use assemblers to make conveyor belts and platform.
 * Carry a 1-trit signal from a top chamber to a bottom chamber, through a 1-wide chute. The top and bottom chambers are player-modifiable but the chute is not. So they probably need to choose one block to drop based on the trit, then interpret that signal at the bottom.
+* Simpler manufacturing puzzles before the current iron plates puzzle:
+	* Smelt a single iron block, and deliver it. Put delivery block some distance away, and make the terrain a bit complex, so it's not trivial (just a furnace block pointing at cell above delivery box).
+	* Weld together two stone blocks into 1x2 bodies, and deliver that.
