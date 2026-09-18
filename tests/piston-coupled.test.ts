@@ -164,6 +164,101 @@ describe("dependency-ordered piston strokes", () => {
     expect(world.chargeAt(4, 3)).toBe(1);
   });
 
+  it("alternates head-welded downward pistons instead of deadlocking a pull against recoil", () => {
+    const { world } = deserializeBoard(JSON.stringify({
+      format: "factory2d-board", version: 15, width: 5, height: 7, tick: 0, result: "in-progress",
+      grid: [".....", ".....", ".....", "..1U.", "...P.", ".1UP.", "#####"],
+      orientations: [
+        { x: 3, y: 3, direction: "right" }, { x: 3, y: 4, direction: "down" },
+        { x: 2, y: 5, direction: "right" }, { x: 3, y: 5, direction: "down" },
+      ],
+      components: [
+        { x: 3, y: 3, type: "rom", width: 2, height: 1, cursor: 0,
+          wrapX: true, wrapY: true, values: [1, -1] },
+        { x: 2, y: 5, type: "rom", width: 2, height: 1, cursor: 0,
+          wrapX: true, wrapY: true, values: [-1, 1] },
+      ],
+      welds: [".....", ".....", ".....", "..-|.", "...|.", ".--..", "----."],
+    }));
+    const upperId = world.idAt(3, 4);
+    const lowerId = world.idAt(3, 5);
+    const upperRomId = world.idAt(3, 3);
+    const lowerRomId = world.idAt(2, 5);
+    const simulation = new Simulation(world);
+
+    for (let cycle = 0; cycle < 3; cycle += 1) {
+      simulation.step();
+      // Later cycles briefly lose floor contact; gravity settles them next tick.
+      const lift = cycle === 0 ? 0 : 1;
+      expect(world.kindAt(3, 3 - lift)).toBe(TileKind.PistonBase);
+      expect(world.tileAt(3, 4 - lift)).toEqual({ kind: TileKind.PistonArm, id: upperId });
+      expect(world.tileAt(3, 5 - lift)).toEqual({ kind: TileKind.Piston, id: lowerId });
+      expect(world.idAt(3, 2 - lift)).toBe(upperRomId);
+      expect(world.idAt(2, 5 - lift)).toBe(lowerRomId);
+      expect(world.isWelded(3, 4 - lift, 3, 5 - lift)).toBe(true);
+
+      simulation.step();
+      expect(world.tileAt(3, 3)).toEqual({ kind: TileKind.Piston, id: upperId });
+      expect(world.kindAt(3, 4)).toBe(TileKind.PistonBase);
+      expect(world.tileAt(3, 5)).toEqual({ kind: TileKind.PistonArm, id: lowerId });
+      expect(world.idAt(3, 2)).toBe(upperRomId);
+      expect(world.idAt(2, 4)).toBe(lowerRomId);
+      expect(world.isWelded(3, 3, 3, 4)).toBe(true);
+      expect(world.isWelded(3, 4, 3, 5)).toBe(true);
+      expect(world.isWelded(2, 4, 3, 4)).toBe(true);
+    }
+  });
+
+  it("orders nested pull/recoil cycles independently of orientation and allocated IDs", () => {
+    for (const direction of [Direction.Up, Direction.Right, Direction.Down, Direction.Left]) {
+      for (const reversed of [false, true]) {
+        const world = new World(9, 9);
+        const point = (distance: number, side = 0): [number, number] => {
+          switch (direction) {
+            case Direction.Up: return [4 + side, 4 - distance];
+            case Direction.Right: return [4 + distance, 4 + side];
+            case Direction.Down: return [4 - side, 4 + distance];
+            case Direction.Left: return [4 - distance, 4 - side];
+          }
+        };
+        const placements: [number, number, TileKind, Direction][] = [
+          [0, 0, TileKind.PistonBase, direction],
+          [1, 0, TileKind.PistonArm, direction],
+          [2, 0, TileKind.Piston, direction],
+          [3, 0, TileKind.Platform, Direction.Up],
+          [0, 1, TileKind.Inverter, (direction + 3) % 4],
+          [0, 2, TileKind.FixedCharge, Direction.Up],
+          [0, -1, TileKind.Floatstone, Direction.Up],
+          [2, 1, TileKind.FixedCharge, Direction.Up],
+        ];
+        if (reversed) placements.reverse();
+        for (const [distance, side, kind, facing] of placements) {
+          world.place(...point(distance, side), kind, facing);
+        }
+        world.setWeld(...point(0), ...point(1), true);
+        world.setWeld(...point(1), ...point(2), true);
+        world.setWeld(...point(0), ...point(0, 1), true);
+        world.setWeld(...point(0, 1), ...point(0, 2), true);
+        world.setWeld(...point(0), ...point(0, -1), true);
+        world.setWeld(...point(2), ...point(2, 1), true);
+        world.setCharge(...point(0, 2), 1);
+        const pullingId = world.idAt(...point(1));
+        const extendingId = world.idAt(...point(2));
+        const carriedSourceId = world.idAt(...point(2, 1));
+
+        new Simulation(world).step();
+
+        expect(world.tileAt(...point(0))).toEqual({ kind: TileKind.Piston, id: pullingId });
+        expect(world.kindAt(...point(1))).toBe(TileKind.PistonBase);
+        expect(world.tileAt(...point(2))).toEqual({ kind: TileKind.PistonArm, id: extendingId });
+        expect(world.idAt(...point(1, 1))).toBe(carriedSourceId);
+        expect(world.isWelded(...point(0), ...point(1))).toBe(true);
+        expect(world.isWelded(...point(1), ...point(2))).toBe(true);
+        expect(world.isWelded(...point(1), ...point(1, 1))).toBe(true);
+      }
+    }
+  });
+
   it("does not let a cycle-breaking vertical stroke bypass ordinary collision jams", () => {
     const world = new World(7, 7);
     world.place(3, 3, TileKind.FixedCharge);

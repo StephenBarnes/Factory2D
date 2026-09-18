@@ -162,11 +162,7 @@ export class PistonResolver {
     links?.collect();
     stroke.cells.length = 0;
     stroke.partners.length = 0;
-    this.visit = (this.visit + 1) >>> 0;
-    if (this.visit === 0) {
-      this.visited.fill(0);
-      this.visit = 1;
-    }
+    this.beginVisit();
     const { base, arm, action, recoil, direction } = stroke;
     if (action === 1 && !recoil && arm < 0) {
       return false;
@@ -259,6 +255,31 @@ export class PistonResolver {
     }
   }
 
+  private beginVisit(): void {
+    this.visit = (this.visit + 1) >>> 0;
+    if (this.visit === 0) {
+      this.visited.fill(0);
+      this.visit = 1;
+    }
+  }
+
+  /** A strictly nested translation can finish before its rigid carrier moves. */
+  private movesStrictSubset(stroke: Stroke, carrier: Stroke): boolean {
+    if (stroke.direction !== carrier.direction || stroke.cells.length >= carrier.cells.length) {
+      return false;
+    }
+    this.beginVisit();
+    for (const cell of carrier.cells) {
+      this.visited[cell] = this.visit;
+    }
+    for (const cell of stroke.cells) {
+      if (this.visited[cell] !== this.visit) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   private chooseReadyStrokes(breakCycles = false): void {
     if (breakCycles) {
       this.labelDependencyCycles();
@@ -278,10 +299,12 @@ export class PistonResolver {
         if (!dependency.valid) {
           continue;
         }
-        // Remove only vertical-to-horizontal carrying edges inside a cycle.
-        // Acyclic dependencies, same-axis ties, and required partners still wait.
-        if (breakCycles && (stroke.direction & 1) === 0 && (dependency.direction & 1) === 1 &&
-            stroke.dependencyComponent === dependency.dependencyComponent) {
+        // Inside a cycle, finish nested same-direction motion before its carrier.
+        // Equal/overlapping loads still tie; perpendicular ties retain vertical priority.
+        // Acyclic dependencies and required partners always remain binding.
+        if (breakCycles && stroke.dependencyComponent === dependency.dependencyComponent &&
+            (this.movesStrictSubset(stroke, dependency) ||
+              (stroke.direction & 1) === 0 && (dependency.direction & 1) === 1)) {
           continue;
         }
         stroke.ready = false;
