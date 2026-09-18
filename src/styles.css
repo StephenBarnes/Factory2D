@@ -874,6 +874,11 @@ body:has(dialog[open]) .tool-cursor {
   font-size: 0.75rem;
 }
 
+.solution-scores strong.best-score {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .empty-solutions {
   margin: 18px 0 0;
   padding: 34px 20px;

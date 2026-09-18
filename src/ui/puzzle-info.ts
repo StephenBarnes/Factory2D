@@ -1,6 +1,7 @@
-import type { PuzzleHistograms, ScoreMetric } from "../game/community-api";
-import { scoreStanding } from "../game/score-histogram";
+import { SCORE_METRICS, type PuzzleHistograms, type ScoreMetric } from "../game/community-api";
+import { bestPuzzleScores, scoreStanding } from "../game/score-histogram";
 import { PUZZLE_DIFFICULTIES } from "../game/puzzle-difficulty";
+import type { PuzzleScores } from "../game/puzzle-scores";
 import type { SavedPuzzleSolution } from "../game/puzzle-solutions";
 import type { PuzzleDefinition } from "../game/puzzles";
 import { formatPuzzleScore } from "./puzzle-score-format";
@@ -56,16 +57,11 @@ export class PuzzleInfoView {
     this.difficulty.title = this.difficulty.ariaLabel;
     this.goal.textContent = options.puzzle.goal;
 
-    let bestCombinedScore = Number.POSITIVE_INFINITY;
-    for (const solution of options.solutions) {
-      if (solution.scores !== null && solution.scores.combined < bestCombinedScore) {
-        bestCombinedScore = solution.scores.combined;
-      }
-    }
+    const bestScores = bestPuzzleScores(options.solutions.map((solution) => solution.scores));
 
     this.rankedScores.length = 0;
     const solutionRows = options.solutions.map((solution) =>
-      this.createSolutionRow(solution, solution.scores?.combined === bestCombinedScore, options),
+      this.createSolutionRow(solution, bestScores, options),
     ).reverse();
     this.solutionList.replaceChildren(...solutionRows);
     this.emptySolutions.hidden = solutionRows.length !== 0;
@@ -89,13 +85,14 @@ export class PuzzleInfoView {
 
   private createSolutionRow(
     solution: SavedPuzzleSolution,
-    isBest: boolean,
+    bestScores: PuzzleScores | null,
     options: PuzzleInfoOptions,
   ): HTMLElement {
     const row = document.createElement("article");
     row.className = "solution-row";
     row.setAttribute("role", "listitem");
-    if (isBest) {
+    if (solution.scores !== null && bestScores !== null &&
+      SCORE_METRICS.some((metric) => solution.scores?.[metric] === bestScores[metric])) {
       row.classList.add("best-score");
       row.dataset.bestScore = "true";
     }
@@ -123,10 +120,10 @@ export class PuzzleInfoView {
     const scores = document.createElement("div");
     scores.className = "solution-scores";
     scores.append(
-      this.createScore("PRICE", "price", solution.scores?.price),
-      this.createScore("AVG CYCLES", "cycles", solution.scores?.cycles),
-      this.createScore("FOOTPRINT", "footprint", solution.scores?.footprint),
-      this.createScore("COMBINED", "combined", solution.scores?.combined),
+      this.createScore("PRICE", "price", solution.scores?.price, bestScores?.price),
+      this.createScore("AVG CYCLES", "cycles", solution.scores?.cycles, bestScores?.cycles),
+      this.createScore("FOOTPRINT", "footprint", solution.scores?.footprint, bestScores?.footprint),
+      this.createScore("COMBINED", "combined", solution.scores?.combined, bestScores?.combined),
     );
 
     const actions = document.createElement("div");
@@ -164,13 +161,22 @@ export class PuzzleInfoView {
     return button;
   }
 
-  private createScore(label: string, metric: ScoreMetric, scoreValue: number | undefined): HTMLElement {
+  private createScore(
+    label: string,
+    metric: ScoreMetric,
+    scoreValue: number | undefined,
+    bestValue: number | undefined,
+  ): HTMLElement {
     const score = document.createElement("span");
     const heading = document.createElement("small");
     heading.textContent = label;
     const value = document.createElement("strong");
     value.textContent = scoreValue === undefined ? "—" : formatPuzzleScore(scoreValue);
     if (scoreValue !== undefined) {
+      if (scoreValue === bestValue) {
+        value.classList.add("best-score");
+        score.title = "Personal best among saved solutions";
+      }
       this.rankedScores.push({ element: value, metric, value: scoreValue });
     }
     score.append(heading, value);
