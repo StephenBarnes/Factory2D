@@ -1327,10 +1327,10 @@ function drawDecoration(
       const inset = size * 0.2;
       context.save();
       context.strokeStyle = definition.decorationColor;
-      context.lineWidth = Math.max(1.5, size * 0.065);
+      context.lineWidth = Math.max(2.0, size * 0.08);
       context.lineCap = "round";
       context.lineJoin = "round";
-      context.setLineDash([size * 0.11, size * 0.09]);
+      context.setLineDash([size * 0.15, size * 0.19]);
       context.lineDashOffset = outputCharge === 0
         ? 0
         : -outputCharge * (mirrored ? -1 : 1) * animationTime * size / 1000;

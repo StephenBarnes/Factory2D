@@ -78,6 +78,7 @@ export function browserStorageFixture(
             "stone-drop",
             "sand-fall",
             "basic-runelore",
+            "vehicle",
             "gordian-knot",
           ]),
         ),

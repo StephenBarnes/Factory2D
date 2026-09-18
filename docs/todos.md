@@ -3,16 +3,19 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 # Authoring tools and player-created puzzles
 
 * Add community puzzle browsing and solution-mode play of downloaded shared puzzles. Published files can currently be downloaded and imported into sandboxes.
-* Allow voting community-created puzzles up and down. We can assume users aren't malicious, this is a zero-stakes indie game; expect under 10 players per day. Use the existing installation UUID rather than email/auth. Browser-level site-data deletion can still create another identity, but the game's clear button preserves it and full player-data import/export transfers it. If popularity warrants it, upgrade to a more robust system.
+* Allow voting community-created puzzles up and down. Assume users aren't malicious; we'll upgrade to a more secure backend if it's ever necessary. Use the existing installation UUID. Browser-level site-data deletion can still create another identity, but the game's clear button preserves it and full player-data import/export transfers it.
 
 # New non-circuit components
 
 * Add a flipper block. It modifies the body of the block it's facing, by flipping that entire body around that block horizontally or vertically, if doing so would not collide/overlap other blocks.
-* Add a bell block that plays a sound when it moves left/right (but not when moving up/down). Decide pitch by counting the blocks in the bell's body, so larger bells are lower pitch. Add a resonator rune that emits a charge when a bell with matching pitch rings, anywhere on the grid; decide resonator's pitch in the same way by counting its body's number of blocks. Constrain pitch to say one octave. Play audio in the browser when a bell block is triggered, maybe preventing it if sim rate is over 10 ticks per second.
+* Add a bell block that plays a sound when it moves left/right (but not when moving up/down); the block does not use orientation / ignores rotation. Decide pitch by counting the blocks in the bell's body, so larger bells are lower pitch. Play the sound in the browser, if audio is enabled and if sim rate is under say 10 ticks per second. Constrain pitch to one octave, based on `clamp(body_size, 1, 8)`.
+	* Follow-up: add a resonator rune that emits a charge when a bell with matching pitch rings, anywhere on the grid; decide resonator's pitch in the same way by counting its body's number of blocks. This functions as dwarven radio/wireless signaling.
 * Hole-puncher block that destroys any blocks moved onto its tile cell, in the same tick they attempt to move onto it. For example, a 5x5 body falling onto one of these blocks, or moved past it by a conveyor, should be cut in half. Once we have the flipper block, also allow flipping bodies onto this block, which destroys the blocks that overlap it. Unclear what behavior we should have when rotating bodies onto it; maybe count it as colliding / preventing rotation onto it, or find all tiles that would intersect the hole-punch's center when rotated through it.
 	* As follow-up, add a lava block that behaves the same way, for e.g. puzzles about crossing a lava chasm.
 * Add a dwarf block which is breakable - anything falling onto the dwarf block should destroy it. Anything pushing the dwarf block should push it, unless the push is blocked by something on the other side like a wall, in which case that should also crush the dwarf. Use the shattering animation for this.
 * Add a dismantler block. Similar to the current splitter, but it unwelds all 4 sides of the block it's facing, instead of only two.
+* Add a swapper block that swaps its front and rear neighbors when it receives a +1 charge on either side. Keep welds the same - if the front block is a stone block with two sides welded, and rear is a lore rune with no sides welded, after the swap, the front block should be a lore rune (with the original rear neighbor's configuration and rotation/mirroring) but with the welds the stone block had, and vice versa. Except if that would break rules (non-weldable blocks, non-weldable sides of e.g. rotator blocks, and weld-protected blocks). Do not allow swapping with immovable or indestructible blocks.
+* Add a gravity stone that changes its welded body's gravity to point in the gravity stone's forward direction, instead of downward.
 
 # Component behaviors
 

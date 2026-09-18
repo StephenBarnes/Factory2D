@@ -364,7 +364,7 @@ test("exports, clears, and imports all player data", async ({ page }) => {
   await page.locator("#import-player-data-file").setInputFiles(downloadPath);
   await importReload;
 
-  await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^5 gemstones\b/);
+  await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^6 gemstones\b/);
   expect(await page.evaluate(() => Object.fromEntries(
     Array.from({ length: window.localStorage.length }, (_, index) => {
       const key = window.localStorage.key(index);
@@ -619,7 +619,7 @@ test("unlocked fixture opens a gemstone-gated group and puzzle", async ({ page }
   const manufacturing = page.locator(".puzzle-group").filter({
     has: page.getByText("Manufacturing", { exact: true }),
   });
-  await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^5 gemstones\b/);
+  await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^6 gemstones\b/);
   await expect(basics).toHaveAttribute("data-state", "completed");
   await expect(manufacturing).toHaveAttribute("data-state", "unlocked");
 
