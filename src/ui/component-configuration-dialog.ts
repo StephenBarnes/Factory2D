@@ -77,6 +77,8 @@ export class ComponentConfigurationDialog {
   private readonly saveButton: HTMLButtonElement;
   private submit: ((submission: ComponentConfigurationSubmission) => void) | null = null;
   private romValues: Charge[] = [];
+  private romDraftWidth = 0;
+  private romDraftHeight = 0;
   private currentKind = TileKind.Empty;
   private openArrayAfterSave = false;
   private romStroke: {
@@ -330,6 +332,8 @@ export class ComponentConfigurationDialog {
       this.romWidth.value = String(state.width);
       this.romHeight.value = String(state.height);
       this.romValues = [...state.values];
+      this.romDraftWidth = state.width;
+      this.romDraftHeight = state.height;
       this.description.textContent =
         (state.type === "checker" ? "Expected values are read row by row. " :
           state.type === "lut" ? "Fixed 3 × 3 truth table: left input selects the column; " +
@@ -543,11 +547,18 @@ export class ComponentConfigurationDialog {
       return;
     }
     const values = new Array<Charge>(width * height).fill(0);
-    const copyLength = Math.min(values.length, this.romValues.length);
-    for (let index = 0; index < copyLength; index += 1) {
-      values[index] = expectDefined(this.romValues[index], "ROM draft value");
+    const copyWidth = Math.min(width, this.romDraftWidth);
+    const copyHeight = Math.min(height, this.romDraftHeight);
+    for (let y = 0; y < copyHeight; y += 1) {
+      for (let x = 0; x < copyWidth; x += 1) {
+        values[y * width + x] = expectDefined(
+          this.romValues[y * this.romDraftWidth + x], "ROM draft value",
+        );
+      }
     }
     this.romValues = values;
+    this.romDraftWidth = width;
+    this.romDraftHeight = height;
     this.renderRomGrid(width, height);
   }
 
