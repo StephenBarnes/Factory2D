@@ -31,10 +31,9 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 # UI
 
 * Add a volume adjuster in the settings menu. The `tone` function in `src/ui/workshop-sounds.ts:115` has a volume argument, may just need to multiply by the volume set in the settings. Make it logarithmic rather than linear, probably. Also add a separate adjuster for volume of bells specifically, which combines with the master volume to determine bell volume.
-* For bell blocks, on mouseover, show the pitch of the bell as a number 1-8, which is determined by its body size. Either as an overlay on the bell block on the canvas (visible on mouseover), or inside the tile inspector.
+* For bell blocks, on mouseover, show the pitch of the bell as a number or note. Pitch is currently determined by the bell's body's size. Show either as an overlay on the bell block on the canvas (visible on mouseover), or as text in the tile inspector.
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
 * Implement limited undo/redo in the workshops (when editing puzzle solutions, or editing a sandbox). Probably keep a few previous states in memory. Running/testing should not write to these; it's for undoing modifications. (For sandbox running while editing, it's a bit unclear what the behavior should be. Maybe just advance the ring buffer / list of previous states whenever they edit.) Ideally click-and-drag should count as one action, so can be undone all at once.
-* When configuring a ROM / lore rune, clicking the up/down buttons to change the height causes the button to jump around because the modal resizes, so trying to click it multiple times is inconvenient. Rather size the `.rom-configuration-grid` for the maximum size of 9x9, and render smaller grids centered in that region, or render them at larger scale so they occupy the same space (though that might behave badly for 1x9 or 9x1 grids). Or do some other layout change that avoids buttons moving around.
 
 # Visuals
 

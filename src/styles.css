@@ -2659,6 +2659,7 @@ kbd {
 
 .component-configuration-dialog form {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-auto-rows: max-content;
 }
 
@@ -2786,6 +2787,13 @@ kbd {
   gap: 3px;
   touch-action: none;
   user-select: none;
+}
+
+.rom-configuration-grid:not(.lut-configuration-grid) {
+  /* Reserve nine 32px cells and eight 3px gaps, regardless of draft dimensions. */
+  width: 312px;
+  height: 312px;
+  place-content: center;
 }
 
 .rom-configuration-cell {
