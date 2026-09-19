@@ -503,7 +503,9 @@ function advanceSimulation(duration: number, startedAt = performance.now()): voi
   }
   const session = surface.session;
   session.previousWorld.copyFrom(session.world);
+  sounds.beforeStep(session.world, clock.running ? clock.ticksPerSecond : 0);
   surface.simulation.step(duration > 0 ? session.previousWorld : undefined);
+  sounds.afterStep(session.world);
   signalTraces.sync(session.world, surface.simulation.tick);
   if (session.world.puzzleResult === PuzzleResult.Won) {
     sounds.victory();
@@ -1430,12 +1432,15 @@ const puzzleTests = new PuzzleTestController(
         },
       });
     },
-    beforeStep: () => {
+    beforeStep: (world, ticksPerSecond, interpolate) => {
+      sounds.beforeStep(world, ticksPerSecond);
+      if (!interpolate) return undefined;
       const session = surface.session;
       session.previousWorld.copyFrom(session.world);
       return session.previousWorld;
     },
     afterStep: (world, tick) => {
+      sounds.afterStep(world);
       signalTraces.sync(world, tick);
     },
     onSuccess: () => sounds.victory(),

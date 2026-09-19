@@ -953,6 +953,42 @@ function drawDecoration(
       context.lineTo(left + size * 0.61, top + size * 0.21);
       context.stroke();
       break;
+    case TileDecorationStyle.Bell:
+      context.lineWidth = Math.max(1, size * 0.035);
+      context.lineJoin = "round";
+      context.lineCap = "round";
+      context.strokeStyle = "#38291d";
+      // The crown, flared skirt, and hanging clapper stay upright in every preview.
+      context.beginPath();
+      drawDot(context, left + size * 0.5, top + size * 0.21, size * 0.065);
+      context.fill();
+      context.stroke();
+      context.beginPath();
+      context.moveTo(left + size * 0.23, top + size * 0.72);
+      context.quadraticCurveTo(left + size * 0.33, top + size * 0.62, left + size * 0.34, top + size * 0.43);
+      context.bezierCurveTo(left + size * 0.35, top + size * 0.19, left + size * 0.65, top + size * 0.19, left + size * 0.66, top + size * 0.43);
+      context.quadraticCurveTo(left + size * 0.67, top + size * 0.62, left + size * 0.77, top + size * 0.72);
+      context.closePath();
+      context.fill();
+      context.stroke();
+      context.fillStyle = "#38291d";
+      context.fillRect(left + size * 0.27, top + size * 0.68, size * 0.46, size * 0.055);
+      context.strokeStyle = definition.decorationColor;
+      context.beginPath();
+      context.moveTo(left + size * 0.5, top + size * 0.7);
+      context.lineTo(left + size * 0.5, top + size * 0.81);
+      context.stroke();
+      context.fillStyle = definition.decorationColor;
+      context.beginPath();
+      drawDot(context, left + size * 0.5, top + size * 0.81, size * 0.065);
+      context.fill();
+      context.strokeStyle = "#fff0ba";
+      context.lineWidth = Math.max(1, size * 0.025);
+      context.beginPath();
+      context.moveTo(left + size * 0.4, top + size * 0.48);
+      context.quadraticCurveTo(left + size * 0.4, top + size * 0.34, left + size * 0.48, top + size * 0.32);
+      context.stroke();
+      break;
     case TileDecorationStyle.Iron:
       drawRivets(context, left, top, size);
       break;

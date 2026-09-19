@@ -138,7 +138,7 @@ function controllerHarness(solution: World): ControllerHarness {
     mountRuntime: (world) => {
       mountedCaseKinds.push(world.kindAt(1, 0));
     },
-    beforeStep: () => solution,
+    beforeStep: (world, _ticksPerSecond, interpolate) => interpolate ? world.clone() : undefined,
     afterStep: () => undefined,
     onSuccess: () => {
       expect(view.report?.succeeded).toBe(true);

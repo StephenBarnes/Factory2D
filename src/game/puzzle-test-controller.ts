@@ -68,7 +68,8 @@ export interface PuzzleTestControllerDependencies {
   readonly resetSession: () => void;
   readonly beginSimulation: () => void;
   readonly mountRuntime: (world: World, simulation?: Simulation) => void;
-  readonly beforeStep: () => World;
+  /** Observes every tick; snapshots are needed only when interpolation is enabled. */
+  readonly beforeStep: (world: World, ticksPerSecond: number, interpolate: boolean) => World | undefined;
   /** Observes the live case world after every committed test step, including fast-forwarding. */
   readonly afterStep: (world: World, tick: number) => void;
   readonly onSuccess: () => void;
@@ -243,8 +244,8 @@ export class PuzzleTestController {
       state = initialState;
     }
 
-    const interpolationSource = this.dependencies.beforeStep();
-    const status = state.run.step(duration > 0 ? interpolationSource : undefined);
+    const interpolationSource = this.dependencies.beforeStep(state.run.world, 0, duration > 0);
+    const status = state.run.step(interpolationSource);
     this.dependencies.afterStep(state.run.world, state.run.simulation.tick);
     this.dependencies.setStepAnimation(startedAt, duration);
     if (status === "between-cases") {
@@ -307,8 +308,12 @@ export class PuzzleTestController {
       const animationDuration = !fast && this.dependencies.animationsEnabled(ticksPerSecond)
         ? Math.min(tickDuration, MAX_AUTOMATIC_ANIMATION_MS)
         : 0;
-      const interpolationSource = animationDuration > 0 ? this.dependencies.beforeStep() : undefined;
-      const status = state.run.step(animationDuration > 0 ? interpolationSource : undefined);
+      const interpolationSource = this.dependencies.beforeStep(
+        state.run.world,
+        fast ? Infinity : ticksPerSecond,
+        animationDuration > 0,
+      );
+      const status = state.run.step(interpolationSource);
       this.dependencies.afterStep(state.run.world, state.run.simulation.tick);
       this.dependencies.setStepAnimation(
         currentTime - accumulatedMs,

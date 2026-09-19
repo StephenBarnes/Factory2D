@@ -74,6 +74,7 @@ export const enum TileKind {
   Dismantler = 72,
   BeamBlockSensor = 73,
   BeamBodySensor = 74,
+  Bell = 75,
 }
 
 export const enum Direction {
@@ -155,6 +156,7 @@ export const enum TileDecorationStyle {
   IndestructibleConduit = 59,
   Dismantler = 60,
   BeamBlockSensor = 61,
+  Bell = 62,
 }
 
 export const enum PaletteCategory {
@@ -457,6 +459,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#66594a",
     decorationStyle: TileDecorationStyle.Fastener,
     decorationColor: "#e3c693",
+  },
+  [TileKind.Bell]: {
+    name: "Bell",
+    boardCode: "5",
+    defaultPrice: 5,
+    palette: {
+      order: 78,
+      category: PaletteCategory.Motion,
+      description: "Rings on net horizontal movement; larger welded bodies sound lower.",
+      extendedDescription: ["Rings when its final horizontal position differs from the start of the tick. Pure vertical movement and motion returning to the same horizontal position are silent. Inner bells measure movement within their own board, not movement of the containing rune array.", "Pitch descends across one octave as its final welded body grows from 1 to 8 blocks, counting the bell itself. Larger bodies use the 8-block pitch.", "Falls under ordinary gravity and can be welded on every side. Has no circuit ports, needs no charge, and ignores orientation.", "Sound plays only in the browser with audio enabled and simulation speed below 10 ticks per second."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.None,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#705039",
+    decorationStyle: TileDecorationStyle.Bell,
+    decorationColor: "#e5bb60",
   },
   [TileKind.Slider]: {
     name: "Slider",
