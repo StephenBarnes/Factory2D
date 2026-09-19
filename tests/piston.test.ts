@@ -255,6 +255,49 @@ describe("pistons", () => {
     expect(world.isWelded(3, 3, 3, 2)).toBe(true);
   });
 
+  it("repeatedly retracts a welded cup while pushing its loose contents", () => {
+    const { world } = deserializeBoard(JSON.stringify({
+      format: "factory2d-board", version: 15, width: 10, height: 6, tick: 0,
+      result: "in-progress",
+      grid: ["..........", "..........", "..........", "..###.....", "..###PU1..", "##########"],
+      orientations: [{ x: 5, y: 4, direction: "left" }, { x: 6, y: 4, direction: "left" }],
+      components: [{
+        x: 6, y: 4, type: "rom", width: 2, height: 2, cursor: 1,
+        wrapX: true, wrapY: true, values: [1, 0, -1, 0],
+      }],
+      welds: ["..........", "..........", "..........", "..|.|.....", "..-----...", "---------."],
+    }));
+    const pistonId = world.idAt(5, 4);
+    const headId = world.idAt(4, 4);
+    const contentsId = world.idAt(3, 3);
+    const simulation = new Simulation(world);
+
+    for (let cycle = 0; cycle < 3; cycle += 1) {
+      let extended = false;
+      let retracted = false;
+      for (let tick = 0; tick < 4; tick += 1) {
+        simulation.step();
+        const charge = world.chargeAt(5, 4);
+        if (charge === 1) {
+          expect(world.kindAt(5, 4)).toBe(TileKind.PistonBase);
+          expect(world.idAt(4, 4)).toBe(pistonId);
+          expect(world.idAt(3, 4)).toBe(headId);
+          expect(world.idAt(2, 3)).toBe(contentsId);
+          extended = true;
+        } else if (charge === -1) {
+          expect(world.tileAt(5, 4)).toEqual({ kind: TileKind.Piston, id: pistonId });
+          expect(world.idAt(4, 4)).toBe(headId);
+          expect(world.idAt(3, 3)).toBe(contentsId);
+          expect(world.isWelded(5, 4, 4, 4)).toBe(true);
+          expect(world.isWelded(3, 3, 3, 4)).toBe(false);
+          retracted = true;
+        }
+      }
+      expect(extended).toBe(true);
+      expect(retracted).toBe(true);
+    }
+  });
+
   it("keeps an inactive piston head weld rigid while retracting it", () => {
     const world = new World(7, 6);
     placeNegativelyPoweredFixedBase(world, 3, 4);
@@ -351,7 +394,7 @@ describe("pistons", () => {
     expect(world.isWelded(2, 2, 2, 3)).toBe(true);
   });
 
-  it("lifts the arm instead when lowering the base would push an unwelded obstruction", () => {
+  it("lifts the arm instead when an unwelded push chain is blocked by terrain", () => {
     const world = new World(4, 4);
     const armId = placeNegativelyPoweredDownBase(world);
     const blockerId = world.place(1, 2, TileKind.Stone);
@@ -363,6 +406,24 @@ describe("pistons", () => {
     expect(world.tileAt(2, 1)).toEqual({ kind: TileKind.Piston, id: armId });
     expect(world.kindAt(2, 2)).toBe(TileKind.Empty);
     expect(world.idAt(1, 2)).toBe(blockerId);
+  });
+
+  it("lowers its base while pushing an unwelded obstruction chain", () => {
+    const world = new World(4, 5);
+    const armId = placeNegativelyPoweredDownBase(world);
+    const inputId = world.idAt(1, 1);
+    const upperId = world.place(1, 2, TileKind.Floatstone);
+    const lowerId = world.place(1, 3, TileKind.Floatstone);
+    world.place(2, 3, TileKind.Platform);
+
+    new Simulation(world).step();
+
+    expect(world.tileAt(2, 2)).toEqual({ kind: TileKind.Piston, id: armId });
+    expect(world.idAt(1, 2)).toBe(inputId);
+    expect(world.idAt(1, 3)).toBe(upperId);
+    expect(world.idAt(1, 4)).toBe(lowerId);
+    expect(world.isWelded(2, 2, 1, 2)).toBe(true);
+    expect(world.isWelded(1, 2, 1, 3)).toBe(false);
   });
 
   it("lowers parallel pistons sharing a welded base together", () => {

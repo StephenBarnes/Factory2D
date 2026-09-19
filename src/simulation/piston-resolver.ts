@@ -195,7 +195,7 @@ export class PistonResolver {
     if (seed >= 0 && this.world.kindAtIndex(seed) !== TileKind.Empty) {
       this.enqueue(stroke, seed);
     }
-    // Pulls collect only weld closure. Pushes additionally collect contact chains.
+    // Every moving body pushes contact chains, including a retracting welded load.
     for (let cursor = 0; cursor < stroke.cells.length; cursor += 1) {
       const cell = expectDefined(stroke.cells[cursor], "piston proposal cell");
       const definition = TILE_DEFINITIONS[this.world.kindAtIndex(cell)];
@@ -233,17 +233,10 @@ export class PistonResolver {
       if (destination < 0) {
         return false;
       }
-      if (action === 1 && this.world.kindAtIndex(destination) !== TileKind.Empty) {
+      if (this.world.kindAtIndex(destination) !== TileKind.Empty &&
+          !(action === -1 &&
+            (destination === arm || this.partnerAt(stroke, cell, destination) >= 0))) {
         this.enqueue(stroke, destination);
-      }
-    }
-    if (action === -1) {
-      for (const cell of stroke.cells) {
-        const destination = this.neighbor(cell, direction);
-        if (destination !== arm && this.world.kindAtIndex(destination) !== TileKind.Empty &&
-            this.visited[destination] !== this.visit && this.partnerAt(stroke, cell, destination) < 0) {
-          return false;
-        }
       }
     }
     return true;

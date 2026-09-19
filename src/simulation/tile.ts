@@ -2020,7 +2020,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 8,
       category: PaletteCategory.Motion,
       description: "Extends on +1 and retracts on -1; its pointed side is the arm head.",
-      extendedDescription: ["Positive charge pushes forward; if the head is blocked, the base can recoil backward instead. Neutral holds the current extension. Negative charge retracts and pulls only a body welded to the head.", "Downward-facing pistons first try lowering the base onto the arm, keeping grounded feet in place. If the base cannot move down, they lift the head instead. Retraction never pushes unwelded obstructions."],
+      extendedDescription: ["Positive charge pushes forward; if the head is blocked, the base can recoil backward instead. Neutral holds the current extension. Negative charge retracts and pulls only a body welded to the head; that moving body can push unwelded obstructions.", "Downward-facing pistons first try lowering the base onto the arm, keeping grounded feet in place and pushing movable obstructions below the base's body. If the base cannot move down, they lift the head instead."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,
