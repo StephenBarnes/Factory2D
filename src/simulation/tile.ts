@@ -159,8 +159,6 @@ export const enum TileDecorationStyle {
 
 export const enum PaletteCategory {
   RawMaterials = 0,
-  Metals = 1,
-  Gemstones = 2,
   Motion = 3,
   Transformation = 4,
   CircuitBasic = 5,
@@ -318,7 +316,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "=",
     defaultPrice: 10,
     palette: {
-      order: 43,
+      order: 25,
       category: PaletteCategory.PuzzleTools,
       description: "Fixed indestructible block not affected by gravity.",
       extendedDescription: ["Anchors its entire welded body: it cannot fall or be pushed. Indestructible: drills cannot remove it. Weld-protected - cannot be welded/split at runtime at sides shared with other weld-protected blocks."],
@@ -345,7 +343,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "z",
     defaultPrice: 20,
     palette: {
-      order: 61,
+      order: 64,
       category: PaletteCategory.Motion,
       description: "Holds its welded body aloft, but can still be pushed.",
       extendedDescription: ["Prevents its entire welded body from falling on its own. An independent falling body on top pushes it downward if the whole chain has room.", "Pistons, conveyors, and rotators can move it. Welding it to a platform still anchors the body. It needs no charge."],
@@ -369,7 +367,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "%",
     defaultPrice: 30,
     palette: {
-      order: 69,
+      order: 65,
       category: PaletteCategory.Motion,
       description: "Disables gravity along its forward beam, to the edge of the grid or an opposing levitation projector. Disabled by -1 rear input.",
       extendedDescription: ["The isolated rear input reads the previous tick's charge: -1 disables the beam; zero, +1, or a disconnected input enables it. Has no circuit output. Rear control also works through rune-array ports.", "Projects through blocks and gaps from one cell ahead to the front face of the first opposing levitation projector, even if that projector is disabled, or this board's boundary. Other projector orientations do not stop the beam. Touching any tile with the beam holds its entire welded body aloft.", "Affected bodies can still be moved by machinery or pushed down by independent falling weight. Platforms and sliders retain their movement restrictions. Leaving the beam restores gravity on the next tick.", "Facing projectors confine their beams to the space between them; they do not hold each other aloft. The projector itself falls normally unless supported or its body intersects another beam. Beams do not cross rune-array boundaries."],
@@ -393,7 +391,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "&",
     defaultPrice: 30,
     palette: {
-      order: 70,
+      order: 61,
       category: PaletteCategory.Motion,
       description: "Pushes the first block ahead on rear +1, or pulls it on rear -1.",
       extendedDescription: ["The isolated rear input reads the previous tick's charge: +1 pushes the first occupied cell ahead away from the projector; -1 pulls it toward the projector. Zero or a disconnected input applies no force. Has no circuit output.", "Looks through empty space only, stopping at any block, including glass and fixed terrain, or this board's boundary. A target in the projector's own welded body blocks the ray without receiving force. Beams do not cross rune-array boundaries.", "Force combines with conveyors and thrusters, moving the target's welded body and pushing movable contact chains under their ordinary slider, collision, and jam rules. Powered pushing takes priority over gravity and can lift ordinary blocks without floatstone or levitation. Successful driven movement breaks carried fasteners.", "The projector falls normally and can be welded on every side. Applying force causes no recoil and does not hold the projector aloft. Targets are observed before production; removed or replacement tiles do not inherit a pending command."],
@@ -441,7 +439,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "y",
     defaultPrice: 4,
     palette: {
-      order: 64,
+      order: 66,
       category: PaletteCategory.Motion,
       description: "Holds its welded body aloft until machinery moves it and breaks the fastener.",
       extendedDescription: ["Prevents its entire welded body from falling on its own. Needs no charge and can be welded on every side.", "A successful conveyor or thruster move, piston push or pull, or rotator turn destroys the fastener and its welds after moving the body. Blocked machinery attempts do not break it.", "An independent falling body can push it downward if the whole chain has room; gravity-driven movement does not break it. Welding it to a platform still anchors the body."],
@@ -465,7 +463,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "~",
     defaultPrice: 20,
     palette: {
-      order: 65,
+      order: 67,
       category: PaletteCategory.Motion,
       description: "Restricts its welded body to movement along the marked axis.",
       extendedDescription: ["Moves in either direction along its rails, never across them. Vertical sliders can fall; horizontal sliders hold their welded body aloft, even under falling weight.", "Every welded slider adds its constraint: perpendicular sliders prevent all translation. Pistons and conveyors must obey the same rails.", "Rotate to change the permitted axis. Rotators can turn the body freely, subject to their usual collisions; the rails turn with it."],
@@ -490,7 +488,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "^",
     defaultPrice: 20,
     palette: {
-      order: 66,
+      order: 69,
       category: PaletteCategory.Motion,
       description: "Holds its welded body aloft and drives it forward, pushing obstacles.",
       extendedDescription: ["Always applies forward thrust without charge. Moves its welded body one cell per tick and pushes movable contact chains; platforms, boundaries, and transverse sliders block the whole move.", "Thrust combines with other thrusters and conveyor forces on the same body. Opposing forces cancel; incompatible moves by separate bodies jam. Powered pushing takes priority over gravity, lifting unwelded loads and reserving destinations before falling bodies."],
@@ -514,7 +512,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "!",
     defaultPrice: 40,
     palette: {
-      order: 67,
+      order: 70,
       category: PaletteCategory.Motion,
       description: "Holds its welded body aloft and thrusts toward a +1 input.",
       extendedDescription: ["Four isolated input ports read the previous tick's charges. Exactly one +1 input applies thrust toward that side; 0 and -1 are ignored. Two or more +1 inputs jam this thruster, producing no force.", "Holds its welded body aloft even while idle. Needs welded circuit connections, but never passes charge between its inputs. No rotation is needed: each side always controls movement toward itself.", "Shares ordinary thruster pushing, force sums, slider restrictions, priority over gravity, and collision rules. A jammed input does not anchor the body against other machinery."],
@@ -538,7 +536,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "L",
     defaultPrice: 10,
     palette: {
-      order: 3,
+      order: 26,
       category: PaletteCategory.Motion,
       description: "Holds magnetic blocks on its pointed side.",
       extendedDescription: ["Acts on the immediately adjacent magnetic block on its pointed side, holding the attached bodies against gravity. The pointed side cannot be welded. It needs no circuit charge."],
@@ -563,7 +561,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 4,
     palette: {
       order: 47,
-      category: PaletteCategory.Metals,
+      category: PaletteCategory.RawMaterials,
       description: "Magnetic structural block affected by gravity and smelted from iron ore.",
       extendedDescription: ["Lodestones can hold iron; ordinary nonmagnetic materials do not attach this way. Weld iron to a larger body to carry that body with it."],
     },
@@ -610,7 +608,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "{",
     defaultPrice: 10,
     palette: {
-      order: 74,
+      order: 38,
       category: PaletteCategory.PuzzleTools,
       description: "Shares charge across welded circuit blocks. Indestructible and weld-protected.",
       extendedDescription: ["Carries charge like a channel: every connected port shares the sign of the total driver charge. Positive and negative drivers cancel, and an undriven network is neutral.", "Indestructible, but not fixed: falls and moves with its welded body like an ordinary channel.", "Weld-protected - cannot be welded/split at runtime at sides shared with other weld-protected blocks."],
@@ -636,7 +634,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: ";",
     defaultPrice: 3,
     palette: {
-      order: 71,
+      order: 10,
       category: PaletteCategory.CircuitBasic,
       description: "Passes rear input to front output, one tick later. Use for delays and forcing direction.",
       extendedDescription: ["Passes -1, 0, and +1 unchanged with ordinary one-tick gate timing. A disconnected rear input produces 0. Has no side ports.", "Equivalent to a combiner rune with one input wired, or a delay rune with delay set to 1."],
@@ -660,7 +658,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "S",
     defaultPrice: 10,
     palette: {
-      order: 10,
+      order: 23,
       category: PaletteCategory.CircuitBasic,
       description: "Emits +1 when its pointed neighbor is occupied, except by glass.",
       extendedDescription: ["Checks only the cell immediately ahead and outputs 0 when it is empty or glass. The other three sides share the output."],
@@ -684,7 +682,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "1",
     defaultPrice: 5,
     palette: {
-      order: 11,
+      order: 12,
       category: PaletteCategory.CircuitBasic,
       description: "Emits +1 constantly into its welded circuit network.",
       extendedDescription: ["Connect it with welds to power a circuit. Multiple drivers combine by the sign of their sum, so an equal negative driver cancels this source."],
@@ -708,7 +706,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "K",
     defaultPrice: 3,
     palette: {
-      order: 12,
+      order: 18,
       category: PaletteCategory.CircuitBasic,
       description: "Emits +1 for the first simulation tick, then goes dark.",
       extendedDescription: ["Use it to initialize a circuit or start a pulse sequence. Resetting the simulation lets it fire again; afterward it contributes 0 rather than holding +1."],
@@ -852,7 +850,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "Q",
     defaultPrice: 15,
     palette: {
-      order: 18,
+      order: 68,
       category: PaletteCategory.CircuitBasic,
       description: "Copies the charge of the tile side ahead to three isolated outputs.",
       extendedDescription: ["Looks straight ahead through empty space and glass, and reads the first block's near-side previous-tick charge. Its other three sides output that charge. Any block stops the scan, except glass; non-circuit blocks and an empty line to the board edge read 0. At a rune array's edge-center port, sensing continues outside the array."],
@@ -876,7 +874,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "M",
     defaultPrice: 10,
     palette: {
-      order: 23,
+      order: 71,
       category: PaletteCategory.CircuitBasic,
       description: "Reports the previous tick's net movement through four isolated outputs.",
       extendedDescription: ["Each axis outputs +1 toward the previous tick's net cell displacement and -1 on the opposite side. Diagonal movement activates both axes; an unchanged axis outputs 0. Stationary sensors output 0 on every side.", "Measures the net displacement across all movement phases, not intermediate moves or distance traveled. The first tick and newly produced sensors have no prior movement to report.", "Can fall and be welded on all four sides. No rotation is needed. Inside a rune array, it measures movement within that board; moving the containing array alone does not trigger it."],
@@ -997,7 +995,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "W",
     defaultPrice: 10,
     palette: {
-      order: 68,
+      order: 11,
       category: PaletteCategory.CircuitBasic,
       description: "Keeps horizontal and vertical conduits separate.",
       extendedDescription: ["Opposite sides share charge, but perpendicular sides never connect electrically. Mechanical welds still join the crossing to its neighbors as a rigid body."],
@@ -1048,7 +1046,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 2,
     palette: {
       order: 46,
-      category: PaletteCategory.Metals,
+      category: PaletteCategory.RawMaterials,
       description: "Solid ore that a furnace smelts into iron.",
       extendedDescription: ["A furnace facing the ore transforms it into iron after six active ticks. Iron is magnetic; unprocessed iron ore is not."],
     },
@@ -1096,7 +1094,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 6,
     palette: {
       order: 51,
-      category: PaletteCategory.Metals,
+      category: PaletteCategory.RawMaterials,
       description: "Solid gold block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
@@ -1120,7 +1118,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 5,
     palette: {
       order: 50,
-      category: PaletteCategory.Metals,
+      category: PaletteCategory.RawMaterials,
       description: "Solid silver block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
@@ -1144,7 +1142,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 53,
-      category: PaletteCategory.Gemstones,
+      category: PaletteCategory.RawMaterials,
       description: "Solid ruby block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
@@ -1168,7 +1166,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 54,
-      category: PaletteCategory.Gemstones,
+      category: PaletteCategory.RawMaterials,
       description: "Solid sapphire block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
@@ -1192,7 +1190,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 55,
-      category: PaletteCategory.Gemstones,
+      category: PaletteCategory.RawMaterials,
       description: "Solid emerald block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
@@ -1216,7 +1214,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 20,
     palette: {
       order: 57,
-      category: PaletteCategory.Gemstones,
+      category: PaletteCategory.RawMaterials,
       description: "Solid diamond block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
@@ -1240,7 +1238,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 56,
-      category: PaletteCategory.Gemstones,
+      category: PaletteCategory.RawMaterials,
       description: "Solid amethyst block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
@@ -1264,7 +1262,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 10,
     palette: {
       order: 52,
-      category: PaletteCategory.Metals,
+      category: PaletteCategory.RawMaterials,
       description: "Solid mithril block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
@@ -1288,7 +1286,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 2,
     palette: {
       order: 48,
-      category: PaletteCategory.Metals,
+      category: PaletteCategory.RawMaterials,
       description: "Solid copper ore block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge.", "A furnace turns copper ore into copper in six active ticks while wood touches any orthogonal side of the ore. Wood is not consumed; removing it pauses progress."],
     },
@@ -1312,7 +1310,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     defaultPrice: 4,
     palette: {
       order: 49,
-      category: PaletteCategory.Metals,
+      category: PaletteCategory.RawMaterials,
       description: "Solid copper block affected by gravity; can be welded.",
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
@@ -1359,7 +1357,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "f",
     defaultPrice: 15,
     palette: {
-      order: 59,
+      order: 7,
       category: PaletteCategory.Transformation,
       description: "Breaks the block ahead in four active ticks; side -1 pauses it; rear outputs +1 while drilling.",
       extendedDescription: ["Reads the previous-tick shared side charge: -1 pauses drilling; 0 or +1 enables it. Progress follows the target's identity; changing targets resets it. Removes one tile and its welds, not the rest of its welded body. The pointed side cannot be welded.", "The isolated rear output is +1 on every active drilling tick, including completion. Targets start-of-tick blocks, before movement. Multiple active drills targeting the same block jam and pause progress. Cannot destroy indestructible blocks such as platforms; produces no material."],
@@ -1383,7 +1381,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "F",
     defaultPrice: 15,
     palette: {
-      order: 7,
+      order: 60,
       category: PaletteCategory.Transformation,
       description: "Bakes the block on its pointed side; linked side -1 pauses it; rear outputs +1 while baking.",
       extendedDescription: ["Sand becomes glass in four active ticks; iron ore becomes iron in six. Copper ore becomes copper in six active ticks while wood touches an orthogonal side of the ore; the wood is not consumed, and removing it pauses progress. A -1 on the shared side circuit also pauses progress; 0 or +1 allows cooking.", "Freshly cooked glass welds to adjacent existing glass, but not to sand cooked in the same tick. Metal smelting adds no welds.", "The isolated rear output is +1 on every active baking tick, including completion. Moving a different target in front resets progress."],
@@ -1407,7 +1405,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "k",
     defaultPrice: 15,
     palette: {
-      order: 60,
+      order: 75,
       category: PaletteCategory.Transformation,
       description: "Grinds the block on its pointed side; linked side -1 pauses it; rear outputs +1 while grinding.",
       extendedDescription: ["Stone and glass become sand after four active ticks. A -1 on the shared side circuit pauses progress; 0 or +1 allows grinding.", "The resulting sand cannot be welded, so grinding removes the target's welds.", "The isolated rear output is +1 on every active grinding tick, including completion. Moving a different target in front resets progress."],
@@ -1432,7 +1430,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "B",
     defaultPrice: 5,
     palette: {
-      order: 8,
+      order: 3,
       category: PaletteCategory.Motion,
       description: "Charged roller: +1 clockwise, -1 counterclockwise, 0 stopped.",
       extendedDescription: ["Moves unwelded neighbors tangentially and applies the opposite reaction to its own body. Cannot move bodies upwards against gravity. Blocked motion can push other movable bodies.", "Press M to place mirrored. Mirroring reverses the roller: +1 counterclockwise, -1 clockwise. Mirrored belts show counterclockwise chevrons."],
@@ -1456,7 +1454,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "D",
     defaultPrice: 10,
     palette: {
-      order: 24,
+      order: 43,
       category: PaletteCategory.PuzzleTools,
       description: "Absorbs a front welded body exactly matching the body behind it and pulses +1 sideways. Indestructible and weld-protected.",
       extendedDescription: ["Matches complete bodies by tile kinds, directional orientations, and weld layout, allowing translation but not rotation or reflection. Configuration does not affect the match.", "The rear body remains as the template. Bodies welded to the box do not match; competing consumption claims jam rather than consuming only part of a body.", "Cannot be destroyed by drills, or welded/split on sides shared with other weld-protected blocks."],
@@ -1482,7 +1480,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "?",
     defaultPrice: 15,
     palette: {
-      order: 35,
+      order: 63,
       category: PaletteCategory.CircuitComplex,
       description: "Outputs +1 sideways while the complete front and rear bodies match in kinds, orientations, and welds; ignores configuration and consumes nothing.",
       extendedDescription: ["Uses the same translation-only body comparison as a delivery box. Both neighbors must exist and neither body may be welded to the comparer. A mismatch outputs 0; matching does not consume either body."],
@@ -1530,7 +1528,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "3",
     defaultPrice: 15,
     palette: {
-      order: 76,
+      order: 77,
       category: PaletteCategory.CircuitComplex,
       description: "Outputs +1 sideways while any block ahead has the same type as the block immediately behind it.",
       extendedDescription: ["Scans the whole forward row or column to this board's boundary, through gaps and other blocks. Compares only block types, including glass, ignoring orientation, configuration, and welds.", "A missing rear block or no matching block ahead outputs 0. Consumes nothing. Beams stay within their rune array; they do not scan enclosing boards."],
@@ -1554,7 +1552,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "4",
     defaultPrice: 20,
     palette: {
-      order: 77,
+      order: 76,
       category: PaletteCategory.CircuitComplex,
       description: "Outputs +1 sideways while any body ahead matches the complete body immediately behind it.",
       extendedDescription: ["Scans the whole forward row or column through gaps and other bodies. Uses the Body Comparer's translation-only comparison of kinds, orientations, handedness, and welds; configuration is ignored.", "The rear body must exist. Bodies joined to the sensor do not match. A match outputs +1, otherwise 0, without consuming anything. Beams stay within their board or rune array."],
@@ -1578,7 +1576,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "V",
     defaultPrice: 10000,
     palette: {
-      order: 25,
+      order: 24,
       category: PaletteCategory.PuzzleTools,
       description: "Wins on +1 input or loses on -1 input; opposing inputs jam. Indestructible and weld-protected.",
       extendedDescription: ["The result latches once triggered. In a puzzle, manual steps do not record completion: the full test must succeed on every case. A victory block inside a rune array affects the whole puzzle. Cannot be destroyed by drills, or welded/split at sides shared with other weld-protected blocks."],
@@ -1604,7 +1602,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "Z",
     defaultPrice: 30,
     palette: {
-      order: 27,
+      order: 36,
       category: PaletteCategory.CircuitComplex,
       description: "Delays the isolated rear input by a configurable number of ticks. Press E or shift + mousewheel to configure.",
       extendedDescription: ["Each tick outputs the oldest queued value, then stores the rear input, including 0. The queue starts neutral. Change the delay by pressing E or shift + mousewheel."],
@@ -1628,7 +1626,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "n",
     defaultPrice: 20,
     palette: {
-      order: 62,
+      order: 39,
       category: PaletteCategory.CircuitComplex,
       description: "Discards the first N rear-input ticks, then passes the rest through. Press E or shift + mousewheel to configure.",
       extendedDescription: ["Outputs 0 for the first N ticks. Afterward, copies the rear input to the isolated front output with a 1-tick delay. Configure N from 0 to 99 by pressing E or shift + mousewheel."],
@@ -1652,7 +1650,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "N",
     defaultPrice: 20,
     palette: {
-      order: 28,
+      order: 37,
       category: PaletteCategory.CircuitComplex,
       description: "Adds signed rear inputs and pulses with the wrap direction. Press E or shift + mousewheel to configure.",
       extendedDescription: ["Adds the rear charge to its stored count each tick. Crossing the configured threshold wraps the count and emits +1; wrapping backward emits -1. Other ticks output 0. Configure by pressing E or shift + mousewheel."],
@@ -1702,7 +1700,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "p",
     defaultPrice: 20,
     palette: {
-      order: 63,
+      order: 35,
       category: PaletteCategory.CircuitComplex,
       description: "Looks up two ternary inputs in an editable 3 by 3 table. Front and right output the same value. Press E to configure.",
       extendedDescription: ["The previous-tick left input selects the column and the rear input selects the row. Both axes run -1, 0, +1: columns left to right and rows top to bottom. Disconnected inputs count as 0.", "Both isolated outputs drive the selected value with ordinary rune timing. The fixed table has no cursor, does not change when rotated or reflected, and cannot be displayed by a Lore Grapher."],
@@ -1774,7 +1772,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "2",
     defaultPrice: 15,
     palette: {
-      order: 75,
+      order: 33,
       category: PaletteCategory.Transformation,
       description: "Removes all four welds of the block ahead; -1 side charge disables it.",
       extendedDescription: ["Removes every weld around the cell ahead, including a weld to the dismantler itself. Shared side -1 disables it; the isolated rear output pulses +1 only when a weld changes. Opposing welder commands jam only the contested edges.", "Cannot cut an edge between two weld-protected blocks, such as platforms, delivery blocks, or judgment stones."],
@@ -1799,7 +1797,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "x",
     defaultPrice: 15,
     palette: {
-      order: 58,
+      order: 32,
       category: PaletteCategory.Transformation,
       description: "Cuts the left edge of every cell ahead, through blocks and gaps; -1 side charge disables it.",
       extendedDescription: ["Cuts one straight line of welds to the board boundary. For an upward-facing laser splitter, cuts the left edge of every cell above it, starting with the cell immediately ahead; rotate to change the cutting side.", "The beam passes through blocks and empty cells without destroying tiles. Shared side -1 disables it; the isolated rear output pulses +1 only when at least one weld changes. Opposing welder commands jam only the contested edges.", "Can be mirrored with the M key.", "Cannot weld together two weld-protected blocks, such as platforms, delivery blocks, or judgment stones."],
@@ -1823,7 +1821,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "Y",
     defaultPrice: 30,
     palette: {
-      order: 32,
+      order: 58,
       category: PaletteCategory.Transformation,
       description: "When given +1 side charge, creates a mirrored duplicate of the welded body behind it.",
       extendedDescription: ["Uses the previous-tick shared side charge. Every mirrored destination must be empty and inside the board; blocked or overlapping copies jam. Copies retain configuration and mirrored welds but get new tile IDs."],
@@ -1847,7 +1845,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "m",
     defaultPrice: 0,
     palette: {
-      order: 36,
+      order: 27,
       category: PaletteCategory.CircuitComplex,
       description: "Joins its welded circuit like a conduit and records that charge every tick on the signal panel. Press E to name its line.",
       extendedDescription: ["Records committed tick values, not animation frames. E sets a label and category to group related traces. Moving a monitor preserves its trace; reset starts a new history."],
@@ -1871,7 +1869,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "g",
     defaultPrice: 0,
     palette: {
-      order: 37,
+      order: 28,
       category: PaletteCategory.CircuitComplex,
       description: "Shows every value of the ROM or sequence checker it points at on the signal panel, marking the cursor. Press E to name its line.",
       extendedDescription: ["Displays the complete stored grid rather than a time history. Point it directly at a ROM or sequence checker. E sets a label and category; nested-array traces also appear in the main signal panel."],
@@ -1895,7 +1893,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "E",
     defaultPrice: 30,
     palette: {
-      order: 38,
+      order: 74,
       category: PaletteCategory.PuzzleTools,
       description: "Waits for the first nonzero rear input, then compares each input with its stored sequence: +1 after a complete match, -1 at the first mismatch. Press E to configure.",
       extendedDescription: ["Expected values are read left to right, row by row. After starting, neutral inputs also count unless Ignore zero inputs is enabled; that mode requires an entirely nonzero expected sequence.", "Success and failure latch until reset. E edits the sequence and zero-handling option."],
@@ -1919,7 +1917,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "A",
     defaultPrice: 10,
     palette: {
-      order: 39,
+      order: 62,
       category: PaletteCategory.CircuitComplex,
       description: "Holds a miniature board whose four edge-center cells connect to its sides with no delay. Press E to configure, Enter to open.",
       extendedDescription: ["The inner board runs ordinary physics and circuits, including gravity. Its four edge-center cells connect to independent outer sides without an extra circuit tick.", "E configures an odd-sized board up to 15 by 15; Enter opens it. Arrays can contain arrays. Puzzle solution price includes inner components, but footprint does not count internal space."],
@@ -1944,7 +1942,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "H",
     defaultPrice: 15,
     palette: {
-      order: 33,
+      order: 59,
       category: PaletteCategory.Transformation,
       description: "Consumes matching recipes ahead and emits products behind; left -1 pauses it, right pulses +1 on production.",
       extendedDescription: ["Consumes only a complete matching body in any rotation, then emits one unwelded product per tick behind it. While outputs are queued it accepts no new recipe; a blocked rear cell pauses emission without discarding the queue.", "A previous-tick -1 on the left circuit pauses both consumption and emission; 0 or +1 enables them. The isolated right output pulses +1 only when a product is emitted, not when a recipe is consumed or an output is blocked."],
@@ -1993,7 +1991,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "P",
     defaultPrice: 10,
     palette: {
-      order: 26,
+      order: 8,
       category: PaletteCategory.Motion,
       description: "Extends on +1 and retracts on -1; its pointed side is the arm head.",
       extendedDescription: ["Positive charge pushes forward; if the head is blocked, the base can recoil backward instead. Neutral holds the current extension. Negative charge retracts and pulls only a body welded to the head."],
