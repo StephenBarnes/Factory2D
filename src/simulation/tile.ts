@@ -370,7 +370,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 69,
       category: PaletteCategory.Motion,
-      description: "Disables gravity along its forward beam unless the rear input is -1.",
+      description: "Disables gravity along its forward beam, to the edge of the grid or an opposing levitation projector. Disabled by -1 rear input.",
       extendedDescription: ["The isolated rear input reads the previous tick's charge: -1 disables the beam; zero, +1, or a disconnected input enables it. Has no circuit output. Rear control also works through rune-array ports.", "Projects through blocks and gaps from one cell ahead to the front face of the first opposing levitation projector, even if that projector is disabled, or this board's boundary. Other projector orientations do not stop the beam. Touching any tile with the beam holds its entire welded body aloft.", "Affected bodies can still be moved by machinery or pushed down by independent falling weight. Platforms and sliders retain their movement restrictions. Leaving the beam restores gravity on the next tick.", "Facing projectors confine their beams to the space between them; they do not hold each other aloft. The projector itself falls normally unless supported or its body intersects another beam. Beams do not cross rune-array boundaries."],
     },
     affectedByGravity: true,

@@ -1810,6 +1810,10 @@ export class CanvasRenderer {
       case TileKind.MagicLink:
         this.drawFacingRay(kind, orientation);
         break;
+      case TileKind.BeamBlockSensor:
+        this.drawFacingRay(kind, orientation);
+        this.drawSensorObservation(oppositeDirection(orientation));
+        break;
       case TileKind.Rotator:
         this.drawRotatorReach(orientation, mirrored);
         break;
@@ -1817,7 +1821,7 @@ export class CanvasRenderer {
   }
 
   private drawFacingRay(
-    kind: TileKind.LevitationProjector | TileKind.MagicLink,
+    kind: TileKind.LevitationProjector | TileKind.MagicLink | TileKind.BeamBlockSensor,
     orientation: Direction,
   ): void {
     const dx = directionX(orientation);
@@ -1826,19 +1830,21 @@ export class CanvasRenderer {
     const startY = this.hoverY + 0.5 + dy / 2;
     let endX = dx === 0 ? startX : dx > 0 ? this.world.width : 0;
     let endY = dy === 0 ? startY : dy > 0 ? this.world.height : 0;
-    const opposingDirection = oppositeDirection(orientation);
-    for (
-      let x = this.hoverX + dx, y = this.hoverY + dy;
-      x >= 0 && x < this.world.width && y >= 0 && y < this.world.height;
-      x += dx, y += dy
-    ) {
-      if (
-        this.world.kindAt(x, y) === kind &&
-        this.world.orientationAt(x, y) === opposingDirection
+    if (kind !== TileKind.BeamBlockSensor) {
+      const opposingDirection = oppositeDirection(orientation);
+      for (
+        let x = this.hoverX + dx, y = this.hoverY + dy;
+        x >= 0 && x < this.world.width && y >= 0 && y < this.world.height;
+        x += dx, y += dy
       ) {
-        endX = x + 0.5 - dx / 2;
-        endY = y + 0.5 - dy / 2;
-        break;
+        if (
+          this.world.kindAt(x, y) === kind &&
+          this.world.orientationAt(x, y) === opposingDirection
+        ) {
+          endX = x + 0.5 - dx / 2;
+          endY = y + 0.5 - dy / 2;
+          break;
+        }
       }
     }
     const { context, cellSize } = this;
@@ -1847,7 +1853,7 @@ export class CanvasRenderer {
     context.beginPath();
     context.moveTo(this.originX + startX * cellSize, this.originY + startY * cellSize);
     context.lineTo(this.originX + endX * cellSize, this.originY + endY * cellSize);
-    if (kind === TileKind.LevitationProjector) {
+    if (kind !== TileKind.MagicLink) {
       context.globalAlpha = 0.18;
       context.lineWidth = cellSize * 0.8;
       context.stroke();
