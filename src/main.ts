@@ -597,12 +597,10 @@ function refreshPointerHover(): void {
 }
 
 function syncEditableRegionAuthoringOverlay(): void {
-  const authoring = selectedTool === "editable-region"
-    ? surface.editableRegionAuthoring
-    : null;
+  const authoring = surface.editableRegionAuthoring;
   surface.renderer.setEditableRegionAuthoring(
     authoring?.region ?? null,
-    authoring?.draftRectangle ?? null,
+    selectedTool === "editable-region" ? authoring?.draftRectangle ?? null : null,
   );
 }
 function syncTileSelectionOverlay(): void {
