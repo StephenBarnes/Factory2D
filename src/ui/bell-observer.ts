@@ -2,6 +2,11 @@ import { WeldedBodyIndex } from "../simulation/welded-body-index";
 import type { World } from "../simulation/world";
 import { WorldFeature } from "../simulation/world-features";
 
+// Preserve the original eight pitches per octave, including both endpoints.
+export const BELL_STEPS_PER_OCTAVE = 7;
+// Three octaves: F5 down to F2. Keep within 32 pitches for the bitmask below.
+export const BELL_PITCH_COUNT = 3 * BELL_STEPS_PER_OCTAVE + 1;
+
 interface BellObservation {
   capture: number;
   readonly initialXs: Map<number, number>;
@@ -20,7 +25,7 @@ export class BellObserver {
     this.captureWorld(world);
   }
 
-  /** Bit (body size - 1), clamped to sizes 1..8; each pitch rings at most once. */
+  /** Bit (body size - 1), clamped to sizes 1..BELL_PITCH_COUNT; each pitch rings at most once. */
   collectPitches(world: World): number {
     if (!this.pending) return 0;
     this.pending = false;
@@ -70,7 +75,7 @@ export class BellObserver {
           bodies = observation.bodies ??= new WeldedBodyIndex(world);
           bodies.collect();
         }
-        const size = Math.max(1, Math.min(8, bodies.memberCountAtRoot(bodies.rootAt(index))));
+        const size = Math.max(1, Math.min(BELL_PITCH_COUNT, bodies.memberCountAtRoot(bodies.rootAt(index))));
         pitches |= 1 << (size - 1);
       }
     }

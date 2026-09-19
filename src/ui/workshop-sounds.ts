@@ -1,5 +1,5 @@
 import type { World } from "../simulation/world";
-import { BellObserver } from "./bell-observer";
+import { BELL_PITCH_COUNT, BELL_STEPS_PER_OCTAVE, BellObserver } from "./bell-observer";
 
 type EditSound = "place" | "remove" | "weld" | "unweld";
 
@@ -13,7 +13,7 @@ const EDIT_TONES: Record<EditSound, readonly [number, number, OscillatorType]> =
 
 // Keep the existing transposition: approximately F5 (698 Hz), not C6.
 const BELL_HIGH_FREQUENCY = 1046.502261 * 0.6667;
-// Ratio, gain at sizes 1/8, duration at sizes 1/8 (seconds).
+// Ratio, gain at sizes 1/8+, duration at sizes 1/8+ (seconds).
 // Preserve the small bell; larger bells emphasize the tierce and ringing nominal.
 // Bell mode reference: https://www.hibberts.co.uk/identifying-bell-partials/
 const BELL_PARTIALS = [
@@ -102,16 +102,17 @@ export class WorkshopSounds {
     this.bellStepPending = false;
     const pitches = this.bells.collectPitches(world);
     if (!this.canPlay()) return;
-    for (let pitch = 0; pitch < 8; pitch += 1) {
+    for (let pitch = 0; pitch < BELL_PITCH_COUNT; pitch += 1) {
       if ((pitches & (1 << pitch)) === 0) continue;
-      // Eight equally spaced log pitches span approximately F5 down to F4.
       this.bell(pitch);
     }
   }
 
   private bell(pitch: number): void {
-    const frequency = BELL_HIGH_FREQUENCY * 2 ** (-pitch / 7);
-    const size = pitch / 7;
+    const octaves = pitch / BELL_STEPS_PER_OCTAVE;
+    const frequency = BELL_HIGH_FREQUENCY * 2 ** -octaves;
+    // Lower pitches retain the size-eight voice, without extrapolating its gains.
+    const size = Math.min(1, octaves);
     for (const [ratio, smallGain, largeGain, smallDuration, largeDuration] of BELL_PARTIALS) {
       const gain = smallGain + (largeGain - smallGain) * size;
       if (gain === 0) continue;

@@ -468,7 +468,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 78,
       category: PaletteCategory.Motion,
       description: "Rings on net horizontal movement; larger welded bodies sound lower.",
-      extendedDescription: ["Rings when its final horizontal position differs from the start of the tick. Pure vertical movement and motion returning to the same horizontal position are silent. Inner bells measure movement within their own board, not movement of the containing rune array.", "Pitch descends across one octave as its final welded body grows from 1 to 8 blocks, counting the bell itself. Larger bodies use the 8-block pitch.", "Falls under ordinary gravity and can be welded on every side. Has no circuit ports, needs no charge, and ignores orientation.", "Sound plays only in the browser with audio enabled and simulation speed below 10 ticks per second."],
+      extendedDescription: ["Rings when its final horizontal position differs from the start of the tick. Pure vertical movement and motion returning to the same horizontal position are silent. Inner bells measure movement within their own board, not movement of the containing rune array.", "Pitch descends across three octaves as its final welded body grows from 1 to 22 blocks, counting the bell itself. Every 7 added blocks lower the pitch by one octave. Larger bodies use the 22-block pitch.", "Falls under ordinary gravity and can be welded on every side. Has no circuit ports, needs no charge, and ignores orientation.", "Sound plays only in the browser with audio enabled and simulation speed below 10 ticks per second."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,

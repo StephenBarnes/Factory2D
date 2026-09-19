@@ -64,9 +64,9 @@ describe("bell observations", () => {
     expect(observer.collectPitches(world)).toBe(1);
   });
 
-  it("coalesces equal pitches and clamps large bodies at size eight", () => {
-    const world = new World(12, 4);
-    const sizes = [1, 3, 8, 10];
+  it("coalesces equal pitches while distinguishing bodies beyond size eight", () => {
+    const world = new World(17, 5);
+    const sizes = [1, 3, 8, 9, 15];
     for (const [y, size] of sizes.entries()) {
       for (let x = 0; x < size; x += 1) {
         world.place(x, y, x < 2 ? TileKind.Bell : TileKind.Stone);
@@ -76,7 +76,19 @@ describe("bell observations", () => {
     const observer = new BellObserver();
     observer.capture(world);
     translate(world, 1, 0);
-    expect(observer.collectPitches(world)).toBe(1 | 4 | 128);
+    expect(observer.collectPitches(world)).toBe(1 | 4 | 128 | 256 | 16384);
+  });
+
+  it.each([22, 23, 40])("clamps a %i-block body at the third octave without bitmask wraparound", (size) => {
+    const world = new World(size + 1, 1);
+    for (let x = 0; x < size; x += 1) {
+      world.place(x, 0, x === 0 ? TileKind.Bell : TileKind.Stone);
+      if (x > 0) world.setWeld(x - 1, 0, x, 0, true);
+    }
+    const observer = new BellObserver();
+    observer.capture(world);
+    translate(world, 1, 0);
+    expect(observer.collectPitches(world)).toBe(1 << 21);
   });
 
   it("uses final weld topology and refreshes retained body membership", () => {
