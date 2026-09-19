@@ -88,24 +88,36 @@ export class WorkshopSounds {
     for (let pitch = 0; pitch < 8; pitch += 1) {
       if ((pitches & (1 << pitch)) === 0) continue;
       // Eight body sizes span C6 down to C5; equal pitches share one voice.
-      const frequency = 1046.502261 * 2 ** (-pitch / 7);
-      this.tone(frequency, frequency, "sine", 0, 0.6);
-      this.tone(frequency * 2.76, frequency * 2.76, "sine", 0, 0.16, 0.12);
+      const frequency = (1046.502261 * 0.6667) * 2 ** (-pitch / 7);
+      this.bell(frequency);
     }
+  }
+
+  private bell(frequency: number): void {
+    // Low, resonant body.
+    this.tone(frequency * 0.5, frequency * 0.5, "sine", 0, 1.8, 0.16);
+    this.tone(frequency,        frequency,        "sine", 0, 1.8, 0.42);
+
+    // Inharmonic bell partials.
+    this.tone(frequency * 1.50, frequency * 1.50, "sine", 0, 1.15, 0.16);
+    this.tone(frequency * 2.03, frequency * 2.03, "sine", 0, 0.85, 0.13);
+    this.tone(frequency * 2.67, frequency * 2.67, "sine", 0, 0.60, 0.10);
+    this.tone(frequency * 3.91, frequency * 3.91, "sine", 0, 0.32, 0.06);
   }
 
   victory(): void {
     if (!this.canPlay()) return;
-    this.tone(392, 392, "sine", 0, 0.22);
-    this.tone(494, 494, "sine", 0.12, 0.22);
-    this.tone(587, 587, "sine", 0.24, 0.38);
+    this.tone(392, 392, "sine",     0.00, 0.16, 0.6);
+    this.tone(494, 494, "sine",     0.09, 0.16, 0.65);
+    this.tone(587, 587, "sine", 0.18, 0.20, 0.65);
+    this.tone(784, 800, "sine",     0.30, 0.42, 0.7);
   }
 
   loss(): void {
     if (!this.canPlay()) return;
-    this.tone(587, 587, "sine", 0, 0.22);
-    this.tone(494, 494, "sine", 0.12, 0.22);
-    this.tone(392, 392, "sine", 0.24, 0.38);
+    this.tone(330, 294, "triangle", 0, 0.22, 0.6);
+    this.tone(262, 220, "triangle", 0.16, 0.26, 0.55);
+    this.tone(196, 147, "sine",     0.34, 0.42, 0.5);
   }
 
   private canPlay(): boolean {
