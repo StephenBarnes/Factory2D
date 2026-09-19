@@ -40,6 +40,14 @@ Add some components that work with beams/lines of cells, and some that interact 
 * Lock gate block - consume body in front and output it on the other side flipped, on receiving a charge. Rather don't add, because we can build this 
 * Magic barrier beam block - rather use pistons to create a physical barrier.
 
+# New circuit components
+
+* Add a "rune engine" component that's like a programmable gate array. Take 2 inputs and produce 2 outputs. The block should be configurable to determine the I/O relation from some possible set. Details TBD. Could include an internal latch for feedback, like the PGA in Shenzhen IO. Visualize the engine block as a variation on the existing "rune array" component, but with a specific pattern of pre-set runes inside it, which cannot be modified except by toggling them between some specific states on click e.g. conduit vs stone block, or rotating by 90-degree increments.
+* Add a stack block with push/pop to store data up to some max size. One input for value to push - always push if it's +1 or -1, but ignore zero. One input to trigger a push on +1, pop on -1. One output for popped value. One input to rotate it forwards or backwards on +1 or -1.
+* Add a queue block, similar to the stack block.
+* Add a delay block, but instead of advancing 1 space per tick, it advances when an additional input is +1. Maybe also allow -1 to scroll back. Uncertain, this seems similar to the queue block.
+* Add a delay block variant that only steps forward if the input is +1 or -1, ignoring zeros. Like the current delay block, on every tick, it outputs the queued value; but we only shift the ring buffer forward and write a value when the back value is +1. Uncertain, seems similar to the queue block.
+
 # Performance
 
 * Mark some tiles or regions as asleep, if they have no updates. Wake up only regions where things are happening. E.g. a static structure made of only solid no-action blocks doesn't need to be processed every frame, doesn't need to re-check gravity every frame, etc.

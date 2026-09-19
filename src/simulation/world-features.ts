@@ -57,6 +57,7 @@ for (const kind of TILE_KINDS) {
     kind === TileKind.Comparer ||
     kind === TileKind.BlockComparer ||
     kind === TileKind.BeamBlockSensor ||
+    kind === TileKind.BeamBodySensor ||
     kind === TileKind.Assembler ||
     kind === TileKind.Welder ||
     kind === TileKind.Splitter ||
@@ -75,7 +76,7 @@ for (const kind of TILE_KINDS) {
   if (kind === TileKind.Delivery) {
     mask |= 1 << WorldFeature.Delivery | 1 << WorldFeature.WeldedBodyObserver;
   }
-  if (kind === TileKind.Comparer) {
+  if (kind === TileKind.Comparer || kind === TileKind.BeamBodySensor) {
     mask |= 1 << WorldFeature.WeldedBodyObserver;
   }
   if (kind === TileKind.Duplicator) {

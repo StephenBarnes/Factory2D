@@ -25,7 +25,7 @@ The selector rune marks its local-left input blue (+1 rear control) and local-ri
 
 Body comparers use a purple slab with front/rear outlined blocks and a charge-colored equals sign; the glyph rotates with the sideways circuit ports. Block type comparers share the glyph with a blue-grey slab and pale-blue block outlines.
 
-Beam block sensors use a purple comparer slab with a rear outlined template block, charge-colored equals sign, and forward arrow flanked by beam strokes. The shared glyph rotates with the sensor on the board, palette, and placement previews.
+Beam block sensors use a purple comparer slab with a rear outlined template block, charge-colored equals sign, and forward arrow flanked by beam strokes. Beam body sensors share this glyph with gold rather than pale-blue outlines, matching the Body Comparer's color convention. The shared glyph rotates with the sensor on the board, palette, and placement previews. Both beam sensors show a forward ray to the local board boundary and a rear template-cell marker on hover/placement.
 
 Laser splitters use a violet slab and an offset forward arrow marking the cutting side: local-left normally, local-right when mirrored. Hover/placement previews draw the complete cutting line to the board boundary; the glyph and preview rotate and reflect together.
 

@@ -73,6 +73,7 @@ export const enum TileKind {
   IndestructibleConduit = 71,
   Dismantler = 72,
   BeamBlockSensor = 73,
+  BeamBodySensor = 74,
 }
 
 export const enum Direction {
@@ -1544,9 +1545,33 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     circuitOutputPorts: WeldSide.None,
     magnetic: false,
     attractionRange: 0,
-    fill: "#635078",
+    fill: "#4e647e",
     decorationStyle: TileDecorationStyle.BeamBlockSensor,
     decorationColor: "#c7e3f5",
+  },
+  [TileKind.BeamBodySensor]: {
+    name: "Beam Body Sensor",
+    boardCode: "4",
+    defaultPrice: 20,
+    palette: {
+      order: 77,
+      category: PaletteCategory.CircuitComplex,
+      description: "Outputs +1 sideways while any body ahead matches the complete body immediately behind it.",
+      extendedDescription: ["Scans the whole forward row or column through gaps and other bodies. Uses the Body Comparer's translation-only comparison of kinds, orientations, handedness, and welds; configuration is ignored.", "The rear body must exist. Bodies joined to the sensor do not match. A match outputs +1, otherwise 0, without consuming anything. Beams stay within their board or rune array."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Right | WeldSide.Left,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#635078",
+    decorationStyle: TileDecorationStyle.BeamBlockSensor,
+    decorationColor: "#e8c987",
   },
   [TileKind.Victory]: {
     name: "Judgment Stone",

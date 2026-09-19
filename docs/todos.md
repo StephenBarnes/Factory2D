@@ -34,13 +34,7 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 ## New circuit components
 
-* Add a "rune engine" component that's like a programmable gate array. Take 2 inputs and produce 2 outputs. The block should be configurable to determine the I/O relation from some possible set. Details TBD. Could include an internal latch for feedback, like the PGA in Shenzhen IO. Visualize the engine block as a variation on the existing "rune array" component, but with a specific pattern of pre-set runes inside it, which cannot be modified except by toggling them between some specific states on click e.g. conduit vs stone block, or rotating by 90-degree increments.
-* Add a stack block with push/pop to store data up to some max size. One input for value to push - always push if it's +1 or -1, but ignore zero. One input to trigger a push on +1, pop on -1. One output for popped value. One input to rotate it forwards or backwards on +1 or -1.
-* Add a queue block, similar to the stack block.
-* Add a delay block, but instead of advancing 1 space per tick, it advances when an additional input is +1. Maybe also allow -1 to scroll back. Uncertain, this seems similar to the queue block.
-* Add a delay block variant that only steps forward if the input is +1 or -1, ignoring zeros. Like the current delay block, on every tick, it outputs the queued value; but we only shift the ring buffer forward and write a value when the back value is +1. Uncertain, seems similar to the queue block.
-* Add a beam body sensor - similar to the body comparer but checks all bodies that occupy any cells in the row/column in front of it. The block-type version is implemented as the Beam Block Sensor.
-	* As a follow-up, add configuration options on the beam sensors (beam block sensor and body sensor) to set a threshold; when set, count how many matching blocks or bodies there are, and compare that to a configurable threshold, outputting -1 if below or +1 if above threshold. Unconfigured blocks keep current behavior by setting the threshold to zero. Also add a checkbox to consider all nonempty block types or all distinct bodies as matching, instead of using the rear block/body. (Useful for e.g. enforcing a constraint that the player's vehicle must fully leave a starting area.)
+* Add configuration options on the beam sensors (Beam Block Sensor and Beam Body Sensor) to set a threshold; when set, count how many matching blocks or bodies there are, and compare that to the threshold, outputting -1 if below or +1 if above. Unconfigured blocks keep current behavior by setting the threshold to zero. Also add a checkbox to consider all nonempty block types or all distinct bodies as matching, instead of using the rear block/body. (Useful for e.g. enforcing a constraint that the player's vehicle must fully leave a starting area.)
 
 # UI
 

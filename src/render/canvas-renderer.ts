@@ -1811,6 +1811,7 @@ export class CanvasRenderer {
         this.drawFacingRay(kind, orientation);
         break;
       case TileKind.BeamBlockSensor:
+      case TileKind.BeamBodySensor:
         this.drawFacingRay(kind, orientation);
         this.drawSensorObservation(oppositeDirection(orientation));
         break;
@@ -1821,7 +1822,8 @@ export class CanvasRenderer {
   }
 
   private drawFacingRay(
-    kind: TileKind.LevitationProjector | TileKind.MagicLink | TileKind.BeamBlockSensor,
+    kind: TileKind.LevitationProjector | TileKind.MagicLink |
+      TileKind.BeamBlockSensor | TileKind.BeamBodySensor,
     orientation: Direction,
   ): void {
     const dx = directionX(orientation);
@@ -1830,7 +1832,7 @@ export class CanvasRenderer {
     const startY = this.hoverY + 0.5 + dy / 2;
     let endX = dx === 0 ? startX : dx > 0 ? this.world.width : 0;
     let endY = dy === 0 ? startY : dy > 0 ? this.world.height : 0;
-    if (kind !== TileKind.BeamBlockSensor) {
+    if (kind === TileKind.LevitationProjector || kind === TileKind.MagicLink) {
       const opposingDirection = oppositeDirection(orientation);
       for (
         let x = this.hoverX + dx, y = this.hoverY + dy;

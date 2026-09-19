@@ -344,17 +344,26 @@ export class CircuitResolver {
             }
           }
         }
-      } else if (kind === TileKind.Comparer) {
+      } else if (kind === TileKind.Comparer || kind === TileKind.BeamBodySensor) {
         const orientation = world.orientationAtIndex(index);
-        const front = neighborIndex(world, index, orientation);
         const rear = neighborIndex(world, index, oppositeDirection(orientation));
         const bodies = runtime.weldedBodies;
-        outputCharge = front >= 0 && rear >= 0 &&
-          world.kindAtIndex(front) !== TileKind.Empty &&
-          world.kindAtIndex(rear) !== TileKind.Empty &&
-          bodies.rootAt(front) !== bodies.rootAt(index) &&
-          bodies.rootAt(rear) !== bodies.rootAt(index) &&
-          bodies.matchesUnderTranslation(rear, front) ? 1 : 0;
+        outputCharge = 0;
+        if (rear >= 0 && world.kindAtIndex(rear) !== TileKind.Empty &&
+            bodies.rootAt(rear) !== bodies.rootAt(index)) {
+          for (
+            let target = neighborIndex(world, index, orientation);
+            target >= 0;
+            target = kind === TileKind.Comparer ? -1 : neighborIndex(world, target, orientation)
+          ) {
+            if (world.kindAtIndex(target) !== TileKind.Empty &&
+                bodies.rootAt(target) !== bodies.rootAt(index) &&
+                bodies.matchesUnderTranslation(rear, target)) {
+              outputCharge = 1;
+              break;
+            }
+          }
+        }
       } else {
         continue;
       }

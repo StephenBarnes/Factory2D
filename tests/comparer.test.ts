@@ -223,3 +223,72 @@ describe("beam block sensor", () => {
     expect(restoredInner.chargeAt(4, 2)).toBe(0);
   });
 });
+
+describe("beam body sensor", () => {
+  it("matches whole off-axis bodies through obstructions, not just the intersected block", () => {
+    const world = new World(8, 3);
+    for (let x = 0; x < world.width; x += 1) world.place(x, 2, TileKind.Platform);
+    world.place(2, 1, TileKind.BeamBodySensor, Direction.Right);
+    world.place(2, 0, TileKind.Conduit);
+    world.setWeld(2, 0, 2, 1, true);
+    for (const x of [1, 6]) {
+      world.place(x, 1, TileKind.Stone);
+      world.place(x, 0, TileKind.Iron);
+      world.setWeld(x, 0, x, 1, true);
+    }
+    world.place(3, 1, TileKind.Platform);
+    world.place(4, 1, TileKind.Stone);
+    const id = world.idAt(6, 1);
+    const simulation = new Simulation(world);
+    simulation.step();
+    expect(world.chargeAt(2, 0)).toBe(1);
+    expect(world.idAt(6, 1)).toBe(id);
+    world.setWeld(6, 0, 6, 1, false);
+    simulation.step();
+    expect(world.chargeAt(2, 0)).toBe(0);
+  });
+
+  it("rejects its own body and a missing template", () => {
+    const world = new World(5, 1);
+    world.place(0, 0, TileKind.Stone);
+    world.place(1, 0, TileKind.BeamBodySensor, Direction.Right);
+    world.place(4, 0, TileKind.Stone);
+    const simulation = new Simulation(world);
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(1);
+    world.setWeld(0, 0, 1, 0, true);
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(0);
+    world.place(0, 0, TileKind.Empty);
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(0);
+  });
+
+  it("preserves nested sensing through serialization and stops at the array boundary", () => {
+    const root = new World(3, 3);
+    root.place(1, 1, TileKind.RuneArray);
+    root.place(1, 2, TileKind.Platform);
+    root.place(0, 1, TileKind.Conduit);
+    root.setWeld(0, 1, 1, 1, true);
+    root.configureRuneArray(1, 1, 5, 5, "");
+    const inner = root.runeArrayWorldAt(1, 1);
+    inner.place(2, 1, TileKind.Platform);
+    inner.place(2, 2, TileKind.BeamBodySensor, Direction.Down);
+    inner.place(2, 4, TileKind.Platform);
+    for (const x of [0, 1, 3, 4]) inner.place(x, 2, TileKind.Conduit);
+    inner.place(0, 2, TileKind.IndestructibleConduit);
+    inner.place(0, 3, TileKind.Platform);
+    inner.setWeld(0, 2, 0, 3, true);
+    for (let x = 0; x < 4; x += 1) inner.setWeld(x, 2, x + 1, 2, true);
+    const restored = deserializeBoard(serializeBoard(root, 0)).world;
+    const restoredInner = restored.runeArrayWorldAt(1, 1);
+    const simulation = new Simulation(restored);
+    simulation.step();
+    expect(restored.chargeAt(0, 1)).toBe(1);
+    expect(restoredInner.chargeAt(4, 2)).toBe(1);
+    restoredInner.place(2, 4, TileKind.Empty);
+    simulation.step();
+    expect(restored.chargeAt(0, 1)).toBe(0);
+    expect(restoredInner.chargeAt(4, 2)).toBe(0);
+  });
+});
