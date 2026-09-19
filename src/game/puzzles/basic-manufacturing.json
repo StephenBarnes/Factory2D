@@ -1,0 +1,142 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 5,
+  "width": 15,
+  "height": 10,
+  "id": "basic-manufacturing",
+  "group": "basics",
+  "order": 5,
+  "name": "Basic manufacturing",
+  "difficulty": "tutorial",
+  "description": "Weld together iron blocks.",
+  "goal": "Deliver ten 2x1 iron pieces to the delivery box.",
+  "cycleLimit": 500,
+  "components": [
+    {
+      "code": "B",
+      "price": 5
+    },
+    {
+      "code": "C",
+      "price": 2
+    },
+    {
+      "code": "1",
+      "price": 5
+    },
+    {
+      "code": "J",
+      "price": 10
+    },
+    {
+      "code": "Y",
+      "price": 30
+    },
+    {
+      "code": "#",
+      "price": 1
+    }
+  ],
+  "editableRegions": [
+    {
+      "x": 6,
+      "y": 7,
+      "width": 1,
+      "height": 1
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "width": 13,
+      "height": 4
+    }
+  ],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 15,
+    "width": 15,
+    "height": 10,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "###############",
+      "##i############",
+      "#QY############",
+      "#.............#",
+      "#.............#",
+      "#.............#",
+      "#.............#",
+      "#BBBBB.BBBB#DNV",
+      "########1###ii#",
+      "###############"
+    ],
+    "orientations": [
+      {
+        "x": 1,
+        "y": 2,
+        "direction": "down"
+      },
+      {
+        "x": 2,
+        "y": 2,
+        "direction": "down"
+      },
+      {
+        "x": 13,
+        "y": 7,
+        "direction": "right"
+      }
+    ],
+    "components": [
+      {
+        "x": 13,
+        "y": 7,
+        "type": "counter",
+        "threshold": 10,
+        "count": 0
+      }
+    ],
+    "textBoxes": [
+      {
+        "id": "c7ba8d62-9255-411a-a258-f976c3b32fb7",
+        "x": 3.3196010890013667,
+        "y": 1.8756207291309295,
+        "width": 4.44,
+        "height": 0.74,
+        "text": "1. Provide a +1 charge to the charge sensor.\nThis triggers the duplicator to produce iron blocks.",
+        "owner": "author"
+      },
+      {
+        "id": "7c54f7d5-e51f-4028-9d1c-9a668a1cdb8a",
+        "x": 5.379648353605851,
+        "y": 8.364627976889286,
+        "width": 2.32,
+        "height": 0.74,
+        "text": "2. Use a welder block to\njoin two iron blocks.",
+        "owner": "author"
+      },
+      {
+        "id": "0ceef9a8-7c25-487c-97da-925b3cea6529",
+        "x": 10.107113472779378,
+        "y": 9.231660330554822,
+        "width": 4.34,
+        "height": 0.48000000000000004,
+        "text": "3. Deliver ten 2x1 iron pieces to the delivery box.",
+        "owner": "author"
+      }
+    ],
+    "welds": [
+      "++-+++++++++++|",
+      "+|.+++++++++++|",
+      "+-------------|",
+      "|.............|",
+      "|.............|",
+      "|.............|",
+      "|.............|",
+      "+++++|.+++++--|",
+      "+++++++++++|-.|",
+      "--------------."
+    ]
+  },
+  "testCases": []
+}

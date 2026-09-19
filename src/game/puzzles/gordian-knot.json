@@ -5,7 +5,7 @@
   "height": 12,
   "id": "gordian-knot",
   "group": "basics",
-  "order": 5,
+  "order": 10,
   "name": "Gordian knot",
   "difficulty": "tutorial",
   "description": "A puzzle's victory conditions are determined by blocks in the puzzle itself. To win a puzzle, a blue +1 charge must get to a judgment stone. If it receives a red -1 charge, you lose the puzzle. You can create your own puzzles using the sandbox.",
