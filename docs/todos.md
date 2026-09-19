@@ -46,7 +46,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 ## Animations
 
 * Add animation for the delivery box, assembler, duplicator, lock gate. When they consume a body, animate the body shrinking, moving towards the block, and lowering opacity until it vanishes. When they produce a body, animate the opposite.
-* Improve the animation when a piston extends and retracts. Currently when retracting, the background of the arm block disappears instantly, which looks like a gap for a split-second until the arm reaches back into the base. Also, when extending, the arm block is drawn as unwelded to the base, until the animation completes; this also looks like a gap appears and then vanishes.
 
 # Content
 

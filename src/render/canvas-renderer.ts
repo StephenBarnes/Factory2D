@@ -90,6 +90,10 @@ interface CachedBody extends CachedBodyGeometry {
   readonly maxX: number;
   /** Exclusive grid bound. */
   readonly maxY: number;
+  /** Clip extended weld outlines to the cells actually painted by this subgroup. */
+  readonly slabClip?: Path2D;
+  /** A consumed arm survives only as a moving slab; the combined piston draws its glyph. */
+  readonly retractingArm?: boolean;
 }
 
 interface CachedMotionBodies {
@@ -1268,7 +1272,7 @@ export class CanvasRenderer {
         this.drawAnimatedBody(body, 1, animationTime);
       } else {
         const groups = this.movingBodies(body);
-        if (groups.length === 1) {
+        if (groups.length === 1 && groups[0] === body) {
           this.drawAnimatedBody(body, progress, animationTime);
         } else {
           // At the collapsed endpoint head and housing overlap. All slab fills
@@ -1292,10 +1296,11 @@ export class CanvasRenderer {
       cached.rotationRevision === this.rotationInterpolation.revision) return cached.bodies;
     const firstCell = expectDefined(body.cells[0], "first motion group cell");
     const firstKey = this.motionGroupAt(firstCell.y * this.world.width + firstCell.x);
-    let uniform = true;
-    for (let i = 1; i < body.cells.length; i += 1) {
+    let uniform = motion.transitionAt(firstCell.y * this.world.width + firstCell.x) !== -1;
+    for (let i = 1; uniform && i < body.cells.length; i += 1) {
       const cell = expectDefined(body.cells[i], "motion group cell");
-      if (this.motionGroupAt(cell.y * this.world.width + cell.x) !== firstKey) {
+      if (motion.transitionAt(cell.y * this.world.width + cell.x) === -1 ||
+        this.motionGroupAt(cell.y * this.world.width + cell.x) !== firstKey) {
         uniform = false;
         break;
       }
@@ -1329,8 +1334,21 @@ export class CanvasRenderer {
         }
         bodies.push({
           cells,
-          path: createBodyPath(0, 0, this.cellSize, cells, cells.length),
+          ...this.motionBodyGeometry(cells),
           minX, minY, maxX, maxY,
+        });
+      }
+      for (const cell of body.cells) {
+        const index = cell.y * this.world.width + cell.x;
+        if (motion.transitionAt(index) !== -1) continue;
+        const arm: BodyCell = { ...cell, kind: TileKind.PistonArm };
+        // Keep the old head's slab even though only the combined tile survives
+        // in the committed world. Its extra offset shrinks to zero at the base.
+        bodies.unshift({
+          cells: [arm],
+          ...this.motionBodyGeometry([arm], true),
+          minX: arm.x, minY: arm.y, maxX: arm.x + 1, maxY: arm.y + 1,
+          retractingArm: true,
         });
       }
     }
@@ -1344,6 +1362,52 @@ export class CanvasRenderer {
       cached.bodies = bodies;
     }
     return bodies;
+  }
+
+  private motionBodyGeometry(
+    cells: readonly BodyCell[],
+    retractingArm = false,
+  ): Pick<CachedBody, "path" | "slabClip"> {
+    // Carry the outline through welds cut by motion grouping, but paint only
+    // this group's cells. Otherwise those artificial cuts acquire rounded
+    // corners and bevels until the very last frame of a piston stroke.
+    const outlines = new Map<number, BodyCell>();
+    const stride = this.world.width + 2; // Include one outline-only neighbor beyond each board edge.
+    const slabClip = new Path2D();
+    for (const cell of cells) {
+      outlines.set((cell.y + 1) * stride + cell.x + 1, { ...cell, seamRight: true, seamDown: true });
+      slabClip.rect(cell.x * this.cellSize, cell.y * this.cellSize, this.cellSize, this.cellSize);
+    }
+    for (const cell of cells) {
+      const index = cell.y * this.world.width + cell.x;
+      const retracting = this.translationInterpolation.transitionAt(index) === -1;
+      const current = expectDefined(
+        outlines.get((cell.y + 1) * stride + cell.x + 1), "motion outline cell",
+      );
+      for (let side = Direction.Up; side <= Direction.Left; side += 1) {
+        const welded = retractingArm
+          ? side === oppositeDirection(cell.orientation) ||
+            (side === cell.orientation && this.world.hasWeldAtIndex(index, side))
+          : (retracting && side === cell.orientation) || this.world.hasWeldAtIndex(index, side);
+        if (!welded) continue;
+        const x = cell.x + directionX(side);
+        const y = cell.y + directionY(side);
+        const key = (y + 1) * stride + x + 1;
+        if (!outlines.has(key)) {
+          outlines.set(key, { ...cell, x, y, seamRight: true, seamDown: true });
+        }
+        const neighbor = expectDefined(outlines.get(key), "motion outline neighbor");
+        if (side === Direction.Right) current.seamRight = false;
+        else if (side === Direction.Down) current.seamDown = false;
+        else if (side === Direction.Left) neighbor.seamRight = false;
+        else neighbor.seamDown = false;
+      }
+    }
+    const outlineCells = [...outlines.values()];
+    return {
+      path: createBodyPath(0, 0, this.cellSize, outlineCells, outlineCells.length),
+      slabClip,
+    };
   }
 
   private motionGroupAt(index: number): number {
@@ -1360,17 +1424,20 @@ export class CanvasRenderer {
     animationTime: number,
     phase: "all" | "slab" | "decoration" = "all",
   ): void {
+    if (body.retractingArm && phase === "decoration") return;
     const firstCell = expectDefined(body.cells[0], "first animated body cell");
     const firstIndex = firstCell.y * this.world.width + firstCell.x;
     const rotation = this.rotationInterpolation.at(firstIndex);
     const remainingProgress = 1 - progress;
     const motion = this.translationInterpolation;
-    const offsetX = rotation === null ? motion.xAt(firstIndex) * remainingProgress : 0;
-    const offsetY = rotation === null ? motion.yAt(firstIndex) * remainingProgress : 0;
-    let minX = body.minX + offsetX;
-    let minY = body.minY + offsetY;
-    let maxX = body.maxX + offsetX;
-    let maxY = body.maxY + offsetY;
+    const armX = body.retractingArm ? directionX(firstCell.orientation) * remainingProgress : 0;
+    const armY = body.retractingArm ? directionY(firstCell.orientation) * remainingProgress : 0;
+    const offsetX = rotation === null ? motion.xAt(firstIndex) * remainingProgress + armX : 0;
+    const offsetY = rotation === null ? motion.yAt(firstIndex) * remainingProgress + armY : 0;
+    let minX = body.minX + offsetX + (rotation === null ? 0 : armX);
+    let minY = body.minY + offsetY + (rotation === null ? 0 : armY);
+    let maxX = body.maxX + offsetX + (rotation === null ? 0 : armX);
+    let maxY = body.maxY + offsetY + (rotation === null ? 0 : armY);
     if (rotation !== null) {
       const centerX = (minX + maxX) / 2;
       const centerY = (minY + maxY) / 2;
@@ -1421,7 +1488,11 @@ export class CanvasRenderer {
       this.originX + offsetX * this.cellSize,
       this.originY + offsetY * this.cellSize,
     );
-    if (rotation !== null) this.applyRotationTransform(rotation);
+    if (rotation !== null) {
+      this.applyRotationTransform(rotation);
+      this.context.translate(armX * this.cellSize, armY * this.cellSize);
+    }
+    if (phase === "slab" && body.slabClip !== undefined) this.context.clip(body.slabClip);
     drawBody(
       this.context, 0, 0, this.cellSize, body.cells, body.cells.length,
       body.path, animationTime, phase,
@@ -1481,14 +1552,16 @@ export class CanvasRenderer {
         if (rotation === null) throw new Error(`Missing rotation for animated cell ${index}`);
         const orientation = world.orientationAtIndex(index);
         const headOffset = this.translationInterpolation.transitionAt(index) === -1 ? remainingProgress : 0;
+        const headX = directionX(orientation) * headOffset;
+        const headY = directionY(orientation) * headOffset;
         this.context.save();
         this.context.translate(originX, originY);
         this.applyRotationTransform(rotation);
         this.context.fillStyle = TILE_DEFINITIONS[world.kindAtIndex(index)].fill;
         this.context.fillRect(
-          (index % world.width + directionX(orientation) * headOffset) * cellSize,
-          (Math.floor(index / world.width) + directionY(orientation) * headOffset) * cellSize,
-          cellSize, cellSize,
+          (index % world.width + Math.min(0, headX)) * cellSize,
+          (Math.floor(index / world.width) + Math.min(0, headY)) * cellSize,
+          (1 + Math.abs(headX)) * cellSize, (1 + Math.abs(headY)) * cellSize,
         );
         this.context.restore();
       }
@@ -1499,24 +1572,25 @@ export class CanvasRenderer {
     const kind = this.world.kindAtIndex(index);
     if (kind === TileKind.Empty || this.rotationInterpolation.at(index) !== null) return;
     const motion = this.translationInterpolation;
-    let dx = motion.xAt(index);
-    let dy = motion.yAt(index);
-    if (motion.transitionAt(index) === -1) {
-      const orientation = this.world.orientationAtIndex(index);
-      dx += directionX(orientation);
-      dy += directionY(orientation);
-    }
-    const left = this.originX + (index % this.world.width + dx * remainingProgress) * this.cellSize;
+    const orientation = this.world.orientationAtIndex(index);
+    const headOffset = motion.transitionAt(index) === -1 ? remainingProgress : 0;
+    const headX = directionX(orientation) * headOffset;
+    const headY = directionY(orientation) * headOffset;
+    const left = this.originX +
+      (index % this.world.width + motion.xAt(index) * remainingProgress + Math.min(0, headX)) * this.cellSize;
     const top = this.originY +
-      (Math.floor(index / this.world.width) + dy * remainingProgress) * this.cellSize;
-    if (left + this.cellSize < 0 || left > this.viewportWidth ||
-      top + this.cellSize < 0 || top > this.viewportHeight) return;
+      (Math.floor(index / this.world.width) + motion.yAt(index) * remainingProgress +
+        Math.min(0, headY)) * this.cellSize;
+    const width = (1 + Math.abs(headX)) * this.cellSize;
+    const height = (1 + Math.abs(headY)) * this.cellSize;
+    if (left + width < 0 || left > this.viewportWidth ||
+      top + height < 0 || top > this.viewportHeight) return;
     let path = this.lowDetailPaths[kind];
     if (path === undefined) {
       path = new Path2D();
       this.lowDetailPaths[kind] = path;
     }
-    path.rect(left, top, this.cellSize, this.cellSize);
+    path.rect(left, top, width, height);
   }
 
   private applyRotationTransform(rotation: RotationTransform): void {
