@@ -77,6 +77,7 @@ function createRecordingCanvas(width: number, height: number): RecordingCanvas {
     strokeRect: vi.fn(),
     beginPath: vi.fn(),
     closePath: vi.fn(),
+    rect: vi.fn(),
     moveTo: vi.fn(),
     lineTo: vi.fn(),
     quadraticCurveTo: vi.fn(),

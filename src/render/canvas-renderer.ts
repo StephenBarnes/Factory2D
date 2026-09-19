@@ -1493,6 +1493,31 @@ export class CanvasRenderer {
       this.context.translate(armX * this.cellSize, armY * this.cellSize);
     }
     if (phase === "slab" && body.slabClip !== undefined) this.context.clip(body.slabClip);
+    if (phase === "slab") {
+      for (const cell of body.cells) {
+        if (cell.kind !== TileKind.PistonArm || cell.pistonTransition === 0) continue;
+        const extension = body.retractingArm ? remainingProgress : progress;
+        if (extension >= 0.5) continue;
+        // The arm's open welded rear edge must not escape the housing's inset
+        // outline. Hide only the part behind the housing center; its front
+        // half still overlaps the arm, keeping the join continuous.
+        this.context.beginPath();
+        this.context.rect(
+          body.minX * this.cellSize, body.minY * this.cellSize,
+          (body.maxX - body.minX) * this.cellSize,
+          (body.maxY - body.minY) * this.cellSize,
+        );
+        this.context.save();
+        this.context.translate((cell.x + 0.5) * this.cellSize, (cell.y + 0.5) * this.cellSize);
+        this.context.rotate(cell.orientation * Math.PI / 2);
+        this.context.rect(
+          -0.5 * this.cellSize, extension * this.cellSize,
+          this.cellSize, (0.5 - extension) * this.cellSize,
+        );
+        this.context.restore();
+        this.context.clip("evenodd");
+      }
+    }
     drawBody(
       this.context, 0, 0, this.cellSize, body.cells, body.cells.length,
       body.path, animationTime, phase,

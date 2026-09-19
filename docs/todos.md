@@ -33,7 +33,8 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 ## New circuit components
 
-* Add configuration options on the beam sensors (Beam Block Sensor and Beam Body Sensor) to set a threshold; when set, count how many matching blocks or bodies there are, and compare that to the threshold, outputting -1 if below or +1 if above. Unconfigured blocks keep current behavior by setting the threshold to zero. Also add a checkbox to consider all nonempty block types or all distinct bodies as matching, instead of using the rear block/body. (Useful for e.g. enforcing a constraint that the player's vehicle must fully leave a starting area.)
+* Add configuration options on the beam sensors (Beam Block Sensor and Beam Body Sensor) to set a threshold. Make the blocks count how many matching blocks or bodies there are, and compare that to the threshold, outputting -1 if below or +1 if above, or zero if equal. Unconfigured blocks keep current behavior by setting the threshold to zero.
+	* For the same blocks, also add a checkbox to consider all non-empty block types or all distinct (non-empty) bodies as matching, instead of using the rear block/body. (Useful for e.g. enforcing a constraint that the player's vehicle must fully leave a starting area.)
 
 # UI
 
