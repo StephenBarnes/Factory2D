@@ -1,6 +1,6 @@
 # Performance status and remaining work
 
-Updated **2026-09-17**. The isolated spot measurements and source-status table below remain against revision `35a9bbc0b7dff729199001c17401350c869222dc`. The large-board production comparison uses `a00c9409fac594e87e3f174bb373e2a5f7715c8c`; the geode measurements use `867c6ad2190d3a21b5f563369df72f5cb3404dc1` plus benchmark-only changes. Each runner result records its own source identity and dirty-tree hashes.
+Updated **2026-09-19**. The isolated spot measurements and source-status table below remain against revision `35a9bbc0b7dff729199001c17401350c869222dc`. The large-board production comparison uses `a00c9409fac594e87e3f174bb373e2a5f7715c8c`; the geode measurements use `867c6ad2190d3a21b5f563369df72f5cb3404dc1` plus benchmark-only changes. The stationary-path comparison uses `8136bfebf05e8f48cd8fefc2547dd3d639b21238` before/after the renderer change described below. Each runner result records its own source identity and dirty-tree hashes.
 
 This is the active plan, not an optimization changelog. The [original investigation and Updates 1–14](performance-history.md) are archived unchanged. Their timings, hotspot percentages, memory totals, and recommendations describe earlier revisions; do not use them as current baselines or add their memory savings together.
 
@@ -8,6 +8,7 @@ This is the active plan, not an optimization changelog. The [original investigat
 
 * **Do not restart the original optimization list.** LOD, culling, geometry caching, sparse feature discovery, cached circuit connectivity, and most lazy-allocation work are implemented. See the status table below.
 * **Separate software rasterization from hardware-GPU costs.** The production comparison below identifies a large main-thread Canvas-resource cost on SwiftShader, absent on the RTX 4060 capture. Hardware fitted falling cases have near-refresh RAF cadence, but dense welded cases still reach roughly 50 ms RAF p95. Neither proves low-end readiness or the isolated render budget.
+* **Stationary low-detail path construction is now cached.** Dense hardware traces identified repeated construction of 120,000 rectangles per animation frame. Reusing the same combined paths substantially reduces RAF callback work, but the untraced dense-board RAF p95 remains about 50 ms. Tick/interpolation preparation and native Canvas work still need attention; this is not a frame-budget pass.
 * **Empty/static-platform simulation is no longer a board-size blocker in isolation.** Dense stationary and moving workloads still cost milliseconds to tens of milliseconds. A 5-tick/s throughput budget does not ensure smooth 60 FPS: a synchronous tick can interrupt a frame.
 * **The largest evidence gap remains representative complete-workshop coverage.** A production browser runner measures workshop RAF cadence, long tasks, and thresholded event timing. The saved small geode factory now also has a 50-tick isolated snapshot/simulation/render replay (below); the earlier 400×300 spot measurements still exclude snapshots and UI work. Current low-end-device performance and total retained browser memory are not established.
 
@@ -152,7 +153,38 @@ npm run benchmark:trace -- temp/fitted-before-trace/workshop.bench.ts-falling-10
 npm run benchmark:trace -- temp/fitted-headed-trace/workshop.bench.ts-falling-10/result.json
 ```
 
-Local raw results, screenshots, traces, and generated summaries remain in those output directories; they are not checked-in timing gates. Headed GPU availability depends on the display/driver environment: verify `environment.graphics` on every run. Large mixed factories, nested arrays, targeted dirty split/merge frames, rotation, remounts, puzzle verification/case transitions, repeated cold starts, memory retention, and full tick-phase attribution remain open. The small geode factory below adds snapshot/step/render attribution separately. **Next large-board target:** trace dense welded cases on hardware to distinguish synchronous tick/snapshot work from Canvas cost; do not infer that split from sparse traces.
+Local raw results, screenshots, traces, and generated summaries remain in those output directories; they are not checked-in timing gates. Headed GPU availability depends on the display/driver environment: verify `environment.graphics` on every run. Large mixed factories, nested arrays, targeted dirty split/merge frames, rotation, remounts, puzzle verification/case transitions, repeated cold starts, memory retention, and full tick-phase attribution remain open. The small geode factory below adds snapshot/step/render attribution separately. Dense welded hardware traces and the stationary-path optimization are covered next.
+
+#### Stationary low-detail paths: measured optimization
+
+Measured 2026-09-19 against clean `8136bfebf05e8f48cd8fefc2547dd3d639b21238`, then the same revision with the stationary-path cache and renderer regressions (tracked diff SHA-256 `0cf53b06b5d81ba0a844b522ddd7b56e55bce24809dc531747897e50fca07651`). Production Chromium **151.0.7922.34**, Ryzen 9 5900X, CDP-confirmed NVIDIA RTX 4060/OpenGL 580.173.02, no throttle, viewport 1280×800 at DPR 1.25; fitted canvas 1008×728 CSS / 1260×910 backing pixels. Animation on, 5 ticks/s, 15 RAF warmups. One untraced run per fixture/version, **120 requested active intervals**; separate traces request 90. All workload validity checks passed.
+
+| Fixture | Untraced RAF p95 before / after (ms) | Untraced max before / after (ms) | Long tasks before / after |
+|---|---:|---:|---:|
+| `welded-stone` | 49.9 / 50.0 | 66.7 / 50.1 | 6 / 10 |
+| `welded-conduit` | 50.0 / 50.0 | 66.6 / 66.6 | 9 / 12 |
+| `falling-10` | 16.7 / 16.7 | 16.8 / 16.8 | 0 / 0 |
+
+Untraced actual interval counts were stone 119→120, conduit 122→120, falling 120→120; median was 16.7 ms throughout. **No improvement in p95 or long-task counts is established.** The moving fixture intentionally retains its original drawing path.
+
+The separate stone trace sampled about **802 ms** in `Path2D.rect`, **1,362 ms** inclusive under `render`, and **242 ms** inclusive under simulation `step` in its 1,920.6 ms active window. After caching, inclusive sampled render time was about **194 ms**, while step was **325 ms**, in a 1,845.9 ms window. These are CPU-profiler sample-delta estimates, not isolated call timings; nested inclusive costs overlap and tracing perturbs execution. In the offline timeline summaries, `FireAnimationFrame` union coverage fell **1,651.4→558.5 ms** for stone and **1,826.2→651.4 ms** for conduit. Stone collected 92→90 active RAF intervals; conduit 91→90 over 2,087.9→1,942.3 ms. Callback coverage includes benchmark callbacks and is neither per-frame latency nor displayed FPS. Slow tick frames remain despite much less between-tick work.
+
+A post-change production **SwiftShader** run used the same settings except headless mode and 60 requested/actual active intervals per fixture. Stone RAF p50/p95/max was **316.7/350.0/366.6 ms**, conduit **333.3/366.7/383.3 ms**, and falling-10 **16.8/33.4/33.4 ms**, with 62/62/0 long tasks respectively. All validity checks passed. These results confirm that dense software rendering is still severely stalled; there is no matched pre-change software run here, so no software speedup is claimed. Artifacts are in `temp/dense-software-after`.
+
+The renderer now retains stationary combined per-kind paths, keyed by geometry revision and camera/viewport geometry. Moving/rotating frames invalidate that cache; no per-rectangle or row-separated fills were introduced. A separate real-Canvas comparison against the original renderer at DPR 1.25 found identical RGBA bytes in **36 frames** covering fractional 2.13-pixel cells, dense adjacent fills, theme changes, fresh stationary snapshots, kind/removal edits, fractional pan, viewport expansion, detail-level changes, translation, piston extension, and actual rotator turns. Two permanent regressions cover stale painted geometry after edits/camera changes and seeks between committed/moving frames. This does not constitute the full visual/workload matrix.
+
+Reproduction and local evidence:
+
+```sh
+# Run on each source version, using distinct output directories:
+BENCH_FIXTURES=welded-stone,welded-conduit,falling-10 BENCH_SAMPLES=120 BENCH_HEADED=1 npm run benchmark -- --output temp/dense-after
+BENCH_FIXTURES=welded-stone,welded-conduit BENCH_SAMPLES=90 BENCH_HEADED=1 BENCH_TRACE=1 npm run benchmark -- --output temp/dense-after-trace
+npm run benchmark:trace -- temp/dense-after-trace/workshop.bench.ts-welded-stone/result.json
+npm run benchmark:trace -- temp/dense-after-trace/workshop.bench.ts-welded-conduit/result.json
+BENCH_FIXTURES=welded-stone,welded-conduit,falling-10 BENCH_SAMPLES=60 npm run benchmark -- --output temp/dense-software-after
+```
+
+Corresponding pre-change artifacts are in `temp/dense-before` and `temp/dense-before-trace`; pixel comparison results/screenshot are `temp/low-detail-pixel-comparison.{json,png}`. **Next dense-board target:** attribute slow tick frames to motion, snapshot copying, and interpolation identity preparation separately. The post-change stone CPU sample profile includes about 144 ms in interpolation `prepare` and 324 ms in ordinary motion over the active window; these are investigation leads, not grounds to merge phase ownership or cache dynamic state without invalidation.
 
 #### Saved geode factory: 50-tick baseline
 
@@ -190,8 +222,8 @@ Option smoke coverage also passed for `empty,geode` with `BENCH_SPEED=60 BENCH_A
 
 ### 2. Investigate fitted active rendering
 
-- [ ] Trace dirty-frame tails and dense welded hardware cases; separate native rasterization/backpressure from JS/path construction. The fitted 5%/10% production comparison above establishes a large software-specific Canvas-resource cost, not its native implementation cause.
-- [ ] Measure `drawLowDetailTiles`, `TranslationInterpolation.prepare`, detailed cache scans/state refresh, large partially visible bodies, and topology/scale rebuilds. Compare any low-detail candidate on both backends and check fractional-cell seams and overlapping same-kind cells, not only throughput. Consider cached low-detail batches, sparse visible iteration, more selective visual refresh, or dirty-region/chunk indexing **only for measured costs**. Interpolation and rotation must retain their existing visibility and identity rules.
+- [ ] Trace remaining dirty-frame tails and moving workloads; separate native rasterization/backpressure from JS/path construction. Dense welded hardware attribution is now available above. The earlier fitted 5%/10% comparison establishes a large software-specific Canvas-resource cost, not its native implementation cause.
+- [ ] Measure `TranslationInterpolation.prepare`, detailed cache scans/state refresh, large partially visible bodies, and topology/scale rebuilds. Stationary low-detail batches are now cached; investigate moving-batch reuse, sparse visible iteration, more selective visual refresh, or dirty-region/chunk indexing **only for measured costs**. Compare candidates on both backends and check fractional-cell seams and overlapping same-kind cells, not only throughput. Interpolation and rotation must retain their existing visibility and identity rules.
 
 Source starting points: `src/render/canvas-renderer.ts` (`drawTiles`, `drawLowDetailTiles`, `rebuildChangedBodyGeometry`, `refreshCachedBodyState`), `src/render/translation-interpolation.ts`, and `src/render/rotation-interpolation.ts`.
 

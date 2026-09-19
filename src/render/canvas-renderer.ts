@@ -160,6 +160,14 @@ export class CanvasRenderer {
   private readonly selectionBodyCells: BodyCell[] = [];
   /** Low-detail cells already carry interpolated positions, so only kind needs batching. */
   private readonly lowDetailPaths: Array<Path2D | undefined> = new Array(TILE_KINDS.length);
+  private lowDetailGeometry: {
+    revision: number;
+    cellSize: number;
+    originX: number;
+    originY: number;
+    width: number;
+    height: number;
+  } | null = null;
   private readonly motionBodies = new WeakMap<CachedBody, CachedMotionBodies>();
   private hoverX = -1;
   private hoverY = -1;
@@ -1428,22 +1436,37 @@ export class CanvasRenderer {
     const startY = Math.max(0, Math.floor(-originY / cellSize) - 1);
     const endX = Math.min(world.width, Math.ceil((this.viewportWidth - originX) / cellSize) + 1);
     const endY = Math.min(world.height, Math.ceil((this.viewportHeight - originY) / cellSize) + 1);
-    this.lowDetailPaths.fill(undefined);
-
-    for (let y = startY; y < endY; y += 1) {
-      let index = y * world.width + startX;
-      for (let x = startX; x < endX; x += 1, index += 1) {
-        this.appendLowDetailCell(index, remainingProgress);
-      }
-    }
-    if (remainingProgress > 0) {
-      // A destination outside the viewport can still be passing through it this frame.
-      for (const index of this.translationInterpolation.movingIndices) {
-        const x = index % world.width;
-        const y = Math.floor(index / world.width);
-        if (x < startX || x >= endX || y < startY || y >= endY) {
+    // Keep the combined per-kind paths: separate fills introduce fractional-pixel seams.
+    // Only committed geometry can outlive a snapshot/progress change.
+    const stationary = !this.rotationInterpolation.active &&
+      (remainingProgress === 0 || this.translationInterpolation.movingIndices.length === 0);
+    const cached = this.lowDetailGeometry;
+    if (!stationary || cached === null || cached.revision !== world.geometryRevision ||
+        cached.cellSize !== cellSize || cached.originX !== originX || cached.originY !== originY ||
+        cached.width !== this.viewportWidth || cached.height !== this.viewportHeight) {
+      this.lowDetailPaths.fill(undefined);
+      this.lowDetailGeometry = null;
+      for (let y = startY; y < endY; y += 1) {
+        let index = y * world.width + startX;
+        for (let x = startX; x < endX; x += 1, index += 1) {
           this.appendLowDetailCell(index, remainingProgress);
         }
+      }
+      if (remainingProgress > 0) {
+        // A destination outside the viewport can still be passing through it this frame.
+        for (const index of this.translationInterpolation.movingIndices) {
+          const x = index % world.width;
+          const y = Math.floor(index / world.width);
+          if (x < startX || x >= endX || y < startY || y >= endY) {
+            this.appendLowDetailCell(index, remainingProgress);
+          }
+        }
+      }
+      if (stationary) {
+        this.lowDetailGeometry = {
+          revision: world.geometryRevision, cellSize, originX, originY,
+          width: this.viewportWidth, height: this.viewportHeight,
+        };
       }
     }
     for (let kind = 0; kind < this.lowDetailPaths.length; kind += 1) {

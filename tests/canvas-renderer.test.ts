@@ -249,6 +249,60 @@ describe("CanvasRenderer scalable tile rendering", () => {
     expect(filledPaths[0]?.rectangles).toHaveLength(2);
   });
 
+  it("updates low-detail painted cells after kind edits and fractional camera changes", () => {
+    vi.stubGlobal("window", { devicePixelRatio: 1.25 });
+    vi.stubGlobal("Path2D", RecordingPath2D);
+    const world = new World(400, 300);
+    world.place(100, 100, TileKind.Platform);
+    const { canvas, filledPaths, fillStyles } = createRecordingCanvas(400, 300);
+    const renderer = new CanvasRenderer(canvas, world);
+    renderer.restoreView({ cellSize: 4, centerX: 100, centerY: 100 });
+    const painted = (progress: number) => {
+      filledPaths.length = 0;
+      renderer.render(null, progress);
+      return filledPaths.flatMap(path => path.rectangles);
+    };
+    expect(painted(0)).toEqual([{ x: 200, y: 150, width: 4, height: 4 }]);
+    expect(painted(0.25)).toEqual([{ x: 200, y: 150, width: 4, height: 4 }]);
+
+    world.place(100, 100, TileKind.Gold);
+    expect(painted(0.5)).toEqual([{ x: 200, y: 150, width: 4, height: 4 }]);
+    expect(fillStyles.at(-1)).toBe(TILE_DEFINITIONS[TileKind.Gold].fill);
+    renderer.panByPixels(0.17, 0.37);
+    const panned = painted(0.75);
+    expect(panned).toHaveLength(1);
+    expect(panned[0]?.x).toBeCloseTo(200.17);
+    expect(panned[0]?.y).toBeCloseTo(150.37);
+    renderer.restoreView({ cellSize: 2, centerX: 100, centerY: 100 });
+    expect(painted(1)).toEqual([{ x: 200, y: 150, width: 2, height: 2 }]);
+  });
+
+  it("does not reuse committed low-detail positions during or after a moving frame", () => {
+    vi.stubGlobal("window", { devicePixelRatio: 1 });
+    vi.stubGlobal("Path2D", RecordingPath2D);
+    const world = new World(400, 300);
+    world.place(100, 100, TileKind.Stone);
+    const previous = world.clone();
+    new Simulation(world).step(previous);
+    const { canvas, filledPaths } = createRecordingCanvas(400, 300);
+    const renderer = new CanvasRenderer(canvas, world);
+    renderer.restoreView({ cellSize: 4, centerX: 100, centerY: 100 });
+    renderer.render();
+    // Start from a cached committed frame, then seek through interpolation in both directions.
+    for (const progress of [0, 0.5, 1, 0.25, 1]) {
+      filledPaths.length = 0;
+      renderer.render(previous, progress);
+      expect(filledPaths.flatMap(path => path.rectangles)).toEqual([
+        { x: 200, y: 150 + 4 * progress, width: 4, height: 4 },
+      ]);
+    }
+    filledPaths.length = 0;
+    renderer.render();
+    expect(filledPaths.flatMap(path => path.rectangles)).toEqual([
+      { x: 200, y: 154, width: 4, height: 4 },
+    ]);
+  });
+
   it("does not submit detailed bodies outside the expanded visible grid rectangle", () => {
     vi.stubGlobal("window", { devicePixelRatio: 1 });
     vi.stubGlobal("Path2D", RecordingPath2D);
