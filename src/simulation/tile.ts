@@ -72,6 +72,7 @@ export const enum TileKind {
   MagicLink = 70,
   IndestructibleConduit = 71,
   Dismantler = 72,
+  BeamBlockSensor = 73,
 }
 
 export const enum Direction {
@@ -152,6 +153,7 @@ export const enum TileDecorationStyle {
   MagicLink = 58,
   IndestructibleConduit = 59,
   Dismantler = 60,
+  BeamBlockSensor = 61,
 }
 
 export const enum PaletteCategory {
@@ -1520,6 +1522,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     attractionRange: 0,
     fill: "#4e647e",
     decorationStyle: TileDecorationStyle.Comparer,
+    decorationColor: "#c7e3f5",
+  },
+  [TileKind.BeamBlockSensor]: {
+    name: "Beam Block Sensor",
+    boardCode: "3",
+    defaultPrice: 15,
+    palette: {
+      order: 76,
+      category: PaletteCategory.CircuitComplex,
+      description: "Outputs +1 sideways while any block ahead has the same type as the block immediately behind it.",
+      extendedDescription: ["Scans the whole forward row or column to this board's boundary, through gaps and other blocks. Compares only block types, including glass, ignoring orientation, configuration, and welds.", "A missing rear block or no matching block ahead outputs 0. Consumes nothing. Beams stay within their rune array; they do not scan enclosing boards."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Right | WeldSide.Left,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#635078",
+    decorationStyle: TileDecorationStyle.BeamBlockSensor,
     decorationColor: "#c7e3f5",
   },
   [TileKind.Victory]: {

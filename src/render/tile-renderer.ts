@@ -1264,13 +1264,28 @@ function drawDecoration(
         WeldSide.Left, WeldSide.Right, circuitPortCharges, mirrored);
       break;
     }
+    case TileDecorationStyle.BeamBlockSensor:
     case TileDecorationStyle.Comparer: {
       context.save();
       context.translate(left + size / 2, top + size / 2);
       context.rotate(orientation * Math.PI / 2);
       context.strokeStyle = definition.decorationColor;
       context.lineWidth = Math.max(1.5, size * 0.045);
-      context.strokeRect(-size * 0.1, -size * 0.34, size * 0.2, size * 0.16);
+      if (definition.decorationStyle === TileDecorationStyle.BeamBlockSensor) {
+        context.beginPath();
+        context.moveTo(0, -size * 0.16);
+        context.lineTo(0, -size * 0.37);
+        context.moveTo(-size * 0.08, -size * 0.29);
+        context.lineTo(0, -size * 0.37);
+        context.lineTo(size * 0.08, -size * 0.29);
+        context.moveTo(-size * 0.15, -size * 0.2);
+        context.lineTo(-size * 0.15, -size * 0.32);
+        context.moveTo(size * 0.15, -size * 0.2);
+        context.lineTo(size * 0.15, -size * 0.32);
+        context.stroke();
+      } else {
+        context.strokeRect(-size * 0.1, -size * 0.34, size * 0.2, size * 0.16);
+      }
       context.strokeRect(-size * 0.1, size * 0.18, size * 0.2, size * 0.16);
       context.strokeStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
       context.lineCap = "round";

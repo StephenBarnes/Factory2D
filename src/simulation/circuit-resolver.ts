@@ -327,6 +327,23 @@ export class CircuitResolver {
         outputCharge = front >= 0 && rear >= 0 &&
           world.kindAtIndex(front) !== TileKind.Empty &&
           world.kindAtIndex(front) === world.kindAtIndex(rear) ? 1 : 0;
+      } else if (kind === TileKind.BeamBlockSensor) {
+        const orientation = world.orientationAtIndex(index);
+        const rear = neighborIndex(world, index, oppositeDirection(orientation));
+        const targetKind = rear < 0 ? TileKind.Empty : world.kindAtIndex(rear);
+        outputCharge = 0;
+        if (targetKind !== TileKind.Empty) {
+          for (
+            let target = neighborIndex(world, index, orientation);
+            target >= 0;
+            target = neighborIndex(world, target, orientation)
+          ) {
+            if (world.kindAtIndex(target) === targetKind) {
+              outputCharge = 1;
+              break;
+            }
+          }
+        }
       } else if (kind === TileKind.Comparer) {
         const orientation = world.orientationAtIndex(index);
         const front = neighborIndex(world, index, orientation);

@@ -56,6 +56,7 @@ for (const kind of TILE_KINDS) {
     kind === TileKind.Delivery ||
     kind === TileKind.Comparer ||
     kind === TileKind.BlockComparer ||
+    kind === TileKind.BeamBlockSensor ||
     kind === TileKind.Assembler ||
     kind === TileKind.Welder ||
     kind === TileKind.Splitter ||

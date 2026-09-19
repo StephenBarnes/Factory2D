@@ -39,9 +39,8 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Add a queue block, similar to the stack block.
 * Add a delay block, but instead of advancing 1 space per tick, it advances when an additional input is +1. Maybe also allow -1 to scroll back. Uncertain, this seems similar to the queue block.
 * Add a delay block variant that only steps forward if the input is +1 or -1, ignoring zeros. Like the current delay block, on every tick, it outputs the queued value; but we only shift the ring buffer forward and write a value when the back value is +1. Uncertain, seems similar to the queue block.
-* Add a beam block sensor. Functions similarly to the block type comparer, except instead of checking whether the front block equals the rear block, it checks whether *any* block in the row/column in front of it matches the block behind it. Useful for some puzzles that require getting a specific block past a finish line.
-	* Similarly add a beam body sensor - similar to the body comparer but also checks all bodies that occupy any cells in the row/column in front of it.
-	* Add variant blocks (or configuration option on the same blocks) that count how many matching blocks or bodies there are, and compare that to a configurable threshold, returning -1 if below or +1 if above threshold. (Useful for e.g. enforcing a constraint that the player's vehicle must leave some starting area.)
+* Add a beam body sensor - similar to the body comparer but checks all bodies that occupy any cells in the row/column in front of it. The block-type version is implemented as the Beam Block Sensor.
+* Add variants of the beam sensors (or configuration options) that count how many matching blocks or bodies there are, and compare that to a configurable threshold, returning -1 if below or +1 if above threshold. (Useful for e.g. enforcing a constraint that the player's vehicle must leave some starting area.)
 
 # UI
 

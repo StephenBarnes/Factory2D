@@ -150,3 +150,76 @@ describe("block type comparer", () => {
     expect(restoredInner.kindAt(1, 2)).toBe(TileKind.Platform);
   });
 });
+
+describe("beam block sensor", () => {
+  it("looks through gaps and other types, detects glass, and clears when the match disappears", () => {
+    const world = new World(7, 2);
+    world.place(0, 1, TileKind.Glass);
+    world.place(1, 1, TileKind.BeamBlockSensor, Direction.Right);
+    world.setWeld(0, 1, 1, 1, true);
+    world.place(2, 1, TileKind.Stone);
+    world.place(4, 1, TileKind.Platform);
+    world.place(6, 1, TileKind.Glass);
+    world.place(1, 0, TileKind.Conduit);
+    world.setWeld(1, 0, 1, 1, true);
+    const targetId = world.idAt(6, 1);
+    const simulation = new Simulation(world);
+    simulation.step();
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(1);
+    expect(world.idAt(6, 1)).toBe(targetId);
+    world.place(6, 1, TileKind.Stone);
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(0);
+    world.place(0, 1, TileKind.Empty);
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(0);
+  });
+
+  it.each([
+    [Direction.Up, 0, -1],
+    [Direction.Right, 1, 0],
+    [Direction.Down, 0, 1],
+    [Direction.Left, -1, 0],
+  ] as const)("scans only its forward ray through the boundary in direction %s", (direction, dx, dy) => {
+    const world = new World(7, 7);
+    world.place(3, 3, TileKind.BeamBlockSensor, direction);
+    world.place(3 - dx, 3 - dy, TileKind.Platform);
+    world.setWeld(3, 3, 3 - dx, 3 - dy, true);
+    world.place(3 + dx * 3, 3 + dy * 3, TileKind.Platform);
+    // A match just off the ray must not count, including across a row boundary.
+    world.place(3 - dy, 3 + dx, TileKind.Platform);
+    const simulation = new Simulation(world);
+    simulation.step();
+    expect(world.chargeAt(3, 3)).toBe(1);
+    world.place(3 + dx * 3, 3 + dy * 3, TileKind.Empty);
+    simulation.step();
+    expect(world.chargeAt(3, 3)).toBe(0);
+  });
+
+  it("drives nested side ports after serialization without scanning outside the array", () => {
+    const root = new World(3, 3);
+    root.place(1, 1, TileKind.RuneArray);
+    root.place(1, 2, TileKind.Platform);
+    root.place(0, 1, TileKind.Conduit);
+    root.setWeld(0, 1, 1, 1, true);
+    root.configureRuneArray(1, 1, 5, 5, "");
+    const inner = root.runeArrayWorldAt(1, 1);
+    inner.place(2, 1, TileKind.Platform);
+    inner.place(2, 2, TileKind.BeamBlockSensor, Direction.Down);
+    inner.setWeld(2, 1, 2, 2, true);
+    inner.place(2, 4, TileKind.Platform);
+    for (const x of [0, 1, 3, 4]) inner.place(x, 2, TileKind.Conduit);
+    for (let x = 0; x < 4; x += 1) inner.setWeld(x, 2, x + 1, 2, true);
+    const restored = deserializeBoard(serializeBoard(root, 0)).world;
+    const restoredInner = restored.runeArrayWorldAt(1, 1);
+    const simulation = new Simulation(restored);
+    simulation.step();
+    expect(restored.chargeAt(0, 1)).toBe(1);
+    expect(restoredInner.chargeAt(4, 2)).toBe(1);
+    restoredInner.place(2, 4, TileKind.Empty);
+    simulation.step();
+    expect(restored.chargeAt(0, 1)).toBe(0);
+    expect(restoredInner.chargeAt(4, 2)).toBe(0);
+  });
+});
