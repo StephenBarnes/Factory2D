@@ -11,21 +11,24 @@ const EDIT_TONES: Record<EditSound, readonly [number, number, OscillatorType]> =
   unweld: [550, 400, "sine"],
 };
 
-// Keep the existing transposition: approximately F5 (698 Hz), not C6.
+// Approximately F5 (698 Hz).
 const BELL_HIGH_FREQUENCY = 1046.502261 * 0.6667;
-// Ratio, gain at sizes 1/8+, duration at sizes 1/8+ (seconds).
-// Preserve the small bell; larger bells emphasize the tierce and ringing nominal.
+const BELL_DEEP_VOICE_START_PITCH = 5;
+// Ratio, gains at sizes 1/8/22, durations at sizes 1/8/22 (seconds).
+// Deep bells shift energy out of the hum and into upper ringing/strike modes.
 // Bell mode reference: https://www.hibberts.co.uk/identifying-bell-partials/
 const BELL_PARTIALS = [
-  [0.50,  0.16, 0.08,  1.80, 4.80], // Hum
-  [1.00,  0.42, 0.24,  1.80, 4.00], // Prime
-  [1.20,  0.00, 0.14,  1.80, 3.40], // Minor-third tierce
-  [1.203, 0.00, 0.04,  1.80, 3.40], // Split tierce: gentle beating, not vibrato
-  [1.50,  0.16, 0.11,  1.15, 2.80], // Quint
-  [2.03,  0.13, 0.22,  0.85, 3.20], // Slightly stretched nominal
-  [2.67,  0.10, 0.10,  0.60, 1.65],
-  [3.91,  0.06, 0.07,  0.32, 0.90],
-  [5.43,  0.00, 0.03,  0.16, 0.35], // Brief metallic attack
+  [0.50,  0.16, 0.08, 0.02,   1.80, 4.80, 1.80], // Hum
+  [1.00,  0.42, 0.24, 0.18,   1.80, 4.00, 2.20], // Prime
+  [1.20,  0.00, 0.14, 0.12,   1.80, 3.40, 2.50], // Minor-third tierce
+  [1.203, 0.00, 0.04, 0.08,   1.80, 3.40, 2.50], // Split tierce: gentle beating, not vibrato
+  [1.50,  0.16, 0.11, 0.12,   1.15, 2.80, 2.00], // Quint
+  [2.03,  0.13, 0.22, 0.22,   0.85, 3.20, 3.60], // Slightly stretched nominal
+  [2.67,  0.10, 0.10, 0.15,   0.60, 1.65, 2.80],
+  [3.91,  0.06, 0.07, 0.24,   0.32, 0.90, 2.00],
+  [5.43,  0.00, 0.03, 0.18,   0.16, 0.35, 1.80],
+  [8.21,  0.00, 0.00, 0.20,   0.16, 0.16, 2.80], // Deep-bell metallic strike
+  [11.17, 0.00, 0.00, 0.15,   0.10, 0.10, 1.20],
 ] as const;
 
 /** Browser-only feedback; never participates in simulation state or timing. */
@@ -111,12 +114,16 @@ export class WorkshopSounds {
   private bell(pitch: number): void {
     const octaves = pitch / BELL_STEPS_PER_OCTAVE;
     const frequency = BELL_HIGH_FREQUENCY * 2 ** -octaves;
-    // Lower pitches retain the size-eight voice, without extrapolating its gains.
     const size = Math.min(1, octaves);
-    for (const [ratio, smallGain, largeGain, smallDuration, largeDuration] of BELL_PARTIALS) {
-      const gain = smallGain + (largeGain - smallGain) * size;
+    const deep = Math.max(0, Math.min(1,
+      (pitch - BELL_DEEP_VOICE_START_PITCH) / (BELL_PITCH_COUNT - 1 - BELL_DEEP_VOICE_START_PITCH),
+    ));
+    for (const [ratio, smallGain, largeGain, deepGain, smallDuration, largeDuration, deepDuration] of BELL_PARTIALS) {
+      const baseGain = smallGain + (largeGain - smallGain) * size;
+      const gain = baseGain + (deepGain - baseGain) * deep;
       if (gain === 0) continue;
-      const duration = smallDuration + (largeDuration - smallDuration) * size;
+      const baseDuration = smallDuration + (largeDuration - smallDuration) * size;
+      const duration = baseDuration + (deepDuration - baseDuration) * deep;
       const partial = frequency * ratio;
       this.tone(partial, partial, "sine", 0, duration, gain);
     }
