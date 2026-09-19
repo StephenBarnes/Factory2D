@@ -29,26 +29,26 @@
       "price": 10
     },
     {
-      "code": "Y",
-      "price": 30
-    },
-    {
       "code": "#",
       "price": 1
+    },
+    {
+      "code": "Y",
+      "price": 30
     }
   ],
   "editableRegions": [
-    {
-      "x": 6,
-      "y": 7,
-      "width": 1,
-      "height": 1
-    },
     {
       "x": 1,
       "y": 3,
       "width": 13,
       "height": 4
+    },
+    {
+      "x": 1,
+      "y": 7,
+      "width": 10,
+      "height": 1
     }
   ],
   "initialBoard": {
@@ -66,8 +66,8 @@
       "#.............#",
       "#.............#",
       "#.............#",
-      "#BBBBB.BBBB#DNV",
-      "########1###ii#",
+      "#..........#DNV",
+      "############ii#",
       "###############"
     ],
     "orientations": [
@@ -108,11 +108,11 @@
       },
       {
         "id": "7c54f7d5-e51f-4028-9d1c-9a668a1cdb8a",
-        "x": 5.379648353605851,
-        "y": 8.364627976889286,
+        "x": 6.9437803418232775,
+        "y": 8.346478354816504,
         "width": 2.32,
         "height": 0.74,
-        "text": "2. Use a welder block to\njoin two iron blocks.",
+        "text": "3. Use a welder block to\njoin two iron blocks.",
         "owner": "author"
       },
       {
@@ -121,7 +121,16 @@
         "y": 9.231660330554822,
         "width": 4.34,
         "height": 0.48000000000000004,
-        "text": "3. Deliver ten 2x1 iron pieces to the delivery box.",
+        "text": "4. Deliver ten 2x1 iron pieces to the delivery box.",
+        "owner": "author"
+      },
+      {
+        "id": "d8f232a5-de54-4092-a94c-5cd04b3a64b9",
+        "x": 2.250587040615176,
+        "y": 8.32515721503795,
+        "width": 2.46,
+        "height": 0.74,
+        "text": "2. Use conveyors to move\nthe iron blocks right.",
         "owner": "author"
       }
     ],
@@ -133,7 +142,7 @@
       "|.............|",
       "|.............|",
       "|.............|",
-      "+++++|.+++++--|",
+      "|..........+--|",
       "+++++++++++|-.|",
       "--------------."
     ]
