@@ -25,10 +25,10 @@ export function populatePuzzleMap(container: HTMLElement, options: MainMenuOptio
   gemstoneCount.className = "gemstone-count";
   gemstoneCount.setAttribute("role", "img");
   gemstoneCount.title =
-    "Gemstones are earned by completing puzzles and automatically unlock new puzzle groups.";
+    `${completedPuzzleCount} ${completedPuzzleCount === 1 ? "puzzle" : "puzzles"} completed`;
   gemstoneCount.setAttribute(
     "aria-label",
-    `${completedPuzzleCount} ${completedPuzzleCount === 1 ? "gemstone" : "gemstones"}. ${gemstoneCount.title}`,
+    gemstoneCount.title,
   );
   const gemstoneIcon = document.createElement("span");
   gemstoneIcon.ariaHidden = "true";
