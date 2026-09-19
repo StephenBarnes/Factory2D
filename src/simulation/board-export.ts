@@ -1,12 +1,15 @@
 import {
   componentStateMatchesKind,
   hasComponentState,
+  DEFAULT_BEAM_SENSOR_THRESHOLD,
   LUT_DIMENSION,
   MAX_ASSEMBLER_OUTPUTS,
+  MAX_BEAM_SENSOR_THRESHOLD,
   MAX_COUNTER_THRESHOLD,
   MAX_DELAY_LENGTH,
   MAX_DISCARD_LENGTH,
   MAX_ROM_DIMENSION,
+  MIN_BEAM_SENSOR_THRESHOLD,
   MIN_COUNTER_THRESHOLD,
   MIN_DELAY_LENGTH,
   MIN_DISCARD_LENGTH,
@@ -126,6 +129,14 @@ interface ExportedCounter {
   readonly count: number;
 }
 
+interface ExportedBeamSensor {
+  readonly x: number;
+  readonly y: number;
+  readonly type: "beam-sensor";
+  readonly threshold: number;
+  readonly matchAll: boolean;
+}
+
 interface ExportedRom {
   readonly x: number;
   readonly y: number;
@@ -222,6 +233,7 @@ type ExportedComponent =
   | ExportedDelay
   | ExportedDiscard
   | ExportedCounter
+  | ExportedBeamSensor
   | ExportedRom
   | ExportedLut
   | ExportedChecker
@@ -417,6 +429,10 @@ function exportBoardContents(world: World): ExportedBoardContents {
           });
         } else if (componentState.type === "fragile") {
           if (componentState.fallDistance !== 0) {
+            components.push({ x, y, ...componentState });
+          }
+        } else if (componentState.type === "beam-sensor") {
+          if (componentState.threshold !== DEFAULT_BEAM_SENSOR_THRESHOLD || componentState.matchAll) {
             components.push({ x, y, ...componentState });
           }
         } else if (componentState.type === "movement-sensor") {
@@ -767,6 +783,7 @@ function importBoardContents(
       "discarded",
       "data",
       "threshold",
+      "matchAll",
       "count",
       "width",
       "height",
@@ -802,6 +819,8 @@ function importBoardContents(
           ? ["x", "y", "type", "length", "cursor", "data"]
           : type === "counter"
             ? ["x", "y", "type", "threshold", "count"]
+            : type === "beam-sensor"
+              ? ["x", "y", "type", "threshold", "matchAll"]
             : type === "lut"
               ? ["x", "y", "type", "width", "height", "values"]
             : type === "rom"
@@ -916,6 +935,20 @@ function importBoardContents(
         type,
         threshold,
         count: requireInteger(state.count, `${componentLabel} count`, 0, threshold - 1),
+      };
+    } else if (type === "beam-sensor") {
+      if (typeof state.matchAll !== "boolean") {
+        throw new Error(`${componentLabel} matchAll must be a boolean`);
+      }
+      snapshot = {
+        type,
+        threshold: requireInteger(
+          state.threshold,
+          `${componentLabel} threshold`,
+          MIN_BEAM_SENSOR_THRESHOLD,
+          MAX_BEAM_SENSOR_THRESHOLD,
+        ),
+        matchAll: state.matchAll,
       };
     } else if (type === "lut") {
       snapshot = {
@@ -1036,6 +1069,7 @@ function importBoardContents(
     const kind = expectDefined(kinds[cellIndex], `tile kind at index ${cellIndex}`) as TileKind;
     if (hasComponentState(kind) && TILE_DEFINITIONS[kind].fragile !== true &&
         kind !== TileKind.MovementSensor &&
+        kind !== TileKind.BeamBlockSensor && kind !== TileKind.BeamBodySensor &&
         componentStateAtCell[cellIndex] !== 1) {
       const x = cellIndex % width;
       const y = (cellIndex - x) / width;

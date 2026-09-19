@@ -26,6 +26,9 @@ export const DEFAULT_DISCARD_LENGTH = 3;
 export const MIN_COUNTER_THRESHOLD = 1;
 export const MAX_COUNTER_THRESHOLD = 99;
 export const DEFAULT_COUNTER_THRESHOLD = 4;
+export const MIN_BEAM_SENSOR_THRESHOLD = 0;
+export const MAX_BEAM_SENSOR_THRESHOLD = 120000;
+export const DEFAULT_BEAM_SENSOR_THRESHOLD = 0;
 export const MIN_ROM_DIMENSION = 1;
 export const MAX_ROM_DIMENSION = 9;
 export const DEFAULT_ROM_WIDTH = 3;
@@ -37,6 +40,14 @@ export const MAX_ASSEMBLER_OUTPUTS = 9;
 
 export interface NumericComponentConfiguration {
   readonly type: "number";
+  readonly label: string;
+  readonly minimum: number;
+  readonly maximum: number;
+  readonly configureOnPlacement: boolean;
+}
+
+export interface BeamSensorComponentConfiguration {
+  readonly type: "beam-sensor";
   readonly label: string;
   readonly minimum: number;
   readonly maximum: number;
@@ -64,6 +75,7 @@ export interface RuneArrayComponentConfiguration {
 
 export type ComponentConfiguration =
   | NumericComponentConfiguration
+  | BeamSensorComponentConfiguration
   | TernaryGridComponentConfiguration
   | TextComponentConfiguration
   | RuneArrayComponentConfiguration;
@@ -87,6 +99,13 @@ const COUNTER_CONFIGURATION: NumericComponentConfiguration = Object.freeze({
   label: "Threshold",
   minimum: MIN_COUNTER_THRESHOLD,
   maximum: MAX_COUNTER_THRESHOLD,
+  configureOnPlacement: false,
+});
+const BEAM_SENSOR_CONFIGURATION: BeamSensorComponentConfiguration = Object.freeze({
+  type: "beam-sensor",
+  label: "Threshold",
+  minimum: MIN_BEAM_SENSOR_THRESHOLD,
+  maximum: MAX_BEAM_SENSOR_THRESHOLD,
   configureOnPlacement: false,
 });
 const TERNARY_GRID_CONFIGURATION: TernaryGridComponentConfiguration = Object.freeze({
@@ -127,6 +146,9 @@ export function componentConfigurationForKind(
       return DISCARD_CONFIGURATION;
     case TileKind.Counter:
       return COUNTER_CONFIGURATION;
+    case TileKind.BeamBlockSensor:
+    case TileKind.BeamBodySensor:
+      return BEAM_SENSOR_CONFIGURATION;
     case TileKind.Rom:
     case TileKind.Lut:
     case TileKind.Checker:
@@ -158,6 +180,12 @@ export interface CounterComponentState {
   readonly type: "counter";
   threshold: number;
   count: number;
+}
+
+export interface BeamSensorComponentState {
+  readonly type: "beam-sensor";
+  threshold: number;
+  matchAll: boolean;
 }
 
 export interface RomComponentState {
@@ -264,6 +292,7 @@ export type ConfigurableComponentState =
   | DelayComponentState
   | DiscardComponentState
   | CounterComponentState
+  | BeamSensorComponentState
   | RomComponentState
   | LutComponentState
   | CheckerComponentState
@@ -288,6 +317,12 @@ export interface CounterComponentSnapshot {
   readonly type: "counter";
   readonly threshold: number;
   readonly count: number;
+}
+
+export interface BeamSensorComponentSnapshot {
+  readonly type: "beam-sensor";
+  readonly threshold: number;
+  readonly matchAll: boolean;
 }
 
 export interface RomComponentSnapshot {
@@ -370,6 +405,7 @@ export type ConfigurableComponentSnapshot =
   | DelayComponentSnapshot
   | DiscardComponentSnapshot
   | CounterComponentSnapshot
+  | BeamSensorComponentSnapshot
   | RomComponentSnapshot
   | LutComponentSnapshot
   | CheckerComponentSnapshot
@@ -417,6 +453,13 @@ export function createDefaultComponentState(
         type: "counter",
         threshold: DEFAULT_COUNTER_THRESHOLD,
         count: 0,
+      };
+    case TileKind.BeamBlockSensor:
+    case TileKind.BeamBodySensor:
+      return {
+        type: "beam-sensor",
+        threshold: DEFAULT_BEAM_SENSOR_THRESHOLD,
+        matchAll: false,
       };
     case TileKind.Rom:
       return {
@@ -496,6 +539,8 @@ export function cloneComponentState(
         threshold: state.threshold,
         count: state.count,
       };
+    case "beam-sensor":
+      return { type: state.type, threshold: state.threshold, matchAll: state.matchAll };
     case "rom":
       return {
         type: "rom",
@@ -572,6 +617,8 @@ export function snapshotComponentState(
         threshold: state.threshold,
         count: state.count,
       };
+    case "beam-sensor":
+      return { type: state.type, threshold: state.threshold, matchAll: state.matchAll };
     case "rom":
       return {
         type: "rom",
@@ -664,6 +711,17 @@ export function validateComponentSnapshot(
         MAX_COUNTER_THRESHOLD,
       );
       requireInteger(snapshot.count, "Counter count", 0, snapshot.threshold - 1);
+      break;
+    case "beam-sensor":
+      requireInteger(
+        snapshot.threshold,
+        "Beam sensor threshold",
+        MIN_BEAM_SENSOR_THRESHOLD,
+        MAX_BEAM_SENSOR_THRESHOLD,
+      );
+      if (typeof snapshot.matchAll !== "boolean") {
+        throw new RangeError("Beam sensor matchAll flag must be a boolean");
+      }
       break;
     case "rom":
       requireInteger(snapshot.width, "ROM width", MIN_ROM_DIMENSION, MAX_ROM_DIMENSION);
@@ -773,6 +831,8 @@ export function stateFromSnapshot(
         threshold: snapshot.threshold,
         count: snapshot.count,
       };
+    case "beam-sensor":
+      return { type: snapshot.type, threshold: snapshot.threshold, matchAll: snapshot.matchAll };
     case "rom":
       return {
         type: "rom",
@@ -949,6 +1009,8 @@ export function componentStateMatchesKind(
     (state.type === "fragile" && TILE_DEFINITIONS[kind].fragile === true) ||
     (state.type === "movement-sensor" && kind === TileKind.MovementSensor) ||
     (state.type === "counter" && kind === TileKind.Counter) ||
+    (state.type === "beam-sensor" &&
+      (kind === TileKind.BeamBlockSensor || kind === TileKind.BeamBodySensor)) ||
     (state.type === "rom" && kind === TileKind.Rom) ||
     (state.type === "lut" && kind === TileKind.Lut) ||
     (state.type === "checker" && kind === TileKind.Checker) ||

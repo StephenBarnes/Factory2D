@@ -41,6 +41,8 @@ export class CircuitResolver {
   private readonly topologyParentIndices: number[] = [];
   private hasWinIntent = false;
   private hasLossIntent = false;
+  private beamBodyVisits = new Uint32Array(0);
+  private beamBodyVisitGeneration = 0;
 
   /** Freeze link controls before any observer collects mechanical bodies. */
   observeMagicLinks(runtimes: readonly WorldRuntime[]): void {
@@ -331,39 +333,36 @@ export class CircuitResolver {
         const orientation = world.orientationAtIndex(index);
         const rear = neighborIndex(world, index, oppositeDirection(orientation));
         const targetKind = rear < 0 ? TileKind.Empty : world.kindAtIndex(rear);
-        outputCharge = 0;
-        if (targetKind !== TileKind.Empty) {
+        const configuration = world.beamSensorConfigurationAtIndex(index);
+        let count = 0;
+        if (configuration.matchAll || targetKind !== TileKind.Empty) {
           for (
             let target = neighborIndex(world, index, orientation);
             target >= 0;
             target = neighborIndex(world, target, orientation)
           ) {
-            if (world.kindAtIndex(target) === targetKind) {
-              outputCharge = 1;
-              break;
+            const targetType = world.kindAtIndex(target);
+            if (targetType !== TileKind.Empty &&
+                (configuration.matchAll || targetType === targetKind)) {
+              count += 1;
+              if (count > configuration.threshold) break;
             }
           }
         }
-      } else if (kind === TileKind.Comparer || kind === TileKind.BeamBodySensor) {
+        outputCharge = chargeFromSum(count - configuration.threshold);
+      } else if (kind === TileKind.BeamBodySensor) {
+        outputCharge = this.beamBodyOutput(runtime, index);
+      } else if (kind === TileKind.Comparer) {
         const orientation = world.orientationAtIndex(index);
         const rear = neighborIndex(world, index, oppositeDirection(orientation));
+        const front = neighborIndex(world, index, orientation);
         const bodies = runtime.weldedBodies;
-        outputCharge = 0;
-        if (rear >= 0 && world.kindAtIndex(rear) !== TileKind.Empty &&
-            bodies.rootAt(rear) !== bodies.rootAt(index)) {
-          for (
-            let target = neighborIndex(world, index, orientation);
-            target >= 0;
-            target = kind === TileKind.Comparer ? -1 : neighborIndex(world, target, orientation)
-          ) {
-            if (world.kindAtIndex(target) !== TileKind.Empty &&
-                bodies.rootAt(target) !== bodies.rootAt(index) &&
-                bodies.matchesUnderTranslation(rear, target)) {
-              outputCharge = 1;
-              break;
-            }
-          }
-        }
+        outputCharge = rear >= 0 && front >= 0 &&
+          world.kindAtIndex(rear) !== TileKind.Empty &&
+          world.kindAtIndex(front) !== TileKind.Empty &&
+          bodies.rootAt(rear) !== bodies.rootAt(index) &&
+          bodies.rootAt(front) !== bodies.rootAt(index) &&
+          bodies.matchesUnderTranslation(rear, front) ? 1 : 0;
       } else {
         continue;
       }
@@ -376,6 +375,48 @@ export class CircuitResolver {
           expectDefined(this.driveSums[root], "circuit drive sum") + outputCharge;
       }
     }
+  }
+
+  private beamBodyOutput(runtime: WorldRuntime, index: number): Charge {
+    const world = runtime.world;
+    const configuration = world.beamSensorConfigurationAtIndex(index);
+    const orientation = world.orientationAtIndex(index);
+    const rear = neighborIndex(world, index, oppositeDirection(orientation));
+    const bodies = runtime.weldedBodies;
+    const ownRoot = bodies.rootAt(index);
+    if (!configuration.matchAll && (rear < 0 ||
+        world.kindAtIndex(rear) === TileKind.Empty || bodies.rootAt(rear) === ownRoot)) {
+      return chargeFromSum(-configuration.threshold);
+    }
+
+    // Reuse root marks across sensors and nested boards, without clearing per ray.
+    const cellCount = world.width * world.height;
+    if (this.beamBodyVisits.length < cellCount) {
+      this.beamBodyVisits = new Uint32Array(cellCount);
+    }
+    this.beamBodyVisitGeneration = (this.beamBodyVisitGeneration + 1) >>> 0;
+    if (this.beamBodyVisitGeneration === 0) {
+      this.beamBodyVisits.fill(0);
+      this.beamBodyVisitGeneration = 1;
+    }
+    const generation = this.beamBodyVisitGeneration;
+    let count = 0;
+    for (
+      let target = neighborIndex(world, index, orientation);
+      target >= 0;
+      target = neighborIndex(world, target, orientation)
+    ) {
+      if (world.kindAtIndex(target) === TileKind.Empty) continue;
+      const root = bodies.rootAt(target);
+      if (this.beamBodyVisits[root] === generation) continue;
+      this.beamBodyVisits[root] = generation;
+      if (configuration.matchAll ||
+          (root !== ownRoot && bodies.matchesUnderTranslation(rear, target))) {
+        count += 1;
+        if (count > configuration.threshold) return 1;
+      }
+    }
+    return chargeFromSum(count - configuration.threshold);
   }
 
   private driveGates(runtime: WorldRuntime): void {

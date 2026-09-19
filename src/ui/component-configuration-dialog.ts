@@ -18,6 +18,7 @@ import { expectDefined } from "../util/assert";
 
 export type ComponentConfigurationSubmission =
   | { readonly type: "number"; readonly value: number }
+  | { readonly type: "beam-sensor"; readonly threshold: number; readonly matchAll: boolean }
   | { readonly type: "text"; readonly value: string; readonly category: string }
   | {
       readonly type: "grid";
@@ -44,6 +45,8 @@ export class ComponentConfigurationDialog {
   private readonly numericPanel: HTMLElement;
   private readonly numericLabel: HTMLElement;
   private readonly numericInput: HTMLInputElement;
+  private readonly beamSensorPanel: HTMLElement;
+  private readonly beamSensorMatchAll: HTMLInputElement;
   private readonly romPanel: HTMLElement;
   private readonly romWidth: HTMLInputElement;
   private readonly romHeight: HTMLInputElement;
@@ -91,6 +94,8 @@ export class ComponentConfigurationDialog {
     this.numericPanel = requiredDescendant(dialog, "[data-component-numeric-panel]");
     this.numericLabel = requiredDescendant(dialog, "[data-component-numeric-label]");
     this.numericInput = requiredDescendant(dialog, "[data-component-numeric-input]");
+    this.beamSensorPanel = requiredDescendant(dialog, "[data-component-beam-sensor-panel]");
+    this.beamSensorMatchAll = requiredDescendant(dialog, "[data-component-beam-sensor-match-all]");
     this.romPanel = requiredDescendant(dialog, "[data-component-rom-panel]");
     this.romWidth = requiredDescendant(dialog, "[data-component-rom-width]");
     this.romHeight = requiredDescendant(dialog, "[data-component-rom-height]");
@@ -227,7 +232,11 @@ export class ComponentConfigurationDialog {
     this.submit = submit;
     this.title.textContent =
       `${submit === null ? "VIEW" : "CONFIGURE"} ${TILE_DEFINITIONS[kind].name.toUpperCase()}`;
-    this.numericPanel.hidden = configuration.type !== "number";
+    const numericConfiguration = configuration.type === "number" || configuration.type === "beam-sensor";
+    this.numericPanel.hidden = !numericConfiguration;
+    this.beamSensorPanel.hidden = configuration.type !== "beam-sensor";
+    this.beamSensorMatchAll.disabled = configuration.type !== "beam-sensor" || submit === null;
+    this.beamSensorMatchAll.checked = state.type === "beam-sensor" && state.matchAll;
     this.romPanel.hidden = configuration.type !== "grid";
     this.textPanel.hidden = configuration.type !== "text";
     this.arrayPanel.hidden = configuration.type !== "array";
@@ -239,7 +248,7 @@ export class ComponentConfigurationDialog {
     this.romWrapY.disabled = kind !== TileKind.Rom || submit === null;
     this.romWrapX.checked = state.type !== "rom" || state.wrapX;
     this.romWrapY.checked = state.type !== "rom" || state.wrapY;
-    this.numericInput.disabled = configuration.type !== "number";
+    this.numericInput.disabled = !numericConfiguration;
     this.romWidth.disabled = configuration.type !== "grid" || kind === TileKind.Lut;
     this.romHeight.disabled = configuration.type !== "grid" || kind === TileKind.Lut;
     this.textInput.disabled = configuration.type !== "text";
@@ -258,18 +267,29 @@ export class ComponentConfigurationDialog {
     this.cancelButton.textContent = submit === null ? "CLOSE" : "CANCEL";
     this.openArrayAfterSave = false;
 
-    if (configuration.type === "number") {
-      if (state.type !== "delay" && state.type !== "discard" && state.type !== "counter") {
+    if (configuration.type === "number" || configuration.type === "beam-sensor") {
+      if (state.type !== "delay" && state.type !== "discard" && state.type !== "counter" &&
+        state.type !== "beam-sensor") {
         throw new Error(`${TILE_DEFINITIONS[kind].name} is missing numeric state`);
       }
       this.numericLabel.textContent = configuration.label.toUpperCase();
       this.numericInput.min = String(configuration.minimum);
       this.numericInput.max = String(configuration.maximum);
       this.numericInput.value = String(
-        state.type === "counter" ? state.threshold : state.length,
+        state.type === "counter" || state.type === "beam-sensor" ? state.threshold : state.length,
       );
       this.description.textContent =
         `Choose an integer from ${configuration.minimum} through ${configuration.maximum}.`;
+      if (configuration.type === "beam-sensor") {
+        this.description.textContent +=
+          " Outputs −1 below the threshold, 0 at it, and +1 above it. " +
+          (kind === TileKind.BeamBodySensor
+            ? "Counts each distinct matching welded body on the forward ray once. " +
+              "Match all includes the sensor's own body if it intersects the ray."
+            : "Counts matching nonempty cells on the forward ray.") +
+          " The ray continues through all blocks and gaps to this board's boundary. " +
+          "Match all ignores the rear template; otherwise the rear block or body is the template.";
+      }
     } else if (configuration.type === "text") {
       if (state.type !== "monitor" && state.type !== "grapher") {
         throw new Error(`${TILE_DEFINITIONS[kind].name} is missing signal name state`);
@@ -330,7 +350,7 @@ export class ComponentConfigurationDialog {
     }
     if (submit === null) {
       this.cancelButton.focus();
-    } else if (configuration.type === "number") {
+    } else if (configuration.type === "number" || configuration.type === "beam-sensor") {
       this.numericInput.focus();
       this.numericInput.select();
     } else if (configuration.type === "text") {
@@ -376,6 +396,12 @@ export class ComponentConfigurationDialog {
     const submit = this.submit;
     if (configuration.type === "number") {
       submit({ type: "number", value: this.numericInput.valueAsNumber });
+    } else if (configuration.type === "beam-sensor") {
+      submit({
+        type: "beam-sensor",
+        threshold: this.numericInput.valueAsNumber,
+        matchAll: this.beamSensorMatchAll.checked,
+      });
     } else if (configuration.type === "text") {
       submit({
         type: "text",

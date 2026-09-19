@@ -1530,8 +1530,8 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 77,
       category: PaletteCategory.CircuitComplex,
-      description: "Outputs +1 sideways while any block ahead has the same type as the block immediately behind it.",
-      extendedDescription: ["Scans the whole forward row or column to this board's boundary, through gaps and other blocks. Compares only block types, including glass, ignoring orientation, configuration, and welds.", "A missing rear block or no matching block ahead outputs 0. Consumes nothing. Beams stay within their rune array; they do not scan enclosing boards."],
+      description: "Counts matching blocks ahead and outputs −1, 0, or +1 sideways below, at, or above its threshold. Press E to configure.",
+      extendedDescription: ["Scans every cell from one cell ahead to this board's boundary, through gaps and other blocks. By default, counts blocks with the immediate rear block's type, including glass, ignoring orientation, configuration, and welds. A missing rear block gives a count of zero.", "Press E to set a threshold from 0 to 120000 or enable Match all to count every nonempty forward-ray cell without using a rear template. Outputs −1 below the threshold, 0 at it, and +1 above it. The default threshold is 0 and Match all is off. Consumes nothing; beams never leave their board or rune array."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -1554,8 +1554,8 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 76,
       category: PaletteCategory.CircuitComplex,
-      description: "Outputs +1 sideways while any body ahead matches the complete body immediately behind it.",
-      extendedDescription: ["Scans the whole forward row or column through gaps and other bodies. Uses the Body Comparer's translation-only comparison of kinds, orientations, handedness, and welds; configuration is ignored.", "The rear body must exist. Bodies joined to the sensor do not match. A match outputs +1, otherwise 0, without consuming anything. Beams stay within their board or rune array."],
+      description: "Counts distinct matching bodies ahead and outputs −1, 0, or +1 sideways below, at, or above its threshold. Press E to configure.",
+      extendedDescription: ["Scans from one cell ahead to this board's boundary, through gaps and other bodies, counting each distinct welded body intersecting the ray once. By default, compares against the complete immediate rear body using the Body Comparer's translation-only matching of kinds, orientations, handedness, and welds, ignoring configuration. Missing rear bodies and bodies joined to the sensor do not match.", "Press E to set a threshold from 0 to 120000 or enable Match all to count every distinct nonempty body intersecting the ray, including the sensor's own body, without using a rear template. Outputs −1 below the threshold, 0 at it, and +1 above it. The default threshold is 0 and Match all is off. Consumes nothing; beams never leave their board or rune array."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,

@@ -29,13 +29,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Follow the current performance plan `docs/performance-todos.md`: refresh end-to-end browser measurements, investigate active fitted rendering, and measure retained session memory before choosing further optimizations. The original profile and completed optimization log are archived in `performance-history.md`.
 * Figure out why our game has high CPU usage currently, and whether we can reduce that (e.g. for battery life on laptop and mobile). The geode bench scene currently uses around 100% CPU while running, on Firefox.
 
-# Circuit network
-
-## New circuit components
-
-* Add configuration options on the beam sensors (Beam Block Sensor and Beam Body Sensor) to set a threshold. Make the blocks count how many matching blocks or bodies there are, and compare that to the threshold, outputting -1 if below or +1 if above, or zero if equal. Unconfigured blocks keep current behavior by setting the threshold to zero.
-	* For the same blocks, also add a checkbox to consider all non-empty block types or all distinct (non-empty) bodies as matching, instead of using the rear block/body. (Useful for e.g. enforcing a constraint that the player's vehicle must fully leave a starting area.)
-
 # UI
 
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)

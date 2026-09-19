@@ -282,6 +282,10 @@ export class TileInspector {
       } else if (componentState.type === "counter") {
         this.configuration.textContent =
           `COUNT ${componentState.count} · THRESHOLD ${componentState.threshold}`;
+      } else if (componentState.type === "beam-sensor") {
+        this.configuration.textContent =
+          `THRESHOLD ${componentState.threshold} · ` +
+          (componentState.matchAll ? "MATCH ALL" : "REAR TEMPLATE");
       } else if (componentState.type === "rom") {
         this.configuration.textContent =
           `${componentState.width} × ${componentState.height} · CELL ${componentState.cursor + 1}`;

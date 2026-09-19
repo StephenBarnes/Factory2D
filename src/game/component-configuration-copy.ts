@@ -17,6 +17,8 @@ export function copyComponentConfiguration(
       return world.configureNumericComponent(x, y, source.length);
     case "counter":
       return world.configureNumericComponent(x, y, source.threshold);
+    case "beam-sensor":
+      return world.configureBeamSensor(x, y, source.threshold, source.matchAll);
     case "monitor":
     case "grapher":
       return world.configureSignalLabel(x, y, source.label, source.category);

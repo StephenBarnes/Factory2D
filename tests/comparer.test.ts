@@ -152,6 +152,35 @@ describe("block type comparer", () => {
 });
 
 describe("beam block sensor", () => {
+  it("compares the matching count with its threshold and can count all types without a rear block", () => {
+    const world = new World(8, 1);
+    world.place(0, 0, TileKind.Glass);
+    world.place(1, 0, TileKind.BeamBlockSensor, Direction.Right);
+    world.place(3, 0, TileKind.Glass);
+    world.place(5, 0, TileKind.Platform);
+    world.place(7, 0, TileKind.Glass);
+    world.configureBeamSensor(1, 0, 2, false);
+    const simulation = new Simulation(world);
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(0);
+    world.place(4, 0, TileKind.Glass);
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(1);
+    world.place(3, 0, TileKind.Empty);
+    world.place(7, 0, TileKind.Empty);
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(-1);
+    world.place(0, 0, TileKind.Empty);
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(-1);
+    world.configureBeamSensor(1, 0, 2, true);
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(0);
+    world.place(7, 0, TileKind.Stone);
+    simulation.step();
+    expect(world.chargeAt(1, 0)).toBe(1);
+  });
+
   it("looks through gaps and other types, detects glass, and clears when the match disappears", () => {
     const world = new World(7, 2);
     world.place(0, 1, TileKind.Glass);
@@ -225,6 +254,77 @@ describe("beam block sensor", () => {
 });
 
 describe("beam body sensor", () => {
+  it("counts matching bodies once even when multiple members intersect the ray", () => {
+    const world = new World(10, 1);
+    for (const x of [0, 1, 4, 5, 8, 9]) world.place(x, 0, TileKind.Stone);
+    for (const x of [0, 4, 8]) world.setWeld(x, 0, x + 1, 0, true);
+    world.place(2, 0, TileKind.BeamBodySensor, Direction.Right);
+    world.configureBeamSensor(2, 0, 2, false);
+    const simulation = new Simulation(world);
+    simulation.step();
+    expect(world.chargeAt(2, 0)).toBe(0);
+    world.setWeld(8, 0, 9, 0, false);
+    simulation.step();
+    expect(world.chargeAt(2, 0)).toBe(-1);
+    world.configureBeamSensor(2, 0, 0, false);
+    simulation.step();
+    expect(world.chargeAt(2, 0)).toBe(1);
+  });
+
+  it("counts distinct bodies through gaps, including its own body in match-all mode", () => {
+    const world = new World(7, 2);
+    world.place(0, 1, TileKind.BeamBodySensor, Direction.Right);
+    world.place(1, 1, TileKind.Platform);
+    world.setWeld(0, 1, 1, 1, true);
+    // One off-axis bridge intersects the ray twice, with a different body between.
+    for (let x = 2; x <= 4; x += 1) world.place(x, 0, TileKind.Platform);
+    world.setWeld(2, 0, 3, 0, true);
+    world.setWeld(3, 0, 4, 0, true);
+    for (const x of [2, 4]) {
+      world.place(x, 1, TileKind.Platform);
+      world.setWeld(x, 0, x, 1, true);
+    }
+    world.place(3, 1, TileKind.Glass);
+    world.place(6, 1, TileKind.BeamBodySensor, Direction.Left);
+    world.configureBeamSensor(0, 1, 4, true);
+    world.configureBeamSensor(6, 1, 3, true);
+    const simulation = new Simulation(world);
+    simulation.step();
+    expect(world.chargeAt(0, 1)).toBe(0);
+    expect(world.chargeAt(6, 1)).toBe(0);
+    world.setWeld(3, 0, 3, 1, true);
+    simulation.step();
+    expect(world.chargeAt(0, 1)).toBe(-1);
+    expect(world.chargeAt(6, 1)).toBe(-1);
+    world.place(5, 1, TileKind.Stone);
+    simulation.step();
+    expect(world.chargeAt(0, 1)).toBe(0);
+    expect(world.chargeAt(6, 1)).toBe(0);
+  });
+
+  it("preserves configured nested sensing through cloning, transforms, and scene persistence", () => {
+    const root = new World(1, 1);
+    root.place(0, 0, TileKind.RuneArray);
+    root.configureRuneArray(0, 0, 5, 1, "");
+    const inner = root.runeArrayWorldAt(0, 0);
+    inner.place(0, 0, TileKind.BeamBodySensor, Direction.Right);
+    inner.configureBeamSensor(0, 0, 2, true);
+    inner.place(2, 0, TileKind.Platform);
+    inner.place(4, 0, TileKind.Platform);
+    const restored = deserializeBoard(serializeBoard(root.clone().transformed(0, true, false), 0)).world;
+    const restoredInner = restored.runeArrayWorldAt(0, 0);
+    const simulation = new Simulation(restored);
+    simulation.step();
+    expect(restoredInner.chargeAt(4, 0)).toBe(0);
+    restoredInner.place(0, 0, TileKind.Empty);
+    simulation.step();
+    expect(restoredInner.chargeAt(4, 0)).toBe(-1);
+    restoredInner.place(0, 0, TileKind.Platform);
+    restoredInner.place(1, 0, TileKind.Platform);
+    simulation.step();
+    expect(restoredInner.chargeAt(4, 0)).toBe(1);
+  });
+
   it("matches whole off-axis bodies through obstructions, not just the intersected block", () => {
     const world = new World(8, 3);
     for (let x = 0; x < world.width; x += 1) world.place(x, 2, TileKind.Platform);

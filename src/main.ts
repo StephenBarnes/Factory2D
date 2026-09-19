@@ -1232,6 +1232,8 @@ function openComponentConfiguration(cell: GridCell): void {
       }
       const changed = submission.type === "number"
         ? surface.world.configureNumericComponent(cell.x, cell.y, submission.value)
+        : submission.type === "beam-sensor"
+        ? surface.world.configureBeamSensor(cell.x, cell.y, submission.threshold, submission.matchAll)
         : submission.type === "text"
         ? surface.world.configureSignalLabel(cell.x, cell.y, submission.value, submission.category)
         : submission.type === "array"

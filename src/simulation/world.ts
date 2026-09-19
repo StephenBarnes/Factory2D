@@ -6,7 +6,9 @@ import {
   hasComponentState,
   LUT_DIMENSION,
   MAX_ASSEMBLER_OUTPUTS,
+  MAX_BEAM_SENSOR_THRESHOLD,
   MAX_ROM_DIMENSION,
+  MIN_BEAM_SENSOR_THRESHOLD,
   MIN_ROM_DIMENSION,
   snapshotComponentState,
   stateFromSnapshot,
@@ -14,6 +16,7 @@ import {
   validateComponentSnapshot,
   validateSignalLabel,
   type AssemblerComponentState,
+  type BeamSensorComponentState,
   type ConfigurableComponentSnapshot,
   type ConfigurableComponentState,
   type MovementSensorComponentState,
@@ -363,6 +366,15 @@ export class World {
     return snapshotComponentState(this.requireComponentStateAtIndex(index));
   }
 
+  /** Allocation-free configuration access; callers must not retain it across edits. */
+  beamSensorConfigurationAtIndex(index: number): Readonly<BeamSensorComponentState> {
+    const state = this.requireComponentStateAtIndex(index);
+    if (state.type !== "beam-sensor") {
+      throw new Error(`Tile at index ${index} is not a beam sensor`);
+    }
+    return state;
+  }
+
   /** Mutable motion history and committed ports; callers must not retain it across edits. */
   movementSensorStateAtIndex(index: number): MovementSensorComponentState {
     this.assertIndex(index);
@@ -436,6 +448,35 @@ export class World {
     } else {
       throw new Error(`Tile at (${x}, ${y}) does not have numeric configuration`);
     }
+    this.cells.charges[index] = 0;
+    this.touchVisualRevision();
+    return true;
+  }
+
+  configureBeamSensor(x: number, y: number, threshold: number, matchAll: boolean): boolean {
+    const index = this.indexOf(x, y);
+    const state = this.requireComponentStateAtIndex(index);
+    if (state.type !== "beam-sensor") {
+      throw new Error(`Tile at (${x}, ${y}) is not a beam sensor`);
+    }
+    if (
+      !Number.isInteger(threshold) ||
+      threshold < MIN_BEAM_SENSOR_THRESHOLD ||
+      threshold > MAX_BEAM_SENSOR_THRESHOLD
+    ) {
+      throw new RangeError(
+        `Beam sensor threshold must be an integer from ` +
+        `${MIN_BEAM_SENSOR_THRESHOLD} through ${MAX_BEAM_SENSOR_THRESHOLD}`,
+      );
+    }
+    if (typeof matchAll !== "boolean") {
+      throw new RangeError("Beam sensor matchAll flag must be a boolean");
+    }
+    if (state.threshold === threshold && state.matchAll === matchAll) {
+      return false;
+    }
+    state.threshold = threshold;
+    state.matchAll = matchAll;
     this.cells.charges[index] = 0;
     this.touchVisualRevision();
     return true;
