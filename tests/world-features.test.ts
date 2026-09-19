@@ -93,9 +93,10 @@ describe("world feature index", () => {
     const actions = new Int8Array(world.cellCount);
     const headWelds = new Uint8Array(world.cellCount);
     const armIds = new Uint32Array(world.cellCount);
+    const retractingBases = new Uint8Array(world.cellCount);
     actions[base] = 1;
 
-    expect(world.applyPistonTransitions(actions, headWelds, armIds)).toBe(1);
+    expect(world.applyPistonTransitions(actions, headWelds, armIds, retractingBases)).toBe(1);
 
     expect(featureIndices(world, WorldFeature.Piston)).toEqual([base]);
     expect(featureIndices(world, WorldFeature.Occupied)).toEqual([base, base + 1]);

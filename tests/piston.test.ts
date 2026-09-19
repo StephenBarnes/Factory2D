@@ -29,6 +29,18 @@ function placeNegativelyPoweredFixedBase(world: World, x: number, y: number): vo
   world.setWeld(x - 1, y, x - 2, y, true);
 }
 
+function placeNegativelyPoweredDownBase(world: World): number {
+  world.place(2, 1, TileKind.PistonBase, Direction.Down);
+  const armId = world.place(2, 2, TileKind.PistonArm, Direction.Down);
+  world.place(1, 1, TileKind.Inverter, Direction.Right);
+  world.place(0, 1, TileKind.FixedCharge);
+  world.setWeld(2, 1, 2, 2, true);
+  world.setWeld(2, 1, 1, 1, true);
+  world.setWeld(1, 1, 0, 1, true);
+  world.setCharge(0, 1, 1);
+  return armId;
+}
+
 describe("pistons", () => {
   it("activates machinery added after empty ticks and reuses it after reset", () => {
     const world = new World(5, 6);
@@ -298,6 +310,121 @@ describe("pistons", () => {
     expect(world.kindAt(3, 3)).toBe(TileKind.Piston);
     expect(world.kindAt(3, 2)).toBe(TileKind.Empty);
     expect(world.idAt(3, 1)).toBe(targetId);
+  });
+
+  it("lowers a downward piston onto its grounded arm in the retraction tick", () => {
+    const world = new World(4, 4);
+    const armId = placeNegativelyPoweredDownBase(world);
+    const inputId = world.idAt(1, 1);
+    world.place(2, 3, TileKind.Platform);
+
+    new Simulation(world).step();
+
+    expect(world.tileAt(2, 2)).toEqual({ kind: TileKind.Piston, id: armId });
+    expect(world.idAt(1, 2)).toBe(inputId);
+    expect(world.kindAt(2, 1)).toBe(TileKind.Empty);
+    expect(world.isWelded(2, 2, 1, 2)).toBe(true);
+    expect(world.kindAt(2, 3)).toBe(TileKind.Platform);
+    expect(world.chargeAt(2, 2)).toBe(-1);
+  });
+
+  it("lowers onto an arm at the bottom boundary", () => {
+    const world = new World(4, 3);
+    const armId = placeNegativelyPoweredDownBase(world);
+
+    new Simulation(world).step();
+
+    expect(world.tileAt(2, 2)).toEqual({ kind: TileKind.Piston, id: armId });
+    expect(world.kindAt(2, 1)).toBe(TileKind.Empty);
+  });
+
+  it("preserves a grounded head weld when lowering the base", () => {
+    const world = new World(4, 4);
+    const armId = placeNegativelyPoweredDownBase(world);
+    const groundId = world.place(2, 3, TileKind.Platform);
+    world.setWeld(2, 2, 2, 3, true);
+
+    new Simulation(world).step();
+
+    expect(world.tileAt(2, 2)).toEqual({ kind: TileKind.Piston, id: armId });
+    expect(world.idAt(2, 3)).toBe(groundId);
+    expect(world.isWelded(2, 2, 2, 3)).toBe(true);
+  });
+
+  it("lifts the arm instead when lowering the base would push an unwelded obstruction", () => {
+    const world = new World(4, 4);
+    const armId = placeNegativelyPoweredDownBase(world);
+    const blockerId = world.place(1, 2, TileKind.Stone);
+    world.place(1, 3, TileKind.Platform);
+    world.place(2, 3, TileKind.Platform);
+
+    new Simulation(world).step();
+
+    expect(world.tileAt(2, 1)).toEqual({ kind: TileKind.Piston, id: armId });
+    expect(world.kindAt(2, 2)).toBe(TileKind.Empty);
+    expect(world.idAt(1, 2)).toBe(blockerId);
+  });
+
+  it("lowers parallel pistons sharing a welded base together", () => {
+    const world = new World(6, 4);
+    const firstArmId = placeNegativelyPoweredDownBase(world);
+    world.place(3, 1, TileKind.Conduit);
+    world.place(4, 1, TileKind.PistonBase, Direction.Down);
+    const secondArmId = world.place(4, 2, TileKind.PistonArm, Direction.Down);
+    world.setWeld(2, 1, 3, 1, true);
+    world.setWeld(3, 1, 4, 1, true);
+    world.setWeld(4, 1, 4, 2, true);
+    world.place(2, 3, TileKind.Platform);
+    world.place(4, 3, TileKind.Platform);
+
+    new Simulation(world).step();
+
+    expect(world.tileAt(2, 2)).toEqual({ kind: TileKind.Piston, id: firstArmId });
+    expect(world.tileAt(4, 2)).toEqual({ kind: TileKind.Piston, id: secondArmId });
+    expect(world.isWelded(2, 2, 3, 2)).toBe(true);
+    expect(world.isWelded(3, 2, 4, 2)).toBe(true);
+    expect(world.kindAt(2, 1)).toBe(TileKind.Empty);
+    expect(world.kindAt(4, 1)).toBe(TileKind.Empty);
+  });
+
+  it("holds both sides when the grounded head is welded and a slider prevents lowering", () => {
+    const world = new World(4, 4);
+    const armId = placeNegativelyPoweredDownBase(world);
+    const baseId = world.idAt(2, 1);
+    world.place(3, 1, TileKind.Slider, Direction.Right);
+    world.setWeld(2, 1, 3, 1, true);
+    world.place(2, 3, TileKind.Platform);
+    world.setWeld(2, 2, 2, 3, true);
+
+    new Simulation(world).step();
+
+    expect(world.tileAt(2, 1)).toEqual({ kind: TileKind.PistonBase, id: baseId });
+    expect(world.tileAt(2, 2)).toEqual({ kind: TileKind.PistonArm, id: armId });
+    expect(world.isWelded(2, 1, 3, 1)).toBe(true);
+    expect(world.isWelded(2, 1, 2, 2)).toBe(true);
+    expect(world.isWelded(2, 2, 2, 3)).toBe(true);
+  });
+
+  it("jams a lowering base against a competing extension without switching to a head pull", () => {
+    const world = new World(5, 5);
+    const armId = placeNegativelyPoweredDownBase(world);
+    const baseId = world.idAt(2, 1);
+    world.place(2, 3, TileKind.Platform);
+    const cargoId = world.place(3, 1, TileKind.Stone);
+    world.setWeld(2, 1, 3, 1, true);
+    const rivalId = world.place(3, 3, TileKind.Piston, Direction.Up);
+    world.place(4, 3, TileKind.FixedCharge);
+    world.place(3, 4, TileKind.Platform);
+    world.setWeld(3, 3, 4, 3, true);
+    world.setWeld(3, 3, 3, 4, true);
+
+    new Simulation(world).step();
+
+    expect(world.tileAt(2, 1)).toEqual({ kind: TileKind.PistonBase, id: baseId });
+    expect(world.tileAt(2, 2)).toEqual({ kind: TileKind.PistonArm, id: armId });
+    expect(world.idAt(3, 1)).toBe(cargoId);
+    expect(world.kindAt(3, 2)).toBe(TileKind.Empty);
+    expect(world.tileAt(3, 3)).toEqual({ kind: TileKind.Piston, id: rivalId });
   });
 
   it("does nothing at zero charge in either piston state", () => {

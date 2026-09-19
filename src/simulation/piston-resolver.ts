@@ -41,6 +41,7 @@ export class PistonResolver {
   private readonly actions: Int8Array;
   private readonly headWelds: Uint8Array;
   private readonly armIds: Uint32Array;
+  private readonly retractingBases: Uint8Array;
   private readonly breakingFasteners: number[] = [];
   private readonly dependencyPath: number[] = [];
   private readonly dependencyStack: number[] = [];
@@ -57,6 +58,7 @@ export class PistonResolver {
     this.actions = new Int8Array(world.cellCount);
     this.headWelds = new Uint8Array(world.cellCount);
     this.armIds = new Uint32Array(world.cellCount);
+    this.retractingBases = new Uint8Array(world.cellCount);
   }
 
   resolve(): number {
@@ -117,8 +119,8 @@ export class PistonResolver {
       stroke.base = base;
       stroke.arm = arm;
       stroke.action = action;
-      stroke.direction = action === 1 ? direction : oppositeDirection(direction);
-      stroke.recoil = false;
+      stroke.recoil = action === -1 && direction === Direction.Down;
+      stroke.direction = action === 1 || stroke.recoil ? direction : oppositeDirection(direction);
       stroke.headWelded = this.world.hasWeldAtIndex(action === 1 ? base : arm, direction);
       stroke.ready = false;
       this.strokeAt[base] = index;
@@ -127,7 +129,36 @@ export class PistonResolver {
       const stroke = expectDefined(this.strokes[index], "observed piston stroke");
       stroke.valid = this.propose(stroke);
     }
-    // A shared welded beam may require several matching head strokes. Reject
+    this.rejectInvalidPartners();
+    // Retraction prefers downward motion: lower a downward-facing base onto
+    // its arm, falling back to lifting the head if the base cannot move.
+    for (let index = 0; index < this.strokeCount; index += 1) {
+      const stroke = expectDefined(this.strokes[index], "lowering piston stroke");
+      if (!stroke.valid && stroke.action === -1 && stroke.recoil) {
+        stroke.recoil = false;
+        stroke.direction = oppositeDirection(stroke.direction);
+      }
+    }
+    for (let index = 0; index < this.strokeCount; index += 1) {
+      const stroke = expectDefined(this.strokes[index], "fallback piston pull");
+      if (!stroke.valid && stroke.action === -1 &&
+          this.world.orientationAtIndex(stroke.base) === Direction.Down) {
+        stroke.valid = this.propose(stroke);
+      }
+    }
+    this.rejectInvalidPartners();
+    for (let index = 0; index < this.strokeCount; index += 1) {
+      const stroke = expectDefined(this.strokes[index], "recoiling piston stroke");
+      if (!stroke.valid && stroke.action === 1) {
+        stroke.recoil = true;
+        stroke.direction = oppositeDirection(stroke.direction);
+        stroke.valid = this.propose(stroke);
+      }
+    }
+  }
+
+  private rejectInvalidPartners(): void {
+    // A shared welded load or base may require several matching strokes. Reject
     // the entire bundle if any required actuator cannot complete its stroke.
     let changed: boolean;
     do {
@@ -146,14 +177,6 @@ export class PistonResolver {
         }
       }
     } while (changed);
-    for (let index = 0; index < this.strokeCount; index += 1) {
-      const stroke = expectDefined(this.strokes[index], "recoiling piston stroke");
-      if (!stroke.valid && stroke.action === 1) {
-        stroke.recoil = true;
-        stroke.direction = oppositeDirection(stroke.direction);
-        stroke.valid = this.propose(stroke);
-      }
-    }
   }
 
   /** Carried pistons stay rigid; matching actuators on a shared load cooperate. */
@@ -226,26 +249,33 @@ export class PistonResolver {
     return true;
   }
 
-  /** Only split an aligned actuator approached from its welded load, not its base. */
+  /** Split matching actuators approached from a shared load or lowering base. */
   private partnerAt(stroke: Stroke, head: number, connection: number): number {
-    if (stroke.recoil) {
-      return -1;
-    }
     const orientation = this.world.orientationAtIndex(stroke.base);
-    if (this.neighbor(connection, orientation) !== head ||
-        !this.world.hasWeldAtIndex(connection, orientation)) {
-      return -1;
+    let base: number;
+    if (stroke.recoil) {
+      if (stroke.action !== -1 || this.neighbor(head, orientation) !== connection ||
+          this.world.kindAtIndex(connection) !== TileKind.PistonArm ||
+          !this.world.hasWeldAtIndex(head, orientation)) {
+        return -1;
+      }
+      base = head;
+    } else {
+      if (this.neighbor(connection, orientation) !== head ||
+          !this.world.hasWeldAtIndex(connection, orientation)) {
+        return -1;
+      }
+      base = stroke.action === 1 ? connection
+        : this.world.kindAtIndex(connection) === TileKind.PistonArm
+          ? this.neighbor(connection, oppositeDirection(orientation)) : -1;
     }
-    const base = stroke.action === 1 ? connection
-      : this.world.kindAtIndex(connection) === TileKind.PistonArm
-        ? this.neighbor(connection, oppositeDirection(orientation)) : -1;
     const index = base < 0 ? -1 : expectDefined(this.strokeAt[base], "cooperating piston index");
     if (index < 0 || base === stroke.base) {
       return -1;
     }
     const partner = expectDefined(this.strokes[index], "cooperating piston");
-    return partner.action === stroke.action && this.world.orientationAtIndex(base) === orientation
-      ? index : -1;
+    return partner.action === stroke.action && partner.recoil === stroke.recoil &&
+      this.world.orientationAtIndex(base) === orientation ? index : -1;
   }
 
   private enqueue(stroke: Stroke, cell: number): void {
@@ -304,7 +334,7 @@ export class PistonResolver {
       }
       for (const cell of stroke.cells) {
         const carried = expectDefined(this.strokeAt[cell], "carried piston stroke");
-        if (carried < 0 || carried === index) {
+        if (carried < 0 || carried === index || stroke.partners.includes(carried)) {
           continue;
         }
         const dependency = expectDefined(this.strokes[carried], "carried piston proposal");
@@ -493,6 +523,7 @@ export class PistonResolver {
     this.actions.fill(0);
     this.headWelds.fill(0);
     this.armIds.fill(0);
+    this.retractingBases.fill(0);
     let accepted = 0;
     for (let index = 0; index < this.strokeCount; index += 1) {
       const stroke = expectDefined(this.strokes[index], "committing piston proposal");
@@ -509,6 +540,7 @@ export class PistonResolver {
       this.headWelds[base] = stroke.headWelded ? 1 : 0;
       if (stroke.action === -1) {
         this.armIds[base] = this.world.idAtIndex(stroke.arm);
+        this.retractingBases[base] = stroke.recoil ? 1 : 0;
       }
     }
     if (accepted === 0) {
@@ -536,7 +568,9 @@ export class PistonResolver {
       }
     }
     const movements = this.world.moveBodies(this.cellRoots, this.moveX, this.moveY);
-    const transitions = this.world.applyPistonTransitions(this.actions, this.headWelds, this.armIds);
+    const transitions = this.world.applyPistonTransitions(
+      this.actions, this.headWelds, this.armIds, this.retractingBases,
+    );
     for (const cell of this.breakingFasteners) {
       if (this.world.kindAtIndex(cell) !== TileKind.Fastener) {
         throw new Error(`Moved fastener missing at index ${cell}`);

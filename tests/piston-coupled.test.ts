@@ -194,8 +194,8 @@ describe("dependency-ordered piston strokes", () => {
 
     for (let cycle = 0; cycle < 3; cycle += 1) {
       simulation.step();
-      // Later cycles briefly lose floor contact; gravity settles them next tick.
-      const lift = (cycle === 0 ? 0 : 1) - offset;
+      // Retraction keeps the feet grounded, so every cycle reaches the same height.
+      const lift = -offset;
       expect(world.kindAt(3, 3 - lift)).toBe(TileKind.PistonBase);
       expect(world.tileAt(3, 4 - lift)).toEqual({ kind: TileKind.PistonArm, id: upperId });
       expect(world.tileAt(3, 5 - lift)).toEqual({ kind: TileKind.Piston, id: lowerId });

@@ -1729,11 +1729,13 @@ export class World {
     actions: Int8Array,
     headWelds: Uint8Array,
     armIds: Uint32Array,
+    retractingBases: Uint8Array,
   ): number {
     if (
       actions.length !== this.cellCount ||
       headWelds.length !== this.cellCount ||
-      armIds.length !== this.cellCount
+      armIds.length !== this.cellCount ||
+      retractingBases.length !== this.cellCount
     ) {
       throw new RangeError("Piston transition buffers must match the world cell count");
     }
@@ -1750,10 +1752,11 @@ export class World {
       }
       const orientation = this.cells.orientations[base] as Direction;
       const arm = this.neighborIndex(base, orientation);
-      if (arm < 0) {
+      const baseRetracted = expectDefined(retractingBases[base], "piston base retraction") === 1;
+      if (arm < 0 && (action === 1 || !baseRetracted)) {
         throw new Error(`Piston transition at index ${base} leaves the world`);
       }
-      const head = this.neighborIndex(arm, orientation);
+      const head = arm < 0 ? -1 : this.neighborIndex(arm, orientation);
       const headWelded = expectDefined(headWelds[base], "piston head weld") === 1;
 
       if (action === 1) {
@@ -1784,11 +1787,11 @@ export class World {
         this.replaceKindAtIndex(base, TileKind.Piston);
         this.cells.ids[base] = movingArmId;
         if (headWelded) {
-          if (this.cells.kinds[arm] === TileKind.Empty) {
+          if (arm < 0 || this.cells.kinds[arm] === TileKind.Empty) {
             throw new Error(`Retracting piston at index ${base} lost its welded target`);
           }
           this.setWeldAtIndices(base, arm, 1);
-        } else {
+        } else if (!baseRetracted) {
           this.clearIndex(arm);
         }
         this.clearDisallowedWeldsAtIndex(base);
