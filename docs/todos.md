@@ -8,7 +8,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 # New non-circuit components
 
 * Add a flipper block. It modifies the body of the block it's facing, by flipping that entire body around that block horizontally or vertically, if doing so would not collide/overlap other blocks.
-* Add a resonator rune that emits a charge when a bell with matching pitch rings, anywhere on the grid; decide resonator's pitch in the same way by counting its body's number of blocks. This functions as dwarven radio/wireless signaling.
 * Hole-puncher block that destroys any blocks moved onto its tile cell, in the same tick they attempt to move onto it. For example, a 5x5 body falling onto one of these blocks, or moved past it by a conveyor, should be cut in half. Once we have the flipper block, also allow flipping bodies onto this block, which destroys the blocks that overlap it. Unclear what behavior we should have when rotating bodies onto it; maybe count it as colliding / preventing rotation onto it, or find all tiles that would intersect the hole-punch's center when rotated through it.
 	* As follow-up, add a lava block that behaves the same way, for e.g. puzzles about crossing a lava chasm.
 * Add a dwarf block which is breakable - anything falling onto the dwarf block should destroy it. Anything pushing the dwarf block should push it, unless the push is blocked by something on the other side like a wall, in which case that should also crush the dwarf. Use the shattering animation for this.
@@ -22,6 +21,13 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Allow welding blocks to the front face of a rotator block. When it rotates, it should treat the body there the same way it currently treats a non-welded body, rotating it around the rotator itself (unless it's joined to the rotator's own body via some other path, in which case we should prevent rotating).
 * Potentially allow configuring the initial state of stateful blocks like the rotator (initial head facing) and piston (whether to start expanded or retracted), maybe using some hotkey to toggle. Would require other changes: for the rotator, once we allow welding to the front/head this initial rotation determines which side can be welded to; for the piston, things like the cost of all placed components is a bit weird; may have to add a special case like piston heads and bodies each having half the price of ordinary retracted body-and-head piston blocks, but still hide body and arm separate blocks from the palette.
 * Bug: see `temp/conveyor-blocking-bug.json`. The conveyor is trying to move its own body right, and pushing the body below it left. Both those pushes together would cause an overlap/collision, so they're prevented. However, in this case, we want to still allow the gap to be closed - probably the conveyor block's body should move right and the other body's leftward move should be blocked. Can we have this behavior while still having consistent predictable physics?
+
+# Audio-related
+
+* Add a resonator rune that emits a charge when a bell with matching pitch rings, anywhere on the grid; decide resonator's pitch in the same way as bells do, by counting its body's number of blocks. This functions as dwarven radio/wireless signaling.
+* Potentially add variants of bell blocks - maybe silver bells that sound different, or chimes. Decide pitch the same way, but modify the partials to give the sounds different character.
+* Maybe make sound effects directional based on camera position, and volume slightly dependent on zoom level.
+* Add sound effects for a few blocks, e.g. pistons that extend or retract, drills, grinders, furnaces. These shouldn't behave like bells (pitch doesn't depend on body size, and sounds don't trigger resonators).
 
 # Performance
 

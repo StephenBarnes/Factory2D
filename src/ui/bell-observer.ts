@@ -1,11 +1,14 @@
 import { WeldedBodyIndex } from "../simulation/welded-body-index";
 import type { World } from "../simulation/world";
 import { WorldFeature } from "../simulation/world-features";
+import { expectDefined } from "../util/assert";
 
-// Preserve the original eight pitches per octave, including both endpoints.
-export const BELL_STEPS_PER_OCTAVE = 7;
-// Three octaves: F5 down to F2. Keep within 32 pitches for the bitmask below.
+// Twelve equal-tempered semitones per octave, tuned to A4 = 440 Hz.
+export const BELL_STEPS_PER_OCTAVE = 12;
+// Three octaves: F5 down to F2.
 export const BELL_PITCH_COUNT = 3 * BELL_STEPS_PER_OCTAVE + 1;
+const BELL_HIGHEST_MIDI_NOTE = 77; // F5
+const NOTE_NAMES = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"] as const;
 
 /** Zero-based pitch, descending as the welded body grows. */
 export function bellPitchForBodySize(size: number): number {
@@ -13,8 +16,13 @@ export function bellPitchForBodySize(size: number): number {
 }
 
 export function bellFrequencyForPitch(pitch: number): number {
-  // Approximately F5 (698 Hz) at pitch zero.
-  return 1046.502261 * 0.6667 * 2 ** (-pitch / BELL_STEPS_PER_OCTAVE);
+  return 440 * 2 ** ((BELL_HIGHEST_MIDI_NOTE - pitch - 69) / BELL_STEPS_PER_OCTAVE);
+}
+
+export function bellNoteForPitch(pitch: number): string {
+  const midiNote = BELL_HIGHEST_MIDI_NOTE - pitch;
+  const name = expectDefined(NOTE_NAMES[midiNote % BELL_STEPS_PER_OCTAVE], "Invalid bell note");
+  return `${name}${Math.floor(midiNote / BELL_STEPS_PER_OCTAVE) - 1}`;
 }
 
 interface BellObservation {
@@ -26,6 +34,7 @@ interface BellObservation {
 /** Browser-side tick observations; neither snapshots nor cloned worlds inherit them. */
 export class BellObserver {
   private readonly observations = new WeakMap<World, BellObservation>();
+  private readonly pitches = new Set<number>();
   private captureNumber = 0;
   private pending = false;
 
@@ -35,11 +44,14 @@ export class BellObserver {
     this.captureWorld(world);
   }
 
-  /** Bit (body size - 1), clamped to sizes 1..BELL_PITCH_COUNT; each pitch rings at most once. */
-  collectPitches(world: World): number {
-    if (!this.pending) return 0;
-    this.pending = false;
-    return this.collectWorldPitches(world);
+  /** Each pitch rings once; the returned set is reused by the next collection. */
+  collectPitches(world: World): ReadonlySet<number> {
+    this.pitches.clear();
+    if (this.pending) {
+      this.pending = false;
+      this.collectWorldPitches(world);
+    }
+    return this.pitches;
   }
 
   private captureWorld(world: World): void {
@@ -68,8 +80,7 @@ export class BellObserver {
     }
   }
 
-  private collectWorldPitches(world: World): number {
-    let pitches = 0;
+  private collectWorldPitches(world: World): void {
     const observation = this.observations.get(world);
     if (observation?.capture === this.captureNumber) {
       let bodies: WeldedBodyIndex | undefined;
@@ -85,7 +96,7 @@ export class BellObserver {
           bodies = observation.bodies ??= new WeldedBodyIndex(world);
           bodies.collect();
         }
-        pitches |= 1 << bellPitchForBodySize(bodies.memberCountAtRoot(bodies.rootAt(index)));
+        this.pitches.add(bellPitchForBodySize(bodies.memberCountAtRoot(bodies.rootAt(index))));
       }
     }
     for (
@@ -93,8 +104,7 @@ export class BellObserver {
       index >= 0;
       index = world.nextFeatureIndex(WorldFeature.RuneArray, index)
     ) {
-      pitches |= this.collectWorldPitches(world.runeArrayWorldAtIndex(index));
+      this.collectWorldPitches(world.runeArrayWorldAtIndex(index));
     }
-    return pitches;
   }
 }

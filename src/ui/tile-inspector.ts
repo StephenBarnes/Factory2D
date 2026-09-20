@@ -8,7 +8,7 @@ import {
 } from "../simulation/tile";
 import { WeldedBodyIndex } from "../simulation/welded-body-index";
 import type { World } from "../simulation/world";
-import { bellFrequencyForPitch, bellPitchForBodySize } from "./bell-observer";
+import { bellNoteForPitch, bellPitchForBodySize } from "./bell-observer";
 
 interface GridPosition {
   readonly x: number;
@@ -340,8 +340,8 @@ export class TileInspector {
       const bodies = this.bellBodies ??= new WeldedBodyIndex(this.world);
       bodies.collect();
       const size = bodies.memberCountAtRoot(bodies.rootAt(position.y * this.world.width + position.x));
-      const frequency = bellFrequencyForPitch(bellPitchForBodySize(size));
-      this.bell.textContent = `${frequency.toFixed(1)} Hz · ${size} BLOCK${size === 1 ? "" : "S"}`;
+      const note = bellNoteForPitch(bellPitchForBodySize(size));
+      this.bell.textContent = `${note} · ${size} BLOCK${size === 1 ? "" : "S"}`;
     }
     this.attractionRow.hidden = definition.attractionRange === 0;
     if (definition.attractionRange > 0) {

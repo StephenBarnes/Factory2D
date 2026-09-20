@@ -16,8 +16,8 @@ const EDIT_TONES: Record<EditSound, readonly [number, number, OscillatorType]> =
   unweld: [550, 400, "sine"],
 };
 
-const BELL_DEEP_VOICE_START_PITCH = 5;
-// Ratio, gains at sizes 1/8/22, durations at sizes 1/8/22 (seconds).
+const BELL_DEEP_VOICE_START_OCTAVES = 5 / 7;
+// Ratio, gains at sizes 1/13/37, durations at sizes 1/13/37 (seconds).
 // Deep bells shift energy out of the hum and into upper ringing/strike modes.
 // Bell mode reference: https://www.hibberts.co.uk/identifying-bell-partials/
 const BELL_PARTIALS = [
@@ -99,7 +99,7 @@ export class WorkshopSounds {
   }
 
   beforeStep(world: World, ticksPerSecond: number): void {
-    this.bellStepPending = ticksPerSecond < 10 && this.canPlay();
+    this.bellStepPending = ticksPerSecond < 15 && this.canPlay();
     if (this.bellStepPending) this.bells.capture(world);
   }
 
@@ -109,7 +109,7 @@ export class WorkshopSounds {
     const pitches = this.bells.collectPitches(world);
     if (!this.canPlay()) return;
     for (let pitch = 0; pitch < BELL_PITCH_COUNT; pitch += 1) {
-      if ((pitches & (1 << pitch)) === 0) continue;
+      if (!pitches.has(pitch)) continue;
       this.bell(pitch);
     }
   }
@@ -119,7 +119,8 @@ export class WorkshopSounds {
     const frequency = bellFrequencyForPitch(pitch);
     const size = Math.min(1, octaves);
     const deep = Math.max(0, Math.min(1,
-      (pitch - BELL_DEEP_VOICE_START_PITCH) / (BELL_PITCH_COUNT - 1 - BELL_DEEP_VOICE_START_PITCH),
+      (octaves - BELL_DEEP_VOICE_START_OCTAVES) /
+      ((BELL_PITCH_COUNT - 1) / BELL_STEPS_PER_OCTAVE - BELL_DEEP_VOICE_START_OCTAVES),
     ));
     for (const [ratio, smallGain, largeGain, deepGain, smallDuration, largeDuration, deepDuration] of BELL_PARTIALS) {
       const baseGain = smallGain + (largeGain - smallGain) * size;
