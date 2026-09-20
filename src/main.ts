@@ -1455,6 +1455,7 @@ const puzzleTests = new PuzzleTestController(
   { caseMenu: testCaseMenu, statusToast: testStatusToast, reportDialog: testReportDialog },
   {
     getBaseline: () => surface.session.baseline,
+    getTicksPerSecond: () => clock.ticksPerSecond,
     prepareForRuntimeChange,
     resetSession: () => sessions.resetSimulation(),
     beginSimulation: () => {

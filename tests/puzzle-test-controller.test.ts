@@ -111,7 +111,7 @@ interface ControllerHarness {
   };
 }
 
-function controllerHarness(solution: World): ControllerHarness {
+function controllerHarness(solution: World, getTicksPerSecond = () => 5): ControllerHarness {
   const view = new FakeView();
   const mountedCaseKinds: TileKind[] = [];
   const recordedReports: Array<PuzzleTestReport["scores"]> = [];
@@ -126,6 +126,7 @@ function controllerHarness(solution: World): ControllerHarness {
   };
   const dependencies: PuzzleTestControllerDependencies = {
     getBaseline: () => solution,
+    getTicksPerSecond,
     prepareForRuntimeChange: () => {
       counts.prepare += 1;
     },
@@ -202,6 +203,48 @@ describe("puzzle test controller", () => {
     expect(harness.view.report?.results.map((result) => result.id)).toEqual(["first", "second"]);
     expect(harness.recordedReports).toHaveLength(1);
     expect(harness.counts.begin).toBe(1);
+  });
+
+  it("scales the ramp with live speed selections and caps it at 60 ticks per second", () => {
+    let speed = 1;
+    const { controller } = controllerHarness(emptyVictoryWorld(), () => speed);
+    controller.configure(puzzleWith([
+      caseDefinition("timeout", 10_000, emptyVictoryWorld),
+    ]));
+    controller.togglePlayback(0);
+    const state = controller.lifecycle;
+    if (state.kind !== "running") throw new Error("Expected running case");
+
+    controller.advanceFrame(1_000, 1_000);
+    expect(state.run.simulation.tick).toBe(1);
+    speed = 30;
+    controller.advanceFrame(2_000, 1_000);
+    expect(state.run.simulation.tick).toBeGreaterThan(45);
+    expect(state.run.simulation.tick).toBeLessThan(60);
+
+    const tick = state.run.simulation.tick;
+    controller.advanceFrame(30_000, 101);
+    expect(state.run.simulation.tick - tick).toBe(6);
+  });
+
+  it("restarts an accelerated run at the selected speed and excludes pre-resume frame time", () => {
+    const { controller } = controllerHarness(emptyVictoryWorld(), () => 2);
+    controller.configure(puzzleWith([
+      caseDefinition("timeout", 10_000, emptyVictoryWorld),
+    ]));
+    controller.togglePlayback(0);
+    controller.advanceFrame(15_000, 101);
+    const state = controller.lifecycle;
+    if (state.kind !== "running") throw new Error("Expected running case");
+    expect(state.run.simulation.tick).toBe(6);
+
+    controller.togglePlayback(15_000);
+    controller.togglePlayback(30_000);
+    controller.advanceFrame(30_010, 250);
+    controller.advanceFrame(30_300, 290);
+    expect(state.run.simulation.tick).toBe(6);
+    controller.advanceFrame(30_500, 200);
+    expect(state.run.simulation.tick).toBe(7);
   });
 
   it("yields fast tests between frames and allows pausing and resetting unfinished runs", () => {

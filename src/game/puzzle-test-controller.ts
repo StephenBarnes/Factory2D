@@ -10,7 +10,6 @@ import { expectDefined } from "../util/assert";
 import { PuzzleTestReportView } from "../ui/puzzle-test-report";
 import type { DropupMenu } from "../ui/dropup-menu";
 
-const INITIAL_TEST_TICKS_PER_SECOND = 5;
 const MAX_TEST_TICKS_PER_SECOND = 60;
 const TEST_SPEED_DOUBLING_MS = 3_000;
 const TEST_CASE_TRANSITION_MS = 600;
@@ -64,6 +63,8 @@ export interface PuzzleTestControllerElements {
 
 export interface PuzzleTestControllerDependencies {
   readonly getBaseline: () => World;
+  /** Selected base rate; automatic verification applies its speed ramp on top. */
+  readonly getTicksPerSecond: () => number;
   readonly prepareForRuntimeChange: () => void;
   readonly resetSession: () => void;
   readonly beginSimulation: () => void;
@@ -292,7 +293,9 @@ export class PuzzleTestController {
     }
 
     const fast = state.mode === "fast";
-    let accumulatedMs = fast ? 0 : state.accumulatedMs + elapsed;
+    // The first frame after starting/resuming may include time spent paused.
+    const activeElapsed = Math.min(elapsed, Math.max(0, currentTime - state.caseStartedAt));
+    let accumulatedMs = fast ? 0 : state.accumulatedMs + activeElapsed;
     const ticksPerSecond = this.testTicksPerSecond(currentTime, state.caseStartedAt);
     const tickDuration = 1000 / ticksPerSecond;
     const deadline = fast ? performance.now() + FAST_TEST_FRAME_BUDGET_MS : 0;
@@ -453,7 +456,7 @@ export class PuzzleTestController {
     const elapsed = Math.max(0, currentTime - caseStartedAt);
     return Math.min(
       MAX_TEST_TICKS_PER_SECOND,
-      INITIAL_TEST_TICKS_PER_SECOND * 2 ** (elapsed / TEST_SPEED_DOUBLING_MS),
+      this.dependencies.getTicksPerSecond() * 2 ** (elapsed / TEST_SPEED_DOUBLING_MS),
     );
   }
 
