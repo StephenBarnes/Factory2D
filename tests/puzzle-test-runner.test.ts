@@ -124,14 +124,14 @@ describe("puzzle test runner", () => {
   it("keeps case-specific tutorial labels while transferring player notes outside the build region", () => {
     const solution = emptyVictoryWorld();
     solution.setTextBoxes([
-      { id: "tutorial", x: 0, y: 0, width: 1, height: 1, text: "Standard instructions", owner: "author" },
-      { id: "note", x: 1.125, y: 0.125, width: 0.75, height: 0.75, text: "My output", owner: "player" },
+      { id: "tutorial", centerX: 0.5, centerY: 0.5, text: "Standard instructions", owner: "author" },
+      { id: "note", centerX: 1.5, centerY: 0.5, text: "My output", owner: "player" },
     ]);
     const testCase = caseDefinition("alternate", 5, () => {
       const world = emptyVictoryWorld();
       world.setTextBoxes([
-        { id: "tutorial", x: 0, y: 0, width: 1, height: 1, text: "Alternate instructions", owner: "author" },
-        { id: "old-note", x: 1, y: 0, width: 1, height: 1, text: "Stale note", owner: "player" },
+        { id: "tutorial", centerX: 0.5, centerY: 0.5, text: "Alternate instructions", owner: "author" },
+        { id: "old-note", centerX: 1.5, centerY: 0.5, text: "Stale note", owner: "player" },
       ]);
       return world;
     });
@@ -144,7 +144,7 @@ describe("puzzle test runner", () => {
       "Alternate instructions", "My output",
     ]);
     solution.setTextBoxes([]);
-    expect(testWorld.textBoxes[1]).toMatchObject({ x: 1.125, y: 0.125, text: "My output" });
+    expect(testWorld.textBoxes[1]).toMatchObject({ centerX: 1.5, centerY: 0.5, text: "My output" });
   });
 
   it("stops immediately on the first failed case", () => {

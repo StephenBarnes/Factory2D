@@ -16,11 +16,11 @@ test("auto-sized annotations paint every line inside their boxes", async ({ page
     const world = new World(8, 6);
     const renderer = new CanvasRenderer(canvas, world);
     renderer.fitBoardToViewport();
-    const base = { id: "single", x: 1, y: 1, width: 4, height: 2, text: "Abc", owner: "author" as const };
+    const base = { id: "single", centerX: 3, centerY: 2, text: "Abc", owner: "author" as const };
     const single = renderer.fitTextBox(base);
-    const four = renderer.fitTextBox({ ...base, id: "four", x: 3, text: "Abc\n123\nXyz\n456" });
+    const four = renderer.fitTextBox({ ...base, id: "four", centerX: 5, text: "Abc\n123\nXyz\n456" });
     const wide = renderer.fitTextBox({ ...base, text: "A longer line of annotation text" });
-    const wrapped = renderer.fitTextBox({ ...base, x: 7, y: 5, text: "Words that must fit within the board. ".repeat(20) });
+    const wrapped = renderer.fitTextBox({ ...base, centerX: 8, centerY: 6, text: "Words that must fit within the board. ".repeat(20) });
     if (single === null || four === null || wide === null || wrapped === null) {
       throw new Error("Short annotations must fit the board");
     }
@@ -30,10 +30,11 @@ test("auto-sized annotations paint every line inside their boxes", async ({ page
     if (context === null) throw new Error("Canvas context is missing");
     const scale = canvas.width / world.width;
     const paintedRows = (box: typeof single) => {
-      const left = Math.ceil(box.x * scale);
-      const top = Math.ceil(box.y * scale);
-      const width = Math.floor(box.width * scale);
-      const height = Math.floor(box.height * scale);
+      const bounds = renderer.textBoxBounds(box);
+      const left = Math.ceil(bounds.x * scale);
+      const top = Math.ceil(bounds.y * scale);
+      const width = Math.floor(bounds.width * scale);
+      const height = Math.floor(bounds.height * scale);
       const pixels = context.getImageData(left, top, width, height).data;
       const rows: number[] = [];
       for (let y = 0; y < height; y += 1) {
@@ -48,7 +49,14 @@ test("auto-sized annotations paint every line inside their boxes", async ({ page
       }
       return rows;
     };
-    return { single, four, wide, wrapped, singleInk: paintedRows(single), fourInk: paintedRows(four) };
+    return {
+      single: renderer.textBoxBounds(single),
+      four: renderer.textBoxBounds(four),
+      wide: renderer.textBoxBounds(wide),
+      wrapped: renderer.textBoxBounds(wrapped),
+      singleInk: paintedRows(single),
+      fourInk: paintedRows(four),
+    };
   });
 
   expect(result.single.width).toBeLessThan(1);

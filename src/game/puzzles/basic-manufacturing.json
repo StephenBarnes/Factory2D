@@ -99,37 +99,29 @@
     "textBoxes": [
       {
         "id": "c7ba8d62-9255-411a-a258-f976c3b32fb7",
-        "x": 3.3196010890013667,
-        "y": 1.8756207291309295,
-        "width": 4.44,
-        "height": 0.74,
+        "centerX": 5.539601089001367,
+        "centerY": 2.2456207291309296,
         "text": "1. Provide a +1 charge to the charge sensor.\nThis triggers the duplicator to produce iron blocks.",
         "owner": "author"
       },
       {
         "id": "7c54f7d5-e51f-4028-9d1c-9a668a1cdb8a",
-        "x": 6.9437803418232775,
-        "y": 8.346478354816504,
-        "width": 2.32,
-        "height": 0.74,
+        "centerX": 8.103780341823278,
+        "centerY": 8.716478354816504,
         "text": "3. Use a welder block to\njoin two iron blocks.",
         "owner": "author"
       },
       {
         "id": "0ceef9a8-7c25-487c-97da-925b3cea6529",
-        "x": 10.107113472779378,
-        "y": 9.231660330554822,
-        "width": 4.34,
-        "height": 0.48000000000000004,
+        "centerX": 12.277113472779378,
+        "centerY": 9.471660330554823,
         "text": "4. Deliver ten 2x1 iron pieces to the delivery box.",
         "owner": "author"
       },
       {
         "id": "d8f232a5-de54-4092-a94c-5cd04b3a64b9",
-        "x": 2.250587040615176,
-        "y": 8.32515721503795,
-        "width": 2.46,
-        "height": 0.74,
+        "centerX": 3.480587040615176,
+        "centerY": 8.695157215037948,
         "text": "2. Use conveyors to move\nthe iron blocks right.",
         "owner": "author"
       }

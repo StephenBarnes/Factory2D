@@ -221,10 +221,8 @@
     "textBoxes": [
       {
         "id": "877415cf-0216-4116-acfa-4f8d88c9f9da",
-        "x": 24.172481430189386,
-        "y": 5.236221008943262,
-        "width": 4.7,
-        "height": 0.48000000000000004,
+        "centerX": 26.522481430189387,
+        "centerY": 5.476221008943262,
         "text": "The hammers must be rotated head-down for delivery.",
         "owner": "author"
       }

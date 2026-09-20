@@ -312,19 +312,15 @@
     "textBoxes": [
       {
         "id": "7a018ffd-329a-4a50-bf9f-d2c570a2a83b",
-        "x": 6.26351290404341,
-        "y": 0.25832065261957304,
-        "width": 2.42,
-        "height": 0.48000000000000004,
+        "centerX": 7.47351290404341,
+        "centerY": 0.49832065261957303,
         "text": "There are 33 sand blocks.",
         "owner": "author"
       },
       {
         "id": "f00b59ee-bc63-4bc0-b5cd-6cc6123d429b",
-        "x": 15.598250630764099,
-        "y": 16.44917455925813,
-        "width": 3.8699999999999997,
-        "height": 0.74,
+        "centerX": 17.533250630764098,
+        "centerY": 16.81917455925813,
         "text": "Note: single glass blocks will shatter if they\nhit the ground after falling 2 or more tiles.",
         "owner": "author"
       }

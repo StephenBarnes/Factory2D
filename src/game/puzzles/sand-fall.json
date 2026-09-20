@@ -47,10 +47,8 @@
     "textBoxes": [
       {
         "id": "4247b3de-c949-44cc-83e6-053b1b36a83d",
-        "x": 1.0780102084901237,
-        "y": 0.6876239087087106,
-        "width": 5.550000000000001,
-        "height": 1.52,
+        "centerX": 3.853010208490124,
+        "centerY": 1.4476239087087106,
         "text": "Place stone blocks to guide the sand into the delivery box below.\n\nClick and drag to WELD placed blocks together.\n\nYou can also use control-click or shift-click.",
         "owner": "author"
       }

@@ -4,6 +4,7 @@ import type { GridPoint } from "../render/grid-drag";
 import { exceedsPanDragThreshold } from "../render/pointer-gesture";
 import { MAX_TEXT_BOXES, MAX_TEXT_BOX_TEXT_LENGTH, type TextBox } from "../simulation/text-box";
 import type { World } from "../simulation/world";
+import { expectDefined } from "../util/assert";
 
 interface TextBoxGesture {
   readonly world: World;
@@ -83,9 +84,10 @@ export class TextBoxTool {
         point.x >= world.width || point.y >= world.height) return;
     let existing: TextBox | null = null;
     for (let index = world.textBoxes.length - 1; index >= 0; index -= 1) {
-      const box = world.textBoxes[index];
-      if (box !== undefined && point.x >= box.x && point.y >= box.y &&
-          point.x <= box.x + box.width && point.y <= box.y + box.height) {
+      const box = expectDefined(world.textBoxes[index], "Text box is missing");
+      const bounds = this.surface.renderer.textBoxBounds(box);
+      if (point.x >= bounds.x && point.y >= bounds.y &&
+          point.x <= bounds.x + bounds.width && point.y <= bounds.y + bounds.height) {
         existing = box;
         break;
       }
@@ -95,14 +97,10 @@ export class TextBoxTool {
       window.alert(`A board can contain at most ${MAX_TEXT_BOXES} text boxes.`);
       return;
     }
-    const width = Math.min(4, world.width);
-    const height = Math.min(2, world.height);
     const preview: TextBox = existing ?? {
       id: crypto.randomUUID(),
-      x: Math.min(point.x, world.width - width),
-      y: Math.min(point.y, world.height - height),
-      width,
-      height,
+      centerX: point.x,
+      centerY: point.y,
       text: "",
       owner: this.surface.session.puzzleAuthoring === null ? "player" : "author",
     };
@@ -128,10 +126,15 @@ export class TextBoxTool {
     gesture.dragged ||= exceedsPanDragThreshold(clientX - gesture.clientX, clientY - gesture.clientY);
     if (!gesture.dragged) return;
     const { world, existing, origin } = gesture;
+    const bounds = gesture.renderer.textBoxBounds(existing);
     gesture.preview = {
       ...existing,
-      x: Math.max(0, Math.min(world.width - existing.width, existing.x + point.x - origin.x)),
-      y: Math.max(0, Math.min(world.height - existing.height, existing.y + point.y - origin.y)),
+      centerX: Math.max(bounds.width / 2, Math.min(
+        world.width - bounds.width / 2, bounds.x + bounds.width / 2 + point.x - origin.x,
+      )),
+      centerY: Math.max(bounds.height / 2, Math.min(
+        world.height - bounds.height / 2, bounds.y + bounds.height / 2 + point.y - origin.y,
+      )),
     };
     gesture.renderer.setTextBoxPreview(gesture.preview);
   }
@@ -145,7 +148,7 @@ export class TextBoxTool {
       world.setTextBoxes(world.textBoxes.filter((box) => box.id !== existing.id));
       this.commitEdit();
     } else if (gesture.dragged) {
-      if (existing.x !== preview.x || existing.y !== preview.y) {
+      if (existing.centerX !== preview.centerX || existing.centerY !== preview.centerY) {
         world.setTextBoxes(world.textBoxes.map((box) => box.id === existing.id ? preview : box));
         this.commitEdit();
       }
@@ -197,8 +200,7 @@ export class TextBoxTool {
         return;
       }
       if (existing === null || text !== existing.text ||
-          updated.width !== existing.width || updated.height !== existing.height ||
-          updated.x !== existing.x || updated.y !== existing.y) {
+          updated.centerX !== existing.centerX || updated.centerY !== existing.centerY) {
         world.setTextBoxes(existing === null
           ? [...world.textBoxes, updated]
           : world.textBoxes.map((entry) => entry.id === existing.id ? updated : entry));

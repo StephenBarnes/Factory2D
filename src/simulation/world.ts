@@ -2183,7 +2183,7 @@ export class World {
    * Builds a new world holding this board flipped, then rotated clockwise by
    * `quarterTurns`, with tile orientations, nested rune arrays, circuit charges, and welds
    * mapped along. Furnace progress is dropped and tiles receive fresh identities.
-   * Annotation rectangles follow the board transform, with their text remaining upright.
+   * Annotation centers follow the board transform, with their text remaining upright.
    */
   transformed(
     quarterTurns: number,
@@ -2197,23 +2197,15 @@ export class World {
       swapAxes ? this.width : this.height,
     );
     result.setTextBoxes(this.textBoxesValue.map((box) => {
-      let x = flippedHorizontally ? this.width - (box.x + box.width) : box.x;
-      let y = flippedVertically ? this.height - (box.y + box.height) : box.y;
-      let width = box.width;
-      let height = box.height;
+      let centerX = flippedHorizontally ? this.width - box.centerX : box.centerX;
+      let centerY = flippedVertically ? this.height - box.centerY : box.centerY;
       for (let turn = 0; turn < turns; turn += 1) {
         const boardHeight = (turn & 1) === 0 ? this.height : this.width;
-        const rotatedX = Math.max(0, boardHeight - (y + height));
-        y = x;
-        x = rotatedX;
-        [width, height] = [height, width];
+        const rotatedX = boardHeight - centerY;
+        centerY = centerX;
+        centerX = rotatedX;
       }
-      // Clamp rounding at the boundary without rotating or mirroring the text itself.
-      return {
-        ...box, x, y,
-        width: Math.min(width, result.width - x),
-        height: Math.min(height, result.height - y),
-      };
+      return { ...box, centerX, centerY };
     }));
     const mapCell = (x: number, y: number): { x: number; y: number } => {
       let sourceX = flippedHorizontally ? this.width - 1 - x : x;
@@ -2304,7 +2296,7 @@ export class World {
    * Copies every tile, component state, charge, and weld of `source` into this world with
    * both centers aligned, dropping whatever falls outside. Both dimensions must share the
    * source's parity so the centers coincide on whole cells.
-   * Annotations move by the same offset and are clipped to the destination board.
+   * Annotations move by the same offset; those with centers outside the board are dropped.
    */
   copyCenteredFrom(source: World): void {
     const offsetX = (this.width - source.width) / 2;
@@ -2312,15 +2304,13 @@ export class World {
     if (!Number.isInteger(offsetX) || !Number.isInteger(offsetY)) {
       throw new RangeError("Centered copies require dimensions of matching parity");
     }
-    // Keep the visible part of each annotation when resizing around the board center.
+    // Keep annotations whose translated centers remain within the board.
     const boxes: TextBox[] = [];
     for (const box of source.textBoxesValue) {
-      const x = Math.max(0, box.x + offsetX);
-      const y = Math.max(0, box.y + offsetY);
-      const right = Math.min(this.width, box.x + box.width + offsetX);
-      const bottom = Math.min(this.height, box.y + box.height + offsetY);
-      if (right > x && bottom > y) {
-        boxes.push({ ...box, x, y, width: right - x, height: bottom - y });
+      const centerX = box.centerX + offsetX;
+      const centerY = box.centerY + offsetY;
+      if (centerX >= 0 && centerX <= this.width && centerY >= 0 && centerY <= this.height) {
+        boxes.push({ ...box, centerX, centerY });
       }
     }
     this.setTextBoxes(boxes);

@@ -124,10 +124,8 @@
     "textBoxes": [
       {
         "id": "ffbcb2b4-b3d1-4c55-bbbf-ee61c025c55f",
-        "x": 2.1215560849793498,
-        "y": 3.28696158419184,
-        "width": 1.81,
-        "height": 0.48000000000000004,
+        "centerX": 3.02655608497935,
+        "centerY": 3.5269615841918402,
         "text": "Touch this sensor.",
         "owner": "author"
       }

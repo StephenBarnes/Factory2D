@@ -55,10 +55,8 @@
     "textBoxes": [
       {
         "id": "b067dbf2-8830-4ac2-909c-40150fd8d32f",
-        "x": 2.4360577258434932,
-        "y": 1.4308670379303319,
-        "width": 4.13,
-        "height": 1,
+        "centerX": 4.501057725843493,
+        "centerY": 1.9308670379303319,
         "text": "Select the stone block in the palette to the left.\nPlace one stone block inside the yellow region.\nThen press the button to test your solution.",
         "owner": "author"
       }

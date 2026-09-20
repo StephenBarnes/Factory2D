@@ -207,7 +207,7 @@ describe("workshop session controller", () => {
     expect(resized.height).toBe(grid.length);
   });
 
-  it("clips removed top and left contents, annotations, welds and editable rectangles across cases", () => {
+  it("crops removed top and left contents, annotations, welds and editable rectangles across cases", () => {
     const world = new World(3, 3);
     world.place(0, 1, TileKind.Stone);
     world.place(1, 1, TileKind.Stone);
@@ -216,8 +216,8 @@ describe("workshop session controller", () => {
     world.setWeld(1, 1, 2, 1, true);
     world.place(1, 0, TileKind.Iron);
     world.setTextBoxes([
-      { id: "clip", x: 0.5, y: 0.5, width: 2, height: 2, text: "Clip", owner: "author" },
-      { id: "drop", x: 0, y: 0, width: 1, height: 1, text: "Drop", owner: "author" },
+      { id: "retained", centerX: 1.5, centerY: 1.5, text: "Retained", owner: "author" },
+      { id: "drop", centerX: 0.5, centerY: 0.5, text: "Drop", owner: "author" },
     ]);
     const sessions = new WorkshopSessionController(world);
     sessions.active.editableRegionAuthoring?.replaceForBoard(3, 3, new GridRegion([
@@ -240,7 +240,7 @@ describe("workshop session controller", () => {
       expect(JSON.parse(serializeBoard(sessions.active.world, 0)).grid[0]).toBe("##");
       expect(JSON.parse(serializeBoard(sessions.active.world, 0)).welds).toEqual(["-.", ".."]);
       expect(sessions.active.world.textBoxes).toEqual([
-        { id: "clip", x: 0, y: 0, width: 1.5, height: 1.5, text: "Clip", owner: "author" },
+        { id: "retained", centerX: 0.5, centerY: 0.5, text: "Retained", owner: "author" },
       ]);
     }
     expect(sessions.active.world.kindAt(1, 1)).toBe(TileKind.Empty);

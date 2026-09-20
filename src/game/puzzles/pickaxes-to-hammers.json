@@ -256,10 +256,8 @@
     "textBoxes": [
       {
         "id": "242f028c-3fc2-4de5-b6d3-88ee585498b8",
-        "x": 8.450880500280325,
-        "y": 22.622164101697294,
-        "width": 3.5199999999999996,
-        "height": 0.7399999999999984,
+        "centerX": 10.210880500280325,
+        "centerY": 22.99216410169729,
         "text": "The delivered hammers must match the\nrotation below, with head facing left.",
         "owner": "author"
       }

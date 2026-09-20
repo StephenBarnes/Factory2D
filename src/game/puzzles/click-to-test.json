@@ -55,10 +55,8 @@
     "textBoxes": [
       {
         "id": "00e333b6-9e25-45d8-a7c4-473de0c1a733",
-        "x": 5.6179725582221804,
-        "y": 0.6688371670773197,
-        "width": 3.669999999999999,
-        "height": 0.74,
+        "centerX": 7.45297255822218,
+        "centerY": 1.0388371670773195,
         "text": "Press the TEST button in the bottom-left.\nYou don't need to place any blocks yet.",
         "owner": "author"
       }

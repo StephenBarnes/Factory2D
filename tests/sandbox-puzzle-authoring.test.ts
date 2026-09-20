@@ -231,7 +231,7 @@ describe("sandbox puzzle authoring", () => {
     const imported = parseSandboxImport(authoredPuzzleSource(), "imported-puzzle.json");
     const standard = imported.authoring.selectTestCase("standard");
     standard.setTextBoxes([
-      { id: "hint", x: 0.25, y: 0.5, width: 2.5, height: 1, text: "Standard hint", owner: "author" },
+      { id: "hint", centerX: 1.5, centerY: 1, text: "Standard hint", owner: "author" },
     ]);
     imported.authoring.saveSelectedWorld(standard);
     const alternate = imported.authoring.selectTestCase("alternate");
@@ -244,15 +244,19 @@ describe("sandbox puzzle authoring", () => {
     expect(restored.authoring.selectTestCase("alternate").textBoxes).toEqual([]);
   });
 
-  it("clips fractional annotation rectangles on shrink and drops fully cropped labels", () => {
+  it("retains centers on inclusive board edges and drops centers outside on shrink", () => {
     const world = new World(4, 3);
     world.setTextBoxes([
-      { id: "retained", x: 1.25, y: 0.5, width: 2, height: 2, text: "Retained", owner: "author" },
-      { id: "cropped", x: 3, y: 2, width: 1, height: 1, text: "Cropped", owner: "author" },
+      { id: "retained", centerX: 1.25, centerY: 0.5, text: "Retained", owner: "author" },
+      { id: "origin", centerX: 0, centerY: 0, text: "Origin", owner: "author" },
+      { id: "edge", centerX: 2, centerY: 1, text: "Edge", owner: "author" },
+      { id: "cropped", centerX: 2.25, centerY: 1.5, text: "Cropped", owner: "author" },
     ]);
     const resized = resizeWorld(world, 2, 1);
     expect(resized.textBoxes).toEqual([
-      { id: "retained", x: 1.25, y: 0.5, width: 0.75, height: 0.5, text: "Retained", owner: "author" },
+      { id: "retained", centerX: 1.25, centerY: 0.5, text: "Retained", owner: "author" },
+      { id: "origin", centerX: 0, centerY: 0, text: "Origin", owner: "author" },
+      { id: "edge", centerX: 2, centerY: 1, text: "Edge", owner: "author" },
     ]);
     expect(resizeWorld(resized, 4, 3).textBoxes).toEqual(resized.textBoxes);
   });
@@ -292,8 +296,8 @@ describe("sandbox puzzle authoring", () => {
     world.setWeld(2, 2, 3, 2, true);
     world.setWeld(3, 2, 4, 2, true);
     world.setTextBoxes([
-      { id: "overlap", x: 1.5, y: 1.5, width: 4, height: 4, text: "Clipped", owner: "author" },
-      { id: "outside", x: 0, y: 0, width: 1, height: 1, text: "Removed", owner: "author" },
+      { id: "retained", centerX: 3.5, centerY: 3.5, text: "Retained", owner: "author" },
+      { id: "outside", centerX: 0.5, centerY: 0.5, text: "Removed", owner: "author" },
     ]);
 
     const cropped = resizeWorld(world, 2, 2, 2, 2);
@@ -301,7 +305,7 @@ describe("sandbox puzzle authoring", () => {
     expect(cropped.kindAt(1, 0)).toBe(TileKind.Stone);
     expect(cropped.isWelded(0, 0, 1, 0)).toBe(true);
     expect(cropped.textBoxes).toEqual([
-      { id: "overlap", x: 0, y: 0, width: 2, height: 2, text: "Clipped", owner: "author" },
+      { id: "retained", centerX: 1.5, centerY: 1.5, text: "Retained", owner: "author" },
     ]);
   });
 
@@ -324,7 +328,7 @@ describe("sandbox puzzle authoring", () => {
     world.place(2, 1, TileKind.Assembler);
     world.setIsolatedOutputCharge(2, 1, -1);
     world.setTextBoxes([
-      { id: "hint", x: 0.25, y: 0.5, width: 2, height: 1, text: "Hint", owner: "author" },
+      { id: "hint", centerX: 1.25, centerY: 1, text: "Hint", owner: "author" },
     ]);
 
     const padded = resizeWorld(world, 4, 3, -1, -1);
@@ -338,7 +342,7 @@ describe("sandbox puzzle authoring", () => {
     expect(padded.isWelded(1, 1, 1, 2)).toBe(true);
     expect(serializeBoard(padded.runeArrayWorldAt(3, 1), 0)).toBe(serializeBoard(inner, 0));
     expect(padded.textBoxes).toEqual([
-      { id: "hint", x: 1.25, y: 1.5, width: 2, height: 1, text: "Hint", owner: "author" },
+      { id: "hint", centerX: 2.25, centerY: 2, text: "Hint", owner: "author" },
     ]);
     expect(serializeBoard(resizeWorld(padded, 3, 2, 1, 1), 0)).toBe(serializeBoard(world, 0));
   });
@@ -356,7 +360,7 @@ describe("sandbox puzzle authoring", () => {
     sessions.active.world.place(0, 0, TileKind.Delay, Direction.Down);
     sessions.active.world.configureNumericComponent(0, 0, 7);
     sessions.active.world.setTextBoxes([
-      { id: "alternate", x: 0, y: 0, width: 2, height: 2, text: "Alternate", owner: "author" },
+      { id: "alternate", centerX: 1, centerY: 1, text: "Alternate", owner: "author" },
     ]);
     sessions.active.simulation.tick = 13;
     const alternate = serializeBoard(sessions.active.world, 0);

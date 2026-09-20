@@ -184,10 +184,8 @@
     "textBoxes": [
       {
         "id": "smelting",
-        "x": 9.627477747793414,
-        "y": 1.4564885729141812,
-        "width": 3.9299999999999997,
-        "height": 1,
+        "centerX": 11.592477747793414,
+        "centerY": 1.9564885729141812,
         "text": "Smelt copper ore in front of a furnace for\n6 ticks, with wood touching the ore.\nTouching wood becomes fire on completion.",
         "owner": "author"
       }

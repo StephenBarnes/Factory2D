@@ -579,16 +579,10 @@ export function resizeWorld(
   board.isolatedOutputCharges = filterCoordinates(translate(board.isolatedOutputCharges ?? []), width, height);
   board.components = filterCoordinates(translate(board.components ?? []), width, height);
   board.textBoxes = (board.textBoxes ?? [])
-    .map((box) => {
-      const x = Math.max(0, box.x - originX);
-      const y = Math.max(0, box.y - originY);
-      return {
-        ...box, x, y,
-        width: Math.min(width, box.x + box.width - originX) - x,
-        height: Math.min(height, box.y + box.height - originY) - y,
-      };
-    })
-    .filter((box) => box.width > 0 && box.height > 0);
+    .map((box) => ({
+      ...box, centerX: box.centerX - originX, centerY: box.centerY - originY,
+    }))
+    .filter((box) => box.centerX >= 0 && box.centerX <= width && box.centerY >= 0 && box.centerY <= height);
   board.furnaces = translate(board.furnaces ?? []).filter((entry) => {
     if (!coordinateFits(entry, width, height)) {
       return false;

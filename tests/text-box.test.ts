@@ -9,7 +9,7 @@ import { TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
 
 const box: TextBox = {
-  id: "instruction", x: 0.25, y: 0.5, width: 1.5, height: 0.75,
+  id: "instruction", centerX: 1, centerY: 0.875,
   text: "Input\n+1 →", owner: "player",
 };
 
@@ -35,11 +35,11 @@ describe("board text boxes", () => {
   });
 
   it.each([
-    ["non-finite coordinate", [{ ...box, x: Number.NaN }]],
-    ["infinite size", [{ ...box, height: Infinity }]],
-    ["negative coordinate", [{ ...box, y: -0.1 }]],
-    ["zero size", [{ ...box, width: 0 }]],
-    ["out-of-board extent", [{ ...box, x: 2 }]],
+    ["non-finite coordinate", [{ ...box, centerX: Number.NaN }]],
+    ["infinite coordinate", [{ ...box, centerY: Infinity }]],
+    ["negative coordinate", [{ ...box, centerY: -0.1 }]],
+    ["out-of-board center", [{ ...box, centerX: 3.1 }]],
+    ["legacy rectangle", [{ id: box.id, x: 0.25, y: 0.5, width: 1.5, height: 0.75, text: box.text, owner: box.owner }]],
     ["blank text", [{ ...box, text: " \n\t" }]],
     ["oversized text", [{ ...box, text: "a".repeat(MAX_TEXT_BOX_TEXT_LENGTH + 1) }]],
     ["blank identity", [{ ...box, id: " " }]],
@@ -90,25 +90,25 @@ describe("board text boxes", () => {
     expect(baseline.runeArrayWorldAt(3, 3).textBoxes).toEqual(inner.textBoxes);
   });
 
-  it("maps annotation rectangles with whole-board transforms while keeping text upright", () => {
+  it("maps annotation centers with whole-board transforms while keeping text upright", () => {
     const world = new World(4, 3);
     world.setTextBoxes([box]);
     const rotated = world.transformed(1, false, false);
-    expect(rotated.textBoxes).toEqual([{ ...box, x: 1.75, y: 0.25, width: 0.75, height: 1.5 }]);
+    expect(rotated.textBoxes).toEqual([{ ...box, centerX: 2.125, centerY: 1 }]);
     expect(rotated.transformed(3, false, false).textBoxes).toEqual([box]);
-    expect(world.transformed(0, true, true).textBoxes).toEqual([{ ...box, x: 2.25, y: 1.75 }]);
+    expect(world.transformed(0, true, true).textBoxes).toEqual([{ ...box, centerX: 3, centerY: 2.125 }]);
   });
 
-  it("clips centered-resize annotations and drops fully cropped boxes", () => {
+  it("translates centered-resize annotations and drops centers outside the board", () => {
     const source = new World(5, 5);
     source.setTextBoxes([
-      { ...box, x: 0.5, y: 1.5, width: 2, height: 1 },
-      { ...box, id: "cropped", x: 0, y: 0, width: 0.5, height: 0.5 },
+      { ...box, centerX: 1.5, centerY: 2 },
+      { ...box, id: "cropped", centerX: 0.25, centerY: 0.25 },
     ]);
     const resized = new World(3, 3);
     resized.copyCenteredFrom(source);
-    expect(resized.textBoxes).toEqual([{ ...box, x: 0, y: 0.5, width: 1.5, height: 1 }]);
-    expect(source.textBoxes[0]?.x).toBe(0.5);
+    expect(resized.textBoxes).toEqual([{ ...box, centerX: 0.5, centerY: 1 }]);
+    expect(source.textBoxes[0]?.centerX).toBe(1.5);
   });
 
   it("exports and imports fixed puzzle labels in base, nested, and additional-case boards", () => {
@@ -141,7 +141,7 @@ describe("board text boxes", () => {
     exported.initialBoard.textBoxes = [box];
     expect(parsePuzzleFile(exported, "labels.json").initialWorld.textBoxes[0]?.owner).toBe("author");
     expect(parsePuzzleAuthoringSnapshot(exported, "snapshot").initialWorld.textBoxes[0]?.owner).toBe("player");
-    exported.testCases[0]!.overrides.initialBoard.textBoxes = [{ ...box, width: 10 }];
+    exported.testCases[0]!.overrides.initialBoard.textBoxes = [{ ...box, centerX: 10 }];
     expect(() => parsePuzzleFile(exported, "labels.json")).toThrow();
   });
 });
