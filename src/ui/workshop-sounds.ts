@@ -4,12 +4,19 @@ import {
   bellFrequencyForPitch,
 } from "./bell-observer";
 import type { MachinerySound } from "./machinery-observer";
+import { soundPosition, spatialSounds, type LocatedSound, type SoundPosition, type SoundView } from "./spatial-sound";
 
 type EditSound = "place" | "remove" | "weld" | "unweld";
 
 interface VolumeControl {
   input: HTMLInputElement;
   output: HTMLOutputElement;
+}
+
+interface SpatialBus {
+  gain: GainNode;
+  panner: StereoPannerNode;
+  sources: number;
 }
 
 // Equal slider steps give equal decibel changes (-40 dB to 0 dB).
@@ -60,6 +67,7 @@ export class WorkshopSounds {
     muteButton: HTMLButtonElement,
     master: VolumeControl,
     bells: VolumeControl,
+    private readonly getView: () => SoundView | null,
   ) {
     this.bindVolume(master, "masterVolume", "factory2d.master-volume");
     this.bindVolume(bells, "bellVolume", "factory2d.bell-volume");
@@ -146,92 +154,124 @@ export class WorkshopSounds {
     }
   }
 
-  edit(sound: EditSound): void {
+  edit(sound: EditSound, x: number, y: number): void {
     const now = performance.now();
     // A fast drag can cross many cells in one event; keep the feedback bounded.
     if (now - this.lastEditTime < 45 || !this.canPlay()) return;
+    const view = this.getView();
+    if (view === null) return;
+    const bus = this.spatialBus(soundPosition(view, x, y));
+    if (bus === null) return;
     this.lastEditTime = now;
     const [start, end, type] = EDIT_TONES[sound];
-    this.tone(start, end, type, 0, 0.09);
+    this.tone(start, end, type, 0, 0.09, 0.7, bus);
   }
 
-  playBells(pitches: ReadonlySet<number>): void {
-    if (!this.canPlay() || this.bellVolume === 0) return;
+  playBells(events: readonly LocatedSound<number>[]): void {
+    if (events.length === 0 || !this.canPlay() || this.bellVolume === 0) return;
+    const view = this.getView();
+    if (view === null) return;
+    const voices = spatialSounds(events, view);
     for (let pitch = 0; pitch < BELL_PITCH_COUNT; pitch += 1) {
-      if (!pitches.has(pitch)) continue;
-      this.bell(pitch);
+      const position = voices.get(pitch);
+      if (position === undefined) continue;
+      const bus = this.spatialBus(position, this.bellOutput);
+      if (bus !== null) this.bell(pitch, bus);
     }
   }
 
-  playMachinery(sounds: ReadonlySet<MachinerySound>): void {
-    if (!this.canPlay()) return;
-    for (const sound of sounds) {
+  playMachinery(events: readonly LocatedSound<MachinerySound>[]): void {
+    if (events.length === 0 || !this.canPlay()) return;
+    const view = this.getView();
+    if (view === null) return;
+    for (const [sound, position] of spatialSounds(events, view)) {
+      const bus = this.spatialBus(position);
+      if (bus === null) continue;
       switch (sound) {
         case "extend":
-          this.noise("bandpass", 900, 0.12, 0.35);
-          this.tone(160, 65, "triangle", 0.07, 0.08, 0.45);
+          this.noise("bandpass", 900, 0.12, 0.35, bus);
+          this.tone(160, 65, "triangle", 0.07, 0.08, 0.45, bus);
           break;
         case "retract":
-          this.noise("bandpass", 600, 0.10, 0.3);
-          this.tone(110, 55, "triangle", 0.05, 0.07, 0.4);
+          this.noise("bandpass", 600, 0.10, 0.3, bus);
+          this.tone(110, 55, "triangle", 0.05, 0.07, 0.4, bus);
           break;
         case "drill":
-          this.noise("bandpass", 2200, 0.12, 0.3);
-          this.tone(95, 80, "sawtooth", 0, 0.10, 0.06);
+          this.noise("bandpass", 2200, 0.12, 0.3, bus);
+          this.tone(95, 80, "sawtooth", 0, 0.10, 0.06, bus);
           break;
         case "grinder":
-          this.noise("lowpass", 1400, 0.14, 0.35);
-          this.tone(55, 40, "triangle", 0, 0.12, 0.2);
+          this.noise("lowpass", 1400, 0.14, 0.35, bus);
+          this.tone(55, 40, "triangle", 0, 0.12, 0.2, bus);
           break;
         case "furnace":
-          this.noise("lowpass", 450, 0.18, 0.5);
+          this.noise("lowpass", 450, 0.18, 0.5, bus);
           break;
         case "welder":
-          this.noise("highpass", 2800, 0.08, 0.3);
-          this.tone(620, 180, "triangle", 0, 0.10, 0.25);
+          this.noise("highpass", 2800, 0.08, 0.3, bus);
+          this.tone(620, 180, "triangle", 0, 0.10, 0.25, bus);
           break;
         case "splitter":
-          this.noise("highpass", 1800, 0.05, 0.4);
-          this.tone(240, 80, "triangle", 0, 0.07, 0.35);
+          this.noise("highpass", 1800, 0.05, 0.4, bus);
+          this.tone(240, 80, "triangle", 0, 0.07, 0.35, bus);
           break;
         case "laserSplitter":
-          this.tone(1800, 450, "sawtooth", 0, 0.10, 0.08);
-          this.noise("bandpass", 3200, 0.08, 0.2);
+          this.tone(1800, 450, "sawtooth", 0, 0.10, 0.08, bus);
+          this.noise("bandpass", 3200, 0.08, 0.2, bus);
           break;
         case "dismantler":
-          this.noise("bandpass", 1100, 0.14, 0.4);
-          this.tone(180, 55, "triangle", 0.02, 0.10, 0.35);
+          this.noise("bandpass", 1100, 0.14, 0.4, bus);
+          this.tone(180, 55, "triangle", 0.02, 0.10, 0.35, bus);
           break;
         case "duplicator":
-          this.tone(220, 660, "sine", 0, 0.12, 0.35);
-          this.tone(440, 880, "sine", 0.04, 0.10, 0.2);
+          this.tone(220, 660, "sine", 0, 0.12, 0.35, bus);
+          this.tone(440, 880, "sine", 0.04, 0.10, 0.2, bus);
           break;
         case "assembler":
-          this.noise("bandpass", 750, 0.07, 0.3);
-          this.tone(130, 70, "triangle", 0, 0.08, 0.4);
-          this.tone(390, 260, "sine", 0.06, 0.08, 0.2);
+          this.noise("bandpass", 750, 0.07, 0.3, bus);
+          this.tone(130, 70, "triangle", 0, 0.08, 0.4, bus);
+          this.tone(390, 260, "sine", 0.06, 0.08, 0.2, bus);
           break;
         case "break":
-          this.noise("lowpass", 1800, 0.16, 0.65);
-          this.tone(150, 45, "triangle", 0, 0.12, 0.5);
+          this.noise("lowpass", 1800, 0.16, 0.65, bus);
+          this.tone(150, 45, "triangle", 0, 0.12, 0.5, bus);
           break;
         case "shatter":
-          this.noise("highpass", 3600, 0.18, 0.5);
-          this.tone(2600, 1700, "sine", 0, 0.12, 0.18);
-          this.tone(3900, 2400, "sine", 0.025, 0.15, 0.12);
+          this.noise("highpass", 3600, 0.18, 0.5, bus);
+          this.tone(2600, 1700, "sine", 0, 0.12, 0.18, bus);
+          this.tone(3900, 2400, "sine", 0.025, 0.15, 0.12, bus);
           break;
         case "snap":
-          this.noise("bandpass", 2600, 0.055, 0.6);
-          this.tone(950, 320, "triangle", 0, 0.075, 0.4);
+          this.noise("bandpass", 2600, 0.055, 0.6, bus);
+          this.tone(950, 320, "triangle", 0, 0.075, 0.4, bus);
           break;
       }
     }
   }
 
-  private noise(type: BiquadFilterType, frequency: number, duration: number, volume: number): void {
+  private spatialBus(position: SoundPosition, output = this.output): SpatialBus | null {
+    const amount = Math.max(0, Math.min(1, position.gain));
+    if (!(amount > 0) || !Number.isFinite(position.pan)) return null;
     const context = this.context;
-    const output = this.output;
     if (context === null || output === null) throw new Error("Workshop audio is not initialized");
+    const gain = context.createGain();
+    const panner = context.createStereoPanner();
+    gain.gain.setValueAtTime(amount, context.currentTime);
+    panner.pan.setValueAtTime(Math.max(-1, Math.min(1, position.pan)), context.currentTime);
+    gain.connect(panner);
+    panner.connect(output);
+    return { gain, panner, sources: 0 };
+  }
+
+  private releaseBus(bus: SpatialBus | null): void {
+    if (bus === null || --bus.sources !== 0) return;
+    bus.gain.disconnect();
+    bus.panner.disconnect();
+  }
+
+  private noise(type: BiquadFilterType, frequency: number, duration: number, volume: number, bus: SpatialBus): void {
+    const context = this.context;
+    if (context === null) throw new Error("Workshop audio is not initialized");
     if (this.machineryNoise === null) {
       this.machineryNoise = context.createBuffer(1, Math.ceil(context.sampleRate * 0.2), context.sampleRate);
       const samples = this.machineryNoise.getChannelData(0);
@@ -250,17 +290,19 @@ export class WorkshopSounds {
     envelope.gain.exponentialRampToValueAtTime(0.001, at + duration);
     source.connect(filter);
     filter.connect(envelope);
-    envelope.connect(output);
+    envelope.connect(bus.gain);
+    bus.sources += 1;
     source.onended = () => {
       source.disconnect();
       filter.disconnect();
       envelope.disconnect();
+      this.releaseBus(bus);
     };
     source.start(at);
     source.stop(at + duration);
   }
 
-  private bell(pitch: number): void {
+  private bell(pitch: number, bus: SpatialBus): void {
     const octaves = pitch / BELL_STEPS_PER_OCTAVE;
     const frequency = bellFrequencyForPitch(pitch);
     const size = Math.min(1, octaves);
@@ -275,7 +317,7 @@ export class WorkshopSounds {
       const baseDuration = smallDuration + (largeDuration - smallDuration) * size;
       const duration = baseDuration + (deepDuration - baseDuration) * deep;
       const partial = frequency * ratio;
-      this.tone(partial, partial, "sine", 0, duration, gain, this.bellOutput);
+      this.tone(partial, partial, "sine", 0, duration, gain, bus);
     }
   }
 
@@ -300,9 +342,10 @@ export class WorkshopSounds {
 
   private tone(
     start: number, end: number, type: OscillatorType, delay: number, duration: number,
-    volume = 0.7, output = this.output,
+    volume = 0.7, bus: SpatialBus | null = null,
   ): void {
     const context = this.context;
+    const output = bus === null ? this.output : bus.gain;
     if (context === null || output === null) throw new Error("Workshop audio is not initialized");
     const at = context.currentTime + delay;
     const oscillator = context.createOscillator();
@@ -315,9 +358,11 @@ export class WorkshopSounds {
     envelope.gain.exponentialRampToValueAtTime(0.001, at + duration);
     oscillator.connect(envelope);
     envelope.connect(output);
+    if (bus !== null) bus.sources += 1;
     oscillator.onended = () => {
       oscillator.disconnect();
       envelope.disconnect();
+      this.releaseBus(bus);
     };
     oscillator.start(at);
     oscillator.stop(at + duration);

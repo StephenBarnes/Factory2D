@@ -166,6 +166,7 @@ export class AssemblerResolver {
           this.emitTargetIndices[assembler] = -1;
         } else {
           remaining += 1;
+          recordMachineryActivity(this.world, "assembler", assembler);
         }
       }
       const input = expectDefined(this.consumeTargetIndices[assembler], "assembler consume target");
@@ -174,6 +175,7 @@ export class AssemblerResolver {
       }
       if (this.bodyUnchanged(assembler)) {
         remaining += 1;
+        recordMachineryActivity(this.world, "assembler", assembler);
         continue;
       }
       this.consumeTargetIndices[assembler] = -1;
@@ -199,7 +201,6 @@ export class AssemblerResolver {
       this.queuedMirrored,
       this.emitTargetIndices,
     );
-    recordMachineryActivity(this.world, "assembler");
     interpolationSource?.applyAssemblerResults(
       this.consumeTargetIndices,
       this.bodyOwners,

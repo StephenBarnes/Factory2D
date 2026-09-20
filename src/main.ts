@@ -140,6 +140,15 @@ const sounds = new WorkshopSounds(
     input: requiredElement<HTMLInputElement>("bell-volume"),
     output: requiredElement<HTMLOutputElement>("bell-volume-value"),
   },
+  () => {
+    const view = surface.renderer.captureView();
+    return view === null ? null : {
+      ...view,
+      world: surface.world,
+      width: canvas.clientWidth,
+      height: canvas.clientHeight,
+    };
+  },
 );
 const bells = new BellObserver(recordBellRing);
 const machinery = new MachineryObserver();
@@ -394,6 +403,7 @@ function refreshPuzzleMetrics(edited = false): void {
 
 
 function commitTileSelection(): void {
+  const rectangle = surface.selection.overlay(canEditCell, componentIsAvailable)?.region.rectangles[0];
   const result = surface.selection.commit(
     surface.world,
     (x, y) =>
@@ -407,7 +417,8 @@ function commitTileSelection(): void {
   syncTileSelectionOverlay();
   if (result.changed) {
     commitEditedWorld();
-    sounds.edit("place");
+    const site = expectDefined(rectangle, "Committed selection sound site");
+    sounds.edit("place", site.x + site.width / 2, site.y + site.height / 2);
   }
 }
 
@@ -521,7 +532,7 @@ function advanceSimulation(duration: number, startedAt = performance.now()): voi
     machinery.capture(session.world);
   }
   surface.simulation.step(duration > 0 ? session.previousWorld : undefined);
-  sounds.playBells(bells.collectPitches(session.world));
+  sounds.playBells(bells.collectSounds(session.world));
   sounds.playMachinery(machinery.collectSounds(session.world));
   signalTraces.sync(session.world, surface.simulation.tick);
   if (session.world.puzzleResult === PuzzleResult.Won) {
@@ -1221,7 +1232,7 @@ function editCellLine(
     }
   }
 
-  if (changed) sounds.edit(erase ? "remove" : tilesChanged ? "place" : "weld");
+  if (changed) sounds.edit(erase ? "remove" : tilesChanged ? "place" : "weld", to.x + 0.5, to.y + 0.5);
   return changed;
 }
 function openComponentConfiguration(cell: GridCell): void {
@@ -1341,7 +1352,8 @@ function editWeld(edge: GridEdge, erase: boolean): boolean {
   }
   if (surface.selection.active) commitTileSelection();
   const changed = setEditableWeld(edge.x1, edge.y1, edge.x2, edge.y2, erase);
-  if (changed) sounds.edit(erase ? "unweld" : "weld");
+  if (changed) sounds.edit(erase ? "unweld" : "weld",
+    (edge.x1 + edge.x2 + 1) / 2, (edge.y1 + edge.y2 + 1) / 2);
   return changed;
 }
 
@@ -1370,7 +1382,7 @@ function editWeldSegment(
       erase,
     ) || changed;
   }
-  if (changed) sounds.edit(erase ? "unweld" : "weld");
+  if (changed) sounds.edit(erase ? "unweld" : "weld", to.x, to.y);
   return changed;
 }
 const componentConfigurationView = new ComponentConfigurationDialog(
@@ -1460,7 +1472,7 @@ const puzzleTests = new PuzzleTestController(
       return session.previousWorld;
     },
     afterStep: (world, tick) => {
-      sounds.playBells(bells.collectPitches(world));
+      sounds.playBells(bells.collectSounds(world));
       sounds.playMachinery(machinery.collectSounds(world));
       signalTraces.sync(world, tick);
     },
@@ -1889,12 +1901,14 @@ function deleteTileSelection(): void {
   if (!surface.selection.active) {
     return;
   }
+  const rectangle = surface.selection.overlay(canEditCell, componentIsAvailable)?.sourceRegion?.rectangles[0];
   const changed = surface.selection.deleteFrom(surface.world);
   syncTileSelectionOverlay();
   refreshPointerHover();
   if (changed) {
     commitEditedWorld();
-    sounds.edit("remove");
+    const site = expectDefined(rectangle, "Deleted selection sound site");
+    sounds.edit("remove", site.x + site.width / 2, site.y + site.height / 2);
   }
 }
 

@@ -100,6 +100,7 @@ export class DuplicatorResolver {
       if (!accepted) {
         continue;
       }
+      this.candidateDuplicators[duplicator] = 2;
       member = this.bodies.headAtRoot(sourceRoot);
       while (member >= 0) {
         const destination = this.destinationIndex(member, duplicator, orientation);
@@ -123,8 +124,16 @@ export class DuplicatorResolver {
       this.sourceForDestination,
       this.destinationOwners,
     );
+    for (
+      let duplicator = this.world.firstFeatureIndex(WorldFeature.Duplicator);
+      duplicator >= 0;
+      duplicator = this.world.nextFeatureIndex(WorldFeature.Duplicator, duplicator)
+    ) {
+      if (this.candidateDuplicators[duplicator] === 2) {
+        recordMachineryActivity(this.world, "duplicator", duplicator);
+      }
+    }
     this.world.applyDuplications(this.sourceForDestination, this.destinationOwners);
-    recordMachineryActivity(this.world, "duplicator");
   }
 
   private isPoweredDuplicator(index: number): boolean {

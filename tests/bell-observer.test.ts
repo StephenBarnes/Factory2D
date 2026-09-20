@@ -23,16 +23,16 @@ describe("bell observations", () => {
     const observer = new BellObserver();
     observer.capture(world);
     simulation.step();
-    expect(observer.collectPitches(world)).toEqual(new Set());
+    expect(observer.collectSounds(world)).toEqual([]);
 
     world.place(2, 1, TileKind.Thruster, Direction.Right);
     world.setWeld(1, 1, 2, 1, true);
     observer.capture(world);
     simulation.step();
-    expect(observer.collectPitches(world)).toEqual(new Set([1]));
+    expect(observer.collectSounds(world)).toEqual([{ voice: 1, world, index: 8 }]);
 
     observer.capture(world);
-    expect(observer.collectPitches(world)).toEqual(new Set());
+    expect(observer.collectSounds(world)).toEqual([]);
   });
 
   it("uses net local x displacement, including diagonal moves and return trips", () => {
@@ -41,12 +41,12 @@ describe("bell observations", () => {
     const observer = new BellObserver();
     observer.capture(world);
     translate(world, -1, 1);
-    expect(observer.collectPitches(world)).toEqual(new Set([0]));
+    expect(observer.collectSounds(world)).toEqual([{ voice: 0, world, index: 15 }]);
 
     observer.capture(world);
     translate(world, 3, 1);
     translate(world, -3, 0);
-    expect(observer.collectPitches(world)).toEqual(new Set());
+    expect(observer.collectSounds(world)).toEqual([]);
   });
 
   it("rings for a rotator's horizontal displacement", () => {
@@ -61,10 +61,10 @@ describe("bell observations", () => {
     const observer = new BellObserver();
     observer.capture(world);
     new Simulation(world).step();
-    expect(observer.collectPitches(world)).toEqual(new Set([0]));
+    expect(observer.collectSounds(world)).toEqual([{ voice: 0, world, index: 25 }]);
   });
 
-  it("coalesces equal pitches without collisions across all three octaves", () => {
+  it("retains equal-pitch bell sites across all three octaves", () => {
     const sizes = [1, 3, 8, 9, 15, 32, 33, 36, 37];
     const world = new World(38, sizes.length);
     for (const [y, size] of sizes.entries()) {
@@ -76,7 +76,12 @@ describe("bell observations", () => {
     const observer = new BellObserver();
     observer.capture(world);
     translate(world, 1, 0);
-    expect(observer.collectPitches(world)).toEqual(new Set([0, 2, 7, 8, 14, 31, 32, 35, 36]));
+    expect(observer.collectSounds(world)).toEqual(sizes.flatMap((size, y) =>
+      Array.from({ length: Math.min(size, 2) }, (_, x) => ({
+        voice: size - 1,
+        world,
+        index: y * world.width + x + 1,
+      }))));
   });
 
   it.each([37, 38])("clamps a %i-block body at F2", (size) => {
@@ -88,7 +93,7 @@ describe("bell observations", () => {
     const observer = new BellObserver();
     observer.capture(world);
     translate(world, 1, 0);
-    expect(observer.collectPitches(world)).toEqual(new Set([36]));
+    expect(observer.collectSounds(world)).toEqual([{ voice: 36, world, index: 1 }]);
   });
 
   it("uses final weld topology and refreshes retained body membership", () => {
@@ -99,12 +104,12 @@ describe("bell observations", () => {
     observer.capture(world);
     translate(world, 1, 0);
     world.setWeld(1, 0, 2, 0, true);
-    expect(observer.collectPitches(world)).toEqual(new Set([1]));
+    expect(observer.collectSounds(world)).toEqual([{ voice: 1, world, index: 1 }]);
 
     observer.capture(world);
     translate(world, 1, 0);
     world.setWeld(2, 0, 3, 0, false);
-    expect(observer.collectPitches(world)).toEqual(new Set([0]));
+    expect(observer.collectSounds(world)).toEqual([{ voice: 0, world, index: 2 }]);
   });
 
   it("includes mechanically linked remote tiles in the final body size", () => {
@@ -118,7 +123,7 @@ describe("bell observations", () => {
     const observer = new BellObserver();
     observer.capture(world);
     translate(world, 1, 0);
-    expect(observer.collectPitches(world)).toEqual(new Set([3]));
+    expect(observer.collectSounds(world)).toEqual([{ voice: 3, world, index: 1 }]);
   });
 
   it("does not ring for deleted bells or newly created bells that move", () => {
@@ -132,7 +137,7 @@ describe("bell observations", () => {
     world.place(3, 0, TileKind.Empty);
     world.place(0, 0, TileKind.Bell);
     translate(world, 1, 0);
-    expect(observer.collectPitches(world)).toEqual(new Set());
+    expect(observer.collectSounds(world)).toEqual([]);
   });
 
   it("observes recursive local boards without ringing for carrier movement", () => {
@@ -148,13 +153,16 @@ describe("bell observations", () => {
     const observer = new BellObserver();
     observer.capture(world);
     translate(world, 1, 0);
-    expect(observer.collectPitches(world)).toEqual(new Set());
+    expect(observer.collectSounds(world)).toEqual([]);
 
     observer.capture(world);
     translate(world, 1, 0);
     translate(inner, 1, 0);
     translate(deepest, 1, 0);
-    expect(observer.collectPitches(world)).toEqual(new Set([0, 1]));
+    expect(observer.collectSounds(world)).toEqual([
+      { voice: 1, world: inner, index: 2 * inner.width + 1 },
+      { voice: 0, world: deepest, index: 1 },
+    ]);
   });
 
   it("does not transfer observations to cloned inner worlds with matching IDs", () => {
@@ -168,27 +176,27 @@ describe("bell observations", () => {
     world.place(1, 0, TileKind.RuneArray);
     world.runeArrayWorldAt(1, 0).copyFrom(original);
     world.place(0, 0, TileKind.Empty);
-    expect(observer.collectPitches(world)).toEqual(new Set());
+    expect(observer.collectSounds(world)).toEqual([]);
   });
 
   it("consumes captures and lets a new capture supersede previous positions", () => {
     const world = new World(6, 1);
     world.place(0, 0, TileKind.Bell);
     const observer = new BellObserver();
-    expect(observer.collectPitches(world)).toEqual(new Set());
+    expect(observer.collectSounds(world)).toEqual([]);
     observer.capture(world);
     translate(world, 1, 0);
     observer.capture(world);
-    expect(observer.collectPitches(world)).toEqual(new Set());
+    expect(observer.collectSounds(world)).toEqual([]);
 
     observer.capture(world);
     translate(world, 1, 0);
-    expect(observer.collectPitches(world)).toEqual(new Set([0]));
-    expect(observer.collectPitches(world)).toEqual(new Set());
+    expect(observer.collectSounds(world)).toEqual([{ voice: 0, world, index: 2 }]);
+    expect(observer.collectSounds(world)).toEqual([]);
 
     observer.capture(world);
     translate(world, 1, 0);
     observer.capture(new World(1, 1));
-    expect(observer.collectPitches(world)).toEqual(new Set());
+    expect(observer.collectSounds(world)).toEqual([]);
   });
 });

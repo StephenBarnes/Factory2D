@@ -21,7 +21,7 @@ export function watchShatterAnimation(world: World): Map<number, ShatterAnimatio
 export function recordShatterEffects(world: World, index: number): void {
   const kind = world.kindAtIndex(index);
   recordMachineryActivity(world,
-    kind === TileKind.Fastener ? "snap" : TILE_DEFINITIONS[kind].fragile ? "shatter" : "break");
+    kind === TileKind.Fastener ? "snap" : TILE_DEFINITIONS[kind].fragile ? "shatter" : "break", index);
   const cells = animations.get(world);
   if (cells === undefined) return;
   const animation = cells.get(index);

@@ -2,6 +2,7 @@ import { WeldedBodyIndex } from "../simulation/welded-body-index";
 import type { World } from "../simulation/world";
 import { WorldFeature } from "../simulation/world-features";
 import { expectDefined } from "../util/assert";
+import type { LocatedSound } from "./spatial-sound";
 
 // Twelve equal-tempered semitones per octave, tuned to A4 = 440 Hz.
 export const BELL_STEPS_PER_OCTAVE = 12;
@@ -34,7 +35,7 @@ interface BellObservation {
 /** Browser-side tick observations; neither snapshots nor cloned worlds inherit them. */
 export class BellObserver {
   private readonly observations = new WeakMap<World, BellObservation>();
-  private readonly pitches = new Set<number>();
+  private readonly sounds: LocatedSound<number>[] = [];
   private captureNumber = 0;
   private pending = false;
 
@@ -46,14 +47,14 @@ export class BellObserver {
     this.captureWorld(world);
   }
 
-  /** Each pitch rings once; the returned set is reused by the next collection. */
-  collectPitches(world: World): ReadonlySet<number> {
-    this.pitches.clear();
+  /** Preserve every ringing site; the returned array is reused by the next collection. */
+  collectSounds(world: World): readonly LocatedSound<number>[] {
+    this.sounds.length = 0;
     if (this.pending) {
       this.pending = false;
-      this.collectWorldPitches(world);
+      this.collectWorldSounds(world);
     }
-    return this.pitches;
+    return this.sounds;
   }
 
   private captureWorld(world: World): void {
@@ -82,7 +83,7 @@ export class BellObserver {
     }
   }
 
-  private collectWorldPitches(world: World): void {
+  private collectWorldSounds(world: World): void {
     const observation = this.observations.get(world);
     if (observation?.capture === this.captureNumber) {
       let bodies: WeldedBodyIndex | undefined;
@@ -99,7 +100,11 @@ export class BellObserver {
           bodies = observation.bodies ??= new WeldedBodyIndex(world);
           bodies.collect();
         }
-        this.pitches.add(bellPitchForBodySize(bodies.memberCountAtRoot(bodies.rootAt(index))));
+        this.sounds.push({
+          voice: bellPitchForBodySize(bodies.memberCountAtRoot(bodies.rootAt(index))),
+          world,
+          index,
+        });
       }
     }
     for (
@@ -107,7 +112,7 @@ export class BellObserver {
       index >= 0;
       index = world.nextFeatureIndex(WorldFeature.RuneArray, index)
     ) {
-      this.collectWorldPitches(world.runeArrayWorldAtIndex(index));
+      this.collectWorldSounds(world.runeArrayWorldAtIndex(index));
     }
   }
 }

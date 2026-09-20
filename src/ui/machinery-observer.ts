@@ -1,7 +1,13 @@
-import { watchMachineryActivity, type MachineryActivity } from "../simulation/machinery-activity";
+import {
+  finishMachineryActivity,
+  watchMachineryActivity,
+  type MachineryActivity,
+  type MachineryActivityEvent,
+} from "../simulation/machinery-activity";
 import { directionX, directionY, oppositeDirection, TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
 import { WorldFeature } from "../simulation/world-features";
+import type { LocatedSound } from "./spatial-sound";
 
 export type MachinerySound = MachineryActivity |
   "extend" | "retract" | "drill" | "grinder" | "furnace" |
@@ -14,7 +20,7 @@ const MACHINE_FEATURES = [
 interface MachineryObservation {
   capture: number;
   readonly kinds: Map<number, TileKind>;
-  activity: ReadonlySet<MachineryActivity> | null;
+  activity: readonly MachineryActivityEvent[] | null;
 }
 
 /** An extended piston keeps its original identity in its arm, not its new base. */
@@ -34,24 +40,32 @@ function machineId(world: World, index: number, kind: TileKind): number {
 /** Browser-only, sparse tick observations; cloned/new machines never inherit activity. */
 export class MachineryObserver {
   private readonly observations = new WeakMap<World, MachineryObservation>();
-  private readonly sounds = new Set<MachinerySound>();
+  private readonly sounds: LocatedSound<MachinerySound>[] = [];
+  private readonly activityWorlds: World[] = [];
   private captureNumber = 0;
   private pending = false;
 
   capture(world: World): void {
+    this.finishActivity();
     this.captureNumber += 1;
     this.pending = true;
     this.visitWorld(world, true);
   }
 
-  /** Coalesce each voice across the board tree; consume each capture only once. */
-  collectSounds(world: World): ReadonlySet<MachinerySound> {
-    this.sounds.clear();
+  /** Preserve every committed site across the board tree; consume each capture once. */
+  collectSounds(world: World): readonly LocatedSound<MachinerySound>[] {
+    this.sounds.length = 0;
     if (this.pending) {
       this.pending = false;
+      this.finishActivity();
       this.visitWorld(world, false);
     }
     return this.sounds;
+  }
+
+  private finishActivity(): void {
+    for (const world of this.activityWorlds) finishMachineryActivity(world);
+    this.activityWorlds.length = 0;
   }
 
   private visitWorld(world: World, capture: boolean): void {
@@ -67,10 +81,11 @@ export class MachineryObserver {
       observation.capture = this.captureNumber;
       observation.kinds.clear();
       observation.activity = hasActivity ? watchMachineryActivity(world) : null;
+      if (hasActivity) this.activityWorlds.push(world);
     }
     if (observation?.capture === this.captureNumber) {
       if (!capture && observation.activity !== null) {
-        for (const activity of observation.activity) this.sounds.add(activity);
+        for (const { voice, index } of observation.activity) this.sounds.push({ voice, world, index });
       }
       for (const feature of MACHINE_FEATURES) {
         for (
@@ -88,19 +103,22 @@ export class MachineryObserver {
           const previousKind = observation.kinds.get(id);
           if (previousKind === undefined) continue;
           if (kind === TileKind.PistonBase && previousKind === TileKind.Piston) {
-            this.sounds.add("extend");
+            this.sounds.push({ voice: "extend", world, index });
           } else if (kind === TileKind.Piston && previousKind === TileKind.PistonBase) {
-            this.sounds.add("retract");
+            this.sounds.push({ voice: "retract", world, index });
           } else if (kind === previousKind &&
               world.chargeAtPortIndex(index, oppositeDirection(world.orientationAtIndex(index))) === 1) {
             // Isolated rear outputs report active processing or successful weld changes.
-            if (kind === TileKind.Drill) this.sounds.add("drill");
-            else if (kind === TileKind.Grinder) this.sounds.add("grinder");
-            else if (kind === TileKind.Furnace) this.sounds.add("furnace");
-            else if (kind === TileKind.Welder) this.sounds.add("welder");
-            else if (kind === TileKind.Splitter) this.sounds.add("splitter");
-            else if (kind === TileKind.LaserSplitter) this.sounds.add("laserSplitter");
-            else if (kind === TileKind.Dismantler) this.sounds.add("dismantler");
+            let voice: MachinerySound;
+            if (kind === TileKind.Drill) voice = "drill";
+            else if (kind === TileKind.Grinder) voice = "grinder";
+            else if (kind === TileKind.Furnace) voice = "furnace";
+            else if (kind === TileKind.Welder) voice = "welder";
+            else if (kind === TileKind.Splitter) voice = "splitter";
+            else if (kind === TileKind.LaserSplitter) voice = "laserSplitter";
+            else if (kind === TileKind.Dismantler) voice = "dismantler";
+            else continue;
+            this.sounds.push({ voice, world, index });
           }
         }
       }
