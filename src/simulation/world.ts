@@ -28,6 +28,7 @@ import { isCharge, type Charge } from "./circuit";
 import { isProcessingMachine, processingRecipeFor } from "./furnace";
 import { PuzzleResult } from "./puzzle-result";
 import { recordProcessingAnimation } from "./processing-animation";
+import { recordConsumption, recordProduction } from "./production-animation";
 import { ContactDestruction, contactDestruction } from "./motion-contact";
 import { recordShatterEffects } from "./shatter-animation";
 import { validateTextBoxes, type TextBox } from "./text-box";
@@ -1087,6 +1088,7 @@ export class World {
       if (this.cells.kinds[target] === TileKind.Empty || bodyOwners[target] !== assembler) {
         throw new Error(`Assembler at index ${assembler} lost its input body`);
       }
+      recordConsumption(this, bodyOwners, assembler);
       let removed = 0;
       for (let index = 0; index < this.cellCount; index += 1) {
         if (bodyOwners[index] !== assembler) {
@@ -1147,6 +1149,7 @@ export class World {
       const targetX = target % this.width;
       const targetY = (target - targetX) / this.width;
       this.place(targetX, targetY, kind, orientation, mirrored);
+      recordProduction(this, target, assembler);
       changed = true;
     }
 
@@ -1185,6 +1188,7 @@ export class World {
       ) {
         throw new Error(`Delivery box at index ${delivery} lost its absorption body`);
       }
+      recordConsumption(this, bodyOwners, delivery);
     }
 
     let removedCellCount = 0;
@@ -1426,6 +1430,7 @@ export class World {
           this.cells.downWelds[destination] = 1;
         }
       }
+      recordProduction(this, destination, owner);
     }
     this.touchGeometryRevision();
   }

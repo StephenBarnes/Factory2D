@@ -147,8 +147,8 @@ export class AssemblerResolver {
 
   /**
    * Drops intents invalidated by earlier phases this tick, then applies the rest to the
-   * world and, identically, to the interpolation source so emitted tiles animate from
-   * their output cell.
+   * world and, identically, to the interpolation source so subsequent motion starts
+   * at the output cell. Render-only production capture adds the emergence animation.
    */
   commit(interpolationSource?: World): void {
     if (this.intentCount === 0) {

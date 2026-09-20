@@ -2,6 +2,7 @@ import { CircuitResolver } from "./circuit-resolver";
 import { beginFlipAnimation, clearFlipAnimation, sealFlipAnimation } from "./flip-animation";
 import { MAX_RUNE_ARRAY_DEPTH } from "./rune-array";
 import { beginRotationAnimation, clearRotationAnimation, sealRotationAnimation } from "./rotation-animation";
+import { beginProductionAnimation, clearProductionAnimation, sealProductionAnimation } from "./production-animation";
 import { TileKind } from "./tile";
 import { WorldFeature } from "./world-features";
 import type { World } from "./world";
@@ -34,6 +35,7 @@ export class Simulation {
     for (const runtime of this.runtimes) {
       clearRotationAnimation(runtime.world);
       clearFlipAnimation(runtime.world);
+      clearProductionAnimation(runtime.world);
     }
     this.collectRuntimes(interpolationSource);
     this.circuitResolver.observeMagicLinks(this.runtimes);
@@ -41,6 +43,7 @@ export class Simulation {
     for (const runtime of this.runtimes) {
       beginRotationAnimation(runtime.world, runtime.interpolationSource);
       beginFlipAnimation(runtime.world, runtime.interpolationSource);
+      beginProductionAnimation(runtime.world, runtime.interpolationSource);
       runtime.collectIntents();
       hasCircuit ||= runtime.world.hasFeature(WorldFeature.Circuit);
     }
@@ -61,6 +64,7 @@ export class Simulation {
     for (const runtime of this.runtimes) {
       sealRotationAnimation(runtime.world);
       sealFlipAnimation(runtime.world);
+      sealProductionAnimation(runtime.world);
     }
     this.tick += 1;
     return movementCount;
@@ -70,6 +74,7 @@ export class Simulation {
     for (const runtime of this.runtimes) {
       clearRotationAnimation(runtime.world);
       clearFlipAnimation(runtime.world);
+      clearProductionAnimation(runtime.world);
     }
     this.world.copyFrom(snapshot);
     this.tick = 0;

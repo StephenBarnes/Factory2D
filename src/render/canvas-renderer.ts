@@ -27,6 +27,7 @@ import { tileAppearance } from "./appearance";
 import { FlipInterpolation } from "./flip-interpolation";
 import { RotationInterpolation } from "./rotation-interpolation";
 import { TranslationInterpolation } from "./translation-interpolation";
+import { ProductionInterpolation } from "./production-interpolation";
 import {
   type BodyCell,
   createBodyPath,
@@ -209,6 +210,8 @@ export class CanvasRenderer {
   private readonly flipInterpolation = new FlipInterpolation();
   private readonly rotationTransform: BodyTransform = { a: 1, b: 0, c: 0, d: 1, x: 0, y: 0 };
   private readonly translationInterpolation = new TranslationInterpolation();
+  private readonly productionInterpolation: ProductionInterpolation;
+  private readonly productionTransform: BodyTransform = { a: 1, b: 0, c: 0, d: 1, x: 0, y: 0 };
   private renderedProgress = -1;
   private renderedNestedPortCharges = -1;
   private hasTimeDependentVisuals = false;
@@ -231,6 +234,7 @@ export class CanvasRenderer {
     this.processingAnimations = watchProcessingAnimation(world);
     this.shatterAnimations = watchShatterAnimation(world);
     this.bellRings = watchBellRings(world);
+    this.productionInterpolation = new ProductionInterpolation(world);
     this.editableRegion = editableRegion;
     this.nestedView = nestedView;
     this.fitMargin = nestedView === null ? 0 : 1;
@@ -398,6 +402,8 @@ export class CanvasRenderer {
     if (!animationsEnabled || this.cellSize < 6) {
       this.shatterAnimations.clear();
       this.bellRings.clear();
+      if (this.productionInterpolation.active) this.renderInvalidated = true;
+      this.productionInterpolation.clear();
     }
     const boundedProgress = Math.max(0, Math.min(1, progress));
     const previousWorldRevision = previousWorld?.revision ?? -1;
@@ -1287,6 +1293,10 @@ export class CanvasRenderer {
     this.translationInterpolation.prepare(this.world, previousWorld);
     this.rotationInterpolation.prepare(this.world, previousWorld, progress);
     this.flipInterpolation.prepare(this.world, previousWorld, progress);
+    this.productionInterpolation.prepare(previousWorld, progress);
+    this.productionInterpolation.drawConsumed(
+      this.context, this.originX, this.originY, this.cellSize, animationTime,
+    );
     if (
       previousWorld !== this.renderedPreviousWorld ||
       (previousWorld?.revision ?? -1) !== this.renderedPreviousWorldRevision
@@ -1342,12 +1352,12 @@ export class CanvasRenderer {
       cached.rotationRevision === this.rotationInterpolation.revision &&
       cached.flipRevision === this.flipInterpolation.revision) return cached.bodies;
     const firstCell = expectDefined(body.cells[0], "first motion group cell");
-    const firstKey = this.motionGroupAt(firstCell.y * this.world.width + firstCell.x);
+    const firstKey = this.productionMotionGroupAt(firstCell.y * this.world.width + firstCell.x);
     let uniform = motion.transitionAt(firstCell.y * this.world.width + firstCell.x) !== -1;
     for (let i = 1; uniform && i < body.cells.length; i += 1) {
       const cell = expectDefined(body.cells[i], "motion group cell");
       if (motion.transitionAt(cell.y * this.world.width + cell.x) === -1 ||
-        this.motionGroupAt(cell.y * this.world.width + cell.x) !== firstKey) {
+        this.productionMotionGroupAt(cell.y * this.world.width + cell.x) !== firstKey) {
         uniform = false;
         break;
       }
@@ -1362,9 +1372,9 @@ export class CanvasRenderer {
     if (uniform) {
       bodies.push(body);
     } else {
-      const groups = new Map<number, BodyCell[]>();
+      const groups = new Map<number | string, BodyCell[]>();
       for (const cell of body.cells) {
-        const key = this.motionGroupAt(cell.y * this.world.width + cell.x);
+        const key = this.productionMotionGroupAt(cell.y * this.world.width + cell.x);
         const group = groups.get(key);
         if (group === undefined) groups.set(key, [cell]);
         else group.push(cell);
@@ -1460,6 +1470,12 @@ export class CanvasRenderer {
     };
   }
 
+  private productionMotionGroupAt(index: number): number | string {
+    const motionGroup = this.motionGroupAt(index);
+    const origin = this.productionInterpolation.originAt(index);
+    return origin === undefined ? motionGroup : `${motionGroup}:${origin.group}`;
+  }
+
   private motionGroupAt(index: number): number {
     const flipGroup = this.flipInterpolation.groupAt(index);
     if (flipGroup > 0) return -2 * flipGroup;
@@ -1545,6 +1561,9 @@ export class CanvasRenderer {
       }
     }
     this.context.save();
+    if (this.productionInterpolation.originAt(firstIndex) !== undefined) {
+      this.context.globalAlpha *= progress;
+    }
     this.context.translate(
       this.originX + offsetX * this.cellSize,
       this.originY + offsetY * this.cellSize,
@@ -1691,6 +1710,24 @@ export class CanvasRenderer {
   }
 
   private bodyTransformAt(index: number): BodyTransform | null {
+    const base = this.rigidBodyTransformAt(index);
+    const origin = this.productionInterpolation.originAt(index);
+    if (origin === undefined) return base;
+    const progress = this.productionInterpolation.progress;
+    const remaining = 1 - progress;
+    const transform = this.productionTransform;
+    transform.a = progress * (base?.a ?? 1);
+    transform.b = progress * (base?.b ?? 0);
+    transform.c = progress * (base?.c ?? 0);
+    transform.d = progress * (base?.d ?? 1);
+    transform.x = progress * (base?.x ?? this.translationInterpolation.xAt(index) * remaining) +
+      remaining * (origin.x + progress * (origin.currentX - origin.x));
+    transform.y = progress * (base?.y ?? this.translationInterpolation.yAt(index) * remaining) +
+      remaining * (origin.y + progress * (origin.currentY - origin.y));
+    return transform;
+  }
+
+  private rigidBodyTransformAt(index: number): BodyTransform | null {
     const flip = this.flipInterpolation.at(index);
     if (flip !== null) return flip;
     const rotation = this.rotationInterpolation.at(index);
