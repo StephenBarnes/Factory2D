@@ -1,0 +1,113 @@
+{
+  "format": "factory2d-board",
+  "version": 15,
+  "width": 15,
+  "height": 15,
+  "tick": 0,
+  "result": "in-progress",
+  "grid": [
+    "===============",
+    "=......o......=",
+    "=......o......=",
+    "=......o......=",
+    "=......o......=",
+    "=......o......=",
+    "=......o......=",
+    "=.............=",
+    "=.............=",
+    "=.............=",
+    "=.C&....F.....=",
+    "=.U....w=.....=",
+    "=.1..........{{",
+    "=.=..1BBBBBBD{N",
+    "============c=V"
+  ],
+  "orientations": [
+    {
+      "x": 3,
+      "y": 10,
+      "direction": "right"
+    },
+    {
+      "x": 8,
+      "y": 10,
+      "direction": "left"
+    },
+    {
+      "x": 14,
+      "y": 13,
+      "direction": "down"
+    }
+  ],
+  "components": [
+    {
+      "x": 2,
+      "y": 11,
+      "type": "rom",
+      "width": 3,
+      "height": 4,
+      "cursor": 0,
+      "wrapX": true,
+      "wrapY": true,
+      "values": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        -1
+      ]
+    },
+    {
+      "x": 14,
+      "y": 13,
+      "type": "counter",
+      "threshold": 6,
+      "count": 0
+    }
+  ],
+  "textBoxes": [
+    {
+      "id": "ore",
+      "x": 1,
+      "y": 1,
+      "width": 5,
+      "height": 3,
+      "text": "Six copper ore blocks.\nNo replacements.",
+      "owner": "author"
+    },
+    {
+      "id": "smelting",
+      "x": 8,
+      "y": 1,
+      "width": 6,
+      "height": 5,
+      "text": "Copper ore needs six active furnace ticks with wood touching the ore.\n\nWood is not consumed.",
+      "owner": "author"
+    }
+  ],
+  "welds": [
+    "...............",
+    "...............",
+    "...............",
+    "...............",
+    "...............",
+    "...............",
+    "...............",
+    "...............",
+    "...............",
+    "...............",
+    "..+.....|......",
+    "..|....-......|",
+    "..|..........+|",
+    ".....++++++|-.|",
+    "..............."
+  ]
+}
+

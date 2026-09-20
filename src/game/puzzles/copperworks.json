@@ -1,0 +1,207 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 5,
+  "width": 15,
+  "height": 15,
+  "id": "copperworks",
+  "group": "manufacturing",
+  "order": 0.5,
+  "name": "Copperworks",
+  "difficulty": 2,
+  "description": "The brewers need copper for their new stills. Six blocks of copper ore are waiting above the workshop. Smelt them and deliver the copper below. A furnace needs six active ticks with wood touching the ore orthogonally; the wood is not consumed. There is no replacement ore, so keep unfinished material away from the receiver.",
+  "goal": "Smelt and deliver all six copper blocks.",
+  "cycleLimit": 1000,
+  "components": [
+    {
+      "code": "#",
+      "price": 1
+    },
+    {
+      "code": "w",
+      "price": 1
+    },
+    {
+      "code": "=",
+      "price": 10
+    },
+    {
+      "code": "L",
+      "price": 10
+    },
+    {
+      "code": "B",
+      "price": 5
+    },
+    {
+      "code": "P",
+      "price": 10
+    },
+    {
+      "code": "r",
+      "price": 15
+    },
+    {
+      "code": "&",
+      "price": 30
+    },
+    {
+      "code": "F",
+      "price": 15
+    },
+    {
+      "code": "J",
+      "price": 10
+    },
+    {
+      "code": "X",
+      "price": 10
+    },
+    {
+      "code": "C",
+      "price": 2
+    },
+    {
+      "code": "S",
+      "price": 10
+    },
+    {
+      "code": "Q",
+      "price": 15
+    },
+    {
+      "code": "1",
+      "price": 5
+    },
+    {
+      "code": "K",
+      "price": 3
+    },
+    {
+      "code": "I",
+      "price": 10
+    },
+    {
+      "code": "+",
+      "price": 10
+    },
+    {
+      "code": "R",
+      "price": 15
+    },
+    {
+      "code": "T",
+      "price": 10
+    },
+    {
+      "code": "W",
+      "price": 10
+    },
+    {
+      "code": ";",
+      "price": 3
+    },
+    {
+      "code": "Z",
+      "price": 30
+    },
+    {
+      "code": "N",
+      "price": 20
+    },
+    {
+      "code": "U",
+      "price": 30
+    },
+    {
+      "code": "m",
+      "price": 0
+    }
+  ],
+  "editableRegions": [
+    {
+      "x": 1,
+      "y": 7,
+      "width": 11,
+      "height": 7
+    }
+  ],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 15,
+    "width": 15,
+    "height": 15,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "===============",
+      "=......o......=",
+      "=......o......=",
+      "=......o......=",
+      "=......o......=",
+      "=......o......=",
+      "=......o......=",
+      "=.............=",
+      "=.............=",
+      "=.............=",
+      "=.............=",
+      "=.............=",
+      "=............{{",
+      "=...........D{N",
+      "============c=V"
+    ],
+    "orientations": [
+      {
+        "x": 14,
+        "y": 13,
+        "direction": "down"
+      }
+    ],
+    "components": [
+      {
+        "x": 14,
+        "y": 13,
+        "type": "counter",
+        "threshold": 6,
+        "count": 0
+      }
+    ],
+    "textBoxes": [
+      {
+        "id": "ore",
+        "x": 1,
+        "y": 1,
+        "width": 5,
+        "height": 3,
+        "text": "Six copper ore blocks.\nNo replacements.",
+        "owner": "author"
+      },
+      {
+        "id": "smelting",
+        "x": 8,
+        "y": 1,
+        "width": 6,
+        "height": 5,
+        "text": "Copper ore needs six active furnace ticks with wood touching the ore.\n\nWood is not consumed.",
+        "owner": "author"
+      }
+    ],
+    "welds": [
+      "...............",
+      "...............",
+      "...............",
+      "...............",
+      "...............",
+      "...............",
+      "...............",
+      "...............",
+      "...............",
+      "...............",
+      "...............",
+      "..............|",
+      ".............+|",
+      "............-.|",
+      "..............."
+    ]
+  },
+  "testCases": []
+}

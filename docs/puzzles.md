@@ -1,4 +1,4 @@
-Current shipped catalog: **21 puzzles — 7 tutorials and 14 non-tutorials**. Each entry below links to its definition in `src/game/puzzles/`; names, groups, and ordering follow those files.
+Current shipped catalog: **22 puzzles — 7 tutorials and 15 non-tutorials**. Each entry below links to its definition in `src/game/puzzles/`; names, groups, and ordering follow those files.
 
 # Tutorial puzzles
 
@@ -40,6 +40,7 @@ The puzzle set we ship on first release should focus more on mechanical puzzles.
 ## Manufacturing
 
 * [Glass blocks](glass-blocks.json) (Easy): sand falls from above. It must be smelted into glass blocks and delivered. Introduces furnaces and fragile blocks. Solution is easy, but leaves some room for optimizing cycles or price by several means (moving/modifying the sand dispenser, dropping glass directly on delivery to avoid shattering, grinding the stone ceiling/walls for more sand, or using advanced blocks in palette).
+* [Copperworks](../src/game/puzzles/copperworks.json) (Intermediate): smelt a finite supply of six copper ore blocks beside wood, then deliver all six copper blocks. The compact lower workshop requires coordinating six-tick processing with transport; wood is reusable, but there is no replacement ore and duplicators are unavailable. The reference solution uses a timed force projector to pull finished copper from a furnace onto a conveyor line.
 * [Iron plates](../src/game/puzzles/iron-plates.json) (Hard): duplicate iron ore, smelt it, and weld three iron blocks in a row; deliver ten plates. Two duplicators offer tradeoffs between cycles, footprint, cost, and complexity. Exploits may also be possible, such as drilling away a duplicator and duplicating entire plates.
 * [Pickaxes to hammers](../src/game/puzzles/pickaxes-to-hammers.json) (Hard): produce five warhammers by reforging supplied pickaxes or smelting supplied ore. Separate duplicators provide the two feedstocks; drills, splitters, welders, and furnaces support different production routes. Delivered hammers must match the template with their heads facing left.
 
