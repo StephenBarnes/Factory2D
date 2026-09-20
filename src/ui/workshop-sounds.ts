@@ -211,6 +211,19 @@ export class WorkshopSounds {
           this.tone(130, 70, "triangle", 0, 0.08, 0.4);
           this.tone(390, 260, "sine", 0.06, 0.08, 0.2);
           break;
+        case "break":
+          this.noise("lowpass", 1800, 0.16, 0.65);
+          this.tone(150, 45, "triangle", 0, 0.12, 0.5);
+          break;
+        case "shatter":
+          this.noise("highpass", 3600, 0.18, 0.5);
+          this.tone(2600, 1700, "sine", 0, 0.12, 0.18);
+          this.tone(3900, 2400, "sine", 0.025, 0.15, 0.12);
+          break;
+        case "snap":
+          this.noise("bandpass", 2600, 0.055, 0.6);
+          this.tone(950, 320, "triangle", 0, 0.075, 0.4);
+          break;
       }
     }
   }

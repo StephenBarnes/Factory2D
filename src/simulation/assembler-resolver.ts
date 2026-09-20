@@ -3,7 +3,7 @@ import { ASSEMBLER_PATTERNS, MIRRORED_ASSEMBLER_PATTERNS, type AssemblerPattern 
 import { MAX_ASSEMBLER_OUTPUTS } from "./configurable-components";
 import type { DeliveryResolver } from "./delivery-resolver";
 import type { DuplicatorResolver } from "./duplicator-resolver";
-import { recordProductionActivity } from "./production-activity";
+import { recordMachineryActivity } from "./machinery-activity";
 import {
   Direction,
   orientedDirection,
@@ -199,7 +199,7 @@ export class AssemblerResolver {
       this.queuedMirrored,
       this.emitTargetIndices,
     );
-    recordProductionActivity(this.world, "assembler");
+    recordMachineryActivity(this.world, "assembler");
     interpolationSource?.applyAssemblerResults(
       this.consumeTargetIndices,
       this.bodyOwners,

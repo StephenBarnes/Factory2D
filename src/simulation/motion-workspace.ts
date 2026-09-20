@@ -1,6 +1,6 @@
 import { expectDefined } from "../util/assert";
 import { magicLinksFor } from "./magic-link";
-import { recordShatterAnimation } from "./shatter-animation";
+import { recordShatterEffects } from "./shatter-animation";
 import {
   Direction,
   directionX,
@@ -193,7 +193,7 @@ export class MotionWorkspace {
         throw new Error(`Moved fastener missing at index ${index}`);
       }
       const x = index % this.world.width;
-      recordShatterAnimation(this.world, index);
+      recordShatterEffects(this.world, index);
       this.world.place(x, (index - x) / this.world.width, TileKind.Empty);
     }
   }
@@ -222,7 +222,7 @@ export class MotionWorkspace {
         throw new Error(`Landed fragile tile missing at index ${index}`);
       }
       const x = index % this.world.width;
-      recordShatterAnimation(this.world, index);
+      recordShatterEffects(this.world, index);
       this.world.place(x, (index - x) / this.world.width, TileKind.Empty);
     }
   }

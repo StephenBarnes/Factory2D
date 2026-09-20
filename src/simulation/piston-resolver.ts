@@ -1,6 +1,6 @@
 import { expectDefined } from "../util/assert";
 import { magicLinksFor } from "./magic-link";
-import { recordShatterAnimation } from "./shatter-animation";
+import { recordShatterEffects } from "./shatter-animation";
 import { Direction, directionX, directionY, oppositeDirection, TILE_DEFINITIONS, TileKind } from "./tile";
 import { World } from "./world";
 import { WorldFeature } from "./world-features";
@@ -568,7 +568,7 @@ export class PistonResolver {
       if (this.world.kindAtIndex(cell) !== TileKind.Fastener) {
         throw new Error(`Moved fastener missing at index ${cell}`);
       }
-      recordShatterAnimation(this.world, cell);
+      recordShatterEffects(this.world, cell);
       this.world.place(cell % this.world.width, Math.floor(cell / this.world.width), TileKind.Empty);
     }
     return movements + transitions;

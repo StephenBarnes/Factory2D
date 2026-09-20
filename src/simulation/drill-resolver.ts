@@ -1,6 +1,6 @@
 import { expectDefined } from "../util/assert";
 import { DRILL_TICKS, processingRecipeFor } from "./furnace";
-import { recordShatterAnimation } from "./shatter-animation";
+import { recordShatterEffects } from "./shatter-animation";
 import { Direction, directionX, directionY, TILE_DEFINITIONS, TileKind } from "./tile";
 import type { World } from "./world";
 import { WorldFeature } from "./world-features";
@@ -105,7 +105,7 @@ export class DrillResolver {
         continue;
       }
       if (TILE_DEFINITIONS[this.world.kindAtIndex(target)].indestructible) continue;
-      recordShatterAnimation(this.world, target);
+      recordShatterEffects(this.world, target);
       this.world.place(target % this.world.width, Math.floor(target / this.world.width), TileKind.Empty);
     }
   }

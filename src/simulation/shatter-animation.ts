@@ -1,4 +1,5 @@
-import type { TileKind } from "./tile";
+import { recordMachineryActivity } from "./machinery-activity";
+import { TILE_DEFINITIONS, TileKind } from "./tile";
 import type { World } from "./world";
 
 export interface ShatterAnimation {
@@ -17,10 +18,12 @@ export function watchShatterAnimation(world: World): Map<number, ShatterAnimatio
 }
 
 /** Call immediately before committed destruction, not ordinary erasing or consumption. */
-export function recordShatterAnimation(world: World, index: number): void {
+export function recordShatterEffects(world: World, index: number): void {
+  const kind = world.kindAtIndex(index);
+  recordMachineryActivity(world,
+    kind === TileKind.Fastener ? "snap" : TILE_DEFINITIONS[kind].fragile ? "shatter" : "break");
   const cells = animations.get(world);
   if (cells === undefined) return;
-  const kind = world.kindAtIndex(index);
   const animation = cells.get(index);
   if (animation === undefined) {
     cells.set(index, { startedAt: performance.now(), kind });

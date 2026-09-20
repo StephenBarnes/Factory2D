@@ -62,7 +62,9 @@ describe("machinery sound observations", () => {
     for (let tick = 0; tick < 4; tick += 1) {
       observer.capture(world);
       simulation.step();
-      expect(observer.collectSounds(world)).toEqual(new Set(["furnace", "grinder", "drill"]));
+      expect(observer.collectSounds(world)).toEqual(new Set(
+        tick === 3 ? ["furnace", "grinder", "drill", "break"] : ["furnace", "grinder", "drill"],
+      ));
     }
     observer.capture(world);
     simulation.step();
@@ -91,5 +93,56 @@ describe("machinery sound observations", () => {
     world.runeArrayWorldAt(1, 0).copyFrom(inner);
     world.place(0, 0, TileKind.Empty);
     expect(observer.collectSounds(world)).toEqual(new Set());
+  });
+
+  it("hears unwatched nested glass landings without replaying skipped ticks or erased tiles", () => {
+    const world = new World(1, 1);
+    world.place(0, 0, TileKind.RuneArray);
+    world.configureRuneArray(0, 0, 3, 3, "");
+    const inner = world.runeArrayWorldAt(0, 0);
+    inner.place(0, 0, TileKind.Glass);
+    inner.place(1, 0, TileKind.Glass);
+    inner.place(2, 0, TileKind.Glass);
+    inner.place(2, 2, TileKind.Platform);
+    const observer = new MachineryObserver();
+    const simulation = new Simulation(world);
+    for (let tick = 0; tick < 2; tick += 1) {
+      observer.capture(world);
+      simulation.step();
+      expect(observer.collectSounds(world)).toEqual(new Set());
+    }
+    observer.capture(world);
+    simulation.step();
+    expect(observer.collectSounds(world)).toEqual(new Set(["shatter"]));
+    expect(observer.collectSounds(world)).toEqual(new Set());
+
+    inner.place(0, 0, TileKind.Glass);
+    simulation.step();
+    simulation.step();
+    simulation.step();
+    observer.capture(world);
+    simulation.step();
+    expect(observer.collectSounds(world)).toEqual(new Set());
+    observer.capture(world);
+    inner.place(2, 1, TileKind.Empty);
+    simulation.step();
+    expect(observer.collectSounds(world)).toEqual(new Set());
+  });
+
+  it("snaps only after accepted fastener movement, even without a mounted animation", () => {
+    const world = new World(3, 1);
+    world.place(0, 0, TileKind.Thruster, Direction.Right);
+    world.place(1, 0, TileKind.Fastener);
+    world.setWeld(0, 0, 1, 0, true);
+    world.place(2, 0, TileKind.Platform);
+    const observer = new MachineryObserver();
+    const simulation = new Simulation(world);
+    observer.capture(world);
+    simulation.step();
+    expect(observer.collectSounds(world)).toEqual(new Set());
+    world.place(2, 0, TileKind.Empty);
+    observer.capture(world);
+    simulation.step();
+    expect(observer.collectSounds(world)).toEqual(new Set(["snap"]));
   });
 });

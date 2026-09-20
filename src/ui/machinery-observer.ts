@@ -1,9 +1,9 @@
-import { watchProductionActivity, type ProductionActivity } from "../simulation/production-activity";
+import { watchMachineryActivity, type MachineryActivity } from "../simulation/machinery-activity";
 import { directionX, directionY, oppositeDirection, TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
 import { WorldFeature } from "../simulation/world-features";
 
-export type MachinerySound = ProductionActivity |
+export type MachinerySound = MachineryActivity |
   "extend" | "retract" | "drill" | "grinder" | "furnace" |
   "welder" | "splitter" | "laserSplitter" | "dismantler";
 
@@ -14,7 +14,7 @@ const MACHINE_FEATURES = [
 interface MachineryObservation {
   capture: number;
   readonly kinds: Map<number, TileKind>;
-  production: ReadonlySet<ProductionActivity> | null;
+  activity: ReadonlySet<MachineryActivity> | null;
 }
 
 /** An extended piston keeps its original identity in its arm, not its new base. */
@@ -56,19 +56,21 @@ export class MachineryObserver {
 
   private visitWorld(world: World, capture: boolean): void {
     let observation = this.observations.get(world);
-    const hasProduction = world.hasFeature(WorldFeature.Duplicator) || world.hasFeature(WorldFeature.Assembler);
-    if (capture && (hasProduction || MACHINE_FEATURES.some((feature) => world.hasFeature(feature)))) {
+    const hasActivity = world.hasFeature(WorldFeature.Duplicator) || world.hasFeature(WorldFeature.Assembler) ||
+      world.hasFeature(WorldFeature.Drill) || world.hasFeature(WorldFeature.Fragile) ||
+      world.hasFeature(WorldFeature.Fastener);
+    if (capture && (hasActivity || MACHINE_FEATURES.some((feature) => world.hasFeature(feature)))) {
       if (observation === undefined) {
-        observation = { capture: this.captureNumber, kinds: new Map(), production: null };
+        observation = { capture: this.captureNumber, kinds: new Map(), activity: null };
         this.observations.set(world, observation);
       }
       observation.capture = this.captureNumber;
       observation.kinds.clear();
-      observation.production = hasProduction ? watchProductionActivity(world) : null;
+      observation.activity = hasActivity ? watchMachineryActivity(world) : null;
     }
     if (observation?.capture === this.captureNumber) {
-      if (!capture && observation.production !== null) {
-        for (const activity of observation.production) this.sounds.add(activity);
+      if (!capture && observation.activity !== null) {
+        for (const activity of observation.activity) this.sounds.add(activity);
       }
       for (const feature of MACHINE_FEATURES) {
         for (

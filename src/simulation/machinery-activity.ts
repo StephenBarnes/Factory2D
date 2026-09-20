@@ -1,12 +1,12 @@
 import type { World } from "./world";
 
-export type ProductionActivity = "duplicator" | "assembler";
+export type MachineryActivity = "duplicator" | "assembler" | "break" | "shatter" | "snap";
 
 // Transient feedback only: never serialized or copied with a world.
-const observations = new WeakMap<World, Set<ProductionActivity>>();
+const observations = new WeakMap<World, Set<MachineryActivity>>();
 
 /** Start a fresh observation window, retaining storage across visible ticks. */
-export function watchProductionActivity(world: World): ReadonlySet<ProductionActivity> {
+export function watchMachineryActivity(world: World): ReadonlySet<MachineryActivity> {
   let activity = observations.get(world);
   if (activity === undefined) {
     activity = new Set();
@@ -18,6 +18,6 @@ export function watchProductionActivity(world: World): ReadonlySet<ProductionAct
 }
 
 /** Only successful commits report activity; unobserved boards allocate nothing. */
-export function recordProductionActivity(world: World, activity: ProductionActivity): void {
+export function recordMachineryActivity(world: World, activity: MachineryActivity): void {
   observations.get(world)?.add(activity);
 }
