@@ -10,6 +10,7 @@ import { MotionWorkspace } from "./motion-workspace";
 import { MovementSensorObserver } from "./movement-sensor";
 import { PistonResolver } from "./piston-resolver";
 import { RotatorResolver } from "./rotator-resolver";
+import { TonalObserver } from "./tonal-observer";
 import { WeldOperationResolver } from "./weld-operation-resolver";
 import { WeldedBodyIndex } from "./welded-body-index";
 import type { World } from "./world";
@@ -36,7 +37,7 @@ export class WorldRuntime {
   private flipperResolverValue: FlipperResolver | undefined;
   private weldOperationResolverValue: WeldOperationResolver | undefined;
   private movementSensorObserver: MovementSensorObserver | undefined;
-  private initialBellXs: Map<number, number> | undefined;
+  private tonalObserver: TonalObserver | undefined;
   private heardBellPitches: Uint8Array | undefined;
   private nextChargesValue: Int8Array | undefined;
   private nextCrossingVerticalChargesValue: Int8Array | undefined;
@@ -136,7 +137,10 @@ export class WorldRuntime {
   collectIntents(): void {
     const world = this.world;
     this.motionWorkspaceValue?.clearCircuitCommands();
-    this.collectBellPositions();
+    if (world.hasFeature(WorldFeature.Bell) || world.hasFeature(WorldFeature.Mallet)) {
+      this.tonalObserver ??= new TonalObserver(world);
+    }
+    this.tonalObserver?.capture();
     if (world.hasFeature(WorldFeature.MovementSensor)) {
       this.movementSensorObserver ??= new MovementSensorObserver(world);
     }
@@ -212,40 +216,14 @@ export class WorldRuntime {
     return movementCount;
   }
 
-  private collectBellPositions(): void {
-    this.initialBellXs?.clear();
-    const world = this.world;
-    if (!world.hasFeature(WorldFeature.Bell)) return;
-    const positions = this.initialBellXs ??= new Map<number, number>();
-    for (
-      let index = world.firstFeatureIndex(WorldFeature.Bell);
-      index >= 0;
-      index = world.nextFeatureIndex(WorldFeature.Bell, index)
-    ) {
-      positions.set(world.idAtIndex(index), index % world.width);
-    }
-  }
-
   private commitResonatorPulses(): void {
     const world = this.world;
-    if (!world.hasFeature(WorldFeature.Resonator) || !this.initialBellXs?.size) return;
+    if (!world.hasFeature(WorldFeature.Resonator) || this.tonalObserver === undefined) return;
+    const events = this.tonalObserver.collect(this.weldedBodies);
+    if (events.length === 0) return;
     const pitches = this.heardBellPitches ??= new Uint8Array(BELL_PITCH_COUNT);
     pitches.fill(0);
-    let rang = false;
-    for (
-      let index = world.firstFeatureIndex(WorldFeature.Bell);
-      index >= 0;
-      index = world.nextFeatureIndex(WorldFeature.Bell, index)
-    ) {
-      const initialX = this.initialBellXs.get(world.idAtIndex(index));
-      if (initialX === undefined || initialX === index % world.width) continue;
-      // Intent observers no longer use this scratch; rebuild against final geometry.
-      if (!rang) this.weldedBodies.collect();
-      rang = true;
-      const size = this.weldedBodies.memberCountAtRoot(this.weldedBodies.rootAt(index));
-      pitches[bellPitchForBodySize(size)] = 1;
-    }
-    if (!rang) return;
+    for (const event of events) pitches[event.pitch] = 1;
     for (
       let index = world.firstFeatureIndex(WorldFeature.Resonator);
       index >= 0;

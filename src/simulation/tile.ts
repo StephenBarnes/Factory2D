@@ -84,6 +84,7 @@ export const enum TileKind {
   Tin = 82,
   Steel = 83,
   Bronze = 84,
+  Mallet = 85,
 }
 
 export const enum Direction {
@@ -171,6 +172,7 @@ export const enum TileDecorationStyle {
   Flipper = 65,
   Destroyer = 66,
   Lava = 67,
+  Mallet = 68,
 }
 
 export const enum PaletteCategory {
@@ -361,7 +363,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "0",
     defaultPrice: 10,
     palette: {
-      order: 87,
+      order: 88,
       category: PaletteCategory.PuzzleTools,
       description: "Fixed lava that destroys blocks moving into it. Cannot be welded.",
       extendedDescription: ["Destroys only contacted tiles and their welds during accepted movement, including falling, pushing, rotations, and flips. Simply standing next to lava is safe; blocked or competing moves destroy nothing.", "Indestructible blocks remain solid and safe. Lava cannot fall, be pushed, or be destroyed, and needs no charge."],
@@ -511,7 +513,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 82,
       category: PaletteCategory.Motion,
       description: "Rings on net horizontal movement; larger welded bodies sound lower.",
-      extendedDescription: ["Rings when its final horizontal position differs from the start of the tick. Pure vertical movement and motion returning to the same horizontal position are silent. Inner bells measure movement within their own board, not movement of the containing rune array.", "Pitch descends one semitone per added block from F5 at 1 block to F2 at 37 blocks, counting the bell itself. Every 12 added blocks lower the pitch by one octave: 13 blocks give F4 and 25 give F3. Larger bodies keep the F2 pitch. Hover a bell to see its note and body size.", "Falls under ordinary gravity and can be welded on every side. Has no circuit ports, needs no charge, and ignores orientation.", "Sound plays only in the browser with audio enabled and simulation speed below 10 ticks per second."],
+      extendedDescription: ["Rings when its final horizontal position differs from the start of the tick. Pure vertical movement and motion returning to the same horizontal position are silent. Inner bells measure movement within their own board, not movement of the containing rune array.", "Pitch descends one semitone per added block from F5 at 1 block to F2 at 37 blocks, counting the bell itself. Every 12 added blocks lower the pitch by one octave: 13 blocks give F4 and 25 give F3. Larger bodies keep the F2 pitch. Hover a bell to see its note and body size.", "Falls under ordinary gravity and can be welded on every side. Has no circuit ports, needs no charge, and ignores orientation.", "Sound plays only in the browser with audio enabled and simulation speed below 15 ticks per second."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -526,6 +528,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#705039",
     decorationStyle: TileDecorationStyle.Bell,
     decorationColor: "#e5bb60",
+  },
+  [TileKind.Mallet]: {
+    name: "Mallet",
+    boardCode: "_",
+    defaultPrice: 5,
+    palette: {
+      order: 83,
+      category: PaletteCategory.Motion,
+      description: "Strikes adjacent bodies after net movement; larger struck bodies sound lower.",
+      extendedDescription: ["After each tick, strikes the occupied tile beside its final position in each direction of net movement. Horizontal motion strikes left or right; vertical motion strikes up or down. Diagonal net motion can strike both cardinal neighbors, but the same body sounds only once per mallet. Returning to its starting position is silent.", "Cannot strike its own welded or mechanically linked body. Empty neighbors and board boundaries are silent. Only surviving mallets present at the start of the tick can strike. Movement is measured within the mallet's own board, not movement of a containing rune array.", "Pitch depends on the final size of the struck welded body, including mechanically linked blocks, not the mallet's body. Pitch descends one semitone per added block from F5 at 1 block to F2 at 37 blocks; larger bodies stay at F2.", "Falls under ordinary gravity and can be welded on every side. Has no circuit ports or stored state, needs no charge, and ignores orientation.", "Sound plays only in the browser with audio enabled and simulation speed below 15 ticks per second. Resonators on the same board hear matching strikes even with sound muted and at every simulation speed."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.None,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#68503c",
+    decorationStyle: TileDecorationStyle.Mallet,
+    decorationColor: "#e6c896",
   },
   [TileKind.Slider]: {
     name: "Slider",
@@ -967,10 +993,10 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "7",
     defaultPrice: 15,
     palette: {
-      order: 84,
+      order: 85,
       category: PaletteCategory.CircuitBasic,
-      description: "Outputs +1 after a matching-pitch bell rings anywhere on this board.",
-      extendedDescription: ["Listens for bells whose final horizontal position differs from the start of the tick. A matching ring produces +1 on all four outputs on the next tick; no matching ring produces 0. Multiple matches still produce only +1.", "Tune it by changing the size of its welded body, including mechanically linked blocks and the resonator itself. Uses the same pitches as bells: F5 at 1 block, down one semitone per added block, clamped to F2 at 37 blocks. Hover to see its note and body size.", "Hears through all obstacles, but only within its own board; sounds do not cross rune-array boundaries. Works with sound muted and at every simulation speed.", "Falls under ordinary gravity and can be welded on every side. Its four outputs are isolated; connecting a circuit also changes its body's size and therefore its pitch."],
+      description: "Outputs +1 after a matching-pitch bell ring or mallet strike anywhere on this board.",
+      extendedDescription: ["Listens for bells with net horizontal movement and mallets striking neighboring bodies after net movement. A matching ring or strike produces +1 on all four outputs on the next tick; no match produces 0. Multiple matches still produce only +1.", "Tune it by changing the size of its welded body, including mechanically linked blocks and the resonator itself. Uses the same pitches as bells and mallet-struck bodies: F5 at 1 block, down one semitone per added block, clamped to F2 at 37 blocks. Hover to see its note and body size.", "Hears through all obstacles, but only within its own board; sounds do not cross rune-array boundaries. Works with sound muted and at every simulation speed.", "Falls under ordinary gravity and can be welded on every side. Its four outputs are isolated; connecting a circuit also changes its body's size and therefore its pitch."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -1546,7 +1572,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "6",
     defaultPrice: 1,
     palette: {
-      order: 83,
+      order: 84,
       category: PaletteCategory.Transformation,
       description: "Ignites adjacent wood, then disappears after one tick. Cannot be welded.",
       extendedDescription: ["Each tick, ignites wood directly above, below, left, and right, then disappears. Newly ignited wood spreads fire on the following tick, never immediately.", "Burning removes the wood's welds. Other materials do not burn. Fire does not fall, needs no charge, and cannot be welded."],
@@ -1570,7 +1596,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "9",
     defaultPrice: 15,
     palette: {
-      order: 86,
+      order: 87,
       category: PaletteCategory.Transformation,
       description: "Shatters blocks that move into it, or that it moves into. Needs no charge.",
       extendedDescription: ["Destruction occurs only during accepted movement, including falling, powered movement, rotations, and flips. Simply touching an adjacent block does nothing. Removes the contacted tile and its welds, not its whole welded body.", "Indestructible blocks remain solid and cannot be destroyed. Two destroyers destroy each other on contact. Falls normally, can be welded on every side, and needs no charge."],
@@ -2230,7 +2256,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     boardCode: "8",
     defaultPrice: 15,
     palette: {
-      order: 85,
+      order: 86,
       category: PaletteCategory.Motion,
       description: "Flips the body ahead around its front block: +1 left/right, -1 forward/backward.",
       extendedDescription: ["Rear +1 swaps the body's local left/right sides; -1 swaps forward/backward, relative to the flipper's facing. Rotate the flipper to rotate both axes. Neutral does nothing. The immediate front block is the pivot. Only the final cells must fit: other blocks, fixed terrain, and board edges block the flip; nearby loose blocks are not carried.", "Weld to the front or rear. A front weld temporarily splits for the flip and reconnects afterward; the flip jams if the reflected target cannot accept that weld. An alternate welded or magic-link path back to the flipper makes it flip with the body. Competing flips jam.", "Flips preserve identities, reflect orientations, handedness, component contents, and welds, and break carried fasteners. A held nonzero input flips again every tick."],

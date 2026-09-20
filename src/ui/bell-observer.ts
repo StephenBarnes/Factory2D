@@ -1,5 +1,5 @@
-import { BELL_STEPS_PER_OCTAVE, bellPitchForBodySize } from "../simulation/bell-pitch";
-import { WeldedBodyIndex } from "../simulation/welded-body-index";
+import { BELL_STEPS_PER_OCTAVE } from "../simulation/bell-pitch";
+import { TonalObserver } from "../simulation/tonal-observer";
 import type { World } from "../simulation/world";
 import { WorldFeature } from "../simulation/world-features";
 import { expectDefined } from "../util/assert";
@@ -20,8 +20,7 @@ export function bellNoteForPitch(pitch: number): string {
 
 interface BellObservation {
   capture: number;
-  readonly initialXs: Map<number, number>;
-  bodies?: WeldedBodyIndex;
+  readonly tones: TonalObserver;
 }
 
 /** Browser-side tick observations; neither snapshots nor cloned worlds inherit them. */
@@ -50,21 +49,14 @@ export class BellObserver {
   }
 
   private captureWorld(world: World): void {
-    if (world.hasFeature(WorldFeature.Bell)) {
+    if (world.hasFeature(WorldFeature.Bell) || world.hasFeature(WorldFeature.Mallet)) {
       let observation = this.observations.get(world);
       if (observation === undefined) {
-        observation = { capture: this.captureNumber, initialXs: new Map() };
+        observation = { capture: this.captureNumber, tones: new TonalObserver(world) };
         this.observations.set(world, observation);
       }
       observation.capture = this.captureNumber;
-      observation.initialXs.clear();
-      for (
-        let index = world.firstFeatureIndex(WorldFeature.Bell);
-        index >= 0;
-        index = world.nextFeatureIndex(WorldFeature.Bell, index)
-      ) {
-        observation.initialXs.set(world.idAtIndex(index), index % world.width);
-      }
+      observation.tones.capture();
     }
     for (
       let index = world.firstFeatureIndex(WorldFeature.RuneArray);
@@ -78,25 +70,9 @@ export class BellObserver {
   private collectWorldSounds(world: World): void {
     const observation = this.observations.get(world);
     if (observation?.capture === this.captureNumber) {
-      let bodies: WeldedBodyIndex | undefined;
-      for (
-        let index = world.firstFeatureIndex(WorldFeature.Bell);
-        index >= 0;
-        index = world.nextFeatureIndex(WorldFeature.Bell, index)
-      ) {
-        const initialX = observation.initialXs.get(world.idAtIndex(index));
-        if (initialX === undefined || initialX === index % world.width) continue;
-        this.onRing?.(world, index);
-        // Retain topology scratch, but only collect it when a surviving bell moved.
-        if (bodies === undefined) {
-          bodies = observation.bodies ??= new WeldedBodyIndex(world);
-          bodies.collect();
-        }
-        this.sounds.push({
-          voice: bellPitchForBodySize(bodies.memberCountAtRoot(bodies.rootAt(index))),
-          world,
-          index,
-        });
+      for (const event of observation.tones.collect()) {
+        this.onRing?.(world, event.index);
+        this.sounds.push({ voice: event.pitch, world, index: event.index });
       }
     }
     for (

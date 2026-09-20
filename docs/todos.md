@@ -20,11 +20,8 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 # Audio-related
 
-* Add a mallet or beater block. When it's moved in a direction, it checks the block one further in that direction. If that block is nonempty and belongs to a different body to the beater block, play a sound with pitch dependent on the size of that body. Similar to our current bell block, except the sound depends on the neighboring body.
-	* Apply the same expanding-rings animation (implemented for bells) when playing a sound.
-	* Make resonators also sense sounds from beaters/mallets.
-	* As a large follow-up, define a different character of sound for different materials - metals could sound like our bells currently do, but different sound classes for other types like stone, wood, glass.
-	* Once this is present, potentially remove the bell blocks entirely - since we can instead build bells in-world from metal blocks, or build other instruments like lithophones.
+* Give mallet-struck bodies different sound characters by material: metals can retain the current bell voice, with other sound classes for stone, wood, and glass. Mallets, expanding rings, and resonator hearing are implemented.
+* Potentially remove bell blocks now that mallets can play instruments built from ordinary blocks, including metal bells and lithophones.
 
 # Performance
 

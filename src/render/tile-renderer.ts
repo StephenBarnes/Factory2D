@@ -1036,6 +1036,43 @@ function drawDecoration(
       context.quadraticCurveTo(left + size * 0.4, top + size * 0.34, left + size * 0.48, top + size * 0.32);
       context.stroke();
       break;
+    case TileDecorationStyle.Mallet:
+      context.lineWidth = Math.max(1, size * 0.035);
+      context.lineJoin = "round";
+      context.lineCap = "round";
+      context.strokeStyle = "#38291d";
+      // A centered, double-faced wooden head and handle have no facing direction.
+      context.fillStyle = "#b9844d";
+      context.beginPath();
+      context.rect(left + size * 0.44, top + size * 0.39, size * 0.12, size * 0.43);
+      context.fill();
+      context.stroke();
+      context.fillStyle = definition.decorationColor;
+      context.beginPath();
+      context.moveTo(left + size * 0.23, top + size * 0.2);
+      context.lineTo(left + size * 0.77, top + size * 0.2);
+      context.lineTo(left + size * 0.8, top + size * 0.25);
+      context.lineTo(left + size * 0.8, top + size * 0.43);
+      context.lineTo(left + size * 0.77, top + size * 0.48);
+      context.lineTo(left + size * 0.23, top + size * 0.48);
+      context.lineTo(left + size * 0.2, top + size * 0.43);
+      context.lineTo(left + size * 0.2, top + size * 0.25);
+      context.closePath();
+      context.fill();
+      context.stroke();
+      context.beginPath();
+      context.moveTo(left + size * 0.3, top + size * 0.22);
+      context.lineTo(left + size * 0.3, top + size * 0.46);
+      context.moveTo(left + size * 0.7, top + size * 0.22);
+      context.lineTo(left + size * 0.7, top + size * 0.46);
+      context.stroke();
+      context.strokeStyle = "#fff0cf";
+      context.lineWidth = Math.max(1, size * 0.025);
+      context.beginPath();
+      context.moveTo(left + size * 0.36, top + size * 0.27);
+      context.lineTo(left + size * 0.64, top + size * 0.27);
+      context.stroke();
+      break;
     case TileDecorationStyle.Resonator:
       context.lineCap = "round";
       context.lineJoin = "round";
