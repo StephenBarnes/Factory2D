@@ -61,7 +61,7 @@ Manufacturing puzzles involve turning a few small components into small or large
 
 Extraction puzzles involve turning a large input into small outputs by removing most of the blocks or separating one type from another.
 
-* [Spear reclamation](../src/game/puzzles/spear-reclamation.json) (Intermediate): reclaim 12 individual iron blocks from automatically duplicated elven spears, each with a four-block iron head and a three-block wooden shaft. Placed iron and duplicators are unavailable; dismantlers, splitters, drills, furnaces, and ordinary transport components support different separation and disposal strategies. The reference solution uses dismantlers and laser splitters to separate the heads, conveys the pieces to the protected receiver, and burns wood at its entrance; it completes in 52 cycles.
+* [Arrowhead reclamation](../src/game/puzzles/arrowhead-reclamation.json) (Intermediate): reclaim 35 individual iron blocks from 8 elven arrows, each with a 5-block iron head and wooden shaft. Palette components support different separation and disposal strategies.
 * [Geode extractor](../src/game/puzzles/geode-extractor.json) (Intermediate): extract ten ruby blocks from duplicated stone-shell geodes and deliver them. Two duplicators face different directions, so players can use either supply or both for higher throughput. Drills, splitters, welders, rotators, magnets, grinders, and circuitry support different extraction layouts; the reference solution uses drills and conveyors. More intermediate extraction puzzles could introduce drills before this one.
 
 ## Runelore

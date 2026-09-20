@@ -1,0 +1,252 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 5,
+  "width": 21,
+  "height": 24,
+  "id": "arrowhead-reclamation",
+  "group": "extraction",
+  "order": 1,
+  "name": "Arrowhead reclamation",
+  "difficulty": 2,
+  "description": "The border guard has recovered a collection of Elven arrows. They are worthless, like all Elven weaponry, but their arrowheads can be reclaimed and put to better use.",
+  "goal": "Deliver 35 iron blocks.",
+  "cycleLimit": 1000,
+  "components": [
+    {
+      "code": "B",
+      "price": 5
+    },
+    {
+      "code": "f",
+      "price": 15
+    },
+    {
+      "code": "P",
+      "price": 10
+    },
+    {
+      "code": "C",
+      "price": 2
+    },
+    {
+      "code": ";",
+      "price": 3
+    },
+    {
+      "code": "W",
+      "price": 10
+    },
+    {
+      "code": "1",
+      "price": 5
+    },
+    {
+      "code": "I",
+      "price": 10
+    },
+    {
+      "code": "+",
+      "price": 10
+    },
+    {
+      "code": "K",
+      "price": 3
+    },
+    {
+      "code": "S",
+      "price": 10
+    },
+    {
+      "code": "L",
+      "price": 10
+    },
+    {
+      "code": "m",
+      "price": 0
+    },
+    {
+      "code": "U",
+      "price": 30
+    },
+    {
+      "code": "J",
+      "price": 10
+    },
+    {
+      "code": "X",
+      "price": 10
+    },
+    {
+      "code": "x",
+      "price": 15
+    },
+    {
+      "code": "2",
+      "price": 15
+    },
+    {
+      "code": "r",
+      "price": 15
+    },
+    {
+      "code": "p",
+      "price": 20
+    },
+    {
+      "code": "Z",
+      "price": 30
+    },
+    {
+      "code": "N",
+      "price": 20
+    },
+    {
+      "code": "n",
+      "price": 20
+    },
+    {
+      "code": "#",
+      "price": 1
+    },
+    {
+      "code": "w",
+      "price": 1
+    },
+    {
+      "code": "F",
+      "price": 15
+    },
+    {
+      "code": "A",
+      "price": 10
+    },
+    {
+      "code": "z",
+      "price": 20
+    },
+    {
+      "code": "Q",
+      "price": 15
+    },
+    {
+      "code": "@",
+      "price": 10
+    },
+    {
+      "code": "}",
+      "price": 15
+    },
+    {
+      "code": "6",
+      "price": 1
+    },
+    {
+      "code": "8",
+      "price": 15
+    },
+    {
+      "code": "9",
+      "price": 15
+    }
+  ],
+  "editableRegions": [
+    {
+      "x": 1,
+      "y": 11,
+      "width": 16,
+      "height": 12
+    },
+    {
+      "x": 17,
+      "y": 11,
+      "width": 3,
+      "height": 9
+    }
+  ],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 15,
+    "width": 21,
+    "height": 24,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "#####################",
+      "#...............i...#",
+      "#...i...wwwwwwwwiii.#",
+      "#.iiiwwwwwwww...ii..#",
+      "#..ii.....wwwwwwwiii#",
+      "#iiiwwwwwww.....ii..#",
+      "#..ii...wwwwwwwwiii.#",
+      "#.iiiwwwwwwww...ii..#",
+      "#..ii.....wwwwwwwiii#",
+      "#iiiwwwwwww......i..#",
+      "#..i................#",
+      "#...................#",
+      "#...................#",
+      "#...................#",
+      "#...................#",
+      "#...................#",
+      "#...................#",
+      "#...................#",
+      "#...................#",
+      "#...................#",
+      "#................=.==",
+      "#................=DNV",
+      "#................=i==",
+      "#################===="
+    ],
+    "orientations": [
+      {
+        "x": 19,
+        "y": 21,
+        "direction": "right"
+      }
+    ],
+    "components": [
+      {
+        "x": 19,
+        "y": 21,
+        "type": "counter",
+        "threshold": 35,
+        "count": 0
+      }
+    ],
+    "textBoxes": [
+      {
+        "id": "a90a9bdc-ebf9-4723-aabc-fe301ea1d2c6",
+        "centerX": 10.530538779530442,
+        "centerY": 1.4436183464544918,
+        "text": "There are 20 iron blocks on each side.\nThe delivery box needs 35.",
+        "owner": "author"
+      }
+    ],
+    "welds": [
+      "+-------------------|",
+      "|...............|...|",
+      "|...|...--------+-..|",
+      "|.--+-------.....|..|",
+      "|..|......-------+-.|",
+      "|--+------......|...|",
+      "|...|...--------+-..|",
+      "|.--+-------.....|..|",
+      "|..|......-------+-.|",
+      "|--+------..........|",
+      "|...................|",
+      "|...................|",
+      "|...................|",
+      "|...................|",
+      "|...................|",
+      "|...................|",
+      "|...................|",
+      "|...................|",
+      "|...................|",
+      "|...................|",
+      "|................|.+|",
+      "|................+-+|",
+      "|................|.+|",
+      "--------------------."
+    ]
+  },
+  "testCases": []
+}

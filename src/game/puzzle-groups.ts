@@ -62,21 +62,21 @@ export const PUZZLE_GROUPS: readonly PuzzleGroupDefinition[] = Object.freeze([
     name: "Advanced Runelore",
     displayOrder: 7,
     gemstoneThreshold: 20,
-    initialUnlockedPuzzleCount: 2,
+    initialUnlockedPuzzleCount: 3,
   }),
   Object.freeze({
     id: "rescue",
     name: "Rescue",
     displayOrder: 8,
     gemstoneThreshold: 20,
-    initialUnlockedPuzzleCount: 2,
+    initialUnlockedPuzzleCount: 3,
   }),
   Object.freeze({
     id: "elves",
     name: "Elves",
     displayOrder: 9,
     gemstoneThreshold: 20,
-    initialUnlockedPuzzleCount: 2,
+    initialUnlockedPuzzleCount: 3,
   }),
 ]);
 
