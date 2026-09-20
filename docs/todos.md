@@ -13,7 +13,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Add a dwarf block which is breakable - anything falling onto the dwarf block should destroy it. Anything pushing the dwarf block should push it, unless the push is blocked by something on the other side like a wall, in which case that should also crush the dwarf. Use the shattering animation for this.
 * Add a swapper block that swaps its front and rear neighbors when it receives a +1 charge on either side. Keep welds the same - if the front block is a stone block with two sides welded, and rear is a lore rune with no sides welded, after the swap, the front block should be a lore rune (with the original rear neighbor's configuration and rotation/mirroring) but with the welds the stone block had, and vice versa. Except if that would break rules (non-weldable blocks, non-weldable sides of e.g. rotator blocks, and weld-protected blocks). Do not allow swapping with immovable or indestructible blocks. Allow swapping with empty blocks.
 * Add a gravity stone that changes its welded body's gravity to point in the gravity stone's forward direction, instead of downward.
-* Add a fire block. Each tick, every fire block turns orthogonally adjacent wood blocks into fire blocks, and then disappears. So fire spreads across and consumes wood structures. Make it non-weldable.
 
 # Component behaviors
 

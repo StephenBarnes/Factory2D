@@ -637,6 +637,31 @@ function drawDecoration(
         size * 0.14, size * 0.07, 0, 0, Math.PI * 2);
       context.stroke();
       break;
+    case TileDecorationStyle.Fire:
+      context.fillStyle = definition.decorationColor;
+      context.beginPath();
+      context.moveTo(left + size * 0.52, top + size * 0.13);
+      context.bezierCurveTo(left + size * 0.6, top + size * 0.38,
+        left + size * 0.83, top + size * 0.43, left + size * 0.77, top + size * 0.65);
+      context.bezierCurveTo(left + size * 0.71, top + size * 0.92,
+        left + size * 0.25, top + size * 0.91, left + size * 0.23, top + size * 0.62);
+      context.bezierCurveTo(left + size * 0.2, top + size * 0.49,
+        left + size * 0.31, top + size * 0.4, left + size * 0.3, top + size * 0.3);
+      context.lineTo(left + size * 0.43, top + size * 0.43);
+      context.quadraticCurveTo(left + size * 0.56, top + size * 0.3,
+        left + size * 0.52, top + size * 0.13);
+      context.closePath();
+      context.fill();
+      context.fillStyle = "#ffe4a0";
+      context.beginPath();
+      context.moveTo(left + size * 0.51, top + size * 0.45);
+      context.bezierCurveTo(left + size * 0.51, top + size * 0.6,
+        left + size * 0.68, top + size * 0.65, left + size * 0.58, top + size * 0.78);
+      context.bezierCurveTo(left + size * 0.48, top + size * 0.88,
+        left + size * 0.33, top + size * 0.76, left + size * 0.4, top + size * 0.64);
+      context.closePath();
+      context.fill();
+      break;
     case TileDecorationStyle.Glass:
       context.lineWidth = size * 0.09;
       context.strokeStyle = "rgba(157, 221, 230, 0.32)";

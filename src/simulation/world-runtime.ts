@@ -3,6 +3,7 @@ import { DeliveryResolver } from "./delivery-resolver";
 import { DuplicatorResolver } from "./duplicator-resolver";
 import { DrillResolver } from "./drill-resolver";
 import { FurnaceResolver } from "./furnace-resolver";
+import { FireResolver } from "./fire-resolver";
 import { MotionWorkspace } from "./motion-workspace";
 import { MovementSensorObserver } from "./movement-sensor";
 import { PistonResolver } from "./piston-resolver";
@@ -26,6 +27,7 @@ export class WorldRuntime {
   private duplicatorResolverValue: DuplicatorResolver | undefined;
   private furnaceResolverValue: FurnaceResolver | undefined;
   private drillResolverValue: DrillResolver | undefined;
+  private fireResolver: FireResolver | undefined;
   private motionWorkspaceValue: MotionWorkspace | undefined;
   private pistonResolverValue: PistonResolver | undefined;
   private rotatorResolverValue: RotatorResolver | undefined;
@@ -129,6 +131,10 @@ export class WorldRuntime {
       this.movementSensorObserver ??= new MovementSensorObserver(world);
     }
     this.movementSensorObserver?.collect();
+    if (world.hasFeature(WorldFeature.Fire)) {
+      this.fireResolver ??= new FireResolver(world);
+    }
+    this.fireResolver?.collect();
     this.collectedDuplicators = world.hasFeature(WorldFeature.Duplicator);
     this.collectedWeldOperators = world.hasFeature(WorldFeature.WeldOperator);
     this.collectedDeliveries = world.hasFeature(WorldFeature.Delivery);
@@ -177,6 +183,7 @@ export class WorldRuntime {
     if (this.collectedDrills) {
       this.drillResolver.commit();
     }
+    this.fireResolver?.commit();
     let movementCount = this.world.hasFeature(WorldFeature.Gravity) ||
       this.world.hasFeature(WorldFeature.Thruster)
       ? this.motionWorkspace.resolveOrdinaryMovements(tick)

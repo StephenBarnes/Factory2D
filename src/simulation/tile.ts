@@ -75,6 +75,7 @@ export const enum TileKind {
   BeamBlockSensor = 73,
   BeamBodySensor = 74,
   Bell = 75,
+  Fire = 76,
 }
 
 export const enum Direction {
@@ -157,6 +158,7 @@ export const enum TileDecorationStyle {
   Dismantler = 60,
   BeamBlockSensor = 61,
   Bell = 62,
+  Fire = 63,
 }
 
 export const enum PaletteCategory {
@@ -1362,7 +1364,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 42,
       category: PaletteCategory.RawMaterials,
       description: "Solid wood block affected by gravity; can be welded.",
-      extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
+      extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge.", "Orthogonally adjacent fire consumes wood, replacing it with unweldable fire and removing its welds."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,
@@ -1377,6 +1379,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#55391f",
     decorationStyle: TileDecorationStyle.Wood,
     decorationColor: "#9a703f",
+  },
+  [TileKind.Fire]: {
+    name: "Fire",
+    boardCode: "6",
+    defaultPrice: 1,
+    palette: {
+      order: 79,
+      category: PaletteCategory.Transformation,
+      description: "Ignites adjacent wood, then disappears after one tick. Cannot be welded.",
+      extendedDescription: ["Each tick, ignites wood directly above, below, left, and right, then disappears. Newly ignited wood spreads fire on the following tick, never immediately.", "Burning removes the wood's welds. Other materials do not burn. Fire does not fall, needs no charge, and cannot be welded."],
+    },
+    affectedByGravity: false,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.None,
+    excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.None,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#71351e",
+    decorationStyle: TileDecorationStyle.Fire,
+    decorationColor: "#ff963e",
   },
   [TileKind.Drill]: {
     name: "Drill",
