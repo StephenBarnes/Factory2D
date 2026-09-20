@@ -670,7 +670,12 @@ export class World {
       throw new Error(`Configurable component at (${x}, ${y}) has no tile identity`);
     }
     this.componentStates.set(id, stateFromSnapshot(snapshot));
-    this.touchVisualRevision();
+    if (snapshot.type === "rotator") {
+      this.clearDisallowedWeldsAtIndex(index);
+      this.touchGeometryRevision();
+    } else {
+      this.touchVisualRevision();
+    }
   }
 
   rotatorDirectionAtIndex(index: number): Direction {
@@ -692,7 +697,8 @@ export class World {
     }
     if (state.direction !== direction) {
       state.direction = direction;
-      this.touchVisualRevision();
+      this.clearDisallowedWeldsAtIndex(index);
+      this.touchGeometryRevision();
     }
   }
 
@@ -2398,12 +2404,14 @@ export class World {
       firstDefinition.weldableSides,
       this.cells.orientations[first] as Direction,
       this.cells.mirrored[first] === 1,
-    );
+    ) | (this.cells.kinds[first] === TileKind.Rotator
+      ? 1 << this.rotatorDirectionAtIndex(first) : 0);
     const secondWeldableSides = orientedSides(
       secondDefinition.weldableSides,
       this.cells.orientations[second] as Direction,
       this.cells.mirrored[second] === 1,
-    );
+    ) | (this.cells.kinds[second] === TileKind.Rotator
+      ? 1 << this.rotatorDirectionAtIndex(second) : 0);
     return (
       (firstWeldableSides & (1 << firstSide)) !== 0 &&
       (secondWeldableSides & (1 << secondSide)) !== 0 &&

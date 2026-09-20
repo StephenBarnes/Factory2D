@@ -29,6 +29,84 @@ function weldRing(world: World, left: number, top: number, size: number): void {
 }
 
 describe("rotators", () => {
+  it("holds a welded load between turns without connecting the head to the rear circuit", () => {
+    const world = new World(7, 7);
+    world.place(3, 3, TileKind.Rotator, Direction.Up);
+    const load = world.place(3, 2, TileKind.Conduit);
+    world.place(3, 4, TileKind.FixedCharge);
+    world.place(3, 5, TileKind.Platform);
+    world.setWeld(3, 3, 3, 2, true);
+    world.setWeld(3, 3, 3, 4, true);
+    world.setWeld(3, 4, 3, 5, true);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+    expect(world.idAt(4, 3)).toBe(load);
+    expect(world.isWelded(3, 3, 4, 3)).toBe(true);
+    expect(world.chargeAt(4, 3)).toBe(0);
+    simulation.step();
+    expect(world.idAt(4, 3)).toBe(load);
+    expect(world.isWelded(3, 3, 4, 3)).toBe(true);
+
+    world.setWeld(3, 3, 4, 3, false);
+    simulation.step();
+    expect(world.idAt(4, 4)).toBe(load);
+  });
+
+  it("only welds the current head and rear, preserving a turned head through save and transforms", () => {
+    const world = new World(7, 7);
+    world.place(3, 3, TileKind.Rotator, Direction.Up);
+    world.place(3, 2, TileKind.Stone);
+    world.setWeld(3, 3, 3, 2, true);
+    chargeRotator(world, 3, 3, 1);
+    new RotatorResolver(world).resolve();
+    const restored = deserializeBoard(serializeBoard(world, 0)).world;
+
+    for (const copy of [world.clone(), restored, restored.transformed(1, true, false)]) {
+      const head = copy.rotatorDirectionAtIndex(24);
+      const rear = ((copy.orientationAt(3, 3) + 2) & 3) as Direction;
+      expect(copy.isWelded(3, 3, 3 + directionX(head), 3 + directionY(head))).toBe(true);
+      for (let side: Direction = Direction.Up; side <= Direction.Left; side += 1) {
+        const x = 3 + directionX(side);
+        const y = 3 + directionY(side);
+        if (copy.kindAt(x, y) === TileKind.Empty) {
+          copy.place(x, y, TileKind.Stone);
+        }
+        expect(copy.canWeld(3, 3, x, y)).toBe(side === head || side === rear);
+      }
+    }
+  });
+
+  it.each(["weld", "magic link"] as const)(
+    "blocks head rotation and reaction when an alternate %s path connects back to the base",
+    (connection) => {
+      const world = new World(9, 9);
+      world.place(4, 4, TileKind.Rotator, Direction.Up);
+      world.place(4, 3, TileKind.Stone);
+      world.place(4, 5, TileKind.Stone);
+      world.setWeld(4, 4, 4, 3, true);
+      world.setWeld(4, 4, 4, 5, true);
+      if (connection === "weld") {
+        for (const y of [3, 4, 5]) {
+          world.place(3, y, TileKind.Stone);
+        }
+        world.setWeld(4, 3, 3, 3, true);
+        world.setWeld(3, 3, 3, 4, true);
+        world.setWeld(3, 4, 3, 5, true);
+        world.setWeld(3, 5, 4, 5, true);
+      } else {
+        world.place(3, 3, TileKind.MagicLink, Direction.Down);
+        world.place(3, 5, TileKind.MagicLink, Direction.Up);
+        world.setWeld(4, 3, 3, 3, true);
+        world.setWeld(4, 5, 3, 5, true);
+      }
+      chargeRotator(world, 4, 4, 1);
+      const before = serializeBoard(world, 0);
+      expect(new RotatorResolver(world).resolve()).toBe(0);
+      expect(serializeBoard(world, 0)).toBe(before);
+    },
+  );
+
   it("mirrors its grip direction when duplicated", () => {
     const world = new World(3, 5);
     world.place(1, 2, TileKind.Duplicator, Direction.Up);
@@ -84,6 +162,7 @@ describe("rotators", () => {
           3 + directionX(orientation), 3 + directionY(orientation),
           TileKind.Selector, orientation, true,
         );
+        world.setWeld(3, 3, 3 + directionX(orientation), 3 + directionY(orientation), true);
         chargeRotator(world, 3, 3, charge);
         const resolver = new RotatorResolver(world);
         const destination = ((orientation - charge + 4) & 3) as Direction;
@@ -93,12 +172,14 @@ describe("rotators", () => {
         expect(world.idAt(x, y)).toBe(target);
         expect(world.orientationAt(x, y)).toBe(destination);
         expect(world.mirroredAt(x, y)).toBe(true);
+        expect(world.isWelded(3, 3, x, y)).toBe(true);
         expect(world.rotatorDirectionAtIndex(24)).toBe(destination);
         expect(resolver.resolve()).toBe(0);
         expect(world.idAt(x, y)).toBe(target);
         chargeRotator(world, 3, 3, charge === 1 ? -1 : 1);
         expect(resolver.resolve()).toBe(1);
         expect(world.idAt(3 + directionX(orientation), 3 + directionY(orientation))).toBe(target);
+        expect(world.isWelded(3, 3, 3 + directionX(orientation), 3 + directionY(orientation))).toBe(true);
       }
     },
   );
@@ -193,6 +274,7 @@ describe("rotators", () => {
       const grip = world.place(3, 2, TileKind.Platform);
       const rear = world.place(3, 4, TileKind.Sensor, Direction.Down);
       world.setWeld(3, 3, 3, 4, true);
+      world.setWeld(3, 3, 3, 2, true);
       chargeRotator(world, 3, 3, charge);
       const resolver = new RotatorResolver(world);
       const turn = mirrored ? -charge : charge;
@@ -207,6 +289,7 @@ describe("rotators", () => {
       expect(world.idAt(3 + turn, 3)).toBe(rear);
       expect(world.orientationAt(3 + turn, 3)).toBe(turn === 1 ? Direction.Right : Direction.Left);
       expect(world.isWelded(3, 3, 3 + turn, 3)).toBe(true);
+      expect(world.isWelded(3, 3, 3, 2)).toBe(true);
       // The same command would now put the grip behind the rotated base.
       expect(resolver.resolve()).toBe(0);
       expect(world.orientationAt(3, 3)).toBe(nextOrientation);
@@ -215,6 +298,7 @@ describe("rotators", () => {
       expect(world.orientationAt(3, 3)).toBe(Direction.Up);
       expect(world.idAt(3, 4)).toBe(rear);
       expect(world.rotatorDirectionAtIndex(24)).toBe(Direction.Up);
+      expect(world.isWelded(3, 3, 3, 2)).toBe(true);
     }
   });
 
@@ -336,12 +420,16 @@ describe("rotators", () => {
     chargeRotator(world, 4, 3, -1);
     const leftId = world.place(2, 2, TileKind.Stone);
     const rightId = world.place(4, 2, TileKind.Stone);
+    world.setWeld(2, 3, 2, 2, true);
+    world.setWeld(4, 3, 4, 2, true);
 
     expect(new RotatorResolver(world).resolve()).toBe(0);
     expect(world.idAt(2, 2)).toBe(leftId);
     expect(world.idAt(4, 2)).toBe(rightId);
     expect(world.rotatorDirectionAtIndex(26)).toBe(Direction.Up);
     expect(world.rotatorDirectionAtIndex(28)).toBe(Direction.Up);
+    expect(world.isWelded(2, 3, 2, 2)).toBe(true);
+    expect(world.isWelded(4, 3, 4, 2)).toBe(true);
   });
 
   it("round-trips its internal direction and rejects the rear direction", () => {

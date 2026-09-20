@@ -1996,10 +1996,11 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 34,
       category: PaletteCategory.Motion,
       description: "Turns its gripped body 90° with +1 clockwise or -1 counterclockwise rear input.",
-      extendedDescription: ["Grips ahead or to either side, never behind. If terrain, a boundary, or its own body blocks the gripped body's turn, it instead tries turning its own body the opposite way around the rotator cell, keeping the grip stationary. Turns carry swept bodies and enclosed loose contents, preserving orientations and welds. A blocked reaction or competing turns jam; competing turns do not trigger reaction."],
+      extendedDescription: ["Grips ahead or to either side, never behind. Weld to the moving head or the rear input; head welds follow the turn and hold the load between turns. Another welded or magic-link connection from the load back to the base prevents rotation.", "If terrain, a boundary, or its own body blocks the gripped body's turn, it instead tries turning its own body the opposite way around the rotator cell, keeping the grip stationary. Turns carry swept bodies and enclosed loose contents, preserving orientations and welds. A blocked reaction or competing turns jam; competing turns do not trigger reaction."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,
+    // The moving head adds its current direction in World.canWeldIndices.
     weldableSides: WeldSide.Down,
     excludesFacingWeld: false,
     usesOrientation: true,

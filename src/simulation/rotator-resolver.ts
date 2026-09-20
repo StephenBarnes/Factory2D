@@ -1,4 +1,5 @@
 import { expectDefined } from "../util/assert";
+import { magicLinksFor } from "./magic-link";
 import { recordRotationAnimation } from "./rotation-animation";
 import { recordShatterEffects } from "./shatter-animation";
 import {
@@ -15,6 +16,8 @@ import { WeldedBodyIndex } from "./welded-body-index";
 
 interface RotationProposal {
   pivot: number;
+  grip: number;
+  headWelded: boolean;
   quarterTurn: -1 | 1;
   nextDirection: Direction;
   blocked: boolean;
@@ -78,6 +81,8 @@ export class RotatorResolver {
       }
       const proposal = this.takeProposal();
       proposal.pivot = pivot;
+      proposal.grip = this.neighborIndex(pivot, direction);
+      proposal.headWelded = this.world.hasWeldAtIndex(pivot, direction);
       proposal.quarterTurn = quarterTurn;
       proposal.nextDirection = nextDirection;
       this.buildProposal(proposal, direction);
@@ -114,11 +119,22 @@ export class RotatorResolver {
         proposal.pivot,
         proposal.quarterTurn,
       );
+      if (proposal.headWelded) {
+        this.setHeadWeld(proposal.pivot, proposal.grip, false);
+      }
       rotatedCellCount += this.world.rotateCells(
         this.selected,
         proposal.pivot,
         proposal.quarterTurn,
       );
+      this.world.setRotatorDirectionAtIndex(proposal.pivot, proposal.nextDirection);
+      if (proposal.headWelded) {
+        this.setHeadWeld(
+          proposal.pivot,
+          this.neighborIndex(proposal.pivot, proposal.nextDirection),
+          true,
+        );
+      }
       if (this.world.hasFeature(WorldFeature.Fastener)) {
         for (const source of proposal.selected) {
           const destination = this.destinationFor(source, proposal.pivot, proposal.quarterTurn);
@@ -129,7 +145,6 @@ export class RotatorResolver {
           }
         }
       }
-      this.world.setRotatorDirectionAtIndex(proposal.pivot, proposal.nextDirection);
     }
     return rotatedCellCount;
   }
@@ -139,6 +154,8 @@ export class RotatorResolver {
     if (proposal === undefined) {
       proposal = {
         pivot: -1,
+        grip: -1,
+        headWelded: false,
         quarterTurn: 1,
         nextDirection: Direction.Up,
         blocked: false,
@@ -167,7 +184,7 @@ export class RotatorResolver {
     const stationary = reaction ? target : proposal.pivot;
     const seed = reaction ? proposal.pivot : target;
     if (seed >= 0 && this.world.kindAtIndex(seed) !== TileKind.Empty) {
-      this.addBodyAt(seed, proposal.selected);
+      this.addBodyAt(seed, proposal);
     }
 
     let changed: boolean;
@@ -180,7 +197,7 @@ export class RotatorResolver {
         index = this.world.nextFeatureIndex(WorldFeature.Occupied, index)
       ) {
         if (this.selected[index] === 0 && this.sweep[index] === 1) {
-          this.addBodyAt(index, proposal.selected);
+          this.addBodyAt(index, proposal);
           changed = true;
         }
       }
@@ -191,7 +208,7 @@ export class RotatorResolver {
         index = this.world.nextFeatureIndex(WorldFeature.Occupied, index)
       ) {
         if (this.selected[index] === 0 && this.reachable[index] === 0) {
-          this.addBodyAt(index, proposal.selected);
+          this.addBodyAt(index, proposal);
           changed = true;
         }
       }
@@ -224,15 +241,65 @@ export class RotatorResolver {
     }
   }
 
-  private addBodyAt(index: number, selectedList: number[]): void {
+  private addBodyAt(index: number, proposal: RotationProposal): void {
+    if (this.selected[index] === 1) {
+      return;
+    }
     const root = this.weldedBodies.rootAt(index);
+    if (proposal.headWelded && root === this.weldedBodies.rootAt(proposal.pivot)) {
+      // Split only this actuator's head seam, never another rotator's welds.
+      // Alternate welded or magic-link paths back to the base remain connected.
+      const links = magicLinksFor(this.world);
+      const start = proposal.selected.length;
+      this.selected[index] = 1;
+      proposal.selected.push(index);
+      for (let cursor = start; cursor < proposal.selected.length; cursor += 1) {
+        const cell = expectDefined(proposal.selected[cursor], "rotator body member");
+        for (let side: Direction = Direction.Up; side <= Direction.Left; side += 1) {
+          if (!this.world.hasWeldAtIndex(cell, side)) {
+            continue;
+          }
+          const other = this.neighborIndex(cell, side);
+          if ((cell === proposal.pivot && other === proposal.grip) ||
+              (cell === proposal.grip && other === proposal.pivot)) {
+            continue;
+          }
+          if (this.selected[other] === 0) {
+            this.selected[other] = 1;
+            proposal.selected.push(other);
+          }
+        }
+        if (links !== undefined && this.world.kindAtIndex(cell) === TileKind.MagicLink) {
+          for (let edge = links.firstEdgeAt(cell); edge >= 0; edge = links.nextEdge(edge)) {
+            const other = links.targetAt(edge);
+            if (this.selected[other] === 0) {
+              this.selected[other] = 1;
+              proposal.selected.push(other);
+            }
+          }
+        }
+      }
+      return;
+    }
     let member = this.weldedBodies.headAtRoot(root);
     while (member >= 0) {
       if (this.selected[member] === 0) {
         this.selected[member] = 1;
-        selectedList.push(member);
+        proposal.selected.push(member);
       }
       member = this.weldedBodies.nextMember(member);
+    }
+  }
+
+  private setHeadWeld(pivot: number, grip: number, welded: boolean): void {
+    const pivotX = pivot % this.world.width;
+    const gripX = grip % this.world.width;
+    if (!this.world.setWeld(
+      pivotX, (pivot - pivotX) / this.world.width,
+      gripX, (grip - gripX) / this.world.width,
+      welded,
+    )) {
+      throw new Error(`Cannot ${welded ? "restore" : "split"} rotator head weld at ${pivot}`);
     }
   }
 
