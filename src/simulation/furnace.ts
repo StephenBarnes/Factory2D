@@ -1,4 +1,4 @@
-import { TILE_DEFINITIONS, TILE_KINDS, TileKind } from "./tile";
+import { Direction, TILE_DEFINITIONS, TILE_KINDS, TileKind } from "./tile";
 import type { World } from "./world";
 
 export interface FurnaceRecipe {
@@ -7,9 +7,11 @@ export interface FurnaceRecipe {
   readonly bakeTime: number;
   /** Neighbor kinds after all cooking transformations that the finished product joins. */
   readonly weldTo?: readonly TileKind[];
-  /** Each kind must touch the target orthogonally; completion transforms all matches if output is set. */
+  /** Required target surroundings; completion transforms all orthogonal matches if output is set. */
   readonly requiredNeighbors?: readonly {
     readonly kind: TileKind;
+    /** Relative to the furnace's facing; omitted means any orthogonal neighbor. */
+    readonly placement?: "any" | "lateral" | "both-lateral" | "three-sides";
     readonly output?: TileKind;
   }[];
 }
@@ -29,6 +31,30 @@ export const FURNACE_RECIPES: readonly FurnaceRecipe[] = Object.freeze([
     output: TileKind.Copper,
     bakeTime: 6,
     requiredNeighbors: Object.freeze([Object.freeze({ kind: TileKind.Wood, output: TileKind.Fire })]),
+  }),
+  Object.freeze({
+    input: TileKind.TinOre,
+    output: TileKind.Tin,
+    bakeTime: 6,
+    requiredNeighbors: Object.freeze([
+      Object.freeze({ kind: TileKind.Wood, output: TileKind.Fire, placement: "lateral" as const }),
+    ]),
+  }),
+  Object.freeze({
+    input: TileKind.Iron,
+    output: TileKind.Steel,
+    bakeTime: 8,
+    requiredNeighbors: Object.freeze([
+      Object.freeze({ kind: TileKind.Wood, output: TileKind.Fire, placement: "both-lateral" as const }),
+    ]),
+  }),
+  Object.freeze({
+    input: TileKind.Copper,
+    output: TileKind.Bronze,
+    bakeTime: 8,
+    requiredNeighbors: Object.freeze([
+      Object.freeze({ kind: TileKind.Tin, placement: "three-sides" as const }),
+    ]),
   }),
 ]);
 
@@ -69,15 +95,41 @@ export function furnaceNeighborsPresent(
   world: World,
   targetIndex: number,
   recipe: FurnaceRecipe,
+  orientation: Direction,
 ): boolean {
   if (recipe.requiredNeighbors === undefined) return true;
   const x = targetIndex % world.width;
-  for (const { kind } of recipe.requiredNeighbors) {
-    if (targetIndex >= world.width && world.kindAtIndex(targetIndex - world.width) === kind) continue;
-    if (x + 1 < world.width && world.kindAtIndex(targetIndex + 1) === kind) continue;
-    if (targetIndex + world.width < world.cellCount && world.kindAtIndex(targetIndex + world.width) === kind) continue;
-    if (x > 0 && world.kindAtIndex(targetIndex - 1) === kind) continue;
-    return false;
+  for (const { kind, placement = "any" } of recipe.requiredNeighbors) {
+    let neighbors = 0;
+    if (targetIndex >= world.width && world.kindAtIndex(targetIndex - world.width) === kind) {
+      neighbors |= 1 << Direction.Up;
+    }
+    if (x + 1 < world.width && world.kindAtIndex(targetIndex + 1) === kind) {
+      neighbors |= 1 << Direction.Right;
+    }
+    if (targetIndex + world.width < world.cellCount && world.kindAtIndex(targetIndex + world.width) === kind) {
+      neighbors |= 1 << Direction.Down;
+    }
+    if (x > 0 && world.kindAtIndex(targetIndex - 1) === kind) {
+      neighbors |= 1 << Direction.Left;
+    }
+    const lateral = (1 << ((orientation + 1) & 3)) | (1 << ((orientation + 3) & 3));
+    switch (placement) {
+      case "any":
+        if (neighbors === 0) return false;
+        break;
+      case "lateral":
+        if ((neighbors & lateral) === 0) return false;
+        break;
+      case "both-lateral":
+        if ((neighbors & lateral) !== lateral) return false;
+        break;
+      case "three-sides": {
+        const required = lateral | (1 << orientation);
+        if ((neighbors & required) !== required) return false;
+        break;
+      }
+    }
   }
   return true;
 }

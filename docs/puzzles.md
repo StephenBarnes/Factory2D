@@ -137,3 +137,5 @@ Mining puzzles will involve transport/vehicles plus extraction, e.g. drilling th
 * Puzzle that requires handling a box of wood that's currently on fire. Duplicator makes boxes of wood but somehow sets them on fire, which then spreads. So a low-cycles solution requires extracting as much of the wood as possible from each duplicated body.
 * Puzzle that requires transporting something very quickly over a large distance - probably by welding it to a long arm on a flipper, then flipping to cover the distance in one tick, then unwelding to deposit.
 * Receive a mixture of gemstones from one dispenser. Deliver all of the rubies first, then all the emeralds, then all the sapphires.
+* Separate puzzles with simple smelting tasks: making tin, bronze, and steel. These are made complex by our furnace recipe rules. Include demonstrations of the relevant smelting rule (cases that work or don't work) on one side of the board, not player-modifiable and behind an indestructible wall.
+* Add a separate section for advanced manufacturing, which requires producing large structures from basic parts, e.g. making a complex steel-and-bronze structure given only ore block dispensers.

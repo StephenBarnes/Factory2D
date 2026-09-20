@@ -170,6 +170,193 @@ describe("directional furnaces", () => {
     expect(world.kindAt(0, 1)).toBe(TileKind.Copper);
   });
 
+  it.each([
+    { facing: Direction.Up, rear: Direction.Down, dx: 0, dy: -1 },
+    { facing: Direction.Right, rear: Direction.Left, dx: 1, dy: 0 },
+    { facing: Direction.Down, rear: Direction.Up, dx: 0, dy: 1 },
+    { facing: Direction.Left, rear: Direction.Right, dx: -1, dy: 0 },
+  ])(
+    "smelts tin with either lateral bend, but not opposite or diagonal wood, facing $facing",
+    ({ facing, rear, dx, dy }) => {
+      for (const side of [-1, 1]) {
+        const world = new World(7, 7);
+        const furnaceX = 3 - dx;
+        const furnaceY = 3 - dy;
+        const lateralX = -dy * side;
+        const lateralY = dx * side;
+        world.place(furnaceX, furnaceY, TileKind.Furnace, facing);
+        world.place(3 - 2 * dx, 3 - 2 * dy, TileKind.Platform);
+        world.setWeld(furnaceX, furnaceY, 3 - 2 * dx, 3 - 2 * dy, true);
+        const oreId = world.place(3, 3, TileKind.TinOre);
+        world.setWeld(3, 3, furnaceX, furnaceY, true);
+        world.place(3 + dx, 3 + dy, TileKind.Wood);
+        world.place(3 + 2 * dx, 3 + 2 * dy, TileKind.Platform);
+        world.setWeld(3 + dx, 3 + dy, 3 + 2 * dx, 3 + 2 * dy, true);
+        const diagonalX = 3 + dx + lateralX;
+        const diagonalY = 3 + dy + lateralY;
+        world.place(diagonalX, diagonalY, TileKind.Wood);
+        world.place(diagonalX + dx, diagonalY + dy, TileKind.Platform);
+        world.setWeld(diagonalX, diagonalY, diagonalX + dx, diagonalY + dy, true);
+        const simulation = new Simulation(world);
+
+        for (let tick = 0; tick < 6; tick += 1) {
+          simulation.step();
+          expect(world.furnaceProgressAt(furnaceX, furnaceY)).toBe(0);
+          expect(world.chargeAtPort(furnaceX, furnaceY, rear)).toBe(0);
+        }
+        expect(world.kindAt(3, 3)).toBe(TileKind.TinOre);
+
+        const woodX = 3 + lateralX;
+        const woodY = 3 + lateralY;
+        world.place(woodX, woodY, TileKind.Wood);
+        world.place(3 + 2 * lateralX, 3 + 2 * lateralY, TileKind.Platform);
+        world.setWeld(woodX, woodY, 3 + 2 * lateralX, 3 + 2 * lateralY, true);
+        for (let progress = 1; progress < 6; progress += 1) {
+          simulation.step();
+          expect(world.furnaceProgressAt(furnaceX, furnaceY)).toBe(progress);
+          expect(world.chargeAtPort(furnaceX, furnaceY, rear)).toBe(1);
+          expect(world.kindAt(3, 3)).toBe(TileKind.TinOre);
+          expect(world.kindAt(woodX, woodY)).toBe(TileKind.Wood);
+          expect(world.kindAt(3 + dx, 3 + dy)).toBe(TileKind.Wood);
+        }
+
+        simulation.step();
+        expect(world.kindAt(3, 3)).toBe(TileKind.Tin);
+        expect(world.idAt(3, 3)).toBe(oreId);
+        expect(world.furnaceProgressAt(furnaceX, furnaceY)).toBe(0);
+        expect(world.chargeAtPort(furnaceX, furnaceY, rear)).toBe(1);
+        expect(world.kindAt(woodX, woodY)).toBe(TileKind.Fire);
+        expect(world.kindAt(3 + dx, 3 + dy)).toBe(TileKind.Fire);
+        expect(world.kindAt(diagonalX, diagonalY)).toBe(TileKind.Wood);
+      }
+    },
+  );
+
+  it("requires both lateral woods for steel and preserves paused progress across save/load", () => {
+    let world = new World(5, 5);
+    world.place(1, 2, TileKind.Furnace, Direction.Right);
+    world.place(0, 2, TileKind.Platform);
+    world.setWeld(0, 2, 1, 2, true);
+    world.place(2, 2, TileKind.Iron);
+    world.setWeld(1, 2, 2, 2, true);
+    world.place(2, 0, TileKind.Platform);
+    world.place(2, 4, TileKind.Platform);
+    world.place(2, 1, TileKind.Wood);
+    world.setWeld(2, 0, 2, 1, true);
+    world.place(3, 2, TileKind.Wood);
+    world.place(4, 2, TileKind.Platform);
+    world.setWeld(3, 2, 4, 2, true);
+    let simulation = new Simulation(world);
+
+    for (let tick = 0; tick < 8; tick += 1) {
+      simulation.step();
+      expect(world.furnaceProgressAt(1, 2)).toBe(0);
+      expect(world.chargeAtPort(1, 2, Direction.Left)).toBe(0);
+    }
+    expect(world.kindAt(2, 2)).toBe(TileKind.Iron);
+
+    world.place(2, 1, TileKind.Empty);
+    world.place(2, 3, TileKind.Wood);
+    world.setWeld(2, 3, 2, 4, true);
+    simulation.step();
+    expect(world.furnaceProgressAt(1, 2)).toBe(0);
+    expect(world.chargeAtPort(1, 2, Direction.Left)).toBe(0);
+
+    world.place(2, 1, TileKind.Wood);
+    world.setWeld(2, 0, 2, 1, true);
+    simulation.step();
+    simulation.step();
+    expect(world.furnaceProgressAt(1, 2)).toBe(2);
+    expect(world.chargeAtPort(1, 2, Direction.Left)).toBe(1);
+    world.place(2, 1, TileKind.Empty);
+    simulation.step();
+    expect(world.furnaceProgressAt(1, 2)).toBe(2);
+    expect(world.chargeAtPort(1, 2, Direction.Left)).toBe(0);
+
+    world = deserializeBoard(serializeBoard(world, simulation.tick)).world;
+    const ironId = world.idAt(2, 2);
+    simulation = new Simulation(world);
+    simulation.step();
+    expect(world.furnaceProgressAt(1, 2)).toBe(2);
+    expect(world.chargeAtPort(1, 2, Direction.Left)).toBe(0);
+    world.place(2, 1, TileKind.Wood);
+    world.setWeld(2, 0, 2, 1, true);
+    for (let progress = 3; progress < 8; progress += 1) {
+      simulation.step();
+      expect(world.furnaceProgressAt(1, 2)).toBe(progress);
+      expect(world.kindAt(2, 2)).toBe(TileKind.Iron);
+      expect(world.kindAt(2, 1)).toBe(TileKind.Wood);
+      expect(world.kindAt(2, 3)).toBe(TileKind.Wood);
+      expect(world.kindAt(3, 2)).toBe(TileKind.Wood);
+    }
+    simulation.step();
+    expect(world.kindAt(2, 2)).toBe(TileKind.Steel);
+    expect(world.idAt(2, 2)).toBe(ironId);
+    expect(world.furnaceProgressAt(1, 2)).toBe(0);
+    expect(world.chargeAtPort(1, 2, Direction.Left)).toBe(1);
+    expect(world.kindAt(2, 1)).toBe(TileKind.Fire);
+    expect(world.kindAt(2, 3)).toBe(TileKind.Fire);
+    expect(world.kindAt(3, 2)).toBe(TileKind.Fire);
+    simulation.step();
+    expect(world.chargeAtPort(1, 2, Direction.Left)).toBe(0);
+  });
+
+  it.each([
+    { missingX: 2, missingY: 1 },
+    { missingX: 3, missingY: 2 },
+    { missingX: 2, missingY: 3 },
+  ])(
+    "requires tin on all three free sides for bronze, including ($missingX, $missingY)",
+    ({ missingX, missingY }) => {
+      const world = new World(5, 5);
+      world.place(1, 2, TileKind.Furnace, Direction.Right);
+      world.place(0, 2, TileKind.Platform);
+      world.setWeld(0, 2, 1, 2, true);
+      const copperId = world.place(2, 2, TileKind.Copper);
+      world.setWeld(1, 2, 2, 2, true);
+      const catalysts = [
+        { x: 2, y: 1, supportX: 2, supportY: 0 },
+        { x: 3, y: 2, supportX: 4, supportY: 2 },
+        { x: 2, y: 3, supportX: 2, supportY: 4 },
+      ];
+      for (const { x, y, supportX, supportY } of catalysts) {
+        world.place(supportX, supportY, TileKind.Platform);
+        if (x === missingX && y === missingY) continue;
+        world.place(x, y, TileKind.Tin);
+        world.setWeld(x, y, supportX, supportY, true);
+      }
+      const simulation = new Simulation(world);
+      for (let tick = 0; tick < 8; tick += 1) {
+        simulation.step();
+        expect(world.furnaceProgressAt(1, 2)).toBe(0);
+        expect(world.chargeAtPort(1, 2, Direction.Left)).toBe(0);
+      }
+      expect(world.kindAt(2, 2)).toBe(TileKind.Copper);
+
+      world.place(missingX, missingY, TileKind.Tin);
+      world.setWeld(missingX, missingY, 2 * missingX - 2, 2 * missingY - 2, true);
+      const tinIds = catalysts.map(({ x, y }) => world.idAt(x, y));
+      for (let progress = 1; progress < 8; progress += 1) {
+        simulation.step();
+        expect(world.furnaceProgressAt(1, 2)).toBe(progress);
+        expect(world.chargeAtPort(1, 2, Direction.Left)).toBe(1);
+        expect(world.kindAt(2, 2)).toBe(TileKind.Copper);
+      }
+      simulation.step();
+      expect(world.kindAt(2, 2)).toBe(TileKind.Bronze);
+      expect(world.idAt(2, 2)).toBe(copperId);
+      expect(world.furnaceProgressAt(1, 2)).toBe(0);
+      expect(world.chargeAtPort(1, 2, Direction.Left)).toBe(1);
+      simulation.step();
+      expect(world.chargeAtPort(1, 2, Direction.Left)).toBe(0);
+      for (const [index, { x, y, supportX, supportY }] of catalysts.entries()) {
+        expect(world.kindAt(x, y)).toBe(TileKind.Tin);
+        expect(world.idAt(x, y)).toBe(tinIds[index]);
+        expect(world.isWelded(x, y, supportX, supportY)).toBe(true);
+      }
+    },
+  );
+
   it("welds cooked glass only to adjacent glass on completion", () => {
     const world = new World(3, 3);
     world.place(1, 0, TileKind.Furnace, Direction.Down);

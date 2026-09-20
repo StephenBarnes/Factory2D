@@ -67,11 +67,11 @@ Discard runes use an indigo slab with a directional shutter and upright remainin
 
 Lookup runes share the ROM grid renderer, using a teal slab and jade outline around their fixed 3×3 table without a cursor highlight. Local-left/rear input arrows and front/right output arrows follow orientation and handedness; the logical truth table stays upright on the board and in previews. Assemblers similarly show explicit handed input/output arrows.
 
-Raw-material artwork uses colored rivets for metals and platforms, round grains for dirt and copper ore, grey square grains for iron ore, and curved grain with a knot for wood. Gemstones have cut-diamond outlines with bright/shaded facets and a white specular glint. All use the shared tile renderer, including palette and selection previews.
+Raw-material artwork uses colored rivets for metals and platforms, round grains for dirt, square grains for iron/copper/tin ores, and curved grain with a knot for wood. Tin ore has pale mint grains; tin uses mint rivets, steel blue-grey rivets, and bronze warm gold rivets. Gemstones have cut-diamond outlines with bright/shaded facets and a white specular glint. All use the shared tile renderer, including palette and selection previews.
 
 Fire uses a burnt-orange slab with a bright orange flame and pale-yellow core, shared by the board, palette, and placement/selection previews. It has no orientation or render-clock animation; simulation replaces burning wood and expires old fire in discrete ticks.
 
-Raw-material ordering is shared by the palette and authoring cost controls through tile metadata: basic structural materials, sand/glass, iron ore/iron, copper ore/copper, remaining metals, then gemstones.
+Raw-material ordering is shared by the palette and authoring cost controls through tile metadata: basic structural materials, sand/glass, iron ore/iron/steel, copper ore/copper, tin ore/tin/bronze, remaining metals, then gemstones.
 
 ## Board, camera, and caches
 

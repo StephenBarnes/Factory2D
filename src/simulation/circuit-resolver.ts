@@ -279,7 +279,7 @@ export class CircuitResolver {
         const outputCharge = kind === TileKind.Drill
           ? runtime.drillResolver.activeDrills[index] === 1 ? 1 : 0
           : !disabled && recipe !== undefined &&
-            furnaceNeighborsPresent(world, targetIndex, recipe) ? 1 : 0;
+            furnaceNeighborsPresent(world, targetIndex, recipe, orientation) ? 1 : 0;
         runtime.nextIsolatedOutputCharges[index] = outputCharge;
         this.driveOutputs(
           runtime,

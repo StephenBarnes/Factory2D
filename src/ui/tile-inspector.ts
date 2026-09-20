@@ -378,9 +378,17 @@ export class TileInspector {
       } else {
         const progress = this.world.furnaceProgressAt(position.x, position.y);
         const status = recipe.requiredNeighbors !== undefined && !furnaceNeighborsPresent(
-          this.world, targetY * this.world.width + targetX, recipe,
+          this.world, targetY * this.world.width + targetX, recipe, orientation,
         )
-          ? `WAITING FOR ${recipe.requiredNeighbors.map(({ kind }) => TILE_DEFINITIONS[kind].name.toUpperCase()).join(" + ")} BESIDE TARGET`
+          ? `WAITING FOR ${recipe.requiredNeighbors.map(({ kind, placement = "any" }) => {
+            const material = TILE_DEFINITIONS[kind].name.toUpperCase();
+            switch (placement) {
+              case "any": return `${material} BESIDE TARGET`;
+              case "lateral": return `${material} ON EITHER LATERAL SIDE`;
+              case "both-lateral": return `${material} ON BOTH LATERAL SIDES`;
+              case "three-sides": return `${material} ON ALL THREE NON-FURNACE SIDES`;
+            }
+          }).join(" + ")}`
           : progress === 0
             ? "READY"
             : this.world.chargeAtPort(position.x, position.y, ((orientation + 2) & 3) as Direction) === 1
