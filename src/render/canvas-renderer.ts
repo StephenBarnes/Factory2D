@@ -213,6 +213,7 @@ export class CanvasRenderer {
   private readonly productionInterpolation: ProductionInterpolation;
   private readonly productionTransform: BodyTransform = { a: 1, b: 0, c: 0, d: 1, x: 0, y: 0 };
   private renderedProgress = -1;
+  private renderedInterpolationActive = false;
   private renderedNestedPortCharges = -1;
   private hasTimeDependentVisuals = false;
 
@@ -408,6 +409,7 @@ export class CanvasRenderer {
     const boundedProgress = Math.max(0, Math.min(1, progress));
     const previousWorldRevision = previousWorld?.revision ?? -1;
     const nestedPortCharges = this.nestedPortChargeKey();
+    const interpolationActive = this.prepareInterpolation(previousWorld, boundedProgress);
     if (
       !this.renderInvalidated &&
       !this.hasTimeDependentVisuals &&
@@ -416,11 +418,17 @@ export class CanvasRenderer {
       this.shatterAnimations.size === 0 &&
       this.bellRings.size === 0 &&
       this.renderedWorldRevision === this.world.revision &&
-      this.renderedPreviousWorld === previousWorld &&
-      this.renderedPreviousWorldRevision === previousWorldRevision &&
-      this.renderedProgress === boundedProgress &&
+      ((!interpolationActive && !this.renderedInterpolationActive) ||
+        (this.renderedPreviousWorld === previousWorld &&
+          this.renderedPreviousWorldRevision === previousWorldRevision &&
+          this.renderedProgress === boundedProgress)) &&
       this.renderedNestedPortCharges === nestedPortCharges
     ) {
+      // A fresh stationary snapshot is visually equivalent, but still becomes
+      // the source for subsequent interpolation and rotator direction lookups.
+      this.renderedPreviousWorld = previousWorld;
+      this.renderedPreviousWorldRevision = previousWorldRevision;
+      this.renderedProgress = boundedProgress;
       return;
     }
 
@@ -471,6 +479,7 @@ export class CanvasRenderer {
     this.renderedPreviousWorld = previousWorld;
     this.renderedPreviousWorldRevision = previousWorldRevision;
     this.renderedProgress = boundedProgress;
+    this.renderedInterpolationActive = interpolationActive;
     this.renderedNestedPortCharges = nestedPortCharges;
   }
 
@@ -1289,14 +1298,11 @@ export class CanvasRenderer {
   }
 
 
-  private drawTiles(previousWorld: World | null, progress: number, animationTime: number): void {
+  private prepareInterpolation(previousWorld: World | null, progress: number): boolean {
     this.translationInterpolation.prepare(this.world, previousWorld);
     this.rotationInterpolation.prepare(this.world, previousWorld, progress);
     this.flipInterpolation.prepare(this.world, previousWorld, progress);
     this.productionInterpolation.prepare(previousWorld, progress);
-    this.productionInterpolation.drawConsumed(
-      this.context, this.originX, this.originY, this.cellSize, animationTime,
-    );
     if (
       previousWorld !== this.renderedPreviousWorld ||
       (previousWorld?.revision ?? -1) !== this.renderedPreviousWorldRevision
@@ -1315,6 +1321,24 @@ export class CanvasRenderer {
         }
       }
     }
+    if (previousWorld === null || progress === 1) return false;
+    if (this.translationInterpolation.movingIndices.length > 0 ||
+      this.rotationInterpolation.active || this.flipInterpolation.active ||
+      this.productionInterpolation.active) return true;
+    if (this.cellSize >= DECORATION_CELL_SIZE) {
+      for (let index = this.world.firstFeatureIndex(WorldFeature.Rotator); index >= 0;
+        index = this.world.nextFeatureIndex(WorldFeature.Rotator, index)) {
+        const previous = this.previousRotatorDirections.get(this.world.idAtIndex(index));
+        if (previous !== undefined && previous !== this.world.rotatorDirectionAtIndex(index)) return true;
+      }
+    }
+    return false;
+  }
+
+  private drawTiles(previousWorld: World | null, progress: number, animationTime: number): void {
+    this.productionInterpolation.drawConsumed(
+      this.context, this.originX, this.originY, this.cellSize, animationTime,
+    );
     if (this.cellSize < LOW_DETAIL_CELL_SIZE) {
       this.drawLowDetailTiles(previousWorld, progress);
       return;
@@ -1531,10 +1555,11 @@ export class CanvasRenderer {
 
     for (const cell of body.cells) {
       if (
-        (cell.kind === TileKind.Destroyer && this.cellSize >= DECORATION_CELL_SIZE) ||
-        (cell.kind === TileKind.Conveyor && cell.outputCharge !== 0) ||
-        ((cell.kind === TileKind.Furnace || cell.kind === TileKind.Grinder ||
-          cell.kind === TileKind.Drill) && cell.outputCharge === 1)
+        this.cellSize >= DECORATION_CELL_SIZE && (
+          cell.kind === TileKind.Destroyer ||
+          (cell.kind === TileKind.Conveyor && cell.outputCharge !== 0) ||
+          ((cell.kind === TileKind.Furnace || cell.kind === TileKind.Grinder ||
+            cell.kind === TileKind.Drill) && cell.outputCharge === 1))
       ) {
         this.hasTimeDependentVisuals = true;
       }

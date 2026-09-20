@@ -258,24 +258,23 @@ describe("CanvasRenderer scalable tile rendering", () => {
     const { canvas, filledPaths, fillStyles } = createRecordingCanvas(400, 300);
     const renderer = new CanvasRenderer(canvas, world);
     renderer.restoreView({ cellSize: 4, centerX: 100, centerY: 100 });
-    const painted = (progress: number) => {
+    const painted = () => {
       filledPaths.length = 0;
-      renderer.render(null, progress);
+      renderer.render();
       return filledPaths.flatMap(path => path.rectangles);
     };
-    expect(painted(0)).toEqual([{ x: 200, y: 150, width: 4, height: 4 }]);
-    expect(painted(0.25)).toEqual([{ x: 200, y: 150, width: 4, height: 4 }]);
+    expect(painted()).toEqual([{ x: 200, y: 150, width: 4, height: 4 }]);
 
     world.place(100, 100, TileKind.Gold);
-    expect(painted(0.5)).toEqual([{ x: 200, y: 150, width: 4, height: 4 }]);
+    expect(painted()).toEqual([{ x: 200, y: 150, width: 4, height: 4 }]);
     expect(fillStyles.at(-1)).toBe(TILE_DEFINITIONS[TileKind.Gold].fill);
     renderer.panByPixels(0.17, 0.37);
-    const panned = painted(0.75);
+    const panned = painted();
     expect(panned).toHaveLength(1);
     expect(panned[0]?.x).toBeCloseTo(200.17);
     expect(panned[0]?.y).toBeCloseTo(150.37);
     renderer.restoreView({ cellSize: 2, centerX: 100, centerY: 100 });
-    expect(painted(1)).toEqual([{ x: 200, y: 150, width: 2, height: 2 }]);
+    expect(painted()).toEqual([{ x: 200, y: 150, width: 2, height: 2 }]);
   });
 
   it("does not reuse committed low-detail positions during or after a moving frame", () => {
@@ -290,7 +289,7 @@ describe("CanvasRenderer scalable tile rendering", () => {
     renderer.restoreView({ cellSize: 4, centerX: 100, centerY: 100 });
     renderer.render();
     // Start from a cached committed frame, then seek through interpolation in both directions.
-    for (const progress of [0, 0.5, 1, 0.25, 1]) {
+    for (const progress of [0, 0.5, 1, 0.25]) {
       filledPaths.length = 0;
       renderer.render(previous, progress);
       expect(filledPaths.flatMap(path => path.rectangles)).toEqual([
@@ -362,7 +361,7 @@ describe("CanvasRenderer scalable tile rendering", () => {
     expect(pathConstructionCount).toBe(initialPathCount + 1);
   });
 
-  it("skips canvas drawing for an unchanged static frame", () => {
+  it("does not repaint stationary snapshots just because tick progress advances", () => {
     vi.stubGlobal("window", { devicePixelRatio: 1 });
     vi.stubGlobal("Path2D", RecordingPath2D);
     const world = new World(1, 1);
@@ -370,8 +369,12 @@ describe("CanvasRenderer scalable tile rendering", () => {
     const { canvas, context } = createRecordingCanvas(100, 100);
     const renderer = new CanvasRenderer(canvas, world);
 
-    renderer.render();
-    renderer.render();
+    const previous = world.clone();
+    renderer.render(previous, 0);
+    renderer.render(previous, 0.5);
+    previous.copyFrom(world);
+    renderer.render(previous, 0.25);
+    renderer.render(null, 1);
     expect(context.clearRect).toHaveBeenCalledTimes(1);
 
     world.place(0, 0, TileKind.Stone);
@@ -392,6 +395,40 @@ describe("CanvasRenderer scalable tile rendering", () => {
     renderer.render(null, 1, 16);
 
     expect(context.clearRect).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps grip-only rotator interpolation live, including backward seeks", () => {
+    vi.stubGlobal("window", { devicePixelRatio: 1 });
+    vi.stubGlobal("Path2D", RecordingPath2D);
+    const world = new World(1, 1);
+    world.place(0, 0, TileKind.Rotator);
+    const previous = world.clone();
+    world.setRotatorDirectionAtIndex(0, 1);
+    const { canvas, context } = createRecordingCanvas(100, 100);
+    const renderer = new CanvasRenderer(canvas, world);
+    for (const progress of [0, 0.5, 1, 0.25, 1]) {
+      renderer.render(previous, progress);
+    }
+    expect(context.clearRect).toHaveBeenCalledTimes(5);
+    renderer.render(null, 1);
+    expect(context.clearRect).toHaveBeenCalledTimes(5);
+  });
+
+  it("does not animate conveyor artwork below its decoration detail cutoff", () => {
+    vi.stubGlobal("window", { devicePixelRatio: 1 });
+    vi.stubGlobal("Path2D", RecordingPath2D);
+    const world = new World(1, 1);
+    world.place(0, 0, TileKind.Conveyor);
+    world.setCharge(0, 0, 1);
+    const { canvas, context } = createRecordingCanvas(10, 10);
+    const renderer = new CanvasRenderer(canvas, world);
+    renderer.render(null, 1, 0);
+    renderer.render(null, 1, 16);
+    expect(context.clearRect).toHaveBeenCalledTimes(1);
+    renderer.restoreView({ cellSize: 32, centerX: 0.5, centerY: 0.5 });
+    renderer.render(null, 1, 32);
+    renderer.render(null, 1, 48);
+    expect(context.clearRect).toHaveBeenCalledTimes(3);
   });
 });
 
