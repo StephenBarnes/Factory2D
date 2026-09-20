@@ -38,6 +38,8 @@ export class BellObserver {
   private captureNumber = 0;
   private pending = false;
 
+  constructor(private readonly onRing?: (world: World, index: number) => void) {}
+
   capture(world: World): void {
     this.captureNumber += 1;
     this.pending = true;
@@ -91,6 +93,7 @@ export class BellObserver {
       ) {
         const initialX = observation.initialXs.get(world.idAtIndex(index));
         if (initialX === undefined || initialX === index % world.width) continue;
+        this.onRing?.(world, index);
         // Retain topology scratch, but only collect it when a surviving bell moved.
         if (bodies === undefined) {
           bodies = observation.bodies ??= new WeldedBodyIndex(world);

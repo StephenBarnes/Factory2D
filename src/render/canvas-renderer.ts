@@ -38,6 +38,7 @@ import { watchProcessingAnimation, type ProcessingAnimation } from "../simulatio
 import { drawProcessingParticles } from "./processing-particles";
 import { watchShatterAnimation, type ShatterAnimation } from "../simulation/shatter-animation";
 import { drawShatterParticles } from "./shatter-particles";
+import { drawBellRings, watchBellRings } from "./bell-rings";
 
 
 const MAX_TILE_SIZE = 128;
@@ -129,6 +130,7 @@ export class CanvasRenderer {
   private readonly weldAnimations: Map<number, WeldAnimation>;
   private readonly processingAnimations: Map<number, ProcessingAnimation>;
   private readonly shatterAnimations: Map<number, ShatterAnimation>;
+  private readonly bellRings: Map<number, number>;
 
   private cellSize = MAX_TILE_SIZE;
   private originX = 0;
@@ -212,6 +214,7 @@ export class CanvasRenderer {
     this.weldAnimations = watchWeldAnimation(world);
     this.processingAnimations = watchProcessingAnimation(world);
     this.shatterAnimations = watchShatterAnimation(world);
+    this.bellRings = watchBellRings(world);
     this.editableRegion = editableRegion;
     this.nestedView = nestedView;
     this.fitMargin = nestedView === null ? 0 : 1;
@@ -378,6 +381,7 @@ export class CanvasRenderer {
     }
     if (!animationsEnabled || this.cellSize < 6) {
       this.shatterAnimations.clear();
+      this.bellRings.clear();
     }
     const boundedProgress = Math.max(0, Math.min(1, progress));
     const previousWorldRevision = previousWorld?.revision ?? -1;
@@ -388,6 +392,7 @@ export class CanvasRenderer {
       this.weldAnimations.size === 0 &&
       this.processingAnimations.size === 0 &&
       this.shatterAnimations.size === 0 &&
+      this.bellRings.size === 0 &&
       this.renderedWorldRevision === this.world.revision &&
       this.renderedPreviousWorld === previousWorld &&
       this.renderedPreviousWorldRevision === previousWorldRevision &&
@@ -408,6 +413,12 @@ export class CanvasRenderer {
     this.drawTiles(previousWorld, boundedProgress, animationTime);
     if (drawShatterParticles(
       context, this.shatterAnimations, this.world.width, this.world.height,
+      this.originX, this.originY, this.cellSize,
+    )) {
+      this.hasTimeDependentVisuals = true;
+    }
+    if (drawBellRings(
+      context, this.bellRings, this.world.width, this.world.height,
       this.originX, this.originY, this.cellSize,
     )) {
       this.hasTimeDependentVisuals = true;

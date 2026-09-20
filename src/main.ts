@@ -37,6 +37,8 @@ import type { SelectionPreviewCell } from "./game/tile-selection";
 import { visitWeldEdgesOnGridSegment } from "./render/grid-drag";
 import type { GridCell, GridEdge, GridPoint } from "./render/grid-drag";
 import { drawTile } from "./render/tile-renderer";
+import { recordBellRing } from "./render/bell-rings";
+import { BellObserver } from "./ui/bell-observer";
 import { componentConfigurationForKind } from "./simulation/configurable-components";
 import { serializeBoard } from "./simulation/board-export";
 import { PuzzleResult } from "./simulation/puzzle-result";
@@ -138,6 +140,7 @@ const sounds = new WorkshopSounds(
     output: requiredElement<HTMLOutputElement>("bell-volume-value"),
   },
 );
+const bells = new BellObserver(recordBellRing);
 const exportPlayerDataButton = requiredElement<HTMLButtonElement>("export-player-data-button");
 const importPlayerDataButton = requiredElement<HTMLButtonElement>("import-player-data-button");
 const importPlayerDataFile = requiredElement<HTMLInputElement>("import-player-data-file");
@@ -511,9 +514,9 @@ function advanceSimulation(duration: number, startedAt = performance.now()): voi
   }
   const session = surface.session;
   session.previousWorld.copyFrom(session.world);
-  sounds.beforeStep(session.world, clock.running ? clock.ticksPerSecond : 0);
+  if (!clock.running || clock.ticksPerSecond < 15) bells.capture(session.world);
   surface.simulation.step(duration > 0 ? session.previousWorld : undefined);
-  sounds.afterStep(session.world);
+  sounds.playBells(bells.collectPitches(session.world));
   signalTraces.sync(session.world, surface.simulation.tick);
   if (session.world.puzzleResult === PuzzleResult.Won) {
     sounds.victory();
@@ -1441,14 +1444,14 @@ const puzzleTests = new PuzzleTestController(
       });
     },
     beforeStep: (world, ticksPerSecond, interpolate) => {
-      sounds.beforeStep(world, ticksPerSecond);
+      if (ticksPerSecond < 15) bells.capture(world);
       if (!interpolate) return undefined;
       const session = surface.session;
       session.previousWorld.copyFrom(session.world);
       return session.previousWorld;
     },
     afterStep: (world, tick) => {
-      sounds.afterStep(world);
+      sounds.playBells(bells.collectPitches(world));
       signalTraces.sync(world, tick);
     },
     onSuccess: () => sounds.victory(),

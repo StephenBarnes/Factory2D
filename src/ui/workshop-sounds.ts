@@ -1,8 +1,6 @@
-import type { World } from "../simulation/world";
 import {
   BELL_PITCH_COUNT,
   BELL_STEPS_PER_OCTAVE,
-  BellObserver,
   bellFrequencyForPitch,
 } from "./bell-observer";
 
@@ -54,8 +52,6 @@ export class WorkshopSounds {
   private masterVolume = 100;
   private bellVolume = 100;
   private lastEditTime = -Infinity;
-  private readonly bells = new BellObserver();
-  private bellStepPending = false;
 
   constructor(
     button: HTMLButtonElement,
@@ -157,15 +153,7 @@ export class WorkshopSounds {
     this.tone(start, end, type, 0, 0.09);
   }
 
-  beforeStep(world: World, ticksPerSecond: number): void {
-    this.bellStepPending = ticksPerSecond < 15 && this.bellVolume > 0 && this.canPlay();
-    if (this.bellStepPending) this.bells.capture(world);
-  }
-
-  afterStep(world: World): void {
-    if (!this.bellStepPending) return;
-    this.bellStepPending = false;
-    const pitches = this.bells.collectPitches(world);
+  playBells(pitches: ReadonlySet<number>): void {
     if (!this.canPlay() || this.bellVolume === 0) return;
     for (let pitch = 0; pitch < BELL_PITCH_COUNT; pitch += 1) {
       if (!pitches.has(pitch)) continue;

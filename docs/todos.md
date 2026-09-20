@@ -44,7 +44,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 ## Animations
 
 * Add animation for the delivery box, assembler, duplicator, lock gate. When they consume a body, animate the body shrinking, moving towards the block, and lowering opacity until it vanishes. When they produce a body, animate the opposite.
-* Add some kind of animation when a bell rings. Maybe two faint circles radiating away from it.
 
 # Content
 
