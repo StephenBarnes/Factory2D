@@ -57,7 +57,7 @@ Platforms use blue-grey; ROMs and graphers use jade/teal. Delay, counter, monito
 
 Indestructible channels use the platform's fill and four corner rivets beneath ordinary charge-colored circuit traces and a central channel dot. Board tiles, palette icons, and placement/selection previews share this artwork; disconnected tiles retain the dot to distinguish them from platforms.
 
-Delay gates use the channel's neutral slate slab with a rear semicircular socket and separate front ball/stem. The socket shows rear-input charge and the ball shows output charge; the glyph rotates with its rear/front ports on the board and in shared previews.
+Delay gates use the channel's neutral slate slab with an output-colored circular arc open toward a separate rear-input ball/stem. Connected front and side traces meet the arc; the rear trace meets the input stem. The ball/stem shows rear-input charge independently of the output arc, and the glyph rotates with its ports on the board and in shared previews.
 
 Discard runes use an indigo slab with a directional shutter and upright remaining-tick count. The shutter opens into a charge-colored forward arrow after the discard window; the shared glyph and rear/front port arrows follow orientation on the board and every preview.
 

@@ -681,7 +681,7 @@ describe("circuit networks", () => {
     expect(world.chargeAt(2, 0)).toBe(output);
   });
 
-  it("delays a pulse through each rear-only gate without side leakage or feedback", () => {
+  it("fans delayed pulses out to front and sides without output cross-talk or rear feedback", () => {
     const world = new World(5, 3);
     world.place(0, 1, TileKind.Spark);
     world.place(1, 1, TileKind.DelayGate, Direction.Right);
@@ -690,43 +690,52 @@ describe("circuit networks", () => {
     world.place(1, 0, TileKind.FixedCharge);
     world.place(2, 0, TileKind.Conduit);
     world.place(1, 2, TileKind.Platform);
+    world.place(2, 2, TileKind.Conduit);
     world.setWeld(0, 1, 1, 1, true);
     world.setWeld(1, 1, 2, 1, true);
     world.setWeld(2, 1, 3, 1, true);
     world.setWeld(1, 0, 1, 1, true);
     world.setWeld(2, 0, 2, 1, true);
     world.setWeld(1, 1, 1, 2, true);
+    world.setWeld(2, 1, 2, 2, true);
     const simulation = new Simulation(world);
     const observed: number[][] = [];
     for (let tick = 0; tick < 4; tick += 1) {
       simulation.step();
       observed.push([world.chargeAt(0, 1), world.chargeAt(1, 1),
-        world.chargeAt(3, 1), world.chargeAt(2, 0)]);
+        world.chargeAt(3, 1), world.chargeAt(2, 0), world.chargeAt(2, 2),
+        world.chargeAt(1, 0)]);
     }
     expect(observed).toEqual([
-      [1, 0, 0, 0],
-      [0, 1, 0, 0],
-      [0, 0, 1, 0],
-      [0, 0, 0, 0],
+      [1, 0, 0, 0, 0, 1],
+      [0, 1, 0, 0, 0, 1],
+      [0, 0, 1, 1, 1, 1],
+      [0, 0, 0, 0, 0, 1],
     ]);
   });
 
-  it("passes negative rear charge through a turned delay gate and clears on disconnection", () => {
-    const world = new World(1, 3);
-    world.place(0, 0, TileKind.Conduit);
-    world.place(0, 1, TileKind.DelayGate, Direction.Down);
-    world.place(0, 2, TileKind.Conduit);
-    world.setWeld(0, 0, 0, 1, true);
-    world.setWeld(0, 1, 0, 2, true);
-    world.setCharge(0, 0, -1);
+  it("passes negative rear charge to every turned delay gate output and clears on disconnection", () => {
+    const world = new World(3, 3);
+    world.place(1, 0, TileKind.Conduit);
+    world.place(1, 1, TileKind.DelayGate, Direction.Down);
+    world.place(1, 2, TileKind.Conduit);
+    world.place(0, 1, TileKind.Conduit);
+    world.place(2, 1, TileKind.Conduit);
+    world.setWeld(1, 0, 1, 1, true);
+    world.setWeld(1, 1, 1, 2, true);
+    world.setWeld(1, 1, 0, 1, true);
+    world.setWeld(1, 1, 2, 1, true);
+    world.setCharge(1, 0, -1);
     const simulation = new Simulation(world);
     simulation.step();
-    expect(world.chargeAt(0, 0)).toBe(0);
-    expect(world.chargeAt(0, 2)).toBe(-1);
-    world.setWeld(0, 0, 0, 1, false);
-    world.setCharge(0, 0, 1);
+    expect(world.chargeAt(1, 0)).toBe(0);
+    expect([world.chargeAt(1, 2), world.chargeAt(0, 1), world.chargeAt(2, 1)])
+      .toEqual([-1, -1, -1]);
+    world.setWeld(1, 0, 1, 1, false);
+    world.setCharge(1, 0, 1);
     simulation.step();
-    expect(world.chargeAt(0, 2)).toBe(0);
+    expect([world.chargeAt(1, 2), world.chargeAt(0, 1), world.chargeAt(2, 1)])
+      .toEqual([0, 0, 0]);
   });
 
   it("rotates a combiner's isolated inputs and pointed output", () => {
