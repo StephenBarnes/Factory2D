@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { deserializeBoard, serializeBoard } from "../src/simulation/board-export";
+import { BELL_PITCH_COUNT } from "../src/simulation/bell-pitch";
 import { Simulation } from "../src/simulation/simulation";
-import { Direction, TileKind } from "../src/simulation/tile";
+import { Direction, StrikeTimbre, TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
 import { BellObserver } from "../src/ui/bell-observer";
+import { spatialSounds } from "../src/ui/spatial-sound";
 
 /** Move one unwelded source without moving the bodies it may strike. */
 function moveSource(world: World, x: number, y: number, dx: number, dy: number): void {
@@ -24,6 +26,28 @@ function addReceiver(world: World, x: number, y: number): void {
 }
 
 describe("mallet observations", () => {
+  it("uses the contact material on mixed bodies without coalescing different timbres at the same pitch", () => {
+    const world = new World(4, 4);
+    const materials = [TileKind.Iron, TileKind.Stone, TileKind.Wood, TileKind.Glass];
+    for (const [y, material] of materials.entries()) {
+      world.place(0, y, TileKind.Mallet);
+      world.place(2, y, material);
+      world.place(3, y, TileKind.Iron);
+      world.setWeld(2, y, 3, y, true);
+    }
+    const observer = new BellObserver();
+    observer.capture(world);
+    for (let y = 0; y < materials.length; y += 1) moveSource(world, 0, y, 1, 0);
+    const sounds = observer.collectSounds(world);
+    const voices = [StrikeTimbre.Metal, StrikeTimbre.Stone, StrikeTimbre.Wood, StrikeTimbre.Glass]
+      .map((timbre) => timbre * BELL_PITCH_COUNT + 1);
+    expect(sounds.map(({ voice }) => voice)).toEqual(voices);
+    const spatial = spatialSounds(sounds, {
+      world, centerX: 2, centerY: 2, cellSize: 32, width: 128, height: 128,
+    });
+    expect([...spatial.keys()]).toEqual(voices);
+  });
+
   it("strikes downward under gravity at the target's pitch and site, while falling bells stay silent", () => {
     const world = new World(6, 4);
     world.place(0, 0, TileKind.Bell);

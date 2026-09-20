@@ -1,4 +1,5 @@
-import { BELL_STEPS_PER_OCTAVE } from "../simulation/bell-pitch";
+import { BELL_PITCH_COUNT, BELL_STEPS_PER_OCTAVE } from "../simulation/bell-pitch";
+import { StrikeTimbre, TILE_DEFINITIONS } from "../simulation/tile";
 import { TonalObserver } from "../simulation/tonal-observer";
 import type { World } from "../simulation/world";
 import { WorldFeature } from "../simulation/world-features";
@@ -38,7 +39,7 @@ export class BellObserver {
     this.captureWorld(world);
   }
 
-  /** Preserve every ringing site; the returned array is reused by the next collection. */
+  /** Voices pack timbre * BELL_PITCH_COUNT + pitch; the returned array is reused. */
   collectSounds(world: World): readonly LocatedSound<number>[] {
     this.sounds.length = 0;
     if (this.pending) {
@@ -72,7 +73,8 @@ export class BellObserver {
     if (observation?.capture === this.captureNumber) {
       for (const event of observation.tones.collect()) {
         this.onRing?.(world, event.index);
-        this.sounds.push({ voice: event.pitch, world, index: event.index });
+        const timbre = TILE_DEFINITIONS[world.kindAtIndex(event.index)].strikeTimbre ?? StrikeTimbre.Metal;
+        this.sounds.push({ voice: timbre * BELL_PITCH_COUNT + event.pitch, world, index: event.index });
       }
     }
     for (

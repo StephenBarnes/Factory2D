@@ -1,4 +1,6 @@
 import { BELL_PITCH_COUNT, BELL_STEPS_PER_OCTAVE } from "../simulation/bell-pitch";
+import { StrikeTimbre } from "../simulation/tile";
+import { expectDefined } from "../util/assert";
 import { bellFrequencyForPitch } from "./bell-observer";
 import type { MachinerySound } from "./machinery-observer";
 import { soundPosition, spatialSounds, type LocatedSound, type SoundPosition, type SoundView } from "./spatial-sound";
@@ -47,6 +49,19 @@ const BELL_PARTIALS = [
   [8.21,  0.00, 0.00, 0.20,   0.16, 0.16, 2.80], // Deep-bell metallic strike
   [11.17, 0.00, 0.00, 0.15,   0.10, 0.10, 1.20],
 ] as const;
+
+// Frequency ratio, gain, decay seconds. Keep the fundamental at the shared body-size pitch.
+const STRIKE_PARTIALS: Readonly<Record<number, readonly (readonly [number, number, number])[]>> = {
+  [StrikeTimbre.Stone]: [
+    [1, 0.65, 0.65], [2.76, 0.22, 0.24], [5.4, 0.09, 0.10],
+  ],
+  [StrikeTimbre.Wood]: [
+    [1, 0.75, 0.22], [3, 0.18, 0.085], [6, 0.06, 0.035],
+  ],
+  [StrikeTimbre.Glass]: [
+    [1, 0.48, 2.4], [2.32, 0.22, 1.4], [4.25, 0.12, 0.65], [6.63, 0.06, 0.3],
+  ],
+};
 
 /** Browser-only feedback; never participates in simulation state or timing. */
 export class WorkshopSounds {
@@ -168,12 +183,13 @@ export class WorkshopSounds {
     if (events.length === 0 || !this.canPlay() || this.bellVolume === 0) return;
     const view = this.getView();
     if (view === null) return;
-    const voices = spatialSounds(events, view);
-    for (let pitch = 0; pitch < BELL_PITCH_COUNT; pitch += 1) {
-      const position = voices.get(pitch);
-      if (position === undefined) continue;
+    for (const [voice, position] of spatialSounds(events, view)) {
+      const pitch = voice % BELL_PITCH_COUNT;
+      const timbre = Math.floor(voice / BELL_PITCH_COUNT);
       const bus = this.spatialBus(position, this.bellOutput);
-      if (bus !== null) this.bell(pitch, bus);
+      if (bus === null) continue;
+      if (timbre === StrikeTimbre.Metal) this.bell(pitch, bus);
+      else this.strike(pitch, timbre, bus);
     }
   }
 
@@ -315,6 +331,16 @@ export class WorkshopSounds {
       const duration = baseDuration + (deepDuration - baseDuration) * deep;
       const partial = frequency * ratio;
       this.tone(partial, partial, "sine", 0, duration, gain, bus);
+    }
+  }
+
+  private strike(pitch: number, timbre: StrikeTimbre, bus: SpatialBus): void {
+    const frequency = bellFrequencyForPitch(pitch);
+    const durationScale = 1 + pitch / (BELL_PITCH_COUNT - 1) * 0.6;
+    const partials = expectDefined(STRIKE_PARTIALS[timbre], "Unknown mallet sound character");
+    for (const [ratio, gain, duration] of partials) {
+      const partial = frequency * ratio;
+      this.tone(partial, partial, "sine", 0, duration * durationScale, gain, bus);
     }
   }
 

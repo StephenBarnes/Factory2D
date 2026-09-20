@@ -18,11 +18,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Potentially allow configuring the initial state of stateful blocks like the rotator (initial head facing) and piston (whether to start expanded or retracted), maybe using some hotkey to toggle. The rotator's initial head direction determines which side can be welded to. For the piston, things like the cost of all placed components is a bit weird; may have to add a special case like piston heads and bodies each having half the price of ordinary retracted body-and-head piston blocks, but still hide body and arm separate blocks from the palette.
 * Bug: see `temp/conveyor-blocking-bug.json`. The conveyor is trying to move its own body right, and pushing the body below it left. Both those pushes together would cause an overlap/collision, so they're prevented. However, in this case, we want to still allow the gap to be closed - probably the conveyor block's body should move right and the other body's leftward move should be blocked. Can we have this behavior while still having consistent predictable physics?
 
-# Audio-related
-
-* Give mallet-struck bodies different sound characters by material: metals can retain the current bell voice, with other sound classes for stone, wood, and glass. Mallets, expanding rings, and resonator hearing are implemented.
-* Potentially remove bell blocks now that mallets can play instruments built from ordinary blocks, including metal bells and lithophones.
-
 # Performance
 
 * Follow the current performance plan `docs/performance-todos.md`: refresh end-to-end browser measurements, investigate active fitted rendering, and measure retained session memory before choosing further optimizations. The original profile and completed optimization log are archived in `performance-history.md`.

@@ -185,6 +185,14 @@ export const enum PaletteCategory {
   PuzzleTools = 8,
 }
 
+/** Browser sound character when this tile is struck; independent of resonator pitch. */
+export const enum StrikeTimbre {
+  Metal = 0,
+  Stone = 1,
+  Wood = 2,
+  Glass = 3,
+}
+
 export interface TileDefinition {
   readonly name: string;
   /** Single UTF-16 code unit used by the compact board format. */
@@ -213,6 +221,8 @@ export interface TileDefinition {
   readonly runtimeWeldProtected?: boolean;
   /** Unwelded tiles break when a gravity fall longer than one cell stops. */
   readonly fragile?: boolean;
+  /** Mallet voice at the contact tile; omitted uses the metallic bell voice. */
+  readonly strikeTimbre?: StrikeTimbre;
   readonly weldableSides: WeldSide;
   readonly excludesFacingWeld: boolean;
   readonly usesOrientation: boolean;
@@ -294,6 +304,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       extendedDescription: ["Falls one cell per tick when unsupported. Weld it to neighboring blocks to build a rigid body."],
     },
     affectedByGravity: true,
+    strikeTimbre: StrikeTimbre.Stone,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
@@ -318,6 +329,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       extendedDescription: ["Falls straight down first, then tries a downward diagonal around an obstacle determined by parity of tick number and coordinate. A furnace turns sand into glass in four ticks."],
     },
     affectedByGravity: true,
+    strikeTimbre: StrikeTimbre.Stone,
     slidesDiagonally: true,
     weldableSides: WeldSide.None,
     excludesFacingWeld: false,
@@ -396,6 +408,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       extendedDescription: ["Prevents its entire welded body from falling on its own. An independent falling body on top pushes it downward if the whole chain has room.", "Pistons, conveyors, and rotators can move it. Welding it to a platform still anchors the body. It needs no charge."],
     },
     affectedByGravity: false,
+    strikeTimbre: StrikeTimbre.Stone,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
@@ -537,9 +550,10 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 83,
       category: PaletteCategory.Motion,
       description: "Strikes adjacent bodies after net movement; larger struck bodies sound lower.",
-      extendedDescription: ["After each tick, strikes the occupied tile beside its final position in each direction of net movement. Horizontal motion strikes left or right; vertical motion strikes up or down. Diagonal net motion can strike both cardinal neighbors, but the same body sounds only once per mallet. Returning to its starting position is silent.", "Cannot strike its own welded or mechanically linked body. Empty neighbors and board boundaries are silent. Only surviving mallets present at the start of the tick can strike. Movement is measured within the mallet's own board, not movement of a containing rune array.", "Pitch depends on the final size of the struck welded body, including mechanically linked blocks, not the mallet's body. Pitch descends one semitone per added block from F5 at 1 block to F2 at 37 blocks; larger bodies stay at F2.", "Falls under ordinary gravity and can be welded on every side. Has no circuit ports or stored state, needs no charge, and ignores orientation.", "Sound plays only in the browser with audio enabled and simulation speed below 15 ticks per second. Resonators on the same board hear matching strikes even with sound muted and at every simulation speed."],
+      extendedDescription: ["After each tick, strikes the occupied tile beside its final position in each direction of net movement. Horizontal motion strikes left or right; vertical motion strikes up or down. Diagonal net motion can strike both cardinal neighbors, but the same body sounds only once per mallet. Returning to its starting position is silent.", "Cannot strike its own welded or mechanically linked body. Empty neighbors and board boundaries are silent. Only surviving mallets present at the start of the tick can strike. Movement is measured within the mallet's own board, not movement of a containing rune array.", "Pitch depends on the final size of the struck welded body, including mechanically linked blocks, not the mallet's body. Pitch descends one semitone per added block from F5 at 1 block to F2 at 37 blocks; larger bodies stay at F2.", "The struck tile determines sound character, even in a mixed-material body: metals ring like bells, stone and ores give a short lithophone tone, wood gives a dry knock, and glass and gemstones give a sustained chime. Sound character does not change which resonators hear the strike.", "Falls under ordinary gravity and can be welded on every side. Has no circuit ports or stored state, needs no charge, and ignores orientation.", "Sound plays only in the browser with audio enabled and simulation speed below 15 ticks per second. Resonators on the same board hear matching strikes even with sound muted and at every simulation speed."],
     },
     affectedByGravity: true,
+    strikeTimbre: StrikeTimbre.Wood,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
@@ -1144,6 +1158,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       extendedDescription: ["Collides, falls, and welds like a solid block. Without welds, shatters when it stops after falling more than one cell. One-cell drops are safe; welding protects it and clears its fall history.", "An occupancy sensor facing glass reports 0; charge sensors look through it."],
     },
     affectedByGravity: true,
+    strikeTimbre: StrikeTimbre.Glass,
     invisibleToSensor: true,
     fragile: true,
     slidesDiagonally: false,
@@ -1170,6 +1185,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       extendedDescription: ["A furnace facing the ore transforms it into iron after six active ticks. Iron is magnetic; unprocessed iron ore is not."],
     },
     affectedByGravity: true,
+    strikeTimbre: StrikeTimbre.Stone,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
@@ -1194,6 +1210,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
     affectedByGravity: true,
+    strikeTimbre: StrikeTimbre.Stone,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
@@ -1266,6 +1283,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
     affectedByGravity: true,
+    strikeTimbre: StrikeTimbre.Glass,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
@@ -1290,6 +1308,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
     affectedByGravity: true,
+    strikeTimbre: StrikeTimbre.Glass,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
@@ -1314,6 +1333,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
     affectedByGravity: true,
+    strikeTimbre: StrikeTimbre.Glass,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
@@ -1338,6 +1358,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
     affectedByGravity: true,
+    strikeTimbre: StrikeTimbre.Glass,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
@@ -1362,6 +1383,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge."],
     },
     affectedByGravity: true,
+    strikeTimbre: StrikeTimbre.Glass,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
@@ -1410,6 +1432,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge.", "A furnace turns copper ore into copper in six active ticks while wood touches any orthogonal side of the ore. On completion, all wood touching the ore becomes fire. Removing the wood before completion pauses progress."],
     },
     affectedByGravity: true,
+    strikeTimbre: StrikeTimbre.Stone,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
@@ -1458,6 +1481,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       extendedDescription: ["Falls when unsupported, welds on every side, and is nonmagnetic with no circuit charge.", "A furnace turns tin ore into tin in six active ticks while wood touches either lateral side of the ore, relative to the furnace's facing: furnace, ore, and wood form a right-angle bend. All orthogonally touching wood becomes fire on completion. Losing both lateral wood neighbors pauses progress."],
     },
     affectedByGravity: true,
+    strikeTimbre: StrikeTimbre.Stone,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
@@ -1554,6 +1578,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       extendedDescription: ["Falls one cell per tick when unsupported and can be welded into a rigid body. This material is nonmagnetic and does not conduct circuit charge.", "Orthogonally adjacent fire consumes wood, replacing it with unweldable fire and removing its welds. A furnace facing wood also turns it into fire after two active ticks. Wood fuels copper smelting on any side of the ore, tin smelting on either lateral side, and steel refining on both lateral sides relative to the furnace's facing. All wood touching the target becomes fire on completion."],
     },
     affectedByGravity: true,
+    strikeTimbre: StrikeTimbre.Wood,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,
