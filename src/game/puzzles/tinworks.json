@@ -1,0 +1,203 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 5,
+  "width": 15,
+  "height": 15,
+  "id": "tinworks",
+  "group": "manufacturing",
+  "order": 0.75,
+  "name": "Tinworks",
+  "difficulty": 2,
+  "description": "The bronze foundry is short of tin. Six blocks of tin ore are falling into your workshop; smelt them and deliver every block. Tin takes six active furnace ticks with wood touching either lateral side of the ore: the furnace, ore, and wood must form a right-angle bend, not a straight line. All wood touching the ore ignites when smelting finishes. There is no replacement ore. Build separate hearths or bring the scattered supply into one production line.",
+  "goal": "Smelt and deliver six separate tin blocks.",
+  "cycleLimit": 1000,
+  "components": [
+    {
+      "code": "B",
+      "price": 5
+    },
+    {
+      "code": "P",
+      "price": 10
+    },
+    {
+      "code": "C",
+      "price": 2
+    },
+    {
+      "code": ";",
+      "price": 3
+    },
+    {
+      "code": "W",
+      "price": 10
+    },
+    {
+      "code": "1",
+      "price": 5
+    },
+    {
+      "code": "I",
+      "price": 10
+    },
+    {
+      "code": "+",
+      "price": 10
+    },
+    {
+      "code": "R",
+      "price": 15
+    },
+    {
+      "code": "K",
+      "price": 3
+    },
+    {
+      "code": "T",
+      "price": 10
+    },
+    {
+      "code": "S",
+      "price": 10
+    },
+    {
+      "code": "L",
+      "price": 10
+    },
+    {
+      "code": "m",
+      "price": 0
+    },
+    {
+      "code": "g",
+      "price": 0
+    },
+    {
+      "code": "U",
+      "price": 30
+    },
+    {
+      "code": "J",
+      "price": 10
+    },
+    {
+      "code": "X",
+      "price": 10
+    },
+    {
+      "code": "r",
+      "price": 15
+    },
+    {
+      "code": "Z",
+      "price": 30
+    },
+    {
+      "code": "N",
+      "price": 20
+    },
+    {
+      "code": "#",
+      "price": 1
+    },
+    {
+      "code": "w",
+      "price": 1
+    },
+    {
+      "code": "i",
+      "price": 4
+    },
+    {
+      "code": "F",
+      "price": 15
+    },
+    {
+      "code": "Q",
+      "price": 15
+    },
+    {
+      "code": "~",
+      "price": 20
+    }
+  ],
+  "editableRegions": [
+    {
+      "x": 1,
+      "y": 5,
+      "width": 10,
+      "height": 9
+    },
+    {
+      "x": 11,
+      "y": 5,
+      "width": 2,
+      "height": 8
+    },
+    {
+      "x": 13,
+      "y": 5,
+      "width": 1,
+      "height": 7
+    }
+  ],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 15,
+    "width": 15,
+    "height": 15,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "###############",
+      "#.............#",
+      "#.[.[.[.[.[.[.#",
+      "#.............#",
+      "#.............#",
+      "#.............#",
+      "#.............#",
+      "#.............#",
+      "#.............#",
+      "#.............#",
+      "#.............#",
+      "#.............#",
+      "#............==",
+      "#..........=DNV",
+      "###########=]=="
+    ],
+    "orientations": [
+      {
+        "x": 13,
+        "y": 13,
+        "direction": "right"
+      }
+    ],
+    "components": [
+      {
+        "x": 13,
+        "y": 13,
+        "type": "counter",
+        "threshold": 6,
+        "count": 0
+      }
+    ],
+    "welds": [
+      "+-------------|",
+      "|.............|",
+      "|.............|",
+      "|.............|",
+      "|.............|",
+      "|.............|",
+      "|.............|",
+      "|.............|",
+      "|.............|",
+      "|.............|",
+      "|.............|",
+      "|.............|",
+      "|............+|",
+      "|..........+-+|",
+      "-----------..-."
+    ]
+  },
+  "testCases": []
+}
