@@ -142,18 +142,56 @@ describe("diagonal sand gravity", () => {
     expect(world.kindAt(0, 1)).toBe(TileKind.Sand);
   });
 
-  it("jams equal-priority diagonal moves that claim the same cell", () => {
-    const world = new World(3, 3);
-    world.place(0, 0, TileKind.Sand);
-    world.place(2, 0, TileKind.Sand);
+  it.each([0, 1])("alternates diagonal contention priority at tick %i without losing either grain", (tick) => {
+    const world = new World(3, 4);
+    const rightId = world.place(2, 0, TileKind.Sand);
+    const leftId = world.place(0, 0, TileKind.Sand);
     world.place(0, 1, TileKind.Platform);
     world.place(2, 1, TileKind.Platform);
     const simulation = new Simulation(world);
+    simulation.tick = tick;
+    const winnerId = tick === 0 ? rightId : leftId;
+    const waitingId = tick === 0 ? leftId : rightId;
+    const waitingX = tick === 0 ? 0 : 2;
 
-    expect(simulation.step()).toBe(0);
-    expect(world.kindAt(0, 0)).toBe(TileKind.Sand);
-    expect(world.kindAt(2, 0)).toBe(TileKind.Sand);
-    expect(world.kindAt(1, 1)).toBe(TileKind.Empty);
+    expect(simulation.step()).toBe(1);
+    expect(world.idAt(1, 1)).toBe(winnerId);
+    expect(world.idAt(waitingX, 0)).toBe(waitingId);
+    expect(world.kindAt(2 - waitingX, 0)).toBe(TileKind.Empty);
+
+    simulation.step();
+    simulation.step();
+    expect(world.idAt(1, 1)).toBe(waitingId);
+    expect(world.idAt(1, 3)).toBe(winnerId);
+  });
+
+  it("drains every column of a symmetric sand funnel while preserving all grains", () => {
+    const world = new World(9, 12);
+    const sandIds: number[] = [];
+    for (let y = 0; y < 4; y += 1) {
+      for (let x = 0; x <= y; x += 1) {
+        world.place(x, y, TileKind.Platform);
+        world.place(8 - x, y, TileKind.Platform);
+      }
+      if (y < 3) {
+        for (let x = y + 1; x < 8 - y; x += 1) {
+          sandIds.push(world.place(x, y, TileKind.Sand));
+        }
+      }
+    }
+    const simulation = new Simulation(world);
+    for (let tick = 0; tick < 80; tick += 1) simulation.step();
+
+    const drainedIds: number[] = [];
+    for (let y = 0; y < world.height; y += 1) {
+      for (let x = 0; x < world.width; x += 1) {
+        if (world.kindAt(x, y) === TileKind.Sand) {
+          expect(y).toBeGreaterThan(3);
+          drainedIds.push(world.idAt(x, y));
+        }
+      }
+    }
+    expect(drainedIds.sort((a, b) => a - b)).toEqual(sandIds.sort((a, b) => a - b));
   });
 
   it("lets unsupported overhangs fall before blocked sand can move diagonally", () => {

@@ -1276,11 +1276,20 @@ export class MotionWorkspace {
         member >= 0;
         member = expectDefined(this.nextBodyMember[member], "next body member")
       ) {
-        const destination = member + this.world.width + horizontalMove;
+        const destination: number = member + this.world.width + horizontalMove;
         const owner = expectDefined(this.destinationOwners[destination], "destination owner");
         if (owner >= 0 && owner !== root) {
-          this.jammedBodies[root] = 1;
-          this.jammedBodies[owner] = 1;
+          // Only opposing sand diagonals remain after higher-priority claims.
+          // Alternate the winner spatially and over time, never by scan order.
+          const x = destination % this.world.width;
+          const y = (destination - x) / this.world.width;
+          const preferredDirection: -1 | 1 = (x + y + this.tick) % 2 === 0 ? -1 : 1;
+          if (horizontalMove === preferredDirection) {
+            this.jammedBodies[owner] = 1;
+            this.destinationOwners[destination] = root;
+          } else {
+            this.jammedBodies[root] = 1;
+          }
         } else {
           this.destinationOwners[destination] = root;
         }
