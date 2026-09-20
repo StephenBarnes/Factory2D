@@ -39,17 +39,13 @@ The puzzle set we ship on first release should focus more on mechanical puzzles.
 
 ## Manufacturing
 
+* [Glass blocks](glass-blocks.json) (Easy): sand falls from above. It must be smelted into glass blocks and delivered. Introduces furnaces and fragile blocks. Solution is easy, but leaves some room for optimizing cycles or price by several means (moving/modifying the sand dispenser, dropping glass directly on delivery to avoid shattering, grinding the stone ceiling/walls for more sand, or using advanced blocks in palette).
 * [Iron plates](../src/game/puzzles/iron-plates.json) (Hard): duplicate iron ore, smelt it, and weld three iron blocks in a row; deliver ten plates. Two duplicators offer tradeoffs between cycles, footprint, cost, and complexity. Exploits may also be possible, such as drilling away a duplicator and duplicating entire plates.
 * [Pickaxes to hammers](../src/game/puzzles/pickaxes-to-hammers.json) (Hard): produce five warhammers by reforging supplied pickaxes or smelting supplied ore. Separate duplicators provide the two feedstocks; drills, splitters, welders, and furnaces support different production routes. Delivered hammers must match the template with their heads facing left.
-* We should add some easier puzzles in this section, before the two puzzles above.
 
 ## Extraction
 
 * [Geode extractor](../src/game/puzzles/geode-extractor.json) (Intermediate): extract ten ruby blocks from duplicated stone-shell geodes and deliver them. Two duplicators face different directions, so players can use either supply or both for higher throughput. Drills, splitters, welders, rotators, magnets, grinders, and circuitry support different extraction layouts; the reference solution uses drills and conveyors. More intermediate extraction puzzles could introduce drills before this one.
-
-## Mining
-
-Currently empty. Future puzzles could involve drilling a large block of stone to extract gemstones scattered throughout it.
 
 ## Runelore
 
@@ -61,9 +57,11 @@ Currently empty. Future puzzles could involve drilling a large block of stone to
 
 The fixed ROM signal sources in these five runelore puzzles face right and are mirrored, so rear +1 reads the authored spatial grid left-to-right, then top-to-bottom under component-relative carry rules. Reference scenes use the same handedness.
 
-## Advanced Runelore, Rescue, and Elves (3 groups)
+## Mining, Advanced Runelore, Rescue, and Elves (4 groups)
 
 All currently empty.
+
+Mining is basically transport/vehicles plus extraction, and could involve e.g. drilling a large block of stone to extract gemstones scattered throughout it.
 
 # Ideas for non-tutorial puzzles
 

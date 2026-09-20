@@ -351,7 +351,7 @@ test("exports, clears, and imports all player data", async ({ page }) => {
   });
   await settings.getByRole("button", { name: "CLEAR ALL PLAYER DATA" }).click();
   await clearReload;
-  await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^0 gemstones\b/);
+  await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^0 puzzles completed\b/);
   expect(await page.evaluate(() => ({ ...window.localStorage }))).toEqual({
     [INSTALLATION_ID_STORAGE_KEY]: installationId,
   });
@@ -364,7 +364,7 @@ test("exports, clears, and imports all player data", async ({ page }) => {
   await page.locator("#import-player-data-file").setInputFiles(downloadPath);
   await importReload;
 
-  await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^7 gemstones\b/);
+  await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^7 puzzles completed\b/);
   expect(await page.evaluate(() => Object.fromEntries(
     Array.from({ length: window.localStorage.length }, (_, index) => {
       const key = window.localStorage.key(index);
@@ -595,7 +595,7 @@ test("puzzle groups expose locked progression and can be expanded", async ({ pag
   const runelore = page.locator(".puzzle-group").filter({
     has: page.getByText("Runelore", { exact: true }),
   });
-  await expect(gemstoneCount).toHaveAccessibleName(/^0 gemstones\b/);
+  await expect(gemstoneCount).toHaveAccessibleName(/^0 puzzles completed\b/);
   await expect(basics).toHaveAttribute("data-state", "unlocked");
   await expect(runelore).toHaveAttribute("data-state", "locked");
   await runelore.locator("summary").click();
@@ -619,14 +619,14 @@ test("unlocked fixture opens a gemstone-gated group and puzzle", async ({ page }
   const manufacturing = page.locator(".puzzle-group").filter({
     has: page.getByText("Manufacturing", { exact: true }),
   });
-  await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^7 gemstones\b/);
+  await expect(page.locator(".gemstone-count")).toHaveAccessibleName(/^7 puzzles completed\b/);
   await expect(basics).toHaveAttribute("data-state", "completed");
   await expect(manufacturing).toHaveAttribute("data-state", "unlocked");
 
-  const ironPlates = manufacturing.getByRole("button", { name: /Iron plates/ });
-  await expect(ironPlates).toBeEnabled();
-  await ironPlates.click();
-  await expect(page).toHaveURL(/\/#\/puzzles\/iron-plates$/);
+  const glassBlocks = manufacturing.getByRole("button", { name: /Glass blocks/ });
+  await expect(glassBlocks).toBeEnabled();
+  await glassBlocks.click();
+  await expect(page).toHaveURL(/\/#\/puzzles\/glass-blocks$/);
 });
 
 test("creates, edits, persists, and restores a solution on reload", async ({ page }) => {

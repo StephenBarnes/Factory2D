@@ -1,0 +1,354 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 5,
+  "width": 20,
+  "height": 18,
+  "id": "glass-blocks",
+  "group": "manufacturing",
+  "order": 0,
+  "name": "Glass blocks",
+  "difficulty": 1,
+  "description": "Use furnaces to smelt sand into glass after a delay. Smelt all of the provided sand, then delivery the glass blocks to the delivery box. Unwelded glass will break if you drop it.",
+  "goal": "Deliver 33 glass blocks.",
+  "components": [
+    {
+      "code": "B",
+      "price": 5
+    },
+    {
+      "code": "f",
+      "price": 15
+    },
+    {
+      "code": "P",
+      "price": 10
+    },
+    {
+      "code": "C",
+      "price": 2
+    },
+    {
+      "code": ";",
+      "price": 3
+    },
+    {
+      "code": "W",
+      "price": 10
+    },
+    {
+      "code": "1",
+      "price": 5
+    },
+    {
+      "code": "I",
+      "price": 10
+    },
+    {
+      "code": "+",
+      "price": 10
+    },
+    {
+      "code": "R",
+      "price": 15
+    },
+    {
+      "code": "*",
+      "price": 10
+    },
+    {
+      "code": "-",
+      "price": 15
+    },
+    {
+      "code": "K",
+      "price": 3
+    },
+    {
+      "code": "T",
+      "price": 10
+    },
+    {
+      "code": "e",
+      "price": 10
+    },
+    {
+      "code": "<",
+      "price": 10
+    },
+    {
+      "code": ">",
+      "price": 10
+    },
+    {
+      "code": "S",
+      "price": 10
+    },
+    {
+      "code": "L",
+      "price": 10
+    },
+    {
+      "code": "m",
+      "price": 0
+    },
+    {
+      "code": "g",
+      "price": 0
+    },
+    {
+      "code": "U",
+      "price": 30
+    },
+    {
+      "code": "J",
+      "price": 10
+    },
+    {
+      "code": "X",
+      "price": 10
+    },
+    {
+      "code": "r",
+      "price": 15
+    },
+    {
+      "code": "p",
+      "price": 20
+    },
+    {
+      "code": "Z",
+      "price": 30
+    },
+    {
+      "code": "N",
+      "price": 20
+    },
+    {
+      "code": "n",
+      "price": 20
+    },
+    {
+      "code": "#",
+      "price": 1
+    },
+    {
+      "code": "i",
+      "price": 4
+    },
+    {
+      "code": "F",
+      "price": 15
+    },
+    {
+      "code": "A",
+      "price": 10
+    },
+    {
+      "code": "?",
+      "price": 15
+    },
+    {
+      "code": "%",
+      "price": 30
+    },
+    {
+      "code": "Q",
+      "price": 15
+    },
+    {
+      "code": "M",
+      "price": 10
+    },
+    {
+      "code": "@",
+      "price": 10
+    },
+    {
+      "code": "}",
+      "price": 15
+    },
+    {
+      "code": "k",
+      "price": 15
+    },
+    {
+      "code": "4",
+      "price": 20
+    },
+    {
+      "code": "3",
+      "price": 15
+    }
+  ],
+  "editableRegions": [
+    {
+      "x": 1,
+      "y": 1,
+      "width": 1,
+      "height": 7
+    },
+    {
+      "x": 2,
+      "y": 4,
+      "width": 1,
+      "height": 4
+    },
+    {
+      "x": 3,
+      "y": 5,
+      "width": 1,
+      "height": 3
+    },
+    {
+      "x": 4,
+      "y": 6,
+      "width": 1,
+      "height": 2
+    },
+    {
+      "x": 5,
+      "y": 7,
+      "width": 1,
+      "height": 1
+    },
+    {
+      "x": 9,
+      "y": 7,
+      "width": 1,
+      "height": 1
+    },
+    {
+      "x": 10,
+      "y": 6,
+      "width": 1,
+      "height": 2
+    },
+    {
+      "x": 11,
+      "y": 5,
+      "width": 1,
+      "height": 3
+    },
+    {
+      "x": 12,
+      "y": 4,
+      "width": 1,
+      "height": 4
+    },
+    {
+      "x": 13,
+      "y": 1,
+      "width": 6,
+      "height": 7
+    },
+    {
+      "x": 7,
+      "y": 7,
+      "width": 1,
+      "height": 1
+    },
+    {
+      "x": 1,
+      "y": 14,
+      "width": 15,
+      "height": 3
+    },
+    {
+      "x": 1,
+      "y": 8,
+      "width": 17,
+      "height": 6
+    },
+    {
+      "x": 18,
+      "y": 8,
+      "width": 1,
+      "height": 5
+    }
+  ],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 15,
+    "width": 20,
+    "height": 18,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "####################",
+      "#.#:::::::::#......#",
+      "#.#:::::::::#......#",
+      "#.##:::::::##......#",
+      "#..##:::::##.......#",
+      "#...##:::##........#",
+      "#....##.##.........#",
+      "#.....#.#..........#",
+      "#..................#",
+      "#..................#",
+      "#..................#",
+      "#..................#",
+      "#..................#",
+      "#.................==",
+      "#...............=DNV",
+      "#...............=G==",
+      "#...............====",
+      "####################"
+    ],
+    "orientations": [
+      {
+        "x": 18,
+        "y": 14,
+        "direction": "right"
+      }
+    ],
+    "components": [
+      {
+        "x": 18,
+        "y": 14,
+        "type": "counter",
+        "threshold": 33,
+        "count": 0
+      }
+    ],
+    "textBoxes": [
+      {
+        "id": "7a018ffd-329a-4a50-bf9f-d2c570a2a83b",
+        "x": 6.26351290404341,
+        "y": 0.25832065261957304,
+        "width": 2.42,
+        "height": 0.48000000000000004,
+        "text": "There are 33 sand blocks.",
+        "owner": "author"
+      },
+      {
+        "id": "f00b59ee-bc63-4bc0-b5cd-6cc6123d429b",
+        "x": 15.598250630764099,
+        "y": 16.44917455925813,
+        "width": 3.8699999999999997,
+        "height": 0.74,
+        "text": "Note: single glass blocks will shatter if they\nhit the ground after falling 2 or more tiles.",
+        "owner": "author"
+      }
+    ],
+    "welds": [
+      "+-+---------+------|",
+      "|.|.........|......|",
+      "|.|.........|......|",
+      "|.-|.......+.......|",
+      "|..-|.....+........|",
+      "|...-|...+.........|",
+      "|....-|.+..........|",
+      "|..................|",
+      "|..................|",
+      "|..................|",
+      "|..................|",
+      "|..................|",
+      "|..................|",
+      "|.................+|",
+      "|...............+-+|",
+      "|...............|.+|",
+      "|...............+++|",
+      "-------------------."
+    ]
+  },
+  "testCases": []
+}
