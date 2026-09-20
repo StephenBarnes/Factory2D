@@ -49,3 +49,5 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 # Content
 
 Ideas and puzzle list moved to `puzzles.md`. We have enough tutorial puzzles. We need to add more actual puzzles, at a range of difficulty levels. Before adding any puzzles, read that file, and keep it updated with new puzzles added.
+
+Added **Iron Run**, an Easy manufacturing puzzle before Iron Plates, with a verified reference solution. Continue adding non-tutorial puzzles at other difficulty levels; see `puzzles.md`.

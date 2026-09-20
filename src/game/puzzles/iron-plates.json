@@ -5,7 +5,7 @@
   "height": 11,
   "id": "iron-plates",
   "group": "manufacturing",
-  "order": 0,
+  "order": 1,
   "name": "Iron plates",
   "difficulty": 3,
   "description": "Use furnaces to smelt iron ore to iron blocks. Weld together 3 iron blocks in a row to create an iron plate.",

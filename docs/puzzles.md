@@ -20,7 +20,7 @@ Things we are not teaching yet:
 
 # Current non-tutorial puzzles
 
-Our current set of non-tutorial puzzles is very small: four mechanical puzzles and five circuit puzzles. The puzzle set we ship on first release version will have more focus on mechanical puzzles.
+The puzzle set we ship on first release should focus more on mechanical puzzles.
 
 ## Transport
 
@@ -33,6 +33,7 @@ Our current set of non-tutorial puzzles is very small: four mechanical puzzles a
 
 ## Manufacturing
 
+* Iron Run (Easy): smelt the single supplied iron ore block and deliver one unwelded iron block across a rock ridge. A small motion/furnace/circuit palette excludes ore, finished iron, and duplicators. The protected delivery circuit requires a real delivery. This precedes Iron Plates without adding another tutorial. The reference solution holds the ore beside a furnace, starts an elevated conveyor after a ten-tick delay, and finishes in 32 ticks (200-tick limit).
 * Iron Plates: duplicate iron ore, smelt to iron, and weld together 3 of them to make an iron plate; deliver 10 iron plates to the delivery box. There are 2 duplicators, so deciding whether to use one or both and in what amount trades cycles against footprint, cost, and complexity. There are definitely also exploits possible, e.g. using the drill to remove a duplicator and duplicate entire plates.
 
 ## Mining
@@ -85,7 +86,6 @@ The fixed ROM signal sources in these five runelore puzzles face right and are m
 	* As follow-up, add a harder version where you have dispensers that output e.g. iron ore, and you have to smelt that and use assemblers to make conveyor belts and platform.
 * Carry a 1-trit signal from a top chamber to a bottom chamber, through a 1-wide chute. The top and bottom chambers are player-modifiable but the chute is not. So they probably need to choose one block to drop based on the trit, then interpret that signal at the bottom.
 * Simpler manufacturing puzzles before the current iron plates puzzle:
-	* Smelt a single iron block, and deliver it. Put delivery block some distance away, and make the terrain a bit complex, so it's not trivial (just a furnace block pointing at cell above delivery box).
 	* Weld together two stone blocks into 1x2 bodies, and deliver that.
 * Puzzle where there's 3 circuit inputs; in each test case, one is +1 while the rest are zero. The player must manufacture one specific item dependent on the signal, and get it to a delivery box (which accepts a different item in each test case, matching the circuit input). The 3 possible products are similar, made from mostly the same blocks but with slightly different configurations - maybe pickaxes, hammers, and swords. So the key to keeping footprint small is reusing as much of the production system as possible between the 3 possibilities.
 	* Add variants: different sets of products, different degree of overlap, different number of options.
