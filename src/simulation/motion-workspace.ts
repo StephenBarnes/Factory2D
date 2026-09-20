@@ -941,44 +941,71 @@ export class MotionWorkspace {
       }
     }
 
-    this.destinationOwners.fill(-1);
-    for (
-      let root = this.world.firstFeatureIndex(WorldFeature.Occupied);
-      root >= 0;
-      root = this.world.nextFeatureIndex(WorldFeature.Occupied, root)
-    ) {
-      if (
-        this.drivenBodies[root] === 0 ||
-        this.isMovementGroupBlocked(root)
-      ) {
-        continue;
+    // Axis probing has released gravity's jam markers and queue. Reuse them
+    // for group priorities and a snapshot of geometrically viable candidates.
+    // Snapshot before resolving claims: losing an earlier claim must not hide
+    // a group's later claims and make the result depend on traversal order.
+    let candidateCount = 0;
+    let highestPriority = 0;
+    for (let i = 0; i < queueLength; i += 1) {
+      const root = expectDefined(this.movementQueue[i], "driven movement candidate");
+      if (this.isMovementGroupBlocked(root)) continue;
+      this.blockedBodyQueue[candidateCount++] = root;
+      if (this.poweredMotion?.sources[root] === 1) {
+        this.jammedBodies[this.findMovementGroup(root)] = 1;
+        highestPriority = 1;
       }
-      const moveX = expectDefined(this.horizontalMoves[root], "horizontal driven movement");
-      const moveY = expectDefined(this.verticalMoves[root], "vertical driven movement");
-      for (
-        let member = expectDefined(this.bodyHeads[root], "body head");
-        member >= 0;
-        member = expectDefined(this.nextBodyMember[member], "next body member")
-      ) {
-        const destination = member + moveX + moveY * this.world.width;
-        const owner = expectDefined(this.destinationOwners[destination], "destination owner");
-        if (
-          expectDefined(
-            this.gravityDestinations[destination],
-            "gravity destination occupancy",
-          ) === 1
-        ) {
-          this.blockMovementGroup(root);
-          continue;
+    }
+    for (
+      let index = this.world.firstFeatureIndex(WorldFeature.Conveyor);
+      index >= 0;
+      index = this.world.nextFeatureIndex(WorldFeature.Conveyor, index)
+    ) {
+      if (this.world.chargeAtPortIndex(index, Direction.Up) === 0) continue;
+      const root = expectDefined(this.bodyRoots[index], "conveyor priority body");
+      if (this.drivenBodies[root] === 0 || this.isMovementGroupBlocked(root)) continue;
+      for (let side = Direction.Up; side <= Direction.Left; side += 1) {
+        const neighbor = this.neighborIndex(index, side);
+        if (neighbor >= 0 && this.world.kindAtIndex(neighbor) !== TileKind.Empty &&
+            this.bodyRoots[neighbor] !== root) {
+          this.jammedBodies[this.findMovementGroup(root)] = 1;
+          highestPriority = 1;
+          break;
         }
-        if (
-          owner >= 0 &&
-          this.findMovementGroup(owner) !== this.findMovementGroup(root)
+      }
+    }
+
+    // Self-driven groups claim gaps before passive belt loads. Pushing and
+    // magnetic dependencies already share a group, so stopping a losing group
+    // cannot leave a winner moving into a dependency's now-stationary cells.
+    this.destinationOwners.fill(-1);
+    for (let priority = highestPriority; priority >= 0; priority -= 1) {
+      for (let i = 0; i < candidateCount; i += 1) {
+        const root = expectDefined(this.blockedBodyQueue[i], "destination candidate");
+        const group = this.findMovementGroup(root);
+        if (this.jammedBodies[group] !== priority) continue;
+        const moveX = expectDefined(this.horizontalMoves[root], "horizontal driven movement");
+        const moveY = expectDefined(this.verticalMoves[root], "vertical driven movement");
+        for (
+          let member = expectDefined(this.bodyHeads[root], "body head");
+          member >= 0;
+          member = expectDefined(this.nextBodyMember[member], "next body member")
         ) {
-          this.blockMovementGroup(root);
-          this.blockMovementGroup(owner);
-        } else {
-          this.destinationOwners[destination] = root;
+          const destination = member + moveX + moveY * this.world.width;
+          const owner = expectDefined(this.destinationOwners[destination], "destination owner");
+          if (this.gravityDestinations[destination] === 1) {
+            this.blockMovementGroup(root);
+            continue;
+          }
+          const ownerGroup = owner < 0 ? -1 : this.findMovementGroup(owner);
+          if (ownerGroup >= 0 && ownerGroup !== group) {
+            this.blockMovementGroup(root);
+            if (this.jammedBodies[ownerGroup] === priority) {
+              this.blockMovementGroup(owner);
+            }
+          } else {
+            this.destinationOwners[destination] = root;
+          }
         }
       }
     }

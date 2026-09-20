@@ -218,6 +218,91 @@ describe("conveyor belt forces", () => {
     expect(world.idAt(5, 4)).toBe(stoneId);
   });
 
+  it.each([false, true])(
+    "closes a one-cell gap with the conveyor body rather than its load (mirrored: %s)",
+    (mirrored) => {
+      const { world: initial } = deserializeBoard(JSON.stringify({
+        format: "factory2d-board",
+        version: 15,
+        width: 11,
+        height: 6,
+        tick: 0,
+        result: "in-progress",
+        grid: [
+          "...........", "...........", "...##1B....",
+          "...#.###...", ".......#...", "###########",
+        ],
+        welds: [
+          "...........", "...........", "...+--.....",
+          ".....--|...", "...........", "----------.",
+        ],
+      }));
+      const world = initial.transformed(0, mirrored, false);
+      const xAt = (x: number): number => mirrored ? world.width - 1 - x : x;
+      const conveyorBody = [[3, 2], [4, 2], [5, 2], [6, 2], [3, 3]] as const;
+      const load = [[5, 3], [6, 3], [7, 3], [7, 4]] as const;
+      const conveyorIds = conveyorBody.map(([x, y]) => world.idAt(xAt(x), y));
+      const loadIds = load.map(([x, y]) => world.idAt(xAt(x), y));
+      const simulation = new Simulation(world);
+
+      expect(simulation.step()).toBe(conveyorBody.length);
+      conveyorBody.forEach(([x, y], index) => {
+        expect(world.idAt(xAt(x + 1), y)).toBe(conveyorIds[index]);
+      });
+      load.forEach(([x, y], index) => {
+        expect(world.idAt(xAt(x), y)).toBe(loadIds[index]);
+      });
+      expect(world.isWelded(xAt(4), 2, xAt(4), 3)).toBe(true);
+      // Once the gap is closed, opposing pushes still jam rather than overlap.
+      expect(simulation.step()).toBe(0);
+    },
+  );
+
+  it("jams gap-closing reactions when both bodies carry active conveyors", () => {
+    const { world } = deserializeBoard(JSON.stringify({
+      format: "factory2d-board",
+      version: 15,
+      width: 11,
+      height: 6,
+      tick: 0,
+      result: "in-progress",
+      grid: [
+        "...........", "...........", "...##1B....",
+        "...#.B1#...", ".......#...", "###########",
+      ],
+      welds: [
+        "...........", "...........", "...+--.....",
+        ".....--|...", "...........", "----------.",
+      ],
+    }));
+    const upperId = world.idAt(6, 2);
+    const lowerId = world.idAt(5, 3);
+
+    expect(new Simulation(world).step()).toBe(0);
+    expect(world.idAt(6, 2)).toBe(upperId);
+    expect(world.idAt(5, 3)).toBe(lowerId);
+    expect(world.kindAt(4, 3)).toBe(TileKind.Empty);
+  });
+
+  it("keeps a push chain's later claims after its driver loses an earlier contest", () => {
+    const world = new World(8, 6);
+    const upper = world.place(2, 1, TileKind.Thruster, Direction.Right);
+    const driver = world.place(4, 1, TileKind.Thruster, Direction.Left);
+    for (let y = 2; y <= 4; y += 1) {
+      world.place(4, y, TileKind.Stone);
+      world.setWeld(4, y - 1, 4, y, true);
+    }
+    const lower = world.place(1, 4, TileKind.Thruster, Direction.Right);
+    const pushed = world.place(3, 4, TileKind.Floatstone);
+    // The driver contests (3, 1) with the upper thruster. Its unwelded
+    // push-chain member still contests (2, 4) with the lower thruster.
+    expect(new Simulation(world).step()).toBe(0);
+    expect(world.idAt(2, 1)).toBe(upper);
+    expect(world.idAt(4, 1)).toBe(driver);
+    expect(world.idAt(1, 4)).toBe(lower);
+    expect(world.idAt(3, 4)).toBe(pushed);
+  });
+
   it("lets an unsupported powered assembly fall instead of gripping a ceiling", () => {
     const world = new World(8, 7);
     for (let x = 1; x <= 6; x += 1) {
