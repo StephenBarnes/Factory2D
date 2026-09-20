@@ -1,3 +1,4 @@
+import { bellPitchForBodySize } from "../simulation/bell-pitch";
 import { componentConfigurationForKind } from "../simulation/configurable-components";
 import { furnaceNeighborsPresent, isProcessingMachine, processingRecipeFor } from "../simulation/furnace";
 import {
@@ -8,7 +9,7 @@ import {
 } from "../simulation/tile";
 import { WeldedBodyIndex } from "../simulation/welded-body-index";
 import type { World } from "../simulation/world";
-import { bellNoteForPitch, bellPitchForBodySize } from "./bell-observer";
+import { bellNoteForPitch } from "./bell-observer";
 
 interface GridPosition {
   readonly x: number;
@@ -335,8 +336,8 @@ export class TileInspector {
           ? "E CONFIGURE · ENTER OPEN"
           : "E EDIT";
     }
-    this.bellRow.hidden = kind !== TileKind.Bell;
-    if (kind === TileKind.Bell) {
+    this.bellRow.hidden = kind !== TileKind.Bell && kind !== TileKind.Resonator;
+    if (!this.bellRow.hidden) {
       const bodies = this.bellBodies ??= new WeldedBodyIndex(this.world);
       bodies.collect();
       const size = bodies.memberCountAtRoot(bodies.rootAt(position.y * this.world.width + position.x));

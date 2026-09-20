@@ -34,7 +34,8 @@ export const enum WorldFeature {
   MagicLink = 22,
   Bell = 23,
   Fire = 24,
-  Count = 25,
+  Resonator = 25,
+  Count = 26,
 }
 
 const FEATURE_MASKS = new Uint32Array(
@@ -55,6 +56,7 @@ for (const kind of TILE_KINDS) {
     kind === TileKind.Spark ||
     kind === TileKind.Sensor ||
     kind === TileKind.MovementSensor ||
+    kind === TileKind.Resonator ||
     kind === TileKind.Delivery ||
     kind === TileKind.Comparer ||
     kind === TileKind.BlockComparer ||
@@ -129,6 +131,9 @@ for (const kind of TILE_KINDS) {
   }
   if (kind === TileKind.Bell) {
     mask |= 1 << WorldFeature.Bell;
+  }
+  if (kind === TileKind.Resonator) {
+    mask |= 1 << WorldFeature.Resonator;
   }
   if (kind === TileKind.Fire) {
     mask |= 1 << WorldFeature.Fire;

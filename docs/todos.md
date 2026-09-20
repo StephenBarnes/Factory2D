@@ -22,12 +22,15 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Bug: see `temp/conveyor-blocking-bug.json`. The conveyor is trying to move its own body right, and pushing the body below it left. Both those pushes together would cause an overlap/collision, so they're prevented. However, in this case, we want to still allow the gap to be closed - probably the conveyor block's body should move right and the other body's leftward move should be blocked. Can we have this behavior while still having consistent predictable physics?
 * Modify furnace adjacency rules. We have one rule already - smelting copper ore requires a wood block adjacent to the copper ore, not consumed. Add a way to change the catalyst into a fire block. Add more complex patterns of requirements, e.g. the wood must be on a side not opposite the furnace (so furnace-ore-wood must form 90-degree bend), or it must be on both sides not opposite the furnace, or all 3 sides of the ore except the furnace. Probably add this for other ores, since copper ore already has behavior, e.g. for metals like steel, galvanized iron, mithril, or others; would need to add steel blocks and mithril ore.
 
+# Circuit component changes
+
+* Modify the delay gate to allow output connections on 3 sides instead of just 1. (Currently they have input on one side and output only on the opposite side, which results in awkward designs for things like a simple flip-flop.) For these other 90-degree outputs, render with the line meeting the circular arc, similar to existing single output.
+
 # Audio-related
 
-* Add a resonator rune that emits a charge when a bell with matching pitch rings, anywhere on the grid; decide resonator's pitch in the same way as bells do, by counting its body's number of blocks. This functions as dwarven radio/wireless signaling.
 * Add a mallet or beater block. When it's moved in a direction, it checks the block one further in that direction. If that block is nonempty and belongs to a different body to the beater block, play a sound with pitch dependent on the size of that body. Similar to our current bell block, except the sound depends on the neighboring body.
 	* Apply the same expanding-rings animation (implemented for bells) when playing a sound.
-	* Once resonator blocks are present, make them also sense sounds from beaters/mallets.
+	* Make resonators also sense sounds from beaters/mallets.
 	* As a large follow-up, define a different character of sound for different materials - metals could sound like our bells currently do, but different sound classes for other types like stone, wood, glass.
 	* Once this is present, potentially remove the bell blocks entirely - since we can instead build bells in-world from metal blocks, or build other instruments like lithophones.
 

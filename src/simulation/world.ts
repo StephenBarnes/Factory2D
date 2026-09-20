@@ -20,6 +20,7 @@ import {
   type ConfigurableComponentSnapshot,
   type ConfigurableComponentState,
   type MovementSensorComponentState,
+  type ResonatorComponentState,
   type RuneArrayComponentState,
 } from "./configurable-components";
 import { CellStorage } from "./cell-storage";
@@ -384,6 +385,15 @@ export class World {
     const state = this.requireComponentStateAtIndex(index);
     if (state.type !== "movement-sensor") {
       throw new Error(`Movement sensor at index ${index} has mismatched component state`);
+    }
+    return state;
+  }
+
+  /** Mutable heard pulse; callers must not retain it across edits. */
+  resonatorStateAtIndex(index: number): ResonatorComponentState {
+    const state = this.requireComponentStateAtIndex(index);
+    if (state.type !== "resonator") {
+      throw new Error(`Tile at index ${index} is not a resonator`);
     }
     return state;
   }
@@ -1307,12 +1317,15 @@ export class World {
       this.cells.furnaceTargetIds[destination] = 0;
       if (hasComponentState(kind)) {
         const snapshot = snapshotComponentState(this.requireComponentStateAtIndex(source));
-        this.componentStates.set(
-          id,
-          stateFromSnapshot(
-            transformComponentSnapshot(snapshot, 0, !mirrorVertically, mirrorVertically),
-          ),
+        const state = stateFromSnapshot(
+          transformComponentSnapshot(snapshot, 0, !mirrorVertically, mirrorVertically),
         );
+        if (state.type === "resonator") {
+          state.pending = false;
+        } else if (state.type === "array") {
+          state.world.clearProducedResonatorPulses();
+        }
+        this.componentStates.set(id, state);
       }
     }
 
@@ -2289,6 +2302,17 @@ export class World {
         ) {
           this.setWeld(targetX, targetY, targetX, targetY + 1, true);
         }
+      }
+    }
+  }
+
+  /** New identities cannot replay a template's heard event, even inside copied arrays. */
+  private clearProducedResonatorPulses(): void {
+    for (const state of this.componentStates.values()) {
+      if (state.type === "resonator") {
+        state.pending = false;
+      } else if (state.type === "array") {
+        state.world.clearProducedResonatorPulses();
       }
     }
   }

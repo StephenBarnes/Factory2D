@@ -132,6 +132,7 @@ export function hasComponentState(kind: TileKind): boolean {
   return kind === TileKind.Assembler ||
     kind === TileKind.Rotator ||
     kind === TileKind.MovementSensor ||
+    kind === TileKind.Resonator ||
     TILE_DEFINITIONS[kind].fragile === true ||
     componentConfigurationForKind(kind) !== null;
 }
@@ -284,11 +285,18 @@ export interface MovementSensorComponentState {
   ports: [Charge, Charge, Charge, Charge];
 }
 
+/** A matching local bell heard on the previous tick, consumed by the next circuit solve. */
+export interface ResonatorComponentState {
+  readonly type: "resonator";
+  pending: boolean;
+}
+
 export type ConfigurableComponentState =
   | AssemblerComponentState
   | RotatorComponentState
   | FragileComponentState
   | MovementSensorComponentState
+  | ResonatorComponentState
   | DelayComponentState
   | DiscardComponentState
   | CounterComponentState
@@ -397,11 +405,17 @@ export interface MovementSensorComponentSnapshot {
   readonly ports: readonly [Charge, Charge, Charge, Charge];
 }
 
+export interface ResonatorComponentSnapshot {
+  readonly type: "resonator";
+  readonly pending: boolean;
+}
+
 export type ConfigurableComponentSnapshot =
   | AssemblerComponentSnapshot
   | RotatorComponentSnapshot
   | FragileComponentSnapshot
   | MovementSensorComponentSnapshot
+  | ResonatorComponentSnapshot
   | DelayComponentSnapshot
   | DiscardComponentSnapshot
   | CounterComponentSnapshot
@@ -435,6 +449,8 @@ export function createDefaultComponentState(
       return { type: "rotator", direction: orientation };
     case TileKind.MovementSensor:
       return { type: "movement-sensor", motionX: 0, motionY: 0, ports: [0, 0, 0, 0] };
+    case TileKind.Resonator:
+      return { type: "resonator", pending: false };
     case TileKind.Delay:
       return {
         type: "delay",
@@ -522,6 +538,8 @@ export function cloneComponentState(
       return { type: "rotator", direction: state.direction };
     case "fragile":
       return { type: "fragile", fallDistance: state.fallDistance };
+    case "resonator":
+      return { type: "resonator", pending: state.pending };
     case "movement-sensor":
       return { type: state.type, motionX: state.motionX, motionY: state.motionY, ports: [...state.ports] };
     case "delay":
@@ -600,6 +618,8 @@ export function snapshotComponentState(
       return { type: "rotator", direction: state.direction };
     case "fragile":
       return { type: "fragile", fallDistance: state.fallDistance };
+    case "resonator":
+      return { type: "resonator", pending: state.pending };
     case "movement-sensor":
       return { type: state.type, motionX: state.motionX, motionY: state.motionY, ports: [...state.ports] };
     case "delay":
@@ -684,6 +704,11 @@ export function validateComponentSnapshot(
       break;
     case "fragile":
       requireInteger(snapshot.fallDistance, "Fragile fall distance", 0, 2);
+      break;
+    case "resonator":
+      if (typeof snapshot.pending !== "boolean") {
+        throw new RangeError("Resonator pending pulse must be a boolean");
+      }
       break;
     case "movement-sensor":
       if (!isCharge(snapshot.motionX) || !isCharge(snapshot.motionY)) {
@@ -809,6 +834,8 @@ export function stateFromSnapshot(
       return { type: "rotator", direction: snapshot.direction };
     case "fragile":
       return { type: "fragile", fallDistance: snapshot.fallDistance };
+    case "resonator":
+      return { type: "resonator", pending: snapshot.pending };
     case "movement-sensor":
       return {
         type: snapshot.type,
@@ -1008,6 +1035,7 @@ export function componentStateMatchesKind(
     (state.type === "rotator" && kind === TileKind.Rotator) ||
     (state.type === "fragile" && TILE_DEFINITIONS[kind].fragile === true) ||
     (state.type === "movement-sensor" && kind === TileKind.MovementSensor) ||
+    (state.type === "resonator" && kind === TileKind.Resonator) ||
     (state.type === "counter" && kind === TileKind.Counter) ||
     (state.type === "beam-sensor" &&
       (kind === TileKind.BeamBlockSensor || kind === TileKind.BeamBodySensor)) ||

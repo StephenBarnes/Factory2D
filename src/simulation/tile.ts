@@ -76,6 +76,7 @@ export const enum TileKind {
   BeamBodySensor = 74,
   Bell = 75,
   Fire = 76,
+  Resonator = 77,
 }
 
 export const enum Direction {
@@ -159,6 +160,7 @@ export const enum TileDecorationStyle {
   BeamBlockSensor = 61,
   Bell = 62,
   Fire = 63,
+  Resonator = 64,
 }
 
 export const enum PaletteCategory {
@@ -920,6 +922,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#68428c",
     decorationStyle: TileDecorationStyle.MovementSensor,
     decorationColor: "#e2d2ff",
+  },
+  [TileKind.Resonator]: {
+    name: "Resonator Rune",
+    boardCode: "7",
+    defaultPrice: 15,
+    palette: {
+      order: 80,
+      category: PaletteCategory.CircuitBasic,
+      description: "Outputs +1 after a matching-pitch bell rings anywhere on this board.",
+      extendedDescription: ["Listens for bells whose final horizontal position differs from the start of the tick. A matching ring produces +1 on all four outputs on the next tick; no matching ring produces 0. Multiple matches still produce only +1.", "Tune it by changing the size of its welded body, including mechanically linked blocks and the resonator itself. Uses the same pitches as bells: F5 at 1 block, down one semitone per added block, clamped to F2 at 37 blocks. Hover to see its note and body size.", "Hears through all obstacles, but only within its own board; sounds do not cross rune-array boundaries. Works with sound muted and at every simulation speed.", "Falls under ordinary gravity and can be welded on every side. Its four outputs are isolated; connecting a circuit also changes its body's size and therefore its pitch."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.All,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.All,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#68428c",
+    decorationStyle: TileDecorationStyle.Resonator,
+    decorationColor: "#e5bb60",
   },
   [TileKind.Selector]: {
     usesMirroring: true,

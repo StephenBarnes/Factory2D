@@ -502,6 +502,7 @@ function drawDecoration(
       definition.decorationStyle === TileDecorationStyle.ForceProjector ||
       definition.decorationStyle === TileDecorationStyle.LevitationProjector ||
       definition.decorationStyle === TileDecorationStyle.MagicLink ||
+      definition.decorationStyle === TileDecorationStyle.Resonator ||
       definition.decorationStyle === TileDecorationStyle.Furnace ||
       definition.decorationStyle === TileDecorationStyle.Drill ||
       definition.decorationStyle === TileDecorationStyle.Grinder ||
@@ -1012,6 +1013,33 @@ function drawDecoration(
       context.beginPath();
       context.moveTo(left + size * 0.4, top + size * 0.48);
       context.quadraticCurveTo(left + size * 0.4, top + size * 0.34, left + size * 0.48, top + size * 0.32);
+      context.stroke();
+      break;
+    case TileDecorationStyle.Resonator:
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.lineWidth = Math.max(1, size * 0.035);
+      // Golden sound arcs surround an upright, charge-colored tuning fork.
+      context.beginPath();
+      context.moveTo(left + size * 0.67, top + size * 0.23);
+      context.quadraticCurveTo(left + size * 0.8, top + size * 0.36, left + size * 0.67, top + size * 0.49);
+      context.moveTo(left + size * 0.73, top + size * 0.16);
+      context.quadraticCurveTo(left + size * 0.91, top + size * 0.36, left + size * 0.73, top + size * 0.56);
+      context.moveTo(left + size * 0.33, top + size * 0.23);
+      context.quadraticCurveTo(left + size * 0.2, top + size * 0.36, left + size * 0.33, top + size * 0.49);
+      context.moveTo(left + size * 0.27, top + size * 0.16);
+      context.quadraticCurveTo(left + size * 0.09, top + size * 0.36, left + size * 0.27, top + size * 0.56);
+      context.stroke();
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[outputCharge];
+      context.lineWidth = Math.max(1.5, size * 0.065);
+      context.beginPath();
+      context.moveTo(left + size * 0.4, top + size * 0.2);
+      context.lineTo(left + size * 0.4, top + size * 0.48);
+      context.quadraticCurveTo(left + size * 0.4, top + size * 0.6, left + size * 0.5, top + size * 0.6);
+      context.quadraticCurveTo(left + size * 0.6, top + size * 0.6, left + size * 0.6, top + size * 0.48);
+      context.lineTo(left + size * 0.6, top + size * 0.2);
+      context.moveTo(left + size * 0.5, top + size * 0.6);
+      context.lineTo(left + size * 0.5, top + size * 0.8);
       context.stroke();
       break;
     case TileDecorationStyle.Iron:

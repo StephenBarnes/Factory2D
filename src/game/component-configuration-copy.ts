@@ -38,6 +38,7 @@ export function copyComponentConfiguration(
     case "rotator":
     case "fragile":
     case "movement-sensor":
+    case "resonator":
       throw new Error(`${source.type} has no player-editable configuration`);
   }
 }

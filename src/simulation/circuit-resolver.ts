@@ -13,7 +13,7 @@ import {
   oppositeDirection,
   TILE_DEFINITIONS,
   TileKind,
-  type WeldSide,
+  WeldSide,
 } from "./tile";
 import type { World } from "./world";
 import type { WorldRuntime } from "./world-runtime";
@@ -315,6 +315,11 @@ export class CircuitResolver {
         outputCharge = 1;
       } else if (kind === TileKind.Spark) {
         outputCharge = tick === 0 ? 1 : 0;
+      } else if (kind === TileKind.Resonator) {
+        const state = world.resonatorStateAtIndex(index);
+        this.driveOutputs(runtime, index, WeldSide.All, state.pending ? 1 : 0);
+        state.pending = false;
+        continue;
       } else if (kind === TileKind.Sensor) {
         outputCharge = world.sensorOutputAtIndex(index);
       } else if (kind === TileKind.Delivery) {

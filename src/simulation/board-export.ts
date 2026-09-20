@@ -215,6 +215,13 @@ interface ExportedMovementSensor {
   readonly ports: readonly [Charge, Charge, Charge, Charge];
 }
 
+interface ExportedResonator {
+  readonly x: number;
+  readonly y: number;
+  readonly type: "resonator";
+  readonly pending: boolean;
+}
+
 /** Rune array whose inner board nests the same contents format without tick or result. */
 interface ExportedRuneArray {
   readonly x: number;
@@ -230,6 +237,7 @@ type ExportedComponent =
   | ExportedRotator
   | ExportedFragile
   | ExportedMovementSensor
+  | ExportedResonator
   | ExportedDelay
   | ExportedDiscard
   | ExportedCounter
@@ -433,6 +441,10 @@ function exportBoardContents(world: World): ExportedBoardContents {
           }
         } else if (componentState.type === "beam-sensor") {
           if (componentState.threshold !== DEFAULT_BEAM_SENSOR_THRESHOLD || componentState.matchAll) {
+            components.push({ x, y, ...componentState });
+          }
+        } else if (componentState.type === "resonator") {
+          if (componentState.pending) {
             components.push({ x, y, ...componentState });
           }
         } else if (componentState.type === "movement-sensor") {
@@ -809,6 +821,8 @@ function importBoardContents(
       ? ["x", "y", "type", "pending"]
       : type === "fragile"
         ? ["x", "y", "type", "fallDistance"]
+      : type === "resonator"
+        ? ["x", "y", "type", "pending"]
       : type === "movement-sensor"
         ? ["x", "y", "type", "motionX", "motionY", "ports"]
       : type === "rotator"
@@ -890,6 +904,14 @@ function importBoardContents(
       snapshot = {
         type,
         fallDistance: requireInteger(state.fallDistance, `${componentLabel} fallDistance`, 0, 2),
+      };
+    } else if (type === "resonator") {
+      if (typeof state.pending !== "boolean") {
+        throw new Error(`${componentLabel} pending must be a boolean`);
+      }
+      snapshot = {
+        type,
+        pending: state.pending,
       };
     } else if (type === "movement-sensor") {
       snapshot = {
@@ -1068,7 +1090,7 @@ function importBoardContents(
   for (let cellIndex = 0; cellIndex < kinds.length; cellIndex += 1) {
     const kind = expectDefined(kinds[cellIndex], `tile kind at index ${cellIndex}`) as TileKind;
     if (hasComponentState(kind) && TILE_DEFINITIONS[kind].fragile !== true &&
-        kind !== TileKind.MovementSensor &&
+        kind !== TileKind.MovementSensor && kind !== TileKind.Resonator &&
         kind !== TileKind.BeamBlockSensor && kind !== TileKind.BeamBodySensor &&
         componentStateAtCell[cellIndex] !== 1) {
       const x = cellIndex % width;

@@ -1,8 +1,5 @@
-import {
-  BELL_PITCH_COUNT,
-  BELL_STEPS_PER_OCTAVE,
-  bellFrequencyForPitch,
-} from "./bell-observer";
+import { BELL_PITCH_COUNT, BELL_STEPS_PER_OCTAVE } from "../simulation/bell-pitch";
+import { bellFrequencyForPitch } from "./bell-observer";
 import type { MachinerySound } from "./machinery-observer";
 import { soundPosition, spatialSounds, type LocatedSound, type SoundPosition, type SoundView } from "./spatial-sound";
 

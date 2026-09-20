@@ -1,4 +1,5 @@
 import { AssemblerResolver } from "./assembler-resolver";
+import { BELL_PITCH_COUNT, bellPitchForBodySize } from "./bell-pitch";
 import { DeliveryResolver } from "./delivery-resolver";
 import { DuplicatorResolver } from "./duplicator-resolver";
 import { DrillResolver } from "./drill-resolver";
@@ -33,6 +34,8 @@ export class WorldRuntime {
   private rotatorResolverValue: RotatorResolver | undefined;
   private weldOperationResolverValue: WeldOperationResolver | undefined;
   private movementSensorObserver: MovementSensorObserver | undefined;
+  private initialBellXs: Map<number, number> | undefined;
+  private heardBellPitches: Uint8Array | undefined;
   private nextChargesValue: Int8Array | undefined;
   private nextCrossingVerticalChargesValue: Int8Array | undefined;
   private nextIsolatedOutputChargesValue: Int8Array | undefined;
@@ -127,6 +130,7 @@ export class WorldRuntime {
   collectIntents(): void {
     const world = this.world;
     this.motionWorkspaceValue?.clearCircuitCommands();
+    this.collectBellPositions();
     if (world.hasFeature(WorldFeature.MovementSensor)) {
       this.movementSensorObserver ??= new MovementSensorObserver(world);
     }
@@ -195,6 +199,51 @@ export class WorldRuntime {
       movementCount += this.pistonResolver.resolve();
     }
     this.movementSensorObserver?.commit();
+    this.commitResonatorPulses();
     return movementCount;
+  }
+
+  private collectBellPositions(): void {
+    this.initialBellXs?.clear();
+    const world = this.world;
+    if (!world.hasFeature(WorldFeature.Bell)) return;
+    const positions = this.initialBellXs ??= new Map<number, number>();
+    for (
+      let index = world.firstFeatureIndex(WorldFeature.Bell);
+      index >= 0;
+      index = world.nextFeatureIndex(WorldFeature.Bell, index)
+    ) {
+      positions.set(world.idAtIndex(index), index % world.width);
+    }
+  }
+
+  private commitResonatorPulses(): void {
+    const world = this.world;
+    if (!world.hasFeature(WorldFeature.Resonator) || !this.initialBellXs?.size) return;
+    const pitches = this.heardBellPitches ??= new Uint8Array(BELL_PITCH_COUNT);
+    pitches.fill(0);
+    let rang = false;
+    for (
+      let index = world.firstFeatureIndex(WorldFeature.Bell);
+      index >= 0;
+      index = world.nextFeatureIndex(WorldFeature.Bell, index)
+    ) {
+      const initialX = this.initialBellXs.get(world.idAtIndex(index));
+      if (initialX === undefined || initialX === index % world.width) continue;
+      // Intent observers no longer use this scratch; rebuild against final geometry.
+      if (!rang) this.weldedBodies.collect();
+      rang = true;
+      const size = this.weldedBodies.memberCountAtRoot(this.weldedBodies.rootAt(index));
+      pitches[bellPitchForBodySize(size)] = 1;
+    }
+    if (!rang) return;
+    for (
+      let index = world.firstFeatureIndex(WorldFeature.Resonator);
+      index >= 0;
+      index = world.nextFeatureIndex(WorldFeature.Resonator, index)
+    ) {
+      const size = this.weldedBodies.memberCountAtRoot(this.weldedBodies.rootAt(index));
+      world.resonatorStateAtIndex(index).pending = pitches[bellPitchForBodySize(size)] === 1;
+    }
   }
 }
