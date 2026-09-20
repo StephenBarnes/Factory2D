@@ -129,6 +129,14 @@ initializeBevelSetting(requiredElement<HTMLButtonElement>("bevels-button"), rend
 const sounds = new WorkshopSounds(
   requiredElement<HTMLButtonElement>("sounds-button"),
   requiredElement<HTMLButtonElement>("workshop-mute-button"),
+  {
+    input: requiredElement<HTMLInputElement>("master-volume"),
+    output: requiredElement<HTMLOutputElement>("master-volume-value"),
+  },
+  {
+    input: requiredElement<HTMLInputElement>("bell-volume"),
+    output: requiredElement<HTMLOutputElement>("bell-volume-value"),
+  },
 );
 const exportPlayerDataButton = requiredElement<HTMLButtonElement>("export-player-data-button");
 const importPlayerDataButton = requiredElement<HTMLButtonElement>("import-player-data-button");

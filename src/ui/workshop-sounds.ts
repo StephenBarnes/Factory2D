@@ -8,6 +8,17 @@ import {
 
 type EditSound = "place" | "remove" | "weld" | "unweld";
 
+interface VolumeControl {
+  input: HTMLInputElement;
+  output: HTMLOutputElement;
+}
+
+// Equal slider steps give equal decibel changes (-40 dB to 0 dB).
+// Zero is a separate, truly silent endpoint.
+function volumeGain(percent: number): number {
+  return percent === 0 ? 0 : 10 ** ((percent - 100) / 50);
+}
+
 const STORAGE_KEY = "factory2d.sounds";
 const EDIT_TONES: Record<EditSound, readonly [number, number, OscillatorType]> = {
   place: [150, 55, "triangle"],
@@ -39,11 +50,21 @@ export class WorkshopSounds {
   private enabled = window.localStorage.getItem(STORAGE_KEY) !== "false";
   private context: AudioContext | null = null;
   private output: GainNode | null = null;
+  private bellOutput: GainNode | null = null;
+  private masterVolume = 100;
+  private bellVolume = 100;
   private lastEditTime = -Infinity;
   private readonly bells = new BellObserver();
   private bellStepPending = false;
 
-  constructor(button: HTMLButtonElement, muteButton: HTMLButtonElement) {
+  constructor(
+    button: HTMLButtonElement,
+    muteButton: HTMLButtonElement,
+    master: VolumeControl,
+    bells: VolumeControl,
+  ) {
+    this.bindVolume(master, "masterVolume", "factory2d.master-volume");
+    this.bindVolume(bells, "bellVolume", "factory2d.bell-volume");
     const syncButtons = (): void => {
       button.setAttribute("aria-pressed", String(this.enabled));
       muteButton.setAttribute("aria-pressed", String(!this.enabled));
@@ -62,9 +83,7 @@ export class WorkshopSounds {
       }
       this.enabled = enabled;
       syncButtons();
-      if (this.output !== null && this.context !== null) {
-        this.output.gain.setValueAtTime(enabled ? 0.12 : 0, this.context.currentTime);
-      }
+      this.updateGains();
       if (enabled) this.unlock();
     };
     button.addEventListener("click", toggle);
@@ -74,12 +93,52 @@ export class WorkshopSounds {
     document.addEventListener("keydown", () => this.unlock(), { capture: true });
   }
 
+  private bindVolume(
+    control: VolumeControl,
+    field: "masterVolume" | "bellVolume",
+    storageKey: string,
+  ): void {
+    const stored = window.localStorage.getItem(storageKey);
+    const percent = stored === null || stored.trim() === "" ? NaN : Number(stored);
+    this[field] = Number.isFinite(percent) && percent >= 0 && percent <= 100 ? percent : 100;
+    const sync = (): void => {
+      control.input.value = String(this[field]);
+      const label = this[field] === 0 ? "Muted" : `${this[field]}%`;
+      control.output.value = label;
+      control.input.setAttribute("aria-valuetext", label);
+    };
+    sync();
+    control.input.addEventListener("input", () => {
+      const volume = control.input.valueAsNumber;
+      try {
+        window.localStorage.setItem(storageKey, String(volume));
+      } catch (error) {
+        sync();
+        const message = error instanceof Error ? error.message : String(error);
+        window.alert(`Could not save sound settings: ${message}`);
+        return;
+      }
+      this[field] = volume;
+      sync();
+      this.updateGains();
+    });
+  }
+
+  private updateGains(): void {
+    if (this.context === null || this.output === null || this.bellOutput === null) return;
+    const at = this.context.currentTime;
+    this.output.gain.setValueAtTime(this.enabled ? 0.12 * volumeGain(this.masterVolume) : 0, at);
+    this.bellOutput.gain.setValueAtTime(volumeGain(this.bellVolume), at);
+  }
+
   private unlock(): void {
     if (!this.enabled || typeof AudioContext === "undefined") return;
     if (this.context === null) {
       this.context = new AudioContext();
       this.output = this.context.createGain();
-      this.output.gain.value = 0.12;
+      this.bellOutput = this.context.createGain();
+      this.updateGains();
+      this.bellOutput.connect(this.output);
       this.output.connect(this.context.destination);
     }
     if (this.context.state === "suspended") {
@@ -99,7 +158,7 @@ export class WorkshopSounds {
   }
 
   beforeStep(world: World, ticksPerSecond: number): void {
-    this.bellStepPending = ticksPerSecond < 15 && this.canPlay();
+    this.bellStepPending = ticksPerSecond < 15 && this.bellVolume > 0 && this.canPlay();
     if (this.bellStepPending) this.bells.capture(world);
   }
 
@@ -107,7 +166,7 @@ export class WorkshopSounds {
     if (!this.bellStepPending) return;
     this.bellStepPending = false;
     const pitches = this.bells.collectPitches(world);
-    if (!this.canPlay()) return;
+    if (!this.canPlay() || this.bellVolume === 0) return;
     for (let pitch = 0; pitch < BELL_PITCH_COUNT; pitch += 1) {
       if (!pitches.has(pitch)) continue;
       this.bell(pitch);
@@ -129,7 +188,7 @@ export class WorkshopSounds {
       const baseDuration = smallDuration + (largeDuration - smallDuration) * size;
       const duration = baseDuration + (deepDuration - baseDuration) * deep;
       const partial = frequency * ratio;
-      this.tone(partial, partial, "sine", 0, duration, gain);
+      this.tone(partial, partial, "sine", 0, duration, gain, this.bellOutput);
     }
   }
 
@@ -149,12 +208,14 @@ export class WorkshopSounds {
   }
 
   private canPlay(): boolean {
-    return this.enabled && !document.hidden && this.context?.state === "running";
+    return this.enabled && this.masterVolume > 0 && !document.hidden && this.context?.state === "running";
   }
 
-  private tone(start: number, end: number, type: OscillatorType, delay: number, duration: number, volume = 0.7): void {
+  private tone(
+    start: number, end: number, type: OscillatorType, delay: number, duration: number,
+    volume = 0.7, output = this.output,
+  ): void {
     const context = this.context;
-    const output = this.output;
     if (context === null || output === null) throw new Error("Workshop audio is not initialized");
     const at = context.currentTime + delay;
     const oscillator = context.createOscillator();

@@ -2280,6 +2280,27 @@ kbd {
   box-shadow: inset 0 -3px var(--gold);
 }
 
+.settings-volume {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 12px;
+  margin: 16px 0;
+  color: var(--text-body);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.settings-volume output {
+  color: var(--gold);
+}
+
+.settings-volume input {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 0;
+  accent-color: var(--gold);
+}
+
 .settings-danger-section {
   border-color: #6d3328;
 }

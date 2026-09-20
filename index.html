@@ -424,6 +424,17 @@
               <div class="settings-action-row">
                 <button id="sounds-button" type="button" aria-pressed="true">SOUND EFFECTS</button>
               </div>
+              <div class="settings-volume">
+                <label for="master-volume">Master volume</label>
+                <output id="master-volume-value" for="master-volume">100%</output>
+                <input id="master-volume" type="range" min="0" max="100" step="1" value="100" />
+              </div>
+              <div class="settings-volume">
+                <label for="bell-volume">Bell volume</label>
+                <output id="bell-volume-value" for="bell-volume">100%</output>
+                <input id="bell-volume" type="range" min="0" max="100" step="1" value="100" aria-describedby="bell-volume-help" />
+              </div>
+              <p id="bell-volume-help">Bell volume combines with master volume.</p>
             </section>
             <section class="settings-section" aria-labelledby="cheats-title">
               <h3 id="cheats-title">CHEATS</h3>
