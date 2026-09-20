@@ -205,8 +205,8 @@ describe("puzzle test controller", () => {
     expect(harness.counts.begin).toBe(1);
   });
 
-  it("scales the ramp with live speed selections and caps it at 60 ticks per second", () => {
-    let speed = 1;
+  it("doubles every six seconds up to four times the live speed, capped at 60 ticks per second", () => {
+    let speed = 5;
     const { controller } = controllerHarness(emptyVictoryWorld(), () => speed);
     controller.configure(puzzleWith([
       caseDefinition("timeout", 10_000, emptyVictoryWorld),
@@ -215,16 +215,22 @@ describe("puzzle test controller", () => {
     const state = controller.lifecycle;
     if (state.kind !== "running") throw new Error("Expected running case");
 
-    controller.advanceFrame(1_000, 1_000);
+    controller.advanceFrame(6_000, 101);
     expect(state.run.simulation.tick).toBe(1);
-    speed = 30;
-    controller.advanceFrame(2_000, 1_000);
-    expect(state.run.simulation.tick).toBeGreaterThan(45);
-    expect(state.run.simulation.tick).toBeLessThan(60);
-
-    const tick = state.run.simulation.tick;
+    controller.advanceFrame(12_000, 101);
+    expect(state.run.simulation.tick).toBe(3);
     controller.advanceFrame(30_000, 101);
-    expect(state.run.simulation.tick - tick).toBe(6);
+    expect(state.run.simulation.tick).toBe(5);
+
+    speed = 1;
+    controller.advanceFrame(31_000, 101);
+    expect(state.run.simulation.tick).toBe(5);
+    controller.advanceFrame(32_000, 150);
+    expect(state.run.simulation.tick).toBe(6);
+
+    speed = 30;
+    controller.advanceFrame(33_000, 101);
+    expect(state.run.simulation.tick).toBe(12);
   });
 
   it("restarts an accelerated run at the selected speed and excludes pre-resume frame time", () => {
@@ -233,18 +239,18 @@ describe("puzzle test controller", () => {
       caseDefinition("timeout", 10_000, emptyVictoryWorld),
     ]));
     controller.togglePlayback(0);
-    controller.advanceFrame(15_000, 101);
+    controller.advanceFrame(15_000, 126);
     const state = controller.lifecycle;
     if (state.kind !== "running") throw new Error("Expected running case");
-    expect(state.run.simulation.tick).toBe(6);
+    expect(state.run.simulation.tick).toBe(1);
 
     controller.togglePlayback(15_000);
     controller.togglePlayback(30_000);
     controller.advanceFrame(30_010, 250);
     controller.advanceFrame(30_300, 290);
-    expect(state.run.simulation.tick).toBe(6);
+    expect(state.run.simulation.tick).toBe(1);
     controller.advanceFrame(30_500, 200);
-    expect(state.run.simulation.tick).toBe(7);
+    expect(state.run.simulation.tick).toBe(2);
   });
 
   it("yields fast tests between frames and allows pausing and resetting unfinished runs", () => {

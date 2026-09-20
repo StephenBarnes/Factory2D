@@ -11,7 +11,8 @@ import { PuzzleTestReportView } from "../ui/puzzle-test-report";
 import type { DropupMenu } from "../ui/dropup-menu";
 
 const MAX_TEST_TICKS_PER_SECOND = 60;
-const TEST_SPEED_DOUBLING_MS = 3_000;
+const TEST_SPEED_DOUBLING_MS = 6_000;
+const MAX_TEST_SPEED_DOUBLINGS = 2;
 const TEST_CASE_TRANSITION_MS = 600;
 const MAX_AUTOMATIC_ANIMATION_MS = 250;
 const FAST_TEST_FRAME_BUDGET_MS = 8;
@@ -456,7 +457,8 @@ export class PuzzleTestController {
     const elapsed = Math.max(0, currentTime - caseStartedAt);
     return Math.min(
       MAX_TEST_TICKS_PER_SECOND,
-      this.dependencies.getTicksPerSecond() * 2 ** (elapsed / TEST_SPEED_DOUBLING_MS),
+      this.dependencies.getTicksPerSecond() *
+        2 ** Math.min(MAX_TEST_SPEED_DOUBLINGS, elapsed / TEST_SPEED_DOUBLING_MS),
     );
   }
 
