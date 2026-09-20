@@ -2280,6 +2280,11 @@ kbd {
   box-shadow: inset 0 -3px var(--gold);
 }
 
+.settings-action-row button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
 .settings-volume {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

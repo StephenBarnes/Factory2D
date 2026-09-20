@@ -45,6 +45,8 @@ class RecordingPath2D {
 
 
   moveTo(_x: number, _y: number): void {}
+  lineTo(_x: number, _y: number): void {}
+  roundRect(_x: number, _y: number, _width: number, _height: number, _radius: number): void {}
   arcTo(_x1: number, _y1: number, _x2: number, _y2: number, _radius: number): void {}
   closePath(): void {}
 
@@ -395,6 +397,86 @@ describe("CanvasRenderer scalable tile rendering", () => {
     renderer.render(null, 1, 16);
 
     expect(context.clearRect).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    TileKind.Destroyer, TileKind.Conveyor, TileKind.Furnace, TileKind.Drill, TileKind.Grinder,
+  ])("stops looping glyph %s without preventing edits or resuming animation", (kind) => {
+    vi.stubGlobal("window", { devicePixelRatio: 1 });
+    vi.stubGlobal("Path2D", RecordingPath2D);
+    const world = new World(1, 1);
+    world.place(0, 0, kind);
+    if (kind === TileKind.Conveyor) world.setCharge(0, 0, 1);
+    else if (kind !== TileKind.Destroyer) world.setIsolatedOutputCharge(0, 0, 1);
+    const { canvas, context } = createRecordingCanvas(100, 100);
+    const renderer = new CanvasRenderer(canvas, world);
+    renderer.render(null, 1, 100, false, true, true);
+    renderer.render(null, 1, 116, false, true, true);
+    expect(context.clearRect).toHaveBeenCalledTimes(2);
+
+    renderer.render(null, 1, 132, false, true, false);
+    renderer.render(null, 1, 148, false, true, false);
+    expect(context.clearRect).toHaveBeenCalledTimes(3);
+    vi.mocked(context.rotate).mockClear();
+    vi.mocked(context.translate).mockClear();
+    vi.mocked(context.scale).mockClear();
+    renderer.fitBoardToViewport();
+    renderer.render(null, 1, 164, false, true, false);
+    const frozenTransforms = [
+      vi.mocked(context.rotate).mock.calls.slice(),
+      vi.mocked(context.translate).mock.calls.slice(),
+      vi.mocked(context.scale).mock.calls.slice(),
+    ];
+    vi.mocked(context.rotate).mockClear();
+    vi.mocked(context.translate).mockClear();
+    vi.mocked(context.scale).mockClear();
+    renderer.fitBoardToViewport();
+    renderer.render(null, 1, 800, false, true, false);
+    expect([
+      vi.mocked(context.rotate).mock.calls,
+      vi.mocked(context.translate).mock.calls,
+      vi.mocked(context.scale).mock.calls,
+    ]).toEqual(frozenTransforms);
+
+    renderer.render(null, 1, 816, false, true, true);
+    renderer.render(null, 1, 832, false, true, true);
+    expect(context.clearRect).toHaveBeenCalledTimes(7);
+    renderer.render(null, 1, 848, false, false, true);
+    renderer.render(null, 1, 864, false, false, true);
+    expect(context.clearRect).toHaveBeenCalledTimes(8);
+    world.place(0, 0, TileKind.Stone);
+    renderer.render(null, 1, 880, false, false, true);
+    expect(context.clearRect).toHaveBeenCalledTimes(9);
+  });
+
+  it("clears fractures when animations stop and never replays disabled destruction", () => {
+    vi.stubGlobal("window", { devicePixelRatio: 1 });
+    vi.stubGlobal("Path2D", RecordingPath2D);
+    vi.spyOn(performance, "now").mockReturnValue(100);
+    const world = new World(3, 4);
+    world.place(1, 0, TileKind.Glass);
+    world.place(1, 1, TileKind.Destroyer);
+    world.place(1, 2, TileKind.Platform);
+    world.setWeld(1, 1, 1, 2, true);
+    const { canvas, context, fillStyles } = createRecordingCanvas(200, 200);
+    const renderer = new CanvasRenderer(canvas, world);
+    const simulation = new Simulation(world);
+    simulation.step();
+    expect(world.kindAt(1, 0)).toBe(TileKind.Empty);
+    renderer.render(null, 1, 100, false, true, false);
+    expect(fillStyles.filter(fill => fill === TILE_DEFINITIONS[TileKind.Glass].fill)).toHaveLength(2);
+    fillStyles.length = 0;
+    renderer.render(null, 1, 116, false, false, false);
+    expect(fillStyles).not.toContain(TILE_DEFINITIONS[TileKind.Glass].fill);
+    const clearedFrames = vi.mocked(context.clearRect).mock.calls.length;
+    renderer.render(null, 1, 132, false, true, false);
+    expect(context.clearRect).toHaveBeenCalledTimes(clearedFrames);
+
+    world.place(1, 0, TileKind.Glass);
+    simulation.step();
+    renderer.render(null, 1, 148, false, false, false);
+    renderer.render(null, 1, 164, false, true, false);
+    expect(fillStyles).not.toContain(TILE_DEFINITIONS[TileKind.Glass].fill);
   });
 
   it("keeps grip-only rotator interpolation live, including backward seeks", () => {

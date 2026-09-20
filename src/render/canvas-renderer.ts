@@ -216,6 +216,7 @@ export class CanvasRenderer {
   private renderedInterpolationActive = false;
   private renderedNestedPortCharges = -1;
   private hasTimeDependentVisuals = false;
+  private animateBlocks = true;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -386,6 +387,7 @@ export class CanvasRenderer {
     animationTime = 0,
     lightMode = false,
     animationsEnabled = true,
+    animateBlocks = true,
   ): void {
     if (this.renderedBevels !== tileAppearance.bevels) {
       this.renderedBevels = tileAppearance.bevels;
@@ -396,6 +398,12 @@ export class CanvasRenderer {
       this.renderInvalidated = true;
     }
     this.resizeBackingStore();
+    const blocksEnabled = animationsEnabled && animateBlocks;
+    if (this.animateBlocks !== blocksEnabled) {
+      this.animateBlocks = blocksEnabled;
+      this.renderInvalidated = true;
+    }
+    if (!blocksEnabled) animationTime = 0;
     if (!animationsEnabled || this.cellSize < DECORATION_CELL_SIZE) {
       // Discard hidden bursts before frame invalidation so they neither redraw nor replay later.
       this.processingAnimations.clear();
@@ -406,7 +414,7 @@ export class CanvasRenderer {
       if (this.productionInterpolation.active) this.renderInvalidated = true;
       this.productionInterpolation.clear();
     }
-    const boundedProgress = Math.max(0, Math.min(1, progress));
+    const boundedProgress = animationsEnabled ? Math.max(0, Math.min(1, progress)) : 1;
     const previousWorldRevision = previousWorld?.revision ?? -1;
     const nestedPortCharges = this.nestedPortChargeKey();
     const interpolationActive = this.prepareInterpolation(previousWorld, boundedProgress);
@@ -1555,7 +1563,7 @@ export class CanvasRenderer {
 
     for (const cell of body.cells) {
       if (
-        this.cellSize >= DECORATION_CELL_SIZE && (
+        this.animateBlocks && this.cellSize >= DECORATION_CELL_SIZE && (
           cell.kind === TileKind.Destroyer ||
           (cell.kind === TileKind.Conveyor && cell.outputCharge !== 0) ||
           ((cell.kind === TileKind.Furnace || cell.kind === TileKind.Grinder ||

@@ -79,6 +79,7 @@ import { TextBoxTool } from "./ui/text-box-tool";
 import { populateComponentPalette } from "./ui/component-palette";
 import { initializeTheme } from "./ui/theme";
 import { initializeBevelSetting } from "./ui/bevel-setting";
+import { initializeAnimationSettings } from "./ui/animation-settings";
 import { WorkshopSounds } from "./ui/workshop-sounds";
 import { initializePaletteResize } from "./ui/palette-resize";
 import { BoardResizeControls } from "./ui/board-resize-controls";
@@ -208,6 +209,12 @@ const importButton = requiredElement<HTMLButtonElement>("import-button");
 const importFile = requiredElement<HTMLInputElement>("import-file");
 const animationToggle = requiredElement<HTMLInputElement>("animation-toggle");
 const clock = new SimulationClock(5, () => animationToggle.checked);
+const animationSettings = initializeAnimationSettings(
+  animationToggle,
+  requiredElement<HTMLButtonElement>("animations-button"),
+  requiredElement<HTMLButtonElement>("paused-animations-button"),
+  finishAnimationIfDisabled,
+);
 const speedMenu = new DropupMenu(
   requiredElement<HTMLElement>("speed-dropup"),
   requiredElement<HTMLButtonElement>("speed-button"),
@@ -513,6 +520,11 @@ function finishAnimationIfDisabled(): void {
   if (!clock.animationsEnabled()) {
     finishAnimation();
   }
+}
+
+function blockAnimationsEnabled(): boolean {
+  return animationSettings.whilePaused || clock.running ||
+    (puzzleTests.testing && !puzzleTests.manualStepping);
 }
 
 
@@ -2106,7 +2118,6 @@ stepButton.addEventListener("click", () => {
     advanceSimulation(duration);
   }
 });
-animationToggle.addEventListener("change", finishAnimationIfDisabled);
 
 speedMenu.button.addEventListener("click", () => {
   speedMenu.toggle();
@@ -2239,7 +2250,10 @@ copySceneButton.addEventListener("click", () => {
 
 downloadImageButton.addEventListener("click", () => {
   exportMenu.close();
-  surface.renderer.render(surface.previousWorld, 1, performance.now(), theme.isLight, animationToggle.checked);
+  surface.renderer.render(
+    surface.previousWorld, 1, performance.now(), theme.isLight,
+    animationToggle.checked, blockAnimationsEnabled(),
+  );
   surface.renderer.cropRenderedBoard().toBlob((blob) => {
     if (blob === null) {
       throw new Error("Could not encode the grid image as PNG");
@@ -2738,6 +2752,7 @@ function frame(currentTime: number): void {
     currentTime,
     theme.isLight,
     animationToggle.checked,
+    blockAnimationsEnabled(),
   );
   positionSelectionActions();
   boardResizeControls.update(
