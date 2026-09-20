@@ -2145,7 +2145,7 @@ export class CanvasRenderer {
     context.globalAlpha = 0.8;
     context.beginPath();
     if (kind === TileKind.LaserSplitter) {
-      // The cutting edge follows local handedness, from the front neighbor to the boundary.
+      // The cutting edge follows local handedness and stops before protected seams.
       const cuttingSide = orientedDirection(Direction.Left, orientation, mirrored);
       const sideX = directionX(cuttingSide);
       const sideY = directionY(cuttingSide);
@@ -2155,8 +2155,22 @@ export class CanvasRenderer {
       ) {
         const startX = targetX + 0.5 + sideX / 2 - forwardX / 2;
         const startY = targetY + 0.5 + sideY / 2 - forwardY / 2;
-        const endX = forwardX === 0 ? startX : forwardX > 0 ? this.world.width : 0;
-        const endY = forwardY === 0 ? startY : forwardY > 0 ? this.world.height : 0;
+        let endX = forwardX === 0 ? startX : forwardX > 0 ? this.world.width : 0;
+        let endY = forwardY === 0 ? startY : forwardY > 0 ? this.world.height : 0;
+        for (
+          let x = targetX, y = targetY;
+          x >= 0 && x < this.world.width && y >= 0 && y < this.world.height;
+          x += forwardX, y += forwardY
+        ) {
+          if (
+            TILE_DEFINITIONS[this.world.kindAt(x, y)].runtimeWeldProtected &&
+            TILE_DEFINITIONS[this.world.kindAt(x + sideX, y + sideY)].runtimeWeldProtected
+          ) {
+            endX = x + 0.5 + sideX / 2 - forwardX / 2;
+            endY = y + 0.5 + sideY / 2 - forwardY / 2;
+            break;
+          }
+        }
         context.moveTo(this.originX + startX * cellSize, this.originY + startY * cellSize);
         context.lineTo(this.originX + endX * cellSize, this.originY + endY * cellSize);
       }

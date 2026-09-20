@@ -145,6 +145,13 @@ export class WeldOperationResolver {
           if (neighbor < 0) {
             continue;
           }
+          if (
+            laser &&
+            TILE_DEFINITIONS[this.world.kindAtIndex(target)].runtimeWeldProtected &&
+            TILE_DEFINITIONS[this.world.kindAtIndex(neighbor)].runtimeWeldProtected
+          ) {
+            return;
+          }
           const edge = this.edgeIndex(target, neighbor);
           if (collecting) {
             this.requestEdge(edge, intent);

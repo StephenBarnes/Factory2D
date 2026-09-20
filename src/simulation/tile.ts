@@ -2089,7 +2089,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 32,
       category: PaletteCategory.Transformation,
       description: "Cuts the left edge of every cell ahead, through blocks and gaps; -1 side charge disables it.",
-      extendedDescription: ["Cuts one straight line of welds to the board boundary. For an upward-facing laser splitter, cuts the left edge of every cell above it, starting with the cell immediately ahead; rotate to change the cutting side.", "The beam passes through blocks and empty cells without destroying tiles. Shared side -1 disables it; the isolated rear output pulses +1 only when at least one weld changes. Opposing welder commands jam only the contested edges.", "Can be mirrored with the M key.", "Cannot weld together two weld-protected blocks, such as platforms, delivery blocks, or judgment stones."],
+      extendedDescription: ["Cuts one straight line of welds until a weld-protected edge or the board boundary. For an upward-facing laser splitter, cuts the left edge of every cell above it, starting with the cell immediately ahead; rotate to change the cutting side.", "The beam passes through blocks and empty cells without destroying tiles. Shared side -1 disables it; the isolated rear output pulses +1 only when at least one weld changes. Opposing welder commands jam only the contested edges.", "Can be mirrored with the M key.", "Stops at an edge between two weld-protected blocks, such as platforms, delivery blocks, or judgment stones, even if they are not welded. An edge with only one protected block does not stop the beam."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,

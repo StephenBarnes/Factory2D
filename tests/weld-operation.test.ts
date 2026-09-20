@@ -257,7 +257,7 @@ describe("laser splitter operations", () => {
       [false, true].map((mirrored) => ({ orientation, mirrored })),
     ),
   )(
-    "cuts local-left welds through gaps and protected edges facing $orientation, mirrored $mirrored",
+    "cuts until the first protected edge facing $orientation, mirrored $mirrored",
     ({ orientation, mirrored }) => {
       const world = new World(9, 9);
       const dx = directionX(orientation);
@@ -282,7 +282,7 @@ describe("laser splitter operations", () => {
       for (const distance of [1, 3, 4]) {
         const x = 4 + dx * distance;
         const y = 4 + dy * distance;
-        expect(world.isWelded(x, y, x + lx, y + ly)).toBe(distance === 3);
+        expect(world.isWelded(x, y, x + lx, y + ly)).toBe(distance >= 3);
         expect(world.isWelded(x, y, x - lx, y - ly)).toBe(true);
         expect(world.kindAt(x, y)).toBe(distance === 3 ? TileKind.Platform : TileKind.Floatstone);
       }
@@ -292,6 +292,27 @@ describe("laser splitter operations", () => {
       expect(world.chargeAtPort(4, 4, oppositeDirection(orientation))).toBe(0);
     },
   );
+
+  it("stops at an unwelded protected seam without claiming cuts from a beam beyond it", () => {
+    const world = new World(5, 7);
+    world.place(2, 5, TileKind.LaserSplitter, Direction.Up);
+    world.place(2, 6, TileKind.Platform);
+    world.setWeld(2, 5, 2, 6, true);
+    world.place(1, 3, TileKind.Platform);
+    world.place(2, 3, TileKind.Platform);
+    world.place(2, 2, TileKind.LaserSplitter, Direction.Up);
+    world.setWeld(2, 2, 2, 3, true);
+    world.place(1, 1, TileKind.Floatstone);
+    world.place(2, 1, TileKind.Platform);
+    world.setWeld(1, 1, 2, 1, true);
+
+    new Simulation(world).step();
+
+    expect(world.isWelded(1, 1, 2, 1)).toBe(false);
+    expect(world.isWelded(1, 3, 2, 3)).toBe(false);
+    expect(world.chargeAtPort(2, 2, Direction.Down)).toBe(1);
+    expect(world.chargeAtPort(2, 5, Direction.Down)).toBe(0);
+  });
 
   it("jams contested edges without blocking the rest of overlapping beams", () => {
     const world = new World(5, 8);
