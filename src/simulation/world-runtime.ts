@@ -10,6 +10,7 @@ import { MotionWorkspace } from "./motion-workspace";
 import { MovementSensorObserver } from "./movement-sensor";
 import { PistonResolver } from "./piston-resolver";
 import { RotatorResolver } from "./rotator-resolver";
+import { SwapperResolver } from "./swapper-resolver";
 import { TonalObserver } from "./tonal-observer";
 import { WeldOperationResolver } from "./weld-operation-resolver";
 import { WeldedBodyIndex } from "./welded-body-index";
@@ -35,6 +36,7 @@ export class WorldRuntime {
   private pistonResolverValue: PistonResolver | undefined;
   private rotatorResolverValue: RotatorResolver | undefined;
   private flipperResolverValue: FlipperResolver | undefined;
+  private swapperResolverValue: SwapperResolver | undefined;
   private weldOperationResolverValue: WeldOperationResolver | undefined;
   private movementSensorObserver: MovementSensorObserver | undefined;
   private tonalObserver: TonalObserver | undefined;
@@ -129,6 +131,10 @@ export class WorldRuntime {
     return this.flipperResolverValue ??= new FlipperResolver(this.world);
   }
 
+  get swapperResolver(): SwapperResolver {
+    return this.swapperResolverValue ??= new SwapperResolver(this.world);
+  }
+
   get weldOperationResolver(): WeldOperationResolver {
     return this.weldOperationResolverValue ??= new WeldOperationResolver(this.world);
   }
@@ -137,6 +143,7 @@ export class WorldRuntime {
   collectIntents(): void {
     const world = this.world;
     this.motionWorkspaceValue?.clearCircuitCommands();
+    this.swapperResolverValue?.clear();
     if (world.hasFeature(WorldFeature.Bell) || world.hasFeature(WorldFeature.Mallet)) {
       this.tonalObserver ??= new TonalObserver(world);
     }
@@ -198,7 +205,8 @@ export class WorldRuntime {
       this.drillResolver.commit();
     }
     this.fireResolver?.commit();
-    let movementCount = this.world.hasFeature(WorldFeature.Gravity) ||
+    let movementCount = this.swapperResolverValue?.commit() ?? 0;
+    movementCount += this.world.hasFeature(WorldFeature.Gravity) ||
       this.world.hasFeature(WorldFeature.Thruster)
       ? this.motionWorkspace.resolveOrdinaryMovements(tick)
       : 0;

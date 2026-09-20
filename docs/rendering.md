@@ -33,6 +33,8 @@ Drills use a steel-grey slab with a pale tapered, spiral-cut bit pointing toward
 
 Grinders use paired toothed crushing rollers beneath an open intake, with pale axle highlights while active. The shared glyph rotates toward the front target on the board, palette, and previews; hover/placement highlights the immediate front cell.
 
+Swappers use a purple slab with separate front/rear cell outlines and opposed pale exchange arrows. Charge-colored inward carets mark the two isolated side inputs independently, including when disconnected; connected traces stop at the carets instead of joining through the glyph. The shared glyph and input markers rotate together on the board, palette, and all previews. Hover/placement overlays circle both immediate front and rear cells, including empty cells, and omit out-of-bounds targets.
+
 Destroyers use a rust-red slab with eight hooked pale-steel blades around a brass axle. The shared board, palette, and preview glyph has no directional frame or charge state. One lazily cached, unit-sized `Path2D` supplies the blades at every scale; the render clock rotates it once per 1.8 seconds without modifying simulation state or rebuilding body geometry. Visible board destroyers request frames only when looping block animation is enabled, using the same lifecycle as active conveyors and processing machines. Below the 12-pixel decoration cutoff they neither draw the wheel nor request animation frames.
 
 Lava uses a rust-orange slab with branching orange fissures and bright yellow cores, shared by the board, palette, and placement/selection previews. It has no orientation or render-clock animation; paused lava does not keep frames invalidated.

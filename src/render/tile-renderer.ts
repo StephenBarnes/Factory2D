@@ -518,6 +518,7 @@ function drawDecoration(
       definition.decorationStyle === TileDecorationStyle.Checker ||
       definition.decorationStyle === TileDecorationStyle.Rotator ||
       definition.decorationStyle === TileDecorationStyle.Flipper ||
+      definition.decorationStyle === TileDecorationStyle.Swapper ||
       definition.decorationStyle === TileDecorationStyle.Assembler ||
       definition.decorationStyle === TileDecorationStyle.ForceProjector ||
       definition.decorationStyle === TileDecorationStyle.LevitationProjector ||
@@ -1449,6 +1450,32 @@ function drawDecoration(
         WeldSide.Down, WeldSide.None, circuitPortCharges);
       break;
     }
+    case TileDecorationStyle.Swapper:
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      context.lineWidth = Math.max(1.5, size * 0.045);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      // Separate front/rear cells and opposing paths, clear of the side inputs.
+      context.strokeRect(-size * 0.065, -size * 0.37, size * 0.13, size * 0.13);
+      context.strokeRect(-size * 0.065, size * 0.24, size * 0.13, size * 0.13);
+      context.beginPath();
+      context.moveTo(-size * 0.15, size * 0.22);
+      context.lineTo(-size * 0.15, -size * 0.22);
+      context.moveTo(-size * 0.22, -size * 0.14);
+      context.lineTo(-size * 0.15, -size * 0.22);
+      context.lineTo(-size * 0.08, -size * 0.14);
+      context.moveTo(size * 0.15, -size * 0.22);
+      context.lineTo(size * 0.15, size * 0.22);
+      context.moveTo(size * 0.08, size * 0.14);
+      context.lineTo(size * 0.15, size * 0.22);
+      context.lineTo(size * 0.22, size * 0.14);
+      context.stroke();
+      context.restore();
+      drawPortArrows(context, left, top, size, orientation,
+        WeldSide.Left | WeldSide.Right, WeldSide.None, circuitPortCharges);
+      break;
     case TileDecorationStyle.Assembler: {
       context.save();
       context.translate(left + size / 2, top + size / 2);

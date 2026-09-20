@@ -2057,6 +2057,10 @@ export class CanvasRenderer {
       case TileKind.Flipper:
         this.drawSensorObservation(orientation);
         break;
+      case TileKind.Swapper:
+        this.drawSensorObservation(orientation);
+        this.drawSensorObservation(oppositeDirection(orientation));
+        break;
       case TileKind.ChargeSensor:
         this.drawSensorObservation(orientation, true);
         break;

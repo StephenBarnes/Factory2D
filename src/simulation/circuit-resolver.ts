@@ -488,6 +488,17 @@ export class CircuitResolver {
         }
         continue;
       }
+      if (kind === TileKind.Swapper) {
+        const left = orientedDirection(Direction.Left, orientation);
+        const right = oppositeDirection(left);
+        if ((this.hasConnectedNeighbor(runtime, index, left) &&
+             this.neighborPortCharge(runtime, index, left) === 1) ||
+            (this.hasConnectedNeighbor(runtime, index, right) &&
+             this.neighborPortCharge(runtime, index, right) === 1)) {
+          runtime.swapperResolver.collect(index);
+        }
+        continue;
+      }
       if (kind === TileKind.ControlledThruster) {
         let thrustDirection: Direction | undefined;
         for (let side = Direction.Up; side <= Direction.Left; side += 1) {

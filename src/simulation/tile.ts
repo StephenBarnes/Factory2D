@@ -85,6 +85,7 @@ export const enum TileKind {
   Steel = 83,
   Bronze = 84,
   Mallet = 85,
+  Swapper = 86,
 }
 
 export const enum Direction {
@@ -173,6 +174,7 @@ export const enum TileDecorationStyle {
   Destroyer = 66,
   Lava = 67,
   Mallet = 68,
+  Swapper = 69,
 }
 
 export const enum PaletteCategory {
@@ -2361,6 +2363,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#8b755e",
     decorationStyle: TileDecorationStyle.PistonArm,
     decorationColor: "#e3c486",
+  },
+  [TileKind.Swapper]: {
+    name: "Swapper",
+    boardCode: "(",
+    defaultPrice: 15,
+    palette: {
+      order: 89,
+      category: PaletteCategory.Transformation,
+      description: "Exchanges the front and rear cells when either isolated side input is +1.",
+      extendedDescription: ["Uses previous-tick inputs: +1 on either side swaps once per tick, even if the other side is -1. Side inputs remain separate circuits. Exchanges only the two immediate cells, including empty space, not their welded bodies.", "Tile identities, charges, orientation, handedness, configuration, and nested contents travel with the tiles. Welds stay at their original locations; any weld the arriving tiles cannot accept is removed.", "Both target cells must be inside the board. Immovable or indestructible targets, protected weld changes, and competing swaps sharing any actuator or target cell block the exchange. Swaps occur before ordinary movement. Falls normally and can be welded on every side."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Left | WeldSide.Right,
+    circuitInputPorts: WeldSide.Left | WeldSide.Right,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#5c5368",
+    decorationStyle: TileDecorationStyle.Swapper,
+    decorationColor: "#e1c3f2",
   },
 };
 

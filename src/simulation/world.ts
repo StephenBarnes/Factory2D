@@ -1884,6 +1884,64 @@ export class World {
   }
 
 
+  /** Swapping changes the occupants of weld seams, never protected machinery seams. */
+  canSwapCellsAtIndices(first: number, second: number): boolean {
+    this.assertIndex(first);
+    this.assertIndex(second);
+    if (first === second) return false;
+    const firstDefinition = TILE_DEFINITIONS[this.kindAtIndex(first)];
+    const secondDefinition = TILE_DEFINITIONS[this.kindAtIndex(second)];
+    if (firstDefinition.immovable || firstDefinition.indestructible ||
+        secondDefinition.immovable || secondDefinition.indestructible) return false;
+    if (this.kindAtIndex(first) === TileKind.Empty &&
+        this.kindAtIndex(second) === TileKind.Empty) return false;
+    return this.canExchangeWeldEndpoints(first, second) &&
+      this.canExchangeWeldEndpoints(second, first);
+  }
+
+  /**
+   * Exchanges disjoint, prevalidated cell pairs from the swapper resolver. Welds belong
+   * to board locations, and their legality depends on the whole batch's final occupants.
+   */
+  swapCellPairs(pairs: readonly number[]): number {
+    let moved = 0;
+    for (let cursor = 0; cursor < pairs.length; cursor += 2) {
+      const first = expectDefined(pairs[cursor], "first swap cell");
+      const second = expectDefined(pairs[cursor + 1], "second swap cell");
+      const firstKind = this.kindAtIndex(first);
+      const secondKind = this.kindAtIndex(second);
+      const secondRightWeld = expectDefined(this.cells.rightWelds[second], "swap right weld");
+      const secondDownWeld = expectDefined(this.cells.downWelds[second], "swap down weld");
+      this.movedCells.copyCell(this.cells, first, first);
+      this.cells.copyCell(this.cells, second, first);
+      this.cells.copyCell(this.movedCells, first, second);
+      this.cells.rightWelds[first] = expectDefined(this.movedCells.rightWelds[first], "swap right weld");
+      this.cells.downWelds[first] = expectDefined(this.movedCells.downWelds[first], "swap down weld");
+      this.cells.rightWelds[second] = secondRightWeld;
+      this.cells.downWelds[second] = secondDownWeld;
+      this.featureIndex.replace(first, firstKind, secondKind);
+      this.featureIndex.replace(second, secondKind, firstKind);
+      moved += Number(firstKind !== TileKind.Empty) + Number(secondKind !== TileKind.Empty);
+    }
+    for (const index of pairs) this.clearDisallowedWeldsAtIndex(index);
+    if (moved > 0) this.touchGeometryRevision();
+    return moved;
+  }
+
+  private canExchangeWeldEndpoints(destination: number, source: number): boolean {
+    const outgoing = TILE_DEFINITIONS[this.kindAtIndex(destination)];
+    const incoming = TILE_DEFINITIONS[this.kindAtIndex(source)];
+    for (let side = Direction.Up; side <= Direction.Left; side += 1) {
+      if (!this.hasWeldAtIndex(destination, side)) continue;
+      const neighbor = this.neighborIndex(destination, side);
+      const before = TILE_DEFINITIONS[this.kindAtIndex(neighbor)];
+      const after = neighbor === source ? outgoing : before;
+      if ((outgoing.runtimeWeldProtected && before.runtimeWeldProtected) ||
+          (incoming.runtimeWeldProtected && after.runtimeWeldProtected)) return false;
+    }
+    return true;
+  }
+
   moveBodies(
     bodyRoots: Int32Array,
     horizontalMoves: Int8Array | Int16Array,
