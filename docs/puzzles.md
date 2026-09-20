@@ -1,4 +1,4 @@
-Current shipped catalog: **24 puzzles — 7 tutorials and 17 non-tutorials**. Each entry below links to its definition in `src/game/puzzles/`; names, groups, and ordering follow those files.
+Current shipped catalog: **25 puzzles — 7 tutorials and 18 non-tutorials**. Each entry below links to its definition in `src/game/puzzles/`; names, groups, and ordering follow those files.
 
 # General guidelines for non-tutorial puzzles
 
@@ -61,6 +61,7 @@ Manufacturing puzzles involve turning a few small components into small or large
 
 Extraction puzzles involve turning a large input into small outputs by removing most of the blocks or separating one type from another.
 
+* [Spear reclamation](../src/game/puzzles/spear-reclamation.json) (Intermediate): reclaim 12 individual iron blocks from automatically duplicated elven spears, each with a four-block iron head and a three-block wooden shaft. Placed iron and duplicators are unavailable; dismantlers, splitters, drills, furnaces, and ordinary transport components support different separation and disposal strategies. The reference solution uses dismantlers and laser splitters to separate the heads, conveys the pieces to the protected receiver, and burns wood at its entrance; it completes in 52 cycles.
 * [Geode extractor](../src/game/puzzles/geode-extractor.json) (Intermediate): extract ten ruby blocks from duplicated stone-shell geodes and deliver them. Two duplicators face different directions, so players can use either supply or both for higher throughput. Drills, splitters, welders, rotators, magnets, grinders, and circuitry support different extraction layouts; the reference solution uses drills and conveyors. More intermediate extraction puzzles could introduce drills before this one.
 
 ## Runelore
@@ -131,7 +132,6 @@ Mining puzzles will involve transport/vehicles plus extraction, e.g. drilling th
 * Polyomino packing: set up sensors to detect various polyominoes inside the player-modifiable region. Victory iff all of them are detected. Entirely ignores 90% of our game mechanics (anything that happens over multiple ticks is irrelevant), but might still be fun.
 	* Then a follow-up puzzle that gives them too little space to actually fit all the shapes; so they have to build a machine that creates all necessary shapes in sequence, by welding and unwelding, etc. over multiple ticks.
 * Harder variants of "Reclaimed machinery", e.g. needing to pick up the components lying on the ground.
-* Spear reclamation: given elven spears (wood lengths with triangular 4-iron-block heads) with a duplicator to make many of them, output N 1x1 iron blocks. Easy or intermediate puzzle, placed before pickaxes-to-hammers.
 * Puzzle where circuitry is banned on the right third of the grid (using beam block sensors to check for conduits, fixed charges, sparks) but allowed on the left third. Left third receives a signal; right third must act based on that signal in some way. Options include mechanically transmitting the signal, avoiding only the specific block types that the beam sensors check for, or bells and resonators.
 * Puzzle with an unbreakable wall between two halves. A signal is given on the left half, and must be transmitted to the right half. Bells are mandatory for communicating across the wall. Make the input signal wide, say 20 separate trits communicated on 20 channels, fixed value per channel in each test case. So optimizing for cycles requires developing some kind of encoding that compresses this input into a handful of bell rings, then reading that signal on the right half.
 * Puzzle that requires handling a box of wood that's currently on fire. Duplicator makes boxes of wood but somehow sets them on fire, which then spreads. So a low-cycles solution requires extracting as much of the wood as possible from each duplicated body.
