@@ -7,6 +7,16 @@ export const BELL_STEPS_PER_OCTAVE = 7;
 // Three octaves: F5 down to F2. Keep within 32 pitches for the bitmask below.
 export const BELL_PITCH_COUNT = 3 * BELL_STEPS_PER_OCTAVE + 1;
 
+/** Zero-based pitch, descending as the welded body grows. */
+export function bellPitchForBodySize(size: number): number {
+  return Math.max(1, Math.min(BELL_PITCH_COUNT, size)) - 1;
+}
+
+export function bellFrequencyForPitch(pitch: number): number {
+  // Approximately F5 (698 Hz) at pitch zero.
+  return 1046.502261 * 0.6667 * 2 ** (-pitch / BELL_STEPS_PER_OCTAVE);
+}
+
 interface BellObservation {
   capture: number;
   readonly initialXs: Map<number, number>;
@@ -75,8 +85,7 @@ export class BellObserver {
           bodies = observation.bodies ??= new WeldedBodyIndex(world);
           bodies.collect();
         }
-        const size = Math.max(1, Math.min(BELL_PITCH_COUNT, bodies.memberCountAtRoot(bodies.rootAt(index))));
-        pitches |= 1 << (size - 1);
+        pitches |= 1 << bellPitchForBodySize(bodies.memberCountAtRoot(bodies.rootAt(index)));
       }
     }
     for (

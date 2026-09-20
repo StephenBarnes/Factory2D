@@ -6,7 +6,9 @@ import {
   TILE_DEFINITIONS,
   TileKind,
 } from "../simulation/tile";
+import { WeldedBodyIndex } from "../simulation/welded-body-index";
 import type { World } from "../simulation/world";
+import { bellFrequencyForPitch, bellPitchForBodySize } from "./bell-observer";
 
 interface GridPosition {
   readonly x: number;
@@ -136,6 +138,9 @@ export class TileInspector {
   private readonly furnace: HTMLElement;
   private readonly attractionRow: HTMLElement;
   private readonly attraction: HTMLElement;
+  private readonly bellRow: HTMLElement;
+  private readonly bell: HTMLElement;
+  private bellBodies: WeldedBodyIndex | undefined;
   private lastX = -2;
   private lastY = -2;
   private lastRevision = -1;
@@ -177,6 +182,8 @@ export class TileInspector {
     this.furnace = requiredDescendant(root, "[data-inspector-furnace]");
     this.attractionRow = requiredDescendant(root, "[data-inspector-attraction-row]");
     this.attraction = requiredDescendant(root, "[data-inspector-attraction]");
+    this.bellRow = requiredDescendant(root, "[data-inspector-bell-row]");
+    this.bell = requiredDescendant(root, "[data-inspector-bell]");
   }
 
   showPalette(kind: TileKind, reference: InspectorComponentReference): void {
@@ -327,6 +334,14 @@ export class TileInspector {
         : componentConfiguration.type === "array"
           ? "E CONFIGURE · ENTER OPEN"
           : "E EDIT";
+    }
+    this.bellRow.hidden = kind !== TileKind.Bell;
+    if (kind === TileKind.Bell) {
+      const bodies = this.bellBodies ??= new WeldedBodyIndex(this.world);
+      bodies.collect();
+      const size = bodies.memberCountAtRoot(bodies.rootAt(position.y * this.world.width + position.x));
+      const frequency = bellFrequencyForPitch(bellPitchForBodySize(size));
+      this.bell.textContent = `${frequency.toFixed(1)} Hz · ${size} BLOCK${size === 1 ? "" : "S"}`;
     }
     this.attractionRow.hidden = definition.attractionRange === 0;
     if (definition.attractionRange > 0) {

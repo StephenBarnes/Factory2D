@@ -1,5 +1,10 @@
 import type { World } from "../simulation/world";
-import { BELL_PITCH_COUNT, BELL_STEPS_PER_OCTAVE, BellObserver } from "./bell-observer";
+import {
+  BELL_PITCH_COUNT,
+  BELL_STEPS_PER_OCTAVE,
+  BellObserver,
+  bellFrequencyForPitch,
+} from "./bell-observer";
 
 type EditSound = "place" | "remove" | "weld" | "unweld";
 
@@ -11,8 +16,6 @@ const EDIT_TONES: Record<EditSound, readonly [number, number, OscillatorType]> =
   unweld: [550, 400, "sine"],
 };
 
-// Approximately F5 (698 Hz).
-const BELL_HIGH_FREQUENCY = 1046.502261 * 0.6667;
 const BELL_DEEP_VOICE_START_PITCH = 5;
 // Ratio, gains at sizes 1/8/22, durations at sizes 1/8/22 (seconds).
 // Deep bells shift energy out of the hum and into upper ringing/strike modes.
@@ -113,7 +116,7 @@ export class WorkshopSounds {
 
   private bell(pitch: number): void {
     const octaves = pitch / BELL_STEPS_PER_OCTAVE;
-    const frequency = BELL_HIGH_FREQUENCY * 2 ** -octaves;
+    const frequency = bellFrequencyForPitch(pitch);
     const size = Math.min(1, octaves);
     const deep = Math.max(0, Math.min(1,
       (pitch - BELL_DEEP_VOICE_START_PITCH) / (BELL_PITCH_COUNT - 1 - BELL_DEEP_VOICE_START_PITCH),
