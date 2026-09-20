@@ -21,6 +21,9 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 * Follow the current performance plan `docs/performance-todos.md`: refresh end-to-end browser measurements, investigate active fitted rendering, and measure retained session memory before choosing further optimizations. The original profile and completed optimization log are archived in `performance-history.md`.
 * Figure out why our game has high CPU usage currently, and whether we can reduce that (e.g. for battery life on laptop and mobile). The geode bench scene currently uses around 100% CPU while running, on Firefox.
+* Add an option to disable animations for blocks while the simulation is paused; set it to disable them by default. The problem is that this causes the canvas to redraw every frame, which causes CPU usage on Firefox to be high (around 100%) even when the game is paused. (Most of the time, the game is paused, because the player is slowly designing a solution and placing blocks, not actively running the simulation.) Currently affects destroyer blocks, powered conveyor blocks, and potentially others. We should still animate them while the simulation is running, if animations are turned on globally. The "animate" checkbox we have should also gate these - currently it controls tick-to-tick animations, but these animations for the destroyer and powered conveyors play even if the animate checkbox is unchecked.
+* Don't play the fracturing animation when "animate" checkbox is off.
+* Add a setting in the settings modal for animations, corresponding to the "animate" checkbox visible in the workshop. Next to the setting to animate while paused. We animate while paused only if both are checked (i.e. animations are on, and the more costly animations-while-paused are also on). Maybe grey out the animations-while-paused setting if the global animation setting is off, to make this dependency clear.
 
 # UI
 

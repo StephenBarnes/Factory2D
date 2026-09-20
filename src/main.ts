@@ -2115,7 +2115,7 @@ const speedButtons = [...speedMenu.options.querySelectorAll<HTMLButtonElement>("
 for (const button of speedButtons) {
   button.addEventListener("click", () => {
     clock.setTicksPerSecond(Number(button.dataset.speed));
-    speedMenu.button.textContent = `SPEED: ${button.textContent}`;
+    speedMenu.button.textContent = `SPEED: ${button.dataset.speed}`;
     for (const option of speedButtons) {
       option.setAttribute("aria-pressed", String(option === button));
     }
