@@ -1299,10 +1299,10 @@ function drawDecoration(
     case TileDecorationStyle.Flipper: {
       context.save();
       context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
       context.lineWidth = Math.max(1.5, size * 0.045);
       context.lineCap = "round";
       context.lineJoin = "round";
-      // The charge axes are global: only the target and rear input follow facing.
       context.strokeStyle = CIRCUIT_CHARGE_COLORS[1];
       context.beginPath();
       context.moveTo(-size * 0.22, 0);
@@ -1325,7 +1325,6 @@ function drawDecoration(
       context.lineTo(0, size * 0.22);
       context.lineTo(size * 0.06, size * 0.15);
       context.stroke();
-      context.rotate(orientation * Math.PI / 2);
       context.strokeStyle = definition.decorationColor;
       context.beginPath();
       context.moveTo(-size * 0.11, -size * 0.29);

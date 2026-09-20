@@ -98,7 +98,7 @@ Rotator grip arrows interpolate between committed directions using stable IDs an
 
 Rotators show blue + and red - curved direction indicators, reversing with handedness; hover sweep hints use the same signed mapping. The live grip direction is absolute world state and must not be reflected again when drawing or interpolating it.
 
-Flippers share the rotator's purple slab, with a pale forward marker and charge-colored rear input. Blue horizontal and red vertical double arrows stay aligned to world axes in every orientation: +1 reflects left/right and -1 reflects up/down. Hover/placement highlights the immediate front pivot cell. The shared glyph appears on the board, palette, and previews.
+Flippers share the rotator's purple slab, with a pale forward marker and charge-colored rear input. Blue local-left/right and red local-forward/backward double arrows rotate with the flipper: +1 reflects sideways and -1 reflects along its facing direction. Hover/placement highlights the immediate front pivot cell. The shared glyph appears on the board, palette, and previews.
 
 Accepted flipper reflections retain snapshot-bound per-ID source frames and pivots in `simulation/flip-animation.ts`. `render/flip-interpolation.ts` squashes the body through its pivot and expands it reflected, composing an earlier same-tick rotation and pre/post translations so both endpoints match. Detailed artwork, low-detail tiles, highlights, and culling share the affine transform; cached body paths are not rebuilt per frame. The body collapses to zero width/height at the midpoint. Edits, reset, mismatched snapshots, and nonanimated ticks cannot replay stale flips.
 

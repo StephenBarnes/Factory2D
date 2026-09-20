@@ -2074,8 +2074,8 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 81,
       category: PaletteCategory.Motion,
-      description: "Flips the body ahead around its front block: +1 horizontally, -1 vertically.",
-      extendedDescription: ["Rear +1 reflects left/right; -1 reflects up/down, regardless of facing. Neutral does nothing. The immediate front block is the pivot. Only the final cells must fit: other blocks, fixed terrain, and board edges block the flip; nearby loose blocks are not carried.", "Weld to the front or rear. A front weld temporarily splits for the flip and reconnects afterward; the flip jams if the reflected target cannot accept that weld. An alternate welded or magic-link path back to the flipper makes it flip with the body. Competing flips jam.", "Flips preserve identities, reflect orientations, handedness, component contents, and welds, and break carried fasteners. A held nonzero input flips again every tick."],
+      description: "Flips the body ahead around its front block: +1 left/right, -1 forward/backward.",
+      extendedDescription: ["Rear +1 swaps the body's local left/right sides; -1 swaps forward/backward, relative to the flipper's facing. Rotate the flipper to rotate both axes. Neutral does nothing. The immediate front block is the pivot. Only the final cells must fit: other blocks, fixed terrain, and board edges block the flip; nearby loose blocks are not carried.", "Weld to the front or rear. A front weld temporarily splits for the flip and reconnects afterward; the flip jams if the reflected target cannot accept that weld. An alternate welded or magic-link path back to the flipper makes it flip with the body. Competing flips jam.", "Flips preserve identities, reflect orientations, handedness, component contents, and welds, and break carried fasteners. A held nonzero input flips again every tick."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,

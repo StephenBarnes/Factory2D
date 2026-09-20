@@ -61,7 +61,8 @@ export class FlipperResolver {
       const proposal = this.takeProposal();
       proposal.actuator = actuator;
       proposal.pivot = pivot;
-      proposal.horizontally = charge === 1;
+      // Positive swaps local left/right; negative swaps forward/backward.
+      proposal.horizontally = (charge === 1) === (directionX(direction) === 0);
       proposal.headWelded = this.world.hasWeldAtIndex(actuator, direction);
       this.buildProposal(proposal, direction);
     }

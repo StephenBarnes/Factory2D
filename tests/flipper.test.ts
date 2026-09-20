@@ -31,11 +31,11 @@ describe("flippers", () => {
   });
 
   it.each([Direction.Up, Direction.Right, Direction.Down, Direction.Left])(
-    "uses global signed axes regardless of facing or handedness at orientation %s",
+    "keeps signed flips in the component frame at orientation %s",
     (orientation) => {
       for (const charge of [-1, 1] as const) {
         const world = new World(11, 11);
-        world.place(5, 5, TileKind.Flipper, orientation, true);
+        world.place(5, 5, TileKind.Flipper, orientation);
         const dx = directionX(orientation);
         const dy = directionY(orientation);
         const px = 5 + dx;
@@ -46,19 +46,21 @@ describe("flippers", () => {
         const by = ay + dy;
         const pivot = world.place(px, py, TileKind.Stone);
         world.place(ax, ay, TileKind.Stone);
-        const tip = world.place(bx, by, TileKind.Selector, Direction.Right);
+        const tip = world.place(bx, by, TileKind.Selector, orientation);
         world.setWeld(5, 5, px, py, true);
         world.setWeld(px, py, ax, ay, true);
         world.setWeld(ax, ay, bx, by, true);
         world.setCharge(5, 5, charge);
-        const reflectedX = charge === 1 ? 2 * px - bx : bx;
-        const reflectedY = charge === -1 ? 2 * py - by : by;
+        const forward = charge === -1 ? -1 : 1;
+        const sideways = charge === 1 ? -1 : 1;
+        const reflectedX = px + forward * dx - sideways * dy;
+        const reflectedY = py + forward * dy + sideways * dx;
 
         expect(new FlipperResolver(world).resolve()).toBe(3);
         expect(world.idAt(px, py)).toBe(pivot);
         expect(world.idAt(reflectedX, reflectedY)).toBe(tip);
         expect(world.orientationAt(reflectedX, reflectedY))
-          .toBe(charge === 1 ? Direction.Left : Direction.Right);
+          .toBe(charge === 1 ? orientation : (orientation + 2) % 4);
         expect(world.mirroredAt(reflectedX, reflectedY)).toBe(true);
         expect(world.isWelded(5, 5, px, py)).toBe(true);
       }
@@ -290,7 +292,7 @@ describe("flippers", () => {
     }
     if (count === 3) {
       world.place(3, 4, TileKind.Flipper, Direction.Right);
-      world.setCharge(3, 4, -1);
+      world.setCharge(3, 4, 1);
       for (const y of [4, 5, 6]) world.place(4, y, TileKind.Stone);
       world.setWeld(4, 4, 4, 5, true);
       world.setWeld(4, 5, 4, 6, true);
