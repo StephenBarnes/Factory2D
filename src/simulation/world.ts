@@ -1925,7 +1925,7 @@ export class World {
     }
 
     this.motionVictims?.clear();
-    for (let source = this.hasFeature(WorldFeature.Destroyer) ? this.firstFeatureIndex(WorldFeature.Occupied) : -1; source >= 0;
+    for (let source = this.hasFeature(WorldFeature.DestructiveContact) ? this.firstFeatureIndex(WorldFeature.Occupied) : -1; source >= 0;
       source = this.nextFeatureIndex(WorldFeature.Occupied, source)) {
       const root = expectDefined(bodyRoots[source], "contact body root");
       const dx = expectDefined(horizontalMoves[root], "contact horizontal movement");
@@ -2066,7 +2066,7 @@ export class World {
     }
 
     this.motionVictims?.clear();
-    for (let source = this.hasFeature(WorldFeature.Destroyer) ? 0 : this.cellCount;
+    for (let source = this.hasFeature(WorldFeature.DestructiveContact) ? 0 : this.cellCount;
       source < this.cellCount; source += 1) {
       if (selected[source] === 1) {
         const destination = destinationFor(source);

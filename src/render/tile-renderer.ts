@@ -1132,6 +1132,32 @@ function drawDecoration(
       context.restore();
       break;
     }
+    case TileDecorationStyle.Lava: {
+      context.save();
+      context.translate(left, top);
+      context.scale(size, size);
+      context.strokeStyle = "#e9702a";
+      context.lineWidth = 0.14;
+      context.lineJoin = "round";
+      context.lineCap = "round";
+      context.beginPath();
+      context.moveTo(0.12, 0.28);
+      context.lineTo(0.38, 0.38);
+      context.lineTo(0.62, 0.22);
+      context.lineTo(0.85, 0.32);
+      context.moveTo(0.38, 0.38);
+      context.lineTo(0.46, 0.64);
+      context.lineTo(0.22, 0.82);
+      context.moveTo(0.46, 0.64);
+      context.lineTo(0.76, 0.72);
+      context.lineTo(0.86, 0.55);
+      context.stroke();
+      context.strokeStyle = definition.decorationColor;
+      context.lineWidth = 0.055;
+      context.stroke();
+      context.restore();
+      break;
+    }
     case TileDecorationStyle.Destroyer: {
       context.save();
       context.translate(left + size / 2, top + size / 2);

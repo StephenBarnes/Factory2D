@@ -79,6 +79,7 @@ export const enum TileKind {
   Resonator = 77,
   Flipper = 78,
   Destroyer = 79,
+  Lava = 80,
 }
 
 export const enum Direction {
@@ -165,6 +166,7 @@ export const enum TileDecorationStyle {
   Resonator = 64,
   Flipper = 65,
   Destroyer = 66,
+  Lava = 67,
 }
 
 export const enum PaletteCategory {
@@ -197,8 +199,10 @@ export interface TileDefinition {
   readonly slidesAlongOrientation?: boolean;
   /** Hidden from occupancy sensors and transparent to charge-sensor rays; omitted means detectable. */
   readonly invisibleToSensor?: boolean;
-  /** Immune to drills and destroyer contact; omitted means destructible. */
+  /** Immune to drills and movement-contact destruction; omitted means destructible. */
   readonly indestructible?: boolean;
+  /** Destroys destructible tiles on accepted movement contact, not mere adjacency. */
+  readonly destroysOnContact?: boolean;
   /** Machinery cannot create or cut an edge when both endpoints are protected; editing is unaffected. */
   readonly runtimeWeldProtected?: boolean;
   /** Unwelded tiles break when a gravity fall longer than one cell stops. */
@@ -347,6 +351,33 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#595f7d",
     decorationStyle: TileDecorationStyle.Iron,
     decorationColor: "#2f2b43",
+  },
+  [TileKind.Lava]: {
+    name: "Lava",
+    boardCode: "0",
+    defaultPrice: 10,
+    palette: {
+      order: 83,
+      category: PaletteCategory.PuzzleTools,
+      description: "Fixed lava that destroys blocks moving into it. Cannot be welded.",
+      extendedDescription: ["Destroys only contacted tiles and their welds during accepted movement, including falling, pushing, rotations, and flips. Simply standing next to lava is safe; blocked or competing moves destroy nothing.", "Indestructible blocks remain solid and safe. Lava cannot fall, be pushed, or be destroyed, and needs no charge."],
+    },
+    affectedByGravity: false,
+    immovable: true,
+    indestructible: true,
+    destroysOnContact: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.None,
+    excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.None,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#a83b20",
+    decorationStyle: TileDecorationStyle.Lava,
+    decorationColor: "#ffcb62",
   },
   [TileKind.Floatstone]: {
     name: "Floatstone",
@@ -1445,6 +1476,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       extendedDescription: ["Destruction occurs only during accepted movement, including falling, powered movement, rotations, and flips. Simply touching an adjacent block does nothing. Removes the contacted tile and its welds, not its whole welded body.", "Indestructible blocks remain solid and cannot be destroyed. Two destroyers destroy each other on contact. Falls normally, can be welded on every side, and needs no charge."],
     },
     affectedByGravity: true,
+    destroysOnContact: true,
     slidesDiagonally: false,
     weldableSides: WeldSide.All,
     excludesFacingWeld: false,

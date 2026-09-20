@@ -35,6 +35,8 @@ Grinders use paired toothed crushing rollers beneath an open intake, with pale a
 
 Destroyers use a rust-red slab with eight hooked pale-steel blades around a brass axle. The shared board, palette, and preview glyph has no directional frame or charge state. One lazily cached, unit-sized `Path2D` supplies the blades at every scale; the render clock rotates it once per 1.8 seconds without modifying simulation state or rebuilding body geometry. Visible board destroyers keep frames invalidated even while paused, using the same lifecycle as active conveyors and processing machines. Below the 12-pixel decoration cutoff they neither draw the wheel nor request animation frames.
 
+Lava uses a rust-orange slab with branching orange fissures and bright yellow cores, shared by the board, palette, and placement/selection previews. It has no orientation or render-clock animation; paused lava does not keep frames invalidated.
+
 Floatstone uses a blue slab with a pale suspended diamond above two horizontal levitation lines, shared by the board, palette, and previews.
 
 Levitation projectors use a blue slab with a pale suspended crystal, projecting dish, and forward arrow. A charge-colored inward caret marks the isolated rear circuit input; connected traces stop at the marker. The shared glyph rotates with the beam on the board, palette, and previews. Hover/placement overlays show the potential beam extent: a translucent one-cell-wide strip and bright centerline from the front face to the front face of the first oppositely facing levitation projector, or the local board boundary. Other tiles and projector orientations do not stop the overlay.

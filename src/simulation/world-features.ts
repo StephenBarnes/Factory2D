@@ -36,7 +36,7 @@ export const enum WorldFeature {
   Fire = 24,
   Resonator = 25,
   Flipper = 26,
-  Destroyer = 27,
+  DestructiveContact = 27,
   Count = 28,
 }
 
@@ -146,8 +146,8 @@ for (const kind of TILE_KINDS) {
   if (kind === TileKind.Flipper) {
     mask |= 1 << WorldFeature.Flipper;
   }
-  if (kind === TileKind.Destroyer) {
-    mask |= 1 << WorldFeature.Destroyer;
+  if (definition.destroysOnContact) {
+    mask |= 1 << WorldFeature.DestructiveContact;
   }
   FEATURE_MASKS[kind] = mask;
 }
