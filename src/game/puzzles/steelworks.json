@@ -1,0 +1,205 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 5,
+  "width": 23,
+  "height": 15,
+  "id": "steelworks",
+  "group": "manufacturing",
+  "order": 0.875,
+  "name": "Steelworks",
+  "difficulty": 2,
+  "description": "The armoury needs steel for its next shipment. Six iron blocks are falling into the workshop; turn them into steel and deliver all six. Steel takes eight active furnace ticks with wood touching BOTH lateral sides of the iron, perpendicular to the furnace's facing. All wood touching the iron ignites on completion. The narrow editable strip above the iron lets you load fuel from above; the main workshop is below. There is no replacement iron. Behind the sealed wall on the right, the upper hearth has the required two-sided fuel; the lower hearth does not. Build parallel hearths or route the supply through a shared production line.",
+  "goal": "Smelt and deliver six separate steel blocks.",
+  "cycleLimit": 1000,
+  "components": [
+    {
+      "code": "B",
+      "price": 5
+    },
+    {
+      "code": "P",
+      "price": 10
+    },
+    {
+      "code": "C",
+      "price": 2
+    },
+    {
+      "code": ";",
+      "price": 3
+    },
+    {
+      "code": "W",
+      "price": 10
+    },
+    {
+      "code": "1",
+      "price": 5
+    },
+    {
+      "code": "I",
+      "price": 10
+    },
+    {
+      "code": "+",
+      "price": 10
+    },
+    {
+      "code": "R",
+      "price": 15
+    },
+    {
+      "code": "K",
+      "price": 3
+    },
+    {
+      "code": "T",
+      "price": 10
+    },
+    {
+      "code": "S",
+      "price": 10
+    },
+    {
+      "code": "L",
+      "price": 10
+    },
+    {
+      "code": "m",
+      "price": 0
+    },
+    {
+      "code": "g",
+      "price": 0
+    },
+    {
+      "code": "U",
+      "price": 30
+    },
+    {
+      "code": "J",
+      "price": 10
+    },
+    {
+      "code": "X",
+      "price": 10
+    },
+    {
+      "code": "r",
+      "price": 15
+    },
+    {
+      "code": "Z",
+      "price": 30
+    },
+    {
+      "code": "N",
+      "price": 20
+    },
+    {
+      "code": "#",
+      "price": 1
+    },
+    {
+      "code": "w",
+      "price": 1
+    },
+    {
+      "code": "F",
+      "price": 15
+    },
+    {
+      "code": "Q",
+      "price": 15
+    },
+    {
+      "code": "~",
+      "price": 20
+    }
+  ],
+  "editableRegions": [
+    {
+      "x": 1,
+      "y": 1,
+      "width": 13,
+      "height": 1
+    },
+    {
+      "x": 1,
+      "y": 5,
+      "width": 10,
+      "height": 9
+    },
+    {
+      "x": 11,
+      "y": 5,
+      "width": 2,
+      "height": 8
+    },
+    {
+      "x": 13,
+      "y": 5,
+      "width": 1,
+      "height": 7
+    }
+  ],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 15,
+    "width": 23,
+    "height": 15,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "##############=########",
+      "#.............=.......#",
+      "#.i.i.i.i.i.i.=.......#",
+      "#.............=.......#",
+      "#.............=..wiw..#",
+      "#.............=###F####",
+      "#.............=.......#",
+      "#.............=.......#",
+      "#.............=.......#",
+      "#.............=.......#",
+      "#.............=..wi...#",
+      "#.............=###F####",
+      "#............==.......#",
+      "#..........=DNV=......#",
+      "###########=$==########"
+    ],
+    "orientations": [
+      {
+        "x": 13,
+        "y": 13,
+        "direction": "right"
+      }
+    ],
+    "components": [
+      {
+        "x": 13,
+        "y": 13,
+        "type": "counter",
+        "threshold": 6,
+        "count": 0
+      }
+    ],
+    "welds": [
+      "+-------------+-------|",
+      "|.............|.......|",
+      "|.............|.......|",
+      "|.............|.......|",
+      "|.............|.......|",
+      "|.............+-------|",
+      "|.............|.......|",
+      "|.............|.......|",
+      "|.............|.......|",
+      "|.............|.......|",
+      "|.............|.......|",
+      "|.............+-------|",
+      "|............+|.......|",
+      "|..........+-++|......|",
+      "-----------..---------."
+    ]
+  },
+  "testCases": []
+}
