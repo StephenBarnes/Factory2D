@@ -5,7 +5,7 @@
   "height": 20,
   "id": "a-dangerous-crossing",
   "group": "transport",
-  "order": 4,
+  "order": 5,
   "name": "A dangerous crossing",
   "difficulty": 2,
   "description": "Build a vehicle to travel over a chasm.",

@@ -1,0 +1,183 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 5,
+  "width": 17,
+  "height": 10,
+  "id": "gold-delivery",
+  "group": "transport",
+  "order": 4,
+  "name": "Gold delivery",
+  "difficulty": 2,
+  "description": "The forge has one gold ingot left. Deliver it to the smith on the far side of the wall.",
+  "goal": "Move the gold block to the delivery box.",
+  "cycleLimit": 200,
+  "components": [
+    {
+      "code": "B",
+      "price": 5
+    },
+    {
+      "code": "P",
+      "price": 10
+    },
+    {
+      "code": "C",
+      "price": 2
+    },
+    {
+      "code": ";",
+      "price": 3
+    },
+    {
+      "code": "W",
+      "price": 10
+    },
+    {
+      "code": "1",
+      "price": 5
+    },
+    {
+      "code": "I",
+      "price": 10
+    },
+    {
+      "code": "+",
+      "price": 10
+    },
+    {
+      "code": "R",
+      "price": 15
+    },
+    {
+      "code": "*",
+      "price": 10
+    },
+    {
+      "code": "-",
+      "price": 15
+    },
+    {
+      "code": "K",
+      "price": 3
+    },
+    {
+      "code": "T",
+      "price": 10
+    },
+    {
+      "code": "e",
+      "price": 10
+    },
+    {
+      "code": "<",
+      "price": 10
+    },
+    {
+      "code": ">",
+      "price": 10
+    },
+    {
+      "code": "S",
+      "price": 10
+    },
+    {
+      "code": "L",
+      "price": 10
+    },
+    {
+      "code": "m",
+      "price": 0
+    },
+    {
+      "code": "g",
+      "price": 0
+    },
+    {
+      "code": "U",
+      "price": 30
+    },
+    {
+      "code": "r",
+      "price": 15
+    },
+    {
+      "code": "p",
+      "price": 20
+    },
+    {
+      "code": "Z",
+      "price": 30
+    },
+    {
+      "code": "N",
+      "price": 20
+    },
+    {
+      "code": "n",
+      "price": 20
+    },
+    {
+      "code": "#",
+      "price": 1
+    },
+    {
+      "code": "A",
+      "price": 10
+    },
+    {
+      "code": "Q",
+      "price": 15
+    },
+    {
+      "code": "M",
+      "price": 10
+    }
+  ],
+  "editableRegions": [
+    {
+      "x": 1,
+      "y": 4,
+      "width": 7,
+      "height": 4
+    },
+    {
+      "x": 9,
+      "y": 4,
+      "width": 7,
+      "height": 4
+    }
+  ],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 15,
+    "width": 17,
+    "height": 10,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "#...............#",
+      "#.h.............#",
+      "#...............#",
+      "#.......#.......#",
+      "#.......#.......#",
+      "#.......#.......#",
+      "#.......#.......#",
+      "#.......#.......=",
+      "##############=DV",
+      "##############=h="
+    ],
+    "welds": [
+      "|...............|",
+      "|...............|",
+      "|...............|",
+      "|.......|.......|",
+      "|.......|.......|",
+      "|.......|.......|",
+      "|.......|.......|",
+      "|.......|.......|",
+      "+++++++++++++++-|",
+      "--------------..."
+    ]
+  },
+  "testCases": []
+}

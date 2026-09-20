@@ -2,7 +2,7 @@ Current shipped catalog: **21 puzzles — 7 tutorials and 14 non-tutorials**. Ea
 
 # Tutorial puzzles
 
-**Be wary of adding more tutorial puzzles.** Players don't need a separate tutorial for each component, they can figure it out from the inspector's tooltips and examples. Assume they've played Zachtronics games.
+**Avoid adding more tutorial puzzles.** Players don't need a separate tutorial for each component, they can figure it out from the inspector's tooltips and experimentation. Assume they've played Zachtronics games.
 
 Current tutorial puzzles:
 * [Click to test](../src/game/puzzles/click-to-test.json): no player-modifiable region; they just click the button to test it. Demonstrates basic puzzle testing flow.
@@ -13,13 +13,16 @@ Current tutorial puzzles:
 * [Basic manufacturing](../src/game/puzzles/basic-manufacturing.json): trigger a fixed duplicator through a charge sensor, move iron blocks with conveyors, weld pairs into horizontal 2x1 pieces, and deliver ten pieces. Annotated instructions cover duplication, transport, and automatic welding.
 * [Gordian knot](../src/game/puzzles/gordian-knot.json): the stated sapphire-delivery task is impossible; the solution requires bypassing it by welding a fixed +1 charge to the judgment stone. Teaches that a puzzle's win condition is defined on the game board rather than via metadata, that exploits are possible, and exposes a much larger component palette.
 
+Some of these puzzles deliberately allow some amount of optimization, e.g. Basic runelore can be solved more cheaply by placing a charge sensor, Vehicle by mirroring a conveyor block, and Basic manufacturing by placing a duplicator.
+
 Things not explicitly covered by the current tutorials:
 * Gates delay signals by one tick; branches must be time-equalized with delay gates. Necessary for solving the rectifier puzzle, binary crossed channels, and other puzzles we add later.
 * Pistons and rotators.
 * Magnets.
 * Transformation machines beyond duplicators: furnaces, grinders, and assemblers.
-* Splitting and unwelding machinery; Basic manufacturing already covers welders.
-* Charge sensors' interaction with glass; Basic runelore already covers sensing at a distance.
+* Splitters, laser splitters, dismantlers. (Basic manufacturing already covers welders.)
+* Charge sensors' interaction with glass.
+* Bell blocks, and resonators (once those are added).
 
 # Current non-tutorial puzzles
 
@@ -30,14 +33,15 @@ The puzzle set we ship on first release should focus more on mechanical puzzles.
 * [Hill climber](../src/game/puzzles/climber.json) (Intermediate): build a vehicle that climbs one-cell steps to reach the sensor on the right. Harder than Vehicle; the reference solution uses a back conveyor plus an elevated front conveyor pushed down by a piston when a sensor detects a step. Other approaches include periodically moving the front conveyor or using multiple vehicles as successive platforms.
 * [Hammer delivery](../src/game/puzzles/hammer-delivery.json) (Intermediate): transport five replacement hammers from a fixed duplicator to the delivery box. The supplied hammers point sideways and must be rotated head-down for delivery; the player's build region is a small bay between the supply and receiver.
 * [Chasm climber](../src/game/puzzles/chasm-climber.json) (Intermediate): build at the bottom of a tall, narrow shaft with staggered ledges and climb to any of the downward-facing sensors at the top. Unlike Hill climber, the goal is sustained vertical travel.
+* [Gold delivery](../src/game/puzzles/gold-delivery.json) (Intermediate): deliver the single supplied gold block across a wall. Drills and welders/unwelders are not in the palette, so the wall can't be destroyed; solution would require something like placing a conveyor which is lifted by two pistons to transport the gold over the wall.
 * [A dangerous crossing](../src/game/puzzles/a-dangerous-crossing.json) (Intermediate): build on the left bank and cross a wide chasm to touch the sensor on the right. Duplicators and welders are available, allowing players to explore bridge-building as well as other transport designs.
 * [Crystal stalactite](../src/game/puzzles/crystal-stalactite.json) (Hard): retrieve the ruby attached to a ceiling stalactite and deliver it at the cave floor. The build region is near the bottom, so machinery must reach the suspended gem, detach it, and bring it back.
 
 ## Manufacturing
 
-* [Iron Run](../src/game/puzzles/iron-run.json) (Easy): smelt the single supplied iron ore block and deliver one unwelded iron block across a rock ridge. A small motion/furnace/circuit palette excludes ore, finished iron, and duplicators. The protected delivery circuit requires a real delivery. This precedes Iron plates without adding another tutorial. The reference solution holds the ore beside a furnace, starts an elevated conveyor after a ten-tick delay, and finishes in 32 ticks (200-tick limit).
 * [Iron plates](../src/game/puzzles/iron-plates.json) (Hard): duplicate iron ore, smelt it, and weld three iron blocks in a row; deliver ten plates. Two duplicators offer tradeoffs between cycles, footprint, cost, and complexity. Exploits may also be possible, such as drilling away a duplicator and duplicating entire plates.
 * [Pickaxes to hammers](../src/game/puzzles/pickaxes-to-hammers.json) (Hard): produce five warhammers by reforging supplied pickaxes or smelting supplied ore. Separate duplicators provide the two feedstocks; drills, splitters, welders, and furnaces support different production routes. Delivered hammers must match the template with their heads facing left.
+* We should add some easier puzzles in this section, before the two puzzles above.
 
 ## Extraction
 
@@ -57,16 +61,18 @@ Currently empty. Future puzzles could involve drilling a large block of stone to
 
 The fixed ROM signal sources in these five runelore puzzles face right and are mirrored, so rear +1 reads the authored spatial grid left-to-right, then top-to-bottom under component-relative carry rules. Reference scenes use the same handedness.
 
+## Advanced Runelore, Rescue, and Elves (3 groups)
+
+All currently empty.
+
 # Ideas for non-tutorial puzzles
 
-* Puzzle between Vehicle and Hill climber that introduces pistons.
 * Count up to N pulses from two separate sources and decide which source gave more pulses in total. One solution idea: use a counter block, with an inverter on one of the two inputs, and then check whether final value is positive or negative? But wrap-arounds are possible, so maybe use spark blocks to initialize it to N. Also we can't read the value of the counter block directly, would need to decrement it until it reaches zero and compare number of decrements to initial value; but that seems like almost the same problem we started with?
 * A set of basic circuit problems, where you only have: conduit, combiner, inverter, and fixed source. Add puzzles to build most of the more advanced circuit components out of these. The combiner is effectively a sum or vote/majority rune. Combiner also gives a 1-tick delay, so you can chain them to make a machine that acts like a delay rune with arbitrary memory size. Combiner with duplicate inputs, one delayed and inverted, gives edge detection. Spark is fixed value plus edge detection. For the rectifier/diode, we have a puzzle and reference solution, which needs two combiners and a multiplier. Rectifier could also be built using two combiners, fixed source, and inverter: use fixed source and inverter to get -1, then compute `Combiner(x, x, -1)` which takes (-1, 0, 1) to (-1, -1, 1), and then combine that with +1.
 * Physically reverse a list: The player's machine receives ruby blocks and sapphire blocks in some order; they must be output in reverse order. Requires building a physical contraption that behaves like a push/pop stack, or maybe putting them in a box and physically rotating it. The player presses a button to receive the next block, and we drop a stone block (or pulse a signal) to indicate the end of the sequence. (How do we build the infra to test? Maybe a delivery box, swapping which block is below it. Or maybe use block-comparer to produce +1 and -1 charge for each one received, and then compare sequences omitting zeros. Or maybe put the entire sequence we expect on a conveyor belt below the delivery box.)
 * Physical subtraction: Receive some number of stone blocks and some number of iron blocks; output a number of blocks equal to the absolute value of the difference, then press a button to validate answer.
 * Puzzle: Given a supply of sand blocks, and a conduit that pulses N times, move N sand blocks to the output, and the rest to a different output. Alternatively, provide the requested amount via a clock that pulses every N ticks; or via a few separate buttons for requesting different amounts (say 1, 2, 3, 5; or ternary -3, -1, +1, +3, +5, and if multiple are on, they must output the sum).
-* Puzzle: ROM implemented in-world with basic components. Given an NxM rectangle of ruby and sapphire blocks, and circuit impulses on a given column or row, read the ruby/sapphire state at that specific 2-dimensional index. Repeat for several lookups in the same NxM rectangle.
-* Receive N signals in order on the left, must be output in reverse order on right, no rune crossing blocks allowed. Reverse order meaning vertically flipped; not time reversal. We've implemented puzzles for the N = 2 case; greater N can be done by repeating solutions to those. Could have variants, e.g. inner block gives signals and outer ring must receive them after some permutation.
+* Puzzle: ROM implemented in-world with basic components. Given an NxM rectangle of ruby and sapphire blocks, and circuit impulses on a given column or row, read the ruby/sapphire state at that specific 2-dimensional index. Repeat for several lookups in the same NxM rectangle. Different test cases modify the blocks in the rectangle.
 * Puzzle: given N circuit inputs, output the most common one among them. As a variant, give them one signal with +1 and -1 over different ticks, and they must output the modal value / sign of the sum.
 * Look at other puzzle games (The Witness, various Zachtronics games, Roody:2d) for inspiration. Add any components necessary to allow implementing similar puzzles in our game. For example, we could make Witness-style mazes by letting the player place only conduits, and they have to link a fixed charge to the victory block; but how could we implement other constraints from Witness's puzzles?
 * Various straightforward mechanical manipulation puzzles, e.g. given stone blocks, weld them into 1x2 bodies, or 2x2, or one of each tetromino, or shapes made of different block types in specific configurations.
@@ -75,13 +81,13 @@ The fixed ROM signal sources in these five runelore puzzles face right and are m
 * Given rotator blocks and various circuit blocks, carry stone blocks from a low starting position to a high delivery block, by rotating them repeatedly.
 * Puzzle: build a lock gate that allows through only bodies matching a specific shape.
 * Puzzle: build a gantry that grabs bodies and moves them over a wall.
-* Crossing a gap by building a flying machine. (Uncertain if this is even possible, unless we allow components that trivialize it, like horizontal sliders.)
-* Kaizen-style puzzles: Given dispensers (duplicators with buttons) providing any number of welded 2x2 and 3x4 iron blocks, assemble iron helmets, which are some complex shape made of iron blocks. The player must decide how to drill and weld/unweld blocks to make up the helmet shape, and implement that in machinery.
+* Crossing a gap by building a flying machine. (Uncertain if this is even possible, unless we allow components that trivialize it, like horizontal sliders.) We currently have a Chasm Crosser puzzle, but we allow the duplicator block, and solution requires duplicating and welding blocks to build a bridge; doing it without a duplicator would be harder.
+* Kaizen-style puzzles: Given dispensers providing any number of welded 2x2 and 3x4 iron bodies, assemble iron helmets, which are some complex shape made of iron blocks. The player must decide how to drill and weld/unweld blocks to make up the helmet shape, and implement that in machinery.
 * Slider block puzzles, like Rush Hour: Given some complex arrangement of welded pieces, each with a slider block preventing horizontal or vertical movement, build a device that will untangle them and extract one gem in the center.
 * Puzzle: You have 1 gemstone. Must show the gemstone at port 1, then port 2, then port 3, etc., corresponding to requests on the back wall. Requires moving it around according to commands.
 * Route sand falling from above to different outputs on the right side. Some potential for tiny machinery plus long chutes, relying on sand falling rather than transporting all the way.
 * Puzzle where you have to push a hanging piece up a ladder; it slots into the rungs. Maybe your entire contraption also needs to go back into a hole periodically to avoid walls that sweep across.
-* Puzzle where a gemstone is entangled in differently-shaped stone pieces; must build pistons to shift the pieces in a specific way so the gemstone can drop down into a delivery box.
+* Puzzle where a gemstone or trapped dwarf is entangled in differently-shaped stone pieces; must build pistons to shift the pieces in a specific way so the gemstone can drop down into a delivery box.
 * Puzzle where you receive one stone block and must move it to one of N different output chutes depending on which one has a +1 signal nearby. Each test case only expects one single stone block delivered. As a follow-up, add a variant where the board has a complex shape, e.g. an S-shaped empty region surrounded by stone, with various delivery spots along the S.
 * Add some puzzles in the style of very hard minimal puzzle games like Magicube, Jelly No Puzzle, Snakebird, Baba Is You - specifically minimal puzzles that seem impossible at first glance. Minimal meaning the puzzle is small, the player-modifiable region is small, and the set of allowed components is small.
 * Give an input signal with say 8 values. Require outputting all 8 values to 8 different output ports, at the same time. Requires some basic delays, or potentially a falling charge sensor that feeds into different latches made from delay gates, or similar.
@@ -103,5 +109,5 @@ The fixed ROM signal sources in these five runelore puzzles face right and are m
 * Reading decimal digits. We give the player a stone polyomino representing a digit 0-9, and they must output that many stone blocks into a chute.
 	* Also the reverse - construct decimal digit to represent a number.
 * Carving up arbitrary input shapes into individual blocks. The player is given a polyomino fitting inside a 5x5 box. They must chop it up into individual blocks and deliver those. Each test case has a different input shape.
-* Polyomino packing: set up sensors to detect various polyominoes inside the player-modifiable region. Victory iff all of them are detected. Entirely ignores 90% of our game mechanics, but might still be fun.
+* Polyomino packing: set up sensors to detect various polyominoes inside the player-modifiable region. Victory iff all of them are detected. Entirely ignores 90% of our game mechanics (anything that happens over multiple ticks is irrelevant), but might still be fun.
 	* Then a follow-up puzzle that gives them too little space to actually fit all the shapes; so they have to build a machine that creates all necessary shapes in sequence, by welding and unwelding, etc. over multiple ticks.
