@@ -13,6 +13,7 @@ export interface FurnaceRecipe {
 
 /** Furnace recipes and their required active ticks. */
 export const FURNACE_RECIPES: readonly FurnaceRecipe[] = Object.freeze([
+  Object.freeze({ input: TileKind.Wood, output: TileKind.Fire, bakeTime: 2 }),
   Object.freeze({
     input: TileKind.Sand,
     output: TileKind.Glass,

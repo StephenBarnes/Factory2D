@@ -31,6 +31,40 @@ describe("directional furnaces", () => {
     },
   );
 
+  it("ignites wood after two active ticks, removes welds, and spreads fire only on the following tick", () => {
+    let world = new World(3, 1);
+    world.place(0, 0, TileKind.Furnace, Direction.Right);
+    world.place(1, 0, TileKind.Wood);
+    world.place(2, 0, TileKind.Wood);
+    world.setWeld(1, 0, 2, 0, true);
+    let simulation = new Simulation(world);
+
+    simulation.step();
+    expect(world.kindAt(1, 0)).toBe(TileKind.Wood);
+    expect(world.chargeAtPort(0, 0, Direction.Left)).toBe(1);
+    world.setCharge(0, 0, -1);
+    simulation.step();
+    expect(world.kindAt(1, 0)).toBe(TileKind.Wood);
+    expect(world.isWelded(1, 0, 2, 0)).toBe(true);
+    expect(world.chargeAtPort(0, 0, Direction.Left)).toBe(0);
+
+    world = deserializeBoard(serializeBoard(world, simulation.tick)).world;
+    simulation = new Simulation(world);
+    world.setCharge(0, 0, 0);
+    simulation.step();
+    expect(world.kindAt(1, 0)).toBe(TileKind.Fire);
+    expect(world.kindAt(2, 0)).toBe(TileKind.Wood);
+    expect(world.isWelded(1, 0, 2, 0)).toBe(false);
+    expect(world.chargeAtPort(0, 0, Direction.Left)).toBe(1);
+
+    simulation.step();
+    expect(world.kindAt(1, 0)).toBe(TileKind.Empty);
+    expect(world.kindAt(2, 0)).toBe(TileKind.Fire);
+    expect(world.chargeAtPort(0, 0, Direction.Left)).toBe(0);
+    simulation.step();
+    expect(world.kindAt(2, 0)).toBe(TileKind.Empty);
+  });
+
   it("pauses copper smelting and its output without wood, including across save/load", () => {
     let world = new World(3, 1);
     world.place(0, 0, TileKind.Furnace, Direction.Right);
