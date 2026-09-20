@@ -1,5 +1,14 @@
 Current shipped catalog: **24 puzzles — 7 tutorials and 17 non-tutorials**. Each entry below links to its definition in `src/game/puzzles/`; names, groups, and ordering follow those files.
 
+# General guidelines for non-tutorial puzzles
+
+* Avoid text-boxes on the puzzle. Mostly they're used for tutorials, or easy puzzles where mechanics are encountered for the first time.
+* Disable platform blocks in the palette - those are mostly for puzzle design, not solutions.
+* If there's potentially complex circuitry involved, enable signal monitor and ROM grapher.
+* Avoid enabling very powerful blocks, namely: thruster, controlled thruster, duplicator, force projector.
+* Ensure solution-testing machinery is protected. Don't leave indestructible conduit blocks, victory block, or delivery box exposed on any sides (except the delivery block's receiving front face) because otherwise a single fixed charge block solves the puzzle. We should prevent low-effort exploits; high-effort exploits are fine.
+* Surround most of the puzzle with a border of welded stone blocks. Use platform blocks only for the part that needs protection.
+
 # Tutorial puzzles
 
 **Avoid adding more tutorial puzzles.** Players don't need a separate tutorial for each component, they can figure it out from the inspector's tooltips and experimentation. Assume they've played Zachtronics games.
@@ -30,6 +39,8 @@ The puzzle set we ship on first release should focus more on mechanical puzzles.
 
 ## Transportation
 
+Transportation puzzles involve building a vehicle that travels along some route, and maybe carries something or does very simple operations along the way (like unwelding one block).
+
 * [Hill climber](../src/game/puzzles/climber.json) (Intermediate): build a vehicle that climbs one-cell steps to reach the sensor on the right. Harder than Vehicle; the reference solution uses a back conveyor plus an elevated front conveyor pushed down by a piston when a sensor detects a step. Other approaches include periodically moving the front conveyor or using multiple vehicles as successive platforms.
 * [Hammer delivery](../src/game/puzzles/hammer-delivery.json) (Intermediate): transport five replacement hammers from a fixed duplicator to the delivery box. The supplied hammers point sideways and must be rotated head-down for delivery; the player's build region is a small bay between the supply and receiver.
 * [Chasm climber](../src/game/puzzles/chasm-climber.json) (Intermediate): build at the bottom of a tall, narrow shaft with staggered ledges and climb to any of the downward-facing sensors at the top. Unlike Hill climber, the goal is sustained vertical travel.
@@ -39,13 +50,16 @@ The puzzle set we ship on first release should focus more on mechanical puzzles.
 
 ## Manufacturing
 
+Manufacturing puzzles involve turning a few small components into small or large products.
+
 * [Glass blocks](glass-blocks.json) (Easy): sand falls from above. It must be smelted into glass blocks and delivered. Introduces furnaces and fragile blocks. Solution is easy, but leaves some room for optimizing cycles or price by several means (moving/modifying the sand dispenser, dropping glass directly on delivery to avoid shattering, grinding the stone ceiling/walls for more sand, or using advanced blocks in palette).
 * [Reclaimed machinery](../src/game/puzzles/reclaimed-machinery.json) (Easy): catch a falling duplicator, its attached charge sensor, and a single ruby, then deliver six separate rubies. Neither duplicators nor rubies are available in the palette. The reference solution catches the template and machine at the same height, powers the surviving sensor remotely, and carries the copies to the receiver on conveyors.
 * [Copperworks](../src/game/puzzles/copperworks.json) (Intermediate): smelt a finite supply of six copper ore blocks beside wood, then deliver all six copper blocks. The compact lower workshop requires coordinating six-tick processing with transport; wood is reusable, but there is no replacement ore and duplicators are unavailable. The reference solution uses a timed force projector to pull finished copper from a furnace onto a conveyor line.
 * [Iron plates](../src/game/puzzles/iron-plates.json) (Hard): duplicate iron ore, smelt it, and weld three iron blocks in a row; deliver ten plates. Two duplicators offer tradeoffs between cycles, footprint, cost, and complexity. Exploits may also be possible, such as drilling away a duplicator and duplicating entire plates.
-* [Pickaxes to hammers](../src/game/puzzles/pickaxes-to-hammers.json) (Hard): produce five warhammers by reforging supplied pickaxes or smelting supplied ore. Separate duplicators provide the two feedstocks; drills, splitters, welders, and furnaces support different production routes. Delivered hammers must match the template with their heads facing left.
 
 ## Extraction
+
+Extraction puzzles involve turning a large input into small outputs by removing most of the blocks or separating one type from another.
 
 * [Geode extractor](../src/game/puzzles/geode-extractor.json) (Intermediate): extract ten ruby blocks from duplicated stone-shell geodes and deliver them. Two duplicators face different directions, so players can use either supply or both for higher throughput. Drills, splitters, welders, rotators, magnets, grinders, and circuitry support different extraction layouts; the reference solution uses drills and conveyors. More intermediate extraction puzzles could introduce drills before this one.
 
@@ -59,11 +73,17 @@ The puzzle set we ship on first release should focus more on mechanical puzzles.
 
 The fixed ROM signal sources in these five runelore puzzles face right and are mirrored, so rear +1 reads the authored spatial grid left-to-right, then top-to-bottom under component-relative carry rules. Reference scenes use the same handedness.
 
+## Reworking
+
+Reworking puzzles involve turning large inputs into large outputs. Basically the overlap of manufacturing and extraction, and generally harder than both.
+
+* [Pickaxes to hammers](../src/game/puzzles/pickaxes-to-hammers.json) (Hard): produce five warhammers by reforging supplied pickaxes or smelting supplied ore. Separate duplicators provide the two feedstocks; drills, splitters, welders, and furnaces support different production routes. Delivered hammers must match the template with their heads facing left.
+
 ## Mining, Advanced Runelore, Rescue, and Elves (4 groups)
 
 All currently empty.
 
-Mining is basically transport/vehicles plus extraction, and could involve e.g. drilling a large block of stone to extract gemstones scattered throughout it.
+Mining puzzles will involve transport/vehicles plus extraction, e.g. drilling through a stone cavern to extract gemstones scattered throughout it.
 
 # Ideas for non-tutorial puzzles
 
@@ -111,3 +131,4 @@ Mining is basically transport/vehicles plus extraction, and could involve e.g. d
 * Polyomino packing: set up sensors to detect various polyominoes inside the player-modifiable region. Victory iff all of them are detected. Entirely ignores 90% of our game mechanics (anything that happens over multiple ticks is irrelevant), but might still be fun.
 	* Then a follow-up puzzle that gives them too little space to actually fit all the shapes; so they have to build a machine that creates all necessary shapes in sequence, by welding and unwelding, etc. over multiple ticks.
 * Harder variants of "Reclaimed machinery", e.g. needing to pick up the components lying on the ground.
+* Spear reclamation: given spears (wood lengths with triangular 4-iron-block heads) with a duplicator to make many of them, output N 1x1 iron blocks. Easy or intermediate puzzle, placed before pickaxes-to-hammers.

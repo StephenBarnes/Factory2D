@@ -8,26 +8,10 @@
   "order": 0.5,
   "name": "Copperworks",
   "difficulty": 2,
-  "description": "The brewers need copper for their new stills. Six blocks of copper ore are waiting above the workshop. Smelt them and deliver the copper below. A furnace needs six active ticks with wood touching the ore orthogonally; the wood is not consumed. There is no replacement ore, so keep unfinished material away from the receiver.",
-  "goal": "Smelt and deliver all six copper blocks.",
+  "description": "The brewers need copper for their new stills. Six blocks of copper ore are waiting above the workshop. Smelt them and deliver the copper below. A furnace needs six active ticks with wood touching the ore orthogonally; the wood is not consumed.",
+  "goal": "Smelt and deliver six copper blocks.",
   "cycleLimit": 1000,
   "components": [
-    {
-      "code": "#",
-      "price": 1
-    },
-    {
-      "code": "w",
-      "price": 1
-    },
-    {
-      "code": "=",
-      "price": 10
-    },
-    {
-      "code": "L",
-      "price": 10
-    },
     {
       "code": "B",
       "price": 5
@@ -37,44 +21,20 @@
       "price": 10
     },
     {
-      "code": "r",
-      "price": 15
-    },
-    {
-      "code": "&",
-      "price": 30
-    },
-    {
-      "code": "F",
-      "price": 15
-    },
-    {
-      "code": "J",
-      "price": 10
-    },
-    {
-      "code": "X",
-      "price": 10
-    },
-    {
       "code": "C",
       "price": 2
     },
     {
-      "code": "S",
-      "price": 10
+      "code": ";",
+      "price": 3
     },
     {
-      "code": "Q",
-      "price": 15
+      "code": "W",
+      "price": 10
     },
     {
       "code": "1",
       "price": 5
-    },
-    {
-      "code": "K",
-      "price": 3
     },
     {
       "code": "I",
@@ -89,16 +49,44 @@
       "price": 15
     },
     {
+      "code": "K",
+      "price": 3
+    },
+    {
       "code": "T",
       "price": 10
     },
     {
-      "code": "W",
+      "code": "S",
       "price": 10
     },
     {
-      "code": ";",
-      "price": 3
+      "code": "L",
+      "price": 10
+    },
+    {
+      "code": "m",
+      "price": 0
+    },
+    {
+      "code": "g",
+      "price": 0
+    },
+    {
+      "code": "U",
+      "price": 30
+    },
+    {
+      "code": "J",
+      "price": 10
+    },
+    {
+      "code": "X",
+      "price": 10
+    },
+    {
+      "code": "r",
+      "price": 15
     },
     {
       "code": "Z",
@@ -109,19 +97,47 @@
       "price": 20
     },
     {
-      "code": "U",
+      "code": "#",
+      "price": 1
+    },
+    {
+      "code": "w",
+      "price": 1
+    },
+    {
+      "code": "i",
+      "price": 4
+    },
+    {
+      "code": "F",
+      "price": 15
+    },
+    {
+      "code": "&",
       "price": 30
     },
     {
-      "code": "m",
-      "price": 0
+      "code": "Q",
+      "price": 15
     }
   ],
   "editableRegions": [
     {
       "x": 1,
-      "y": 7,
-      "width": 11,
+      "y": 5,
+      "width": 10,
+      "height": 9
+    },
+    {
+      "x": 11,
+      "y": 5,
+      "width": 2,
+      "height": 8
+    },
+    {
+      "x": 13,
+      "y": 5,
+      "width": 1,
       "height": 7
     }
   ],
@@ -133,32 +149,32 @@
     "tick": 0,
     "result": "in-progress",
     "grid": [
-      "===============",
-      "=......o......=",
-      "=......o......=",
-      "=......o......=",
-      "=......o......=",
-      "=......o......=",
-      "=......o......=",
-      "=.............=",
-      "=.............=",
-      "=.............=",
-      "=.............=",
-      "=.............=",
-      "=............{{",
-      "=...........D{N",
-      "============c=V"
+      "###############",
+      "#.............#",
+      "#..ooo........#",
+      "#..ooo........#",
+      "#.............#",
+      "#.............#",
+      "#.............#",
+      "#.............#",
+      "#.............#",
+      "#.............#",
+      "#.............#",
+      "#.............#",
+      "#............==",
+      "#..........=DNV",
+      "###########=c=="
     ],
     "orientations": [
       {
-        "x": 14,
+        "x": 13,
         "y": 13,
-        "direction": "down"
+        "direction": "right"
       }
     ],
     "components": [
       {
-        "x": 14,
+        "x": 13,
         "y": 13,
         "type": "counter",
         "threshold": 6,
@@ -167,40 +183,31 @@
     ],
     "textBoxes": [
       {
-        "id": "ore",
-        "x": 1,
-        "y": 1,
-        "width": 5,
-        "height": 3,
-        "text": "Six copper ore blocks.\nNo replacements.",
-        "owner": "author"
-      },
-      {
         "id": "smelting",
-        "x": 8,
-        "y": 1,
-        "width": 6,
-        "height": 5,
-        "text": "Copper ore needs six active furnace ticks with wood touching the ore.\n\nWood is not consumed.",
+        "x": 9.756484635913644,
+        "y": 1.4862596351681767,
+        "width": 3.6599999999999997,
+        "height": 1,
+        "text": "Smelt copper ore in front of a furnace for\n6 ticks, with wood touching the ore.\nThe wood is not consumed.",
         "owner": "author"
       }
     ],
     "welds": [
-      "...............",
-      "...............",
-      "...............",
-      "...............",
-      "...............",
-      "...............",
-      "...............",
-      "...............",
-      "...............",
-      "...............",
-      "...............",
-      "..............|",
-      ".............+|",
-      "............-.|",
-      "..............."
+      "+-------------|",
+      "|.............|",
+      "|.............|",
+      "|.............|",
+      "|.............|",
+      "|.............|",
+      "|.............|",
+      "|.............|",
+      "|.............|",
+      "|.............|",
+      "|.............|",
+      "|.............|",
+      "|............+|",
+      "|..........+-+|",
+      "-----------..-."
     ]
   },
   "testCases": []
