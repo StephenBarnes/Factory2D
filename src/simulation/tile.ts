@@ -77,6 +77,7 @@ export const enum TileKind {
   Bell = 75,
   Fire = 76,
   Resonator = 77,
+  Flipper = 78,
 }
 
 export const enum Direction {
@@ -161,6 +162,7 @@ export const enum TileDecorationStyle {
   Bell = 62,
   Fire = 63,
   Resonator = 64,
+  Flipper = 65,
 }
 
 export const enum PaletteCategory {
@@ -448,7 +450,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 66,
       category: PaletteCategory.Motion,
       description: "Holds its welded body aloft until machinery moves it and breaks the fastener.",
-      extendedDescription: ["Prevents its entire welded body from falling on its own. Needs no charge and can be welded on every side.", "A successful conveyor or thruster move, piston push or pull, or rotator turn destroys the fastener and its welds after moving the body. Blocked machinery attempts do not break it.", "An independent falling body can push it downward if the whole chain has room; gravity-driven movement does not break it. Welding it to a platform still anchors the body."],
+      extendedDescription: ["Prevents its entire welded body from falling on its own. Needs no charge and can be welded on every side.", "A successful conveyor or thruster move, piston push or pull, rotator turn, or flipper reflection destroys the fastener and its welds after moving the body. Blocked machinery attempts do not break it.", "An independent falling body can push it downward if the whole chain has room; gravity-driven movement does not break it. Welding it to a platform still anchors the body."],
     },
     affectedByGravity: false,
     slidesDiagonally: false,
@@ -2063,6 +2065,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     attractionRange: 0,
     fill: "#5c5368",
     decorationStyle: TileDecorationStyle.Rotator,
+    decorationColor: "#e1c3f2",
+  },
+  [TileKind.Flipper]: {
+    name: "Flipper",
+    boardCode: "8",
+    defaultPrice: 15,
+    palette: {
+      order: 81,
+      category: PaletteCategory.Motion,
+      description: "Flips the body ahead around its front block: +1 horizontally, -1 vertically.",
+      extendedDescription: ["Rear +1 reflects left/right; -1 reflects up/down, regardless of facing. Neutral does nothing. The immediate front block is the pivot. Only the final cells must fit: other blocks, fixed terrain, and board edges block the flip; nearby loose blocks are not carried.", "Weld to the front or rear. A front weld temporarily splits for the flip and reconnects afterward; the flip jams if the reflected target cannot accept that weld. An alternate welded or magic-link path back to the flipper makes it flip with the body. Competing flips jam.", "Flips preserve identities, reflect orientations, handedness, component contents, and welds, and break carried fasteners. A held nonzero input flips again every tick."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.Up | WeldSide.Down,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Down,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#5c5368",
+    decorationStyle: TileDecorationStyle.Flipper,
     decorationColor: "#e1c3f2",
   },
   [TileKind.Piston]: {

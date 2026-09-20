@@ -1950,8 +1950,23 @@ export class World {
     pivot: number,
     quarterTurn: -1 | 1,
   ): number {
+    return this.transformCells(selected, pivot, quarterTurn, false, false);
+  }
+
+  /** Reflects a complete selection around the faced cell, retaining tile identities. */
+  flipCells(selected: Uint8Array, pivot: number, horizontally: boolean): number {
+    return this.transformCells(selected, pivot, 0, horizontally, !horizontally);
+  }
+
+  private transformCells(
+    selected: Uint8Array,
+    pivot: number,
+    quarterTurn: -1 | 0 | 1,
+    flippedHorizontally: boolean,
+    flippedVertically: boolean,
+  ): number {
     if (selected.length !== this.cellCount) {
-      throw new RangeError("Rotation selection must match the world cell count");
+      throw new RangeError("Transform selection must match the world cell count");
     }
     this.assertIndex(pivot);
     const pivotX = pivot % this.width;
@@ -1959,10 +1974,10 @@ export class World {
     const destinationFor = (source: number): number => {
       const sourceX = source % this.width;
       const sourceY = (source - sourceX) / this.width;
-      const deltaX = sourceX - pivotX;
-      const deltaY = sourceY - pivotY;
-      const destinationX = pivotX + (quarterTurn === 1 ? -deltaY : deltaY);
-      const destinationY = pivotY + (quarterTurn === 1 ? deltaX : -deltaX);
+      const deltaX = (sourceX - pivotX) * (flippedHorizontally ? -1 : 1);
+      const deltaY = (sourceY - pivotY) * (flippedVertically ? -1 : 1);
+      const destinationX = pivotX + (quarterTurn === 0 ? deltaX : quarterTurn === 1 ? -deltaY : deltaY);
+      const destinationY = pivotY + (quarterTurn === 0 ? deltaY : quarterTurn === 1 ? deltaX : -deltaX);
       return destinationX < 0 ||
           destinationX >= this.width ||
           destinationY < 0 ||
@@ -1971,47 +1986,47 @@ export class World {
         : destinationY * this.width + destinationX;
     };
 
-    let rotatedCellCount = 0;
+    let transformedCellCount = 0;
     for (let source = 0; source < this.cellCount; source += 1) {
       if (selected[source] === 0) {
         continue;
       }
       if (selected[source] !== 1 || this.cells.kinds[source] === TileKind.Empty) {
-        throw new Error(`Rotation selection contains invalid cell ${source}`);
+        throw new Error(`Transform selection contains invalid cell ${source}`);
       }
       const destination = destinationFor(source);
       if (destination < 0) {
-        throw new Error(`Rotation from index ${source} leaves the world`);
+        throw new Error(`Transform from index ${source} leaves the world`);
       }
       if (this.cells.kinds[destination] !== TileKind.Empty && selected[destination] === 0) {
-        throw new Error(`Rotation from index ${source} collides at index ${destination}`);
+        throw new Error(`Transform from index ${source} collides at index ${destination}`);
       }
       const x = source % this.width;
       if (
         this.cells.rightWelds[source] === 1 &&
         (x >= this.width - 1 || selected[source + 1] === 0)
       ) {
-        throw new Error(`Rotation selection splits a right weld at index ${source}`);
+        throw new Error(`Transform selection splits a right weld at index ${source}`);
       }
       if (
         this.cells.downWelds[source] === 1 &&
         (source >= this.cellCount - this.width || selected[source + this.width] === 0)
       ) {
-        throw new Error(`Rotation selection splits a down weld at index ${source}`);
+        throw new Error(`Transform selection splits a down weld at index ${source}`);
       }
       if (x > 0 && this.cells.rightWelds[source - 1] === 1 && selected[source - 1] === 0) {
-        throw new Error(`Rotation selection splits a left weld at index ${source}`);
+        throw new Error(`Transform selection splits a left weld at index ${source}`);
       }
       if (
         source >= this.width &&
         this.cells.downWelds[source - this.width] === 1 &&
         selected[source - this.width] === 0
       ) {
-        throw new Error(`Rotation selection splits an up weld at index ${source}`);
+        throw new Error(`Transform selection splits an up weld at index ${source}`);
       }
-      rotatedCellCount += 1;
+      transformedCellCount += 1;
     }
-    if (rotatedCellCount === 0) {
+    if (transformedCellCount === 0) {
       return 0;
     }
 
@@ -2023,20 +2038,26 @@ export class World {
       }
     }
 
-    const turns = quarterTurn === 1 ? 1 : 3;
+    const turns = quarterTurn < 0 ? 3 : quarterTurn;
     for (let source = 0; source < this.cellCount; source += 1) {
       if (selected[source] === 0) {
         continue;
       }
       const destination = destinationFor(source);
       const kind = this.cells.kinds[source] as TileKind;
-      const id = expectDefined(this.cells.ids[source], "rotating tile ID");
+      const id = expectDefined(this.cells.ids[source], "transformed tile ID");
       moved.copyCell(this.cells, source, destination);
+      let orientation = this.cells.orientations[source] as Direction;
+      if (flippedHorizontally) orientation = flipDirectionHorizontally(orientation);
+      if (flippedVertically) orientation = flipDirectionVertically(orientation);
       moved.orientations[destination] = orientationForKind(
         kind,
-        (((this.cells.orientations[source] as Direction) + quarterTurn + 4) & 3) as Direction,
+        ((orientation + turns) & 3) as Direction,
       );
-      if (kind === TileKind.WireCrossing) {
+      moved.mirrored[destination] = Number(mirroringForKind(
+        kind, (this.cells.mirrored[source] === 1) !== (flippedHorizontally !== flippedVertically),
+      ));
+      if (kind === TileKind.WireCrossing && quarterTurn !== 0) {
         moved.charges[destination] = expectDefined(
           this.cells.crossingVerticalCharges[source],
           "rotating vertical crossing charge",
@@ -2045,22 +2066,22 @@ export class World {
           this.cells.charges[source],
           "rotating horizontal crossing charge",
         );
-      } else {
+      } else if (kind !== TileKind.WireCrossing) {
         moved.crossingVerticalCharges[destination] = 0;
       }
-      // Welds turn with the selection and are re-derived below.
+      // Welds follow the selection and are re-derived below.
       moved.rightWelds[destination] = 0;
       moved.downWelds[destination] = 0;
       if (hasComponentState(kind)) {
         const snapshot = snapshotComponentState(this.requireComponentStateAtIndex(source));
         this.componentStates.set(
           id,
-          stateFromSnapshot(transformComponentSnapshot(snapshot, turns, false, false)),
+          stateFromSnapshot(transformComponentSnapshot(snapshot, turns, flippedHorizontally, flippedVertically)),
         );
       }
     }
 
-    const setRotatedWeld = (first: number, second: number): void => {
+    const setTransformedWeld = (first: number, second: number): void => {
       if (second === first + 1) {
         moved.rightWelds[first] = 1;
       } else if (first === second + 1) {
@@ -2070,7 +2091,7 @@ export class World {
       } else if (first === second + this.width) {
         moved.downWelds[second] = 1;
       } else {
-        throw new Error(`Rotated weld endpoints ${first} and ${second} are not adjacent`);
+        throw new Error(`Transformed weld endpoints ${first} and ${second} are not adjacent`);
       }
     };
     for (let source = 0; source < this.cellCount; source += 1) {
@@ -2079,17 +2100,17 @@ export class World {
       }
       const destination = destinationFor(source);
       if (this.cells.rightWelds[source] === 1) {
-        setRotatedWeld(destination, destinationFor(source + 1));
+        setTransformedWeld(destination, destinationFor(source + 1));
       }
       if (this.cells.downWelds[source] === 1) {
-        setRotatedWeld(destination, destinationFor(source + this.width));
+        setTransformedWeld(destination, destinationFor(source + this.width));
       }
     }
 
     this.cells.copyFrom(moved);
     this.featureIndex.rebuild(this.cells.kinds);
     this.touchGeometryRevision();
-    return rotatedCellCount;
+    return transformedCellCount;
   }
 
 

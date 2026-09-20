@@ -6,6 +6,8 @@ import {
   Direction,
   directionX,
   directionY,
+  flipDirectionHorizontally,
+  flipDirectionVertically,
   oppositeDirection,
   mirroringForKind,
   orientedDirection,
@@ -22,7 +24,8 @@ import type { GridCell, GridEdge, GridPoint } from "./grid-drag";
 import { WELD_HIT_RADIUS } from "./grid-drag";
 import { createBodyCell, populateBodyCell } from "./body-cells";
 import { tileAppearance } from "./appearance";
-import { RotationInterpolation, type RotationTransform } from "./rotation-interpolation";
+import { FlipInterpolation } from "./flip-interpolation";
+import { RotationInterpolation } from "./rotation-interpolation";
 import { TranslationInterpolation } from "./translation-interpolation";
 import {
   type BodyCell,
@@ -100,7 +103,17 @@ interface CachedBody extends CachedBodyGeometry {
 interface CachedMotionBodies {
   revision: number;
   rotationRevision: number;
+  flipRevision: number;
   bodies: readonly CachedBody[];
+}
+
+interface BodyTransform {
+  a: number;
+  b: number;
+  c: number;
+  d: number;
+  x: number;
+  y: number;
 }
 export interface GridRegionScreenBounds {
   readonly left: number;
@@ -192,6 +205,8 @@ export class CanvasRenderer {
   private renderedPreviousWorldRevision = -1;
   private readonly previousRotatorDirections = new Map<number, Direction>();
   private readonly rotationInterpolation = new RotationInterpolation();
+  private readonly flipInterpolation = new FlipInterpolation();
+  private readonly rotationTransform: BodyTransform = { a: 1, b: 0, c: 0, d: 1, x: 0, y: 0 };
   private readonly translationInterpolation = new TranslationInterpolation();
   private renderedProgress = -1;
   private renderedNestedPortCharges = -1;
@@ -1252,6 +1267,7 @@ export class CanvasRenderer {
   private drawTiles(previousWorld: World | null, progress: number, animationTime: number): void {
     this.translationInterpolation.prepare(this.world, previousWorld);
     this.rotationInterpolation.prepare(this.world, previousWorld, progress);
+    this.flipInterpolation.prepare(this.world, previousWorld, progress);
     if (
       previousWorld !== this.renderedPreviousWorld ||
       (previousWorld?.revision ?? -1) !== this.renderedPreviousWorldRevision
@@ -1304,7 +1320,8 @@ export class CanvasRenderer {
     const motion = this.translationInterpolation;
     const cached = this.motionBodies.get(body);
     if (cached?.revision === motion.revision &&
-      cached.rotationRevision === this.rotationInterpolation.revision) return cached.bodies;
+      cached.rotationRevision === this.rotationInterpolation.revision &&
+      cached.flipRevision === this.flipInterpolation.revision) return cached.bodies;
     const firstCell = expectDefined(body.cells[0], "first motion group cell");
     const firstKey = this.motionGroupAt(firstCell.y * this.world.width + firstCell.x);
     let uniform = motion.transitionAt(firstCell.y * this.world.width + firstCell.x) !== -1;
@@ -1319,6 +1336,7 @@ export class CanvasRenderer {
     if (uniform && cached?.bodies.length === 1 && cached.bodies[0] === body) {
       cached.revision = motion.revision;
       cached.rotationRevision = this.rotationInterpolation.revision;
+      cached.flipRevision = this.flipInterpolation.revision;
       return cached.bodies;
     }
     const bodies: CachedBody[] = [];
@@ -1365,11 +1383,13 @@ export class CanvasRenderer {
     }
     if (cached === undefined) {
       this.motionBodies.set(body, {
-        revision: motion.revision, rotationRevision: this.rotationInterpolation.revision, bodies,
+        revision: motion.revision, rotationRevision: this.rotationInterpolation.revision,
+        flipRevision: this.flipInterpolation.revision, bodies,
       });
     } else {
       cached.revision = motion.revision;
       cached.rotationRevision = this.rotationInterpolation.revision;
+      cached.flipRevision = this.flipInterpolation.revision;
       cached.bodies = bodies;
     }
     return bodies;
@@ -1422,8 +1442,10 @@ export class CanvasRenderer {
   }
 
   private motionGroupAt(index: number): number {
+    const flipGroup = this.flipInterpolation.groupAt(index);
+    if (flipGroup > 0) return -2 * flipGroup;
     const rotationGroup = this.rotationInterpolation.groupAt(index);
-    if (rotationGroup > 0) return -rotationGroup;
+    if (rotationGroup > 0) return -2 * rotationGroup + 1;
     const motion = this.translationInterpolation;
     return (motion.yAt(index) + this.world.height) * (this.world.width * 2 + 1) +
       motion.xAt(index) + this.world.width;
@@ -1438,30 +1460,32 @@ export class CanvasRenderer {
     if (body.retractingArm && phase === "decoration") return;
     const firstCell = expectDefined(body.cells[0], "first animated body cell");
     const firstIndex = firstCell.y * this.world.width + firstCell.x;
-    const rotation = this.rotationInterpolation.at(firstIndex);
+    const transform = this.bodyTransformAt(firstIndex);
+    const flip = this.flipInterpolation.at(firstIndex);
+    const rotation = flip === null ? this.rotationInterpolation.at(firstIndex) : null;
     const remainingProgress = 1 - progress;
     const motion = this.translationInterpolation;
     const armX = body.retractingArm ? directionX(firstCell.orientation) * remainingProgress : 0;
     const armY = body.retractingArm ? directionY(firstCell.orientation) * remainingProgress : 0;
-    const offsetX = rotation === null ? motion.xAt(firstIndex) * remainingProgress + armX : 0;
-    const offsetY = rotation === null ? motion.yAt(firstIndex) * remainingProgress + armY : 0;
-    let minX = body.minX + offsetX + (rotation === null ? 0 : armX);
-    let minY = body.minY + offsetY + (rotation === null ? 0 : armY);
-    let maxX = body.maxX + offsetX + (rotation === null ? 0 : armX);
-    let maxY = body.maxY + offsetY + (rotation === null ? 0 : armY);
-    if (rotation !== null) {
+    const offsetX = transform === null ? motion.xAt(firstIndex) * remainingProgress + armX : 0;
+    const offsetY = transform === null ? motion.yAt(firstIndex) * remainingProgress + armY : 0;
+    let minX = body.minX + offsetX + (transform === null ? 0 : armX);
+    let minY = body.minY + offsetY + (transform === null ? 0 : armY);
+    let maxX = body.maxX + offsetX + (transform === null ? 0 : armX);
+    let maxY = body.maxY + offsetY + (transform === null ? 0 : armY);
+    if (transform !== null) {
       const centerX = (minX + maxX) / 2;
       const centerY = (minY + maxY) / 2;
       const halfWidth = (maxX - minX) / 2;
       const halfHeight = (maxY - minY) / 2;
-      const rotatedX = rotation.cosine * centerX - rotation.sine * centerY + rotation.x;
-      const rotatedY = rotation.sine * centerX + rotation.cosine * centerY + rotation.y;
-      const extentX = Math.abs(rotation.cosine) * halfWidth + Math.abs(rotation.sine) * halfHeight;
-      const extentY = Math.abs(rotation.sine) * halfWidth + Math.abs(rotation.cosine) * halfHeight;
-      minX = rotatedX - extentX;
-      maxX = rotatedX + extentX;
-      minY = rotatedY - extentY;
-      maxY = rotatedY + extentY;
+      const transformedX = transform.a * centerX + transform.c * centerY + transform.x;
+      const transformedY = transform.b * centerX + transform.d * centerY + transform.y;
+      const extentX = Math.abs(transform.a) * halfWidth + Math.abs(transform.c) * halfHeight;
+      const extentY = Math.abs(transform.b) * halfWidth + Math.abs(transform.d) * halfHeight;
+      minX = transformedX - extentX;
+      maxX = transformedX + extentX;
+      minY = transformedY - extentY;
+      maxY = transformedY + extentY;
     }
     const visibleLeft = -this.originX / this.cellSize - 1;
     const visibleTop = -this.originY / this.cellSize - 1;
@@ -1486,8 +1510,14 @@ export class CanvasRenderer {
         const previousDirection = this.previousRotatorDirections.get(this.world.idAtIndex(index));
         if (previousDirection !== undefined) {
           const direction = cell.componentState.direction;
-          const bodyTurn = rotation?.quarterTurn ?? 0;
-          let turn = ((direction - previousDirection - bodyTurn + 6) % 4) - 2;
+          let carriedDirection = ((previousDirection +
+            (flip?.priorQuarterTurn ?? rotation?.quarterTurn ?? 0)) & 3) as Direction;
+          if (flip !== null) {
+            carriedDirection = flip.horizontally
+              ? flipDirectionHorizontally(carriedDirection)
+              : flipDirectionVertically(carriedDirection);
+          }
+          let turn = ((direction - carriedDirection + 6) % 4) - 2;
           // Batched opposite-side grips pass through the front, never the rear input.
           if (turn === -2 && previousDirection === ((cell.orientation + 3) & 3)) turn = 2;
           cell.rotatorTurnOffset = -turn * remainingProgress;
@@ -1499,8 +1529,8 @@ export class CanvasRenderer {
       this.originX + offsetX * this.cellSize,
       this.originY + offsetY * this.cellSize,
     );
-    if (rotation !== null) {
-      this.applyRotationTransform(rotation);
+    if (transform !== null) {
+      this.applyBodyTransform(transform);
       this.context.translate(armX * this.cellSize, armY * this.cellSize);
     }
     if (phase === "slab" && body.slabClip !== undefined) this.context.clip(body.slabClip);
@@ -1545,7 +1575,7 @@ export class CanvasRenderer {
     const endY = Math.min(world.height, Math.ceil((this.viewportHeight - originY) / cellSize) + 1);
     // Keep the combined per-kind paths: separate fills introduce fractional-pixel seams.
     // Only committed geometry can outlive a snapshot/progress change.
-    const stationary = !this.rotationInterpolation.active &&
+    const stationary = !this.rotationInterpolation.active && !this.flipInterpolation.active &&
       (remainingProgress === 0 || this.translationInterpolation.movingIndices.length === 0);
     const cached = this.lowDetailGeometry;
     if (!stationary || cached === null || cached.revision !== world.geometryRevision ||
@@ -1584,29 +1614,40 @@ export class CanvasRenderer {
     }
     if (this.rotationInterpolation.active) {
       for (const index of this.rotationInterpolation.indices) {
-        const rotation = this.rotationInterpolation.at(index);
-        if (rotation === null) throw new Error(`Missing rotation for animated cell ${index}`);
-        const orientation = world.orientationAtIndex(index);
-        const headOffset = this.translationInterpolation.transitionAt(index) === -1 ? remainingProgress : 0;
-        const headX = directionX(orientation) * headOffset;
-        const headY = directionY(orientation) * headOffset;
-        this.context.save();
-        this.context.translate(originX, originY);
-        this.applyRotationTransform(rotation);
-        this.context.fillStyle = TILE_DEFINITIONS[world.kindAtIndex(index)].fill;
-        this.context.fillRect(
-          (index % world.width + Math.min(0, headX)) * cellSize,
-          (Math.floor(index / world.width) + Math.min(0, headY)) * cellSize,
-          (1 + Math.abs(headX)) * cellSize, (1 + Math.abs(headY)) * cellSize,
-        );
-        this.context.restore();
+        if (this.flipInterpolation.groupAt(index) === 0) {
+          this.drawLowDetailTransformedCell(index, remainingProgress);
+        }
+      }
+    }
+    if (this.flipInterpolation.active) {
+      for (const index of this.flipInterpolation.indices) {
+        this.drawLowDetailTransformedCell(index, remainingProgress);
       }
     }
   }
 
+  private drawLowDetailTransformedCell(index: number, remainingProgress: number): void {
+    const transform = this.bodyTransformAt(index);
+    if (transform === null) throw new Error(`Missing transform for animated cell ${index}`);
+    const orientation = this.world.orientationAtIndex(index);
+    const headOffset = this.translationInterpolation.transitionAt(index) === -1 ? remainingProgress : 0;
+    const headX = directionX(orientation) * headOffset;
+    const headY = directionY(orientation) * headOffset;
+    this.context.save();
+    this.context.translate(this.originX, this.originY);
+    this.applyBodyTransform(transform);
+    this.context.fillStyle = TILE_DEFINITIONS[this.world.kindAtIndex(index)].fill;
+    this.context.fillRect(
+      (index % this.world.width + Math.min(0, headX)) * this.cellSize,
+      (Math.floor(index / this.world.width) + Math.min(0, headY)) * this.cellSize,
+      (1 + Math.abs(headX)) * this.cellSize, (1 + Math.abs(headY)) * this.cellSize,
+    );
+    this.context.restore();
+  }
+
   private appendLowDetailCell(index: number, remainingProgress: number): void {
     const kind = this.world.kindAtIndex(index);
-    if (kind === TileKind.Empty || this.rotationInterpolation.at(index) !== null) return;
+    if (kind === TileKind.Empty || this.bodyTransformAt(index) !== null) return;
     const motion = this.translationInterpolation;
     const orientation = this.world.orientationAtIndex(index);
     const headOffset = motion.transitionAt(index) === -1 ? remainingProgress : 0;
@@ -1629,10 +1670,25 @@ export class CanvasRenderer {
     path.rect(left, top, width, height);
   }
 
-  private applyRotationTransform(rotation: RotationTransform): void {
+  private bodyTransformAt(index: number): BodyTransform | null {
+    const flip = this.flipInterpolation.at(index);
+    if (flip !== null) return flip;
+    const rotation = this.rotationInterpolation.at(index);
+    if (rotation === null) return null;
+    const transform = this.rotationTransform;
+    transform.a = rotation.cosine;
+    transform.b = rotation.sine;
+    transform.c = -rotation.sine;
+    transform.d = rotation.cosine;
+    transform.x = rotation.x;
+    transform.y = rotation.y;
+    return transform;
+  }
+
+  private applyBodyTransform(transform: BodyTransform): void {
     this.context.transform(
-      rotation.cosine, rotation.sine, -rotation.sine, rotation.cosine,
-      rotation.x * this.cellSize, rotation.y * this.cellSize,
+      transform.a, transform.b, transform.c, transform.d,
+      transform.x * this.cellSize, transform.y * this.cellSize,
     );
   }
 
@@ -1908,6 +1964,7 @@ export class CanvasRenderer {
       case TileKind.Furnace:
       case TileKind.Grinder:
       case TileKind.Drill:
+      case TileKind.Flipper:
         this.drawSensorObservation(orientation);
         break;
       case TileKind.ChargeSensor:
@@ -2174,11 +2231,11 @@ export class CanvasRenderer {
     const y = Math.floor(this.highlightedTileIndex / world.width);
     let offsetX = 0;
     let offsetY = 0;
-    const rotation = this.rotationInterpolation.at(this.highlightedTileIndex);
+    const transform = this.bodyTransformAt(this.highlightedTileIndex);
     if (previousWorld !== null && progress < 1) {
       const motion = this.translationInterpolation;
-      let dx = rotation === null ? motion.xAt(this.highlightedTileIndex) : 0;
-      let dy = rotation === null ? motion.yAt(this.highlightedTileIndex) : 0;
+      let dx = transform === null ? motion.xAt(this.highlightedTileIndex) : 0;
+      let dy = transform === null ? motion.yAt(this.highlightedTileIndex) : 0;
       if (motion.transitionAt(this.highlightedTileIndex) === -1) {
         const orientation = world.orientationAtIndex(this.highlightedTileIndex);
         dx += directionX(orientation);
@@ -2192,7 +2249,7 @@ export class CanvasRenderer {
     const inset = Math.min(3, cellSize * 0.15);
     context.save();
     context.translate(this.originX, this.originY);
-    if (rotation !== null) this.applyRotationTransform(rotation);
+    if (transform !== null) this.applyBodyTransform(transform);
     context.strokeStyle = "#f1cc38";
     context.lineWidth = 3;
     context.strokeRect(left, top, cellSize, cellSize);

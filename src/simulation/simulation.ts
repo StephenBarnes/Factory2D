@@ -1,4 +1,5 @@
 import { CircuitResolver } from "./circuit-resolver";
+import { beginFlipAnimation, clearFlipAnimation, sealFlipAnimation } from "./flip-animation";
 import { MAX_RUNE_ARRAY_DEPTH } from "./rune-array";
 import { beginRotationAnimation, clearRotationAnimation, sealRotationAnimation } from "./rotation-animation";
 import { TileKind } from "./tile";
@@ -32,12 +33,14 @@ export class Simulation {
   step(interpolationSource?: World): number {
     for (const runtime of this.runtimes) {
       clearRotationAnimation(runtime.world);
+      clearFlipAnimation(runtime.world);
     }
     this.collectRuntimes(interpolationSource);
     this.circuitResolver.observeMagicLinks(this.runtimes);
     let hasCircuit = false;
     for (const runtime of this.runtimes) {
       beginRotationAnimation(runtime.world, runtime.interpolationSource);
+      beginFlipAnimation(runtime.world, runtime.interpolationSource);
       runtime.collectIntents();
       hasCircuit ||= runtime.world.hasFeature(WorldFeature.Circuit);
     }
@@ -57,6 +60,7 @@ export class Simulation {
     }
     for (const runtime of this.runtimes) {
       sealRotationAnimation(runtime.world);
+      sealFlipAnimation(runtime.world);
     }
     this.tick += 1;
     return movementCount;
@@ -65,6 +69,7 @@ export class Simulation {
   resetTo(snapshot: World): void {
     for (const runtime of this.runtimes) {
       clearRotationAnimation(runtime.world);
+      clearFlipAnimation(runtime.world);
     }
     this.world.copyFrom(snapshot);
     this.tick = 0;

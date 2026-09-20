@@ -5,6 +5,7 @@ import { DuplicatorResolver } from "./duplicator-resolver";
 import { DrillResolver } from "./drill-resolver";
 import { FurnaceResolver } from "./furnace-resolver";
 import { FireResolver } from "./fire-resolver";
+import { FlipperResolver } from "./flipper-resolver";
 import { MotionWorkspace } from "./motion-workspace";
 import { MovementSensorObserver } from "./movement-sensor";
 import { PistonResolver } from "./piston-resolver";
@@ -32,6 +33,7 @@ export class WorldRuntime {
   private motionWorkspaceValue: MotionWorkspace | undefined;
   private pistonResolverValue: PistonResolver | undefined;
   private rotatorResolverValue: RotatorResolver | undefined;
+  private flipperResolverValue: FlipperResolver | undefined;
   private weldOperationResolverValue: WeldOperationResolver | undefined;
   private movementSensorObserver: MovementSensorObserver | undefined;
   private initialBellXs: Map<number, number> | undefined;
@@ -122,6 +124,10 @@ export class WorldRuntime {
     return this.rotatorResolverValue ??= new RotatorResolver(this.world);
   }
 
+  get flipperResolver(): FlipperResolver {
+    return this.flipperResolverValue ??= new FlipperResolver(this.world);
+  }
+
   get weldOperationResolver(): WeldOperationResolver {
     return this.weldOperationResolverValue ??= new WeldOperationResolver(this.world);
   }
@@ -194,6 +200,9 @@ export class WorldRuntime {
       : 0;
     if (this.world.hasFeature(WorldFeature.Rotator)) {
       movementCount += this.rotatorResolver.resolve();
+    }
+    if (this.world.hasFeature(WorldFeature.Flipper)) {
+      movementCount += this.flipperResolver.resolve();
     }
     if (this.world.hasFeature(WorldFeature.Piston)) {
       movementCount += this.pistonResolver.resolve();

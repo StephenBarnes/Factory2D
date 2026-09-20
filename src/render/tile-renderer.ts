@@ -498,6 +498,7 @@ function drawDecoration(
       definition.decorationStyle === TileDecorationStyle.Lut ||
       definition.decorationStyle === TileDecorationStyle.Checker ||
       definition.decorationStyle === TileDecorationStyle.Rotator ||
+      definition.decorationStyle === TileDecorationStyle.Flipper ||
       definition.decorationStyle === TileDecorationStyle.Assembler ||
       definition.decorationStyle === TileDecorationStyle.ForceProjector ||
       definition.decorationStyle === TileDecorationStyle.LevitationProjector ||
@@ -528,7 +529,8 @@ function drawDecoration(
       circuitPortCharges,
       (orientedSides(
         (definition.circuitInputPorts | definition.circuitOutputPorts |
-          (definition.decorationStyle === TileDecorationStyle.Rotator
+          (definition.decorationStyle === TileDecorationStyle.Rotator ||
+            definition.decorationStyle === TileDecorationStyle.Flipper
             ? WeldSide.Down
             : WeldSide.None)) as WeldSide,
         orientation,
@@ -1289,6 +1291,47 @@ function drawDecoration(
         drawDot(context, sign * size * 0.2, size * 0.25, size * 0.055);
         context.fill();
       }
+      context.restore();
+      drawPortArrows(context, left, top, size, orientation,
+        WeldSide.Down, WeldSide.None, circuitPortCharges);
+      break;
+    }
+    case TileDecorationStyle.Flipper: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.lineWidth = Math.max(1.5, size * 0.045);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      // The charge axes are global: only the target and rear input follow facing.
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[1];
+      context.beginPath();
+      context.moveTo(-size * 0.22, 0);
+      context.lineTo(size * 0.22, 0);
+      context.moveTo(-size * 0.15, -size * 0.06);
+      context.lineTo(-size * 0.22, 0);
+      context.lineTo(-size * 0.15, size * 0.06);
+      context.moveTo(size * 0.15, -size * 0.06);
+      context.lineTo(size * 0.22, 0);
+      context.lineTo(size * 0.15, size * 0.06);
+      context.stroke();
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[-1];
+      context.beginPath();
+      context.moveTo(0, -size * 0.22);
+      context.lineTo(0, size * 0.22);
+      context.moveTo(-size * 0.06, -size * 0.15);
+      context.lineTo(0, -size * 0.22);
+      context.lineTo(size * 0.06, -size * 0.15);
+      context.moveTo(-size * 0.06, size * 0.15);
+      context.lineTo(0, size * 0.22);
+      context.lineTo(size * 0.06, size * 0.15);
+      context.stroke();
+      context.rotate(orientation * Math.PI / 2);
+      context.strokeStyle = definition.decorationColor;
+      context.beginPath();
+      context.moveTo(-size * 0.11, -size * 0.29);
+      context.lineTo(0, -size * 0.38);
+      context.lineTo(size * 0.11, -size * 0.29);
+      context.stroke();
       context.restore();
       drawPortArrows(context, left, top, size, orientation,
         WeldSide.Down, WeldSide.None, circuitPortCharges);
