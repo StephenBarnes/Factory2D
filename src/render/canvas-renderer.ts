@@ -1496,6 +1496,7 @@ export class CanvasRenderer {
 
     for (const cell of body.cells) {
       if (
+        (cell.kind === TileKind.Destroyer && this.cellSize >= DECORATION_CELL_SIZE) ||
         (cell.kind === TileKind.Conveyor && cell.outputCharge !== 0) ||
         ((cell.kind === TileKind.Furnace || cell.kind === TileKind.Grinder ||
           cell.kind === TileKind.Drill) && cell.outputCharge === 1)

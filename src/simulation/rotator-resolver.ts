@@ -1,5 +1,6 @@
 import { expectDefined } from "../util/assert";
 import { magicLinksFor } from "./magic-link";
+import { ContactDestruction, contactDestruction } from "./motion-contact";
 import { recordRotationAnimation } from "./rotation-animation";
 import { recordShatterEffects } from "./shatter-animation";
 import {
@@ -12,7 +13,6 @@ import {
 } from "./tile";
 import type { World } from "./world";
 import { WorldFeature } from "./world-features";
-import { WeldedBodyIndex } from "./welded-body-index";
 
 interface RotationProposal {
   pivot: number;
@@ -24,19 +24,23 @@ interface RotationProposal {
   jammed: boolean;
   readonly selected: number[];
   readonly sweep: number[];
+  readonly victims: number[];
+  readonly victimContacts: number[];
 }
 
 /**
  * Resolves quarter-turns around stationary rotator cells, trying opposite base
  * rotation when the gripped body's turn is geometrically blocked. Collision is
- * tile-discrete: swept bodies and enclosed contents join the turn recursively.
+ * tile-discrete: non-destructive swept bodies and enclosed contents join the turn
+ * recursively. Destructive contacts cut individual cells only after acceptance.
  * Fixed bodies, out-of-bounds sweeps, or capture of the stationary body block it.
  */
 export class RotatorResolver {
   private readonly world: World;
-  private readonly weldedBodies: WeldedBodyIndex;
   private readonly selected: Uint8Array;
   private readonly sweep: Uint8Array;
+  private readonly captured: Uint8Array;
+  private readonly destroyed: Uint8Array;
   private readonly reachable: Uint8Array;
   private readonly queue: Int32Array;
   private readonly sweepOwners: Int32Array;
@@ -47,9 +51,10 @@ export class RotatorResolver {
 
   constructor(world: World) {
     this.world = world;
-    this.weldedBodies = new WeldedBodyIndex(world);
     this.selected = new Uint8Array(world.cellCount);
     this.sweep = new Uint8Array(world.cellCount);
+    this.captured = new Uint8Array(world.cellCount);
+    this.destroyed = new Uint8Array(world.cellCount);
     this.reachable = new Uint8Array(world.cellCount);
     this.queue = new Int32Array(world.cellCount);
     this.sweepOwners = new Int32Array(world.cellCount);
@@ -57,7 +62,6 @@ export class RotatorResolver {
   }
 
   resolve(): number {
-    this.weldedBodies.collect();
     this.proposalCount = 0;
     for (
       let pivot = this.world.firstFeatureIndex(WorldFeature.Rotator);
@@ -119,16 +123,30 @@ export class RotatorResolver {
         proposal.pivot,
         proposal.quarterTurn,
       );
+      const pivotId = this.world.idAtIndex(proposal.pivot);
+      const gripId = this.world.idAtIndex(proposal.grip);
       if (proposal.headWelded) {
         this.setHeadWeld(proposal.pivot, proposal.grip, false);
+      }
+      for (let index = 0; index < proposal.victims.length; index += 1) {
+        const victim = expectDefined(proposal.victims[index], "rotation victim");
+        recordShatterEffects(
+          this.world, victim, expectDefined(proposal.victimContacts[index], "rotation contact"),
+        );
+        this.world.place(victim % this.world.width, Math.floor(victim / this.world.width), TileKind.Empty);
+        this.selected[victim] = 0;
       }
       rotatedCellCount += this.world.rotateCells(
         this.selected,
         proposal.pivot,
         proposal.quarterTurn,
       );
-      this.world.setRotatorDirectionAtIndex(proposal.pivot, proposal.nextDirection);
-      if (proposal.headWelded) {
+      const pivotSurvives = this.world.idAtIndex(proposal.pivot) === pivotId;
+      if (pivotSurvives) {
+        this.world.setRotatorDirectionAtIndex(proposal.pivot, proposal.nextDirection);
+      }
+      const head = this.neighborIndex(proposal.pivot, proposal.nextDirection);
+      if (proposal.headWelded && pivotSurvives && this.world.idAtIndex(head) === gripId) {
         this.setHeadWeld(
           proposal.pivot,
           this.neighborIndex(proposal.pivot, proposal.nextDirection),
@@ -137,6 +155,7 @@ export class RotatorResolver {
       }
       if (this.world.hasFeature(WorldFeature.Fastener)) {
         for (const source of proposal.selected) {
+          if (this.selected[source] === 0) continue;
           const destination = this.destinationFor(source, proposal.pivot, proposal.quarterTurn);
           if (this.world.kindAtIndex(destination) === TileKind.Fastener) {
             const x = destination % this.world.width;
@@ -162,6 +181,8 @@ export class RotatorResolver {
         jammed: false,
         selected: [],
         sweep: [],
+        victims: [],
+        victimContacts: [],
       };
       this.proposals.push(proposal);
     }
@@ -170,6 +191,8 @@ export class RotatorResolver {
     proposal.jammed = false;
     proposal.selected.length = 0;
     proposal.sweep.length = 0;
+    proposal.victims.length = 0;
+    proposal.victimContacts.length = 0;
     return proposal;
   }
 
@@ -179,6 +202,7 @@ export class RotatorResolver {
     reaction = false,
   ): void {
     this.selected.fill(0);
+    this.destroyed.fill(0);
     proposal.selected.length = 0;
     const target = this.neighborIndex(proposal.pivot, direction);
     const stationary = reaction ? target : proposal.pivot;
@@ -196,7 +220,7 @@ export class RotatorResolver {
         index >= 0;
         index = this.world.nextFeatureIndex(WorldFeature.Occupied, index)
       ) {
-        if (this.selected[index] === 0 && this.sweep[index] === 1) {
+        if (this.selected[index] === 0 && this.captured[index] === 1 && this.destroyed[index] === 0) {
           this.addBodyAt(index, proposal);
           changed = true;
         }
@@ -207,14 +231,13 @@ export class RotatorResolver {
         index >= 0;
         index = this.world.nextFeatureIndex(WorldFeature.Occupied, index)
       ) {
-        if (this.selected[index] === 0 && this.reachable[index] === 0) {
+        if (this.selected[index] === 0 && this.reachable[index] === 0 && this.destroyed[index] === 0) {
           this.addBodyAt(index, proposal);
           changed = true;
         }
       }
     } while (changed);
 
-    this.buildSweep(proposal);
     proposal.blocked = this.sweepLeavesWorld || this.selected[stationary] === 1;
     for (const source of proposal.selected) {
       if (TILE_DEFINITIONS[this.world.kindAtIndex(source)].immovable) {
@@ -229,7 +252,8 @@ export class RotatorResolver {
       if (
         destination < 0 ||
         (this.world.kindAtIndex(destination) !== TileKind.Empty &&
-          this.selected[destination] === 0)
+          this.selected[destination] === 0 && this.destroyed[destination] === 0 &&
+          this.destroyed[source] === 0)
       ) {
         proposal.blocked = true;
         break;
@@ -242,52 +266,41 @@ export class RotatorResolver {
   }
 
   private addBodyAt(index: number, proposal: RotationProposal): void {
-    if (this.selected[index] === 1) {
+    if (this.selected[index] === 1 || this.destroyed[index] === 1) {
       return;
     }
-    const root = this.weldedBodies.rootAt(index);
-    if (proposal.headWelded && root === this.weldedBodies.rootAt(proposal.pivot)) {
-      // Split only this actuator's head seam, never another rotator's welds.
-      // Alternate welded or magic-link paths back to the base remain connected.
-      const links = magicLinksFor(this.world);
-      const start = proposal.selected.length;
-      this.selected[index] = 1;
-      proposal.selected.push(index);
-      for (let cursor = start; cursor < proposal.selected.length; cursor += 1) {
-        const cell = expectDefined(proposal.selected[cursor], "rotator body member");
-        for (let side: Direction = Direction.Up; side <= Direction.Left; side += 1) {
-          if (!this.world.hasWeldAtIndex(cell, side)) {
-            continue;
-          }
-          const other = this.neighborIndex(cell, side);
-          if ((cell === proposal.pivot && other === proposal.grip) ||
-              (cell === proposal.grip && other === proposal.pivot)) {
-            continue;
-          }
-          if (this.selected[other] === 0) {
+    // Potentially cut cells cannot transmit capture into the untouched remainder
+    // of a body. Its surviving welds still determine which fragments join the turn.
+    const links = magicLinksFor(this.world);
+    links?.collect();
+    const start = proposal.selected.length;
+    this.selected[index] = 1;
+    proposal.selected.push(index);
+    for (let cursor = start; cursor < proposal.selected.length; cursor += 1) {
+      const cell = expectDefined(proposal.selected[cursor], "rotator body member");
+      for (let side: Direction = Direction.Up; side <= Direction.Left; side += 1) {
+        if (!this.world.hasWeldAtIndex(cell, side)) {
+          continue;
+        }
+        const other = this.neighborIndex(cell, side);
+        if ((cell === proposal.pivot && other === proposal.grip) ||
+            (cell === proposal.grip && other === proposal.pivot)) {
+          continue;
+        }
+        if (this.selected[other] === 0 && this.destroyed[other] === 0) {
+          this.selected[other] = 1;
+          proposal.selected.push(other);
+        }
+      }
+      if (links !== undefined && this.world.kindAtIndex(cell) === TileKind.MagicLink) {
+        for (let edge = links.firstEdgeAt(cell); edge >= 0; edge = links.nextEdge(edge)) {
+          const other = links.targetAt(edge);
+          if (this.selected[other] === 0 && this.destroyed[other] === 0) {
             this.selected[other] = 1;
             proposal.selected.push(other);
           }
         }
-        if (links !== undefined && this.world.kindAtIndex(cell) === TileKind.MagicLink) {
-          for (let edge = links.firstEdgeAt(cell); edge >= 0; edge = links.nextEdge(edge)) {
-            const other = links.targetAt(edge);
-            if (this.selected[other] === 0) {
-              this.selected[other] = 1;
-              proposal.selected.push(other);
-            }
-          }
-        }
       }
-      return;
-    }
-    let member = this.weldedBodies.headAtRoot(root);
-    while (member >= 0) {
-      if (this.selected[member] === 0) {
-        this.selected[member] = 1;
-        proposal.selected.push(member);
-      }
-      member = this.weldedBodies.nextMember(member);
     }
   }
 
@@ -305,6 +318,10 @@ export class RotatorResolver {
 
   private buildSweep(proposal: RotationProposal): void {
     this.sweep.fill(0);
+    this.captured.fill(0);
+    this.destroyed.fill(0);
+    proposal.victims.length = 0;
+    proposal.victimContacts.length = 0;
     proposal.sweep.length = 0;
     this.sweepLeavesWorld = false;
     const pivotX = proposal.pivot % this.world.width;
@@ -318,7 +335,7 @@ export class RotatorResolver {
       const steps = Math.max(1, Math.ceil(radius * Math.PI * 2.5));
       let previousX = sourceX;
       let previousY = sourceY;
-      this.markSweepCell(previousX, previousY, proposal.sweep);
+      this.markSweepCell(previousX, previousY, source, proposal);
       for (let step = 1; step <= steps; step += 1) {
         const angle = proposal.quarterTurn * step * Math.PI / (steps * 2);
         const cosine = Math.cos(angle);
@@ -326,17 +343,17 @@ export class RotatorResolver {
         const x = Math.floor(pivotX + deltaX * cosine - deltaY * sine + 0.5);
         const y = Math.floor(pivotY + deltaX * sine + deltaY * cosine + 0.5);
         if (x !== previousX && y !== previousY) {
-          this.markSweepCell(x, previousY, proposal.sweep);
-          this.markSweepCell(previousX, y, proposal.sweep);
+          this.markSweepCell(x, previousY, source, proposal);
+          this.markSweepCell(previousX, y, source, proposal);
         }
-        this.markSweepCell(x, y, proposal.sweep);
+        this.markSweepCell(x, y, source, proposal);
         previousX = x;
         previousY = y;
       }
     }
   }
 
-  private markSweepCell(x: number, y: number, sweepList: number[]): void {
+  private markSweepCell(x: number, y: number, source: number, proposal: RotationProposal): void {
     if (x < 0 || x >= this.world.width || y < 0 || y >= this.world.height) {
       this.sweepLeavesWorld = true;
       return;
@@ -344,8 +361,27 @@ export class RotatorResolver {
     const index = y * this.world.width + x;
     if (this.sweep[index] === 0) {
       this.sweep[index] = 1;
-      sweepList.push(index);
+      proposal.sweep.push(index);
     }
+    // Every selected cell vacates its source with the same rigid transform.
+    // Passing through a co-moving source is not contact, even for destroyers.
+    if (this.selected[index] === 1 || this.world.kindAtIndex(index) === TileKind.Empty) {
+      return;
+    }
+    const destruction = contactDestruction(this.world.kindAtIndex(source), this.world.kindAtIndex(index));
+    if (destruction === ContactDestruction.None) {
+      this.captured[index] = 1;
+    } else {
+      if ((destruction & ContactDestruction.Source) !== 0) this.markVictim(source, index, proposal);
+      if ((destruction & ContactDestruction.Target) !== 0) this.markVictim(index, index, proposal);
+    }
+  }
+
+  private markVictim(victim: number, contact: number, proposal: RotationProposal): void {
+    if (this.destroyed[victim] === 1) return;
+    this.destroyed[victim] = 1;
+    proposal.victims.push(victim);
+    proposal.victimContacts.push(contact);
   }
 
   /** Marks every cell reachable from the board edge without crossing a selected cell. */

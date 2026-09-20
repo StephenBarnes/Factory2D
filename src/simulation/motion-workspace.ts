@@ -1,5 +1,6 @@
 import { expectDefined } from "../util/assert";
 import { magicLinksFor } from "./magic-link";
+import { ContactDestruction, contactDestruction } from "./motion-contact";
 import { recordShatterEffects } from "./shatter-animation";
 import {
   Direction,
@@ -189,9 +190,8 @@ export class MotionWorkspace {
 
   private breakMovedFasteners(): void {
     for (const index of this.breakingFastenerDestinations) {
-      if (this.world.kindAtIndex(index) !== TileKind.Fastener) {
-        throw new Error(`Moved fastener missing at index ${index}`);
-      }
+      // Contact destruction may already have removed this carried fastener.
+      if (this.world.kindAtIndex(index) !== TileKind.Fastener) continue;
       const x = index % this.world.width;
       recordShatterEffects(this.world, index);
       this.world.place(x, (index - x) / this.world.width, TileKind.Empty);
@@ -218,9 +218,8 @@ export class MotionWorkspace {
   private breakLandedFragileTiles(): void {
     // Keep landing cells solid until every body has resolved and committed its movement.
     for (const index of this.breakingFragileDestinations) {
-      if (TILE_DEFINITIONS[this.world.kindAtIndex(index)].fragile !== true) {
-        throw new Error(`Landed fragile tile missing at index ${index}`);
-      }
+      // A moving destroyer may have cut this landing tile during the commit.
+      if (TILE_DEFINITIONS[this.world.kindAtIndex(index)].fragile !== true) continue;
       const x = index % this.world.width;
       recordShatterEffects(this.world, index);
       this.world.place(x, (index - x) / this.world.width, TileKind.Empty);
@@ -726,6 +725,8 @@ export class MotionWorkspace {
           movable = false;
           break;
         }
+        if (contactDestruction(this.world.kindAtIndex(member), this.world.kindAtIndex(destination)) !==
+            ContactDestruction.None) continue;
         const other = expectDefined(this.bodyRoots[destination], "axis destination body");
         if (other >= 0 && this.jammedBodies[other] === 0) {
           this.jammedBodies[other] = 1;
@@ -883,7 +884,9 @@ export class MotionWorkspace {
 
         const destination = destinationY * this.world.width + destinationX;
         const blocker = expectDefined(this.bodyRoots[destination], "destination body root");
-        if (blocker < 0 || blocker === root) {
+        if (blocker < 0 || blocker === root ||
+            contactDestruction(this.world.kindAtIndex(member), this.world.kindAtIndex(destination)) !==
+              ContactDestruction.None) {
           continue;
         }
         if (
@@ -1056,7 +1059,9 @@ export class MotionWorkspace {
           continue;
         }
         const blocker = expectDefined(this.bodyRoots[destination], "gravity blocker root");
-        if (blocker < 0 || blocker === root) {
+        if (blocker < 0 || blocker === root ||
+            contactDestruction(this.world.kindAtIndex(member), this.world.kindAtIndex(destination)) !==
+              ContactDestruction.None) {
           continue;
         }
         if (this.drivenBodies[blocker] === 1) {
@@ -1137,6 +1142,8 @@ export class MotionWorkspace {
           member >= 0;
           member = expectDefined(this.nextBodyMember[member], "next body member")
         ) {
+          if (contactDestruction(this.world.kindAtIndex(member),
+            this.world.kindAtIndex(member + this.world.width)) !== ContactDestruction.None) continue;
           const blocker = expectDefined(this.bodyRoots[member + this.world.width], "gravity contact");
           if (blocker < 0 || gravityActivated[blocker] === 1) {
             continue;
@@ -1324,7 +1331,9 @@ export class MotionWorkspace {
       if (
         expectDefined(this.destinationOwners[destination], "destination owner") >= 0 ||
         this.world.kindAtIndex(destination) !== TileKind.Empty &&
-          this.bodyRoots[destination] !== root
+          this.bodyRoots[destination] !== root &&
+          contactDestruction(this.world.kindAtIndex(member), this.world.kindAtIndex(destination)) ===
+            ContactDestruction.None
       ) {
         return false;
       }

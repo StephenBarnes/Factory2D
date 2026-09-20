@@ -1,6 +1,7 @@
 import { expectDefined } from "../util/assert";
 import { recordFlipAnimation } from "./flip-animation";
 import { magicLinksFor } from "./magic-link";
+import { ContactDestruction, contactDestruction } from "./motion-contact";
 import { recordShatterEffects } from "./shatter-animation";
 import {
   Direction,
@@ -24,6 +25,7 @@ interface FlipProposal {
   pivot: number;
   horizontally: boolean;
   headWelded: boolean;
+  restoreHeadWeld: boolean;
   blocked: boolean;
   jammed: boolean;
   readonly selected: number[];
@@ -79,13 +81,17 @@ export class FlipperResolver {
         this.selected[source] = 1;
       }
       recordFlipAnimation(this.world, proposal.selected, proposal.pivot, proposal.horizontally);
+      const actuatorId = this.world.idAtIndex(proposal.actuator);
+      const pivotId = this.world.idAtIndex(proposal.pivot);
       if (proposal.headWelded) {
         this.setHeadWeld(proposal.actuator, proposal.pivot, false);
       }
       flippedCellCount += this.world.flipCells(
         this.selected, proposal.pivot, proposal.horizontally,
       );
-      if (proposal.headWelded) {
+      if (proposal.restoreHeadWeld &&
+          this.world.idAtIndex(proposal.actuatorDestination) === actuatorId &&
+          this.world.idAtIndex(proposal.pivot) === pivotId) {
         this.setHeadWeld(proposal.actuatorDestination, proposal.pivot, true);
       }
       // Fasteners remain solid until the original head seam is restored.
@@ -111,6 +117,7 @@ export class FlipperResolver {
         pivot: -1,
         horizontally: true,
         headWelded: false,
+        restoreHeadWeld: false,
         blocked: false,
         jammed: false,
         selected: [],
@@ -129,23 +136,33 @@ export class FlipperResolver {
   private buildProposal(proposal: FlipProposal, direction: Direction): void {
     this.selected.fill(0);
     this.collectBody(proposal);
+    proposal.restoreHeadWeld = proposal.headWelded;
     for (const source of proposal.selected) {
       const destination = this.destinationFor(source, proposal.pivot, proposal.horizontally);
       if (
         TILE_DEFINITIONS[this.world.kindAtIndex(source)].immovable ||
         destination < 0 ||
-        (this.world.kindAtIndex(destination) !== TileKind.Empty && this.selected[destination] === 0)
+        (this.world.kindAtIndex(destination) !== TileKind.Empty && this.selected[destination] === 0 &&
+          contactDestruction(this.world.kindAtIndex(source), this.world.kindAtIndex(destination)) ===
+            ContactDestruction.None)
       ) {
         proposal.blocked = true;
         return;
       }
       proposal.destinations.push(destination);
+      if (this.selected[destination] === 0) {
+        const destruction = contactDestruction(this.world.kindAtIndex(source), this.world.kindAtIndex(destination));
+        if ((source === proposal.actuator && (destruction & ContactDestruction.Source) !== 0) ||
+            (destination === proposal.actuator && (destruction & ContactDestruction.Target) !== 0)) {
+          proposal.restoreHeadWeld = false;
+        }
+      }
     }
     const carriesActuator = this.selected[proposal.actuator] === 1;
     proposal.actuatorDestination = carriesActuator
       ? this.destinationFor(proposal.actuator, proposal.pivot, proposal.horizontally)
       : proposal.actuator;
-    if (proposal.headWelded) {
+    if (proposal.restoreHeadWeld) {
       const headDirection = carriesActuator
         ? this.flipDirection(direction, proposal.horizontally)
         : direction;

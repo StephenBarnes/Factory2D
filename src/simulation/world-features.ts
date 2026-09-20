@@ -36,7 +36,8 @@ export const enum WorldFeature {
   Fire = 24,
   Resonator = 25,
   Flipper = 26,
-  Count = 27,
+  Destroyer = 27,
+  Count = 28,
 }
 
 const FEATURE_MASKS = new Uint32Array(
@@ -144,6 +145,9 @@ for (const kind of TILE_KINDS) {
   }
   if (kind === TileKind.Flipper) {
     mask |= 1 << WorldFeature.Flipper;
+  }
+  if (kind === TileKind.Destroyer) {
+    mask |= 1 << WorldFeature.Destroyer;
   }
   FEATURE_MASKS[kind] = mask;
 }

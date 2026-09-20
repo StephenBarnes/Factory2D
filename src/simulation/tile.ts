@@ -78,6 +78,7 @@ export const enum TileKind {
   Fire = 76,
   Resonator = 77,
   Flipper = 78,
+  Destroyer = 79,
 }
 
 export const enum Direction {
@@ -163,6 +164,7 @@ export const enum TileDecorationStyle {
   Fire = 63,
   Resonator = 64,
   Flipper = 65,
+  Destroyer = 66,
 }
 
 export const enum PaletteCategory {
@@ -195,7 +197,7 @@ export interface TileDefinition {
   readonly slidesAlongOrientation?: boolean;
   /** Hidden from occupancy sensors and transparent to charge-sensor rays; omitted means detectable. */
   readonly invisibleToSensor?: boolean;
-  /** Immune to destructive tools such as drills; omitted means destructible. */
+  /** Immune to drills and destroyer contact; omitted means destructible. */
   readonly indestructible?: boolean;
   /** Machinery cannot create or cut an edge when both endpoints are protected; editing is unaffected. */
   readonly runtimeWeldProtected?: boolean;
@@ -327,7 +329,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 25,
       category: PaletteCategory.PuzzleTools,
       description: "Fixed indestructible block not affected by gravity.",
-      extendedDescription: ["Anchors its entire welded body: it cannot fall or be pushed. Indestructible: drills cannot remove it. Weld-protected - cannot be welded/split at runtime at sides shared with other weld-protected blocks."],
+      extendedDescription: ["Anchors its entire welded body: it cannot fall or be pushed. Indestructible: drills and destroyers cannot remove it. Weld-protected - cannot be welded/split at runtime at sides shared with other weld-protected blocks."],
     },
     affectedByGravity: false,
     immovable: true,
@@ -643,7 +645,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 38,
       category: PaletteCategory.PuzzleTools,
       description: "Shares charge across welded circuit blocks. Indestructible and weld-protected.",
-      extendedDescription: ["Carries charge like a channel: every connected port shares the sign of the total driver charge. Positive and negative drivers cancel, and an undriven network is neutral.", "Indestructible, but not fixed: falls and moves with its welded body like an ordinary channel.", "Weld-protected - cannot be welded/split at runtime at sides shared with other weld-protected blocks."],
+      extendedDescription: ["Carries charge like a channel: every connected port shares the sign of the total driver charge. Positive and negative drivers cancel, and an undriven network is neutral.", "Indestructible: drills and destroyers cannot remove it, but it is not fixed and moves with its welded body like an ordinary channel.", "Weld-protected - cannot be welded/split at runtime at sides shared with other weld-protected blocks."],
     },
     affectedByGravity: true,
     indestructible: true,
@@ -1432,6 +1434,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     decorationStyle: TileDecorationStyle.Fire,
     decorationColor: "#ff963e",
   },
+  [TileKind.Destroyer]: {
+    name: "Destroyer",
+    boardCode: "9",
+    defaultPrice: 15,
+    palette: {
+      order: 82,
+      category: PaletteCategory.Transformation,
+      description: "Shatters blocks that move into it, or that it moves into. Needs no charge.",
+      extendedDescription: ["Destruction occurs only during accepted movement, including falling, powered movement, rotations, and flips. Simply touching an adjacent block does nothing. Removes the contacted tile and its welds, not its whole welded body.", "Indestructible blocks remain solid and cannot be destroyed. Two destroyers destroy each other on contact. Falls normally, can be welded on every side, and needs no charge."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.None,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#75483c",
+    decorationStyle: TileDecorationStyle.Destroyer,
+    decorationColor: "#e1d3b7",
+  },
   [TileKind.Drill]: {
     name: "Drill",
     boardCode: "f",
@@ -1537,7 +1563,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 43,
       category: PaletteCategory.PuzzleTools,
       description: "Absorbs a front welded body exactly matching the body behind it and pulses +1 sideways. Indestructible and weld-protected.",
-      extendedDescription: ["Matches complete bodies by tile kinds, directional orientations, and weld layout, allowing translation but not rotation or reflection. Configuration does not affect the match.", "The rear body remains as the template. Bodies welded to the box do not match; competing consumption claims jam rather than consuming only part of a body.", "Cannot be destroyed by drills, or welded/split on sides shared with other weld-protected blocks."],
+      extendedDescription: ["Matches complete bodies by tile kinds, directional orientations, and weld layout, allowing translation but not rotation or reflection. Configuration does not affect the match.", "The rear body remains as the template. Bodies welded to the box do not match; competing consumption claims jam rather than consuming only part of a body.", "Cannot be destroyed by drills or destroyers, or welded/split on sides shared with other weld-protected blocks."],
     },
     affectedByGravity: true,
     indestructible: true,
@@ -1659,7 +1685,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
       order: 24,
       category: PaletteCategory.PuzzleTools,
       description: "Wins on +1 input or loses on -1 input; opposing inputs jam. Indestructible and weld-protected.",
-      extendedDescription: ["The result latches once triggered. In a puzzle, manual steps do not record completion: the full test must succeed on every case. A victory block inside a rune array affects the whole puzzle. Cannot be destroyed by drills, or welded/split at sides shared with other weld-protected blocks."],
+      extendedDescription: ["The result latches once triggered. In a puzzle, manual steps do not record completion: the full test must succeed on every case. A victory block inside a rune array affects the whole puzzle. Cannot be destroyed by drills or destroyers, or welded/split at sides shared with other weld-protected blocks."],
     },
     affectedByGravity: true,
     indestructible: true,

@@ -18,15 +18,16 @@ export function watchShatterAnimation(world: World): Map<number, ShatterAnimatio
 }
 
 /** Call immediately before committed destruction, not ordinary erasing or consumption. */
-export function recordShatterEffects(world: World, index: number): void {
-  const kind = world.kindAtIndex(index);
+export function recordShatterEffects(
+  world: World, index: number, site = index, kind = world.kindAtIndex(index),
+): void {
   recordMachineryActivity(world,
-    kind === TileKind.Fastener ? "snap" : TILE_DEFINITIONS[kind].fragile ? "shatter" : "break", index);
+    kind === TileKind.Fastener ? "snap" : TILE_DEFINITIONS[kind].fragile ? "shatter" : "break", site);
   const cells = animations.get(world);
   if (cells === undefined) return;
-  const animation = cells.get(index);
+  const animation = cells.get(site);
   if (animation === undefined) {
-    cells.set(index, { startedAt: performance.now(), kind });
+    cells.set(site, { startedAt: performance.now(), kind });
   } else {
     // Bound retained effects to one per cell, even during fast simulation.
     animation.startedAt = performance.now();

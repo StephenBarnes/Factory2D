@@ -86,6 +86,25 @@ const BEVEL_CELL_SIZE = 24;
 const HIGHLIGHT_STYLE = "rgba(255, 255, 255, 0.15)";
 const SHADE_STYLE = "rgba(0, 0, 0, 0.18)";
 
+// Unit-sized blade geometry is shared across tiles and scales; animation only rotates it.
+let destroyerBlades: Path2D | undefined;
+
+function destroyerBladePath(): Path2D {
+  if (destroyerBlades !== undefined) return destroyerBlades;
+  const path = new Path2D();
+  for (let blade = 0; blade < 8; blade += 1) {
+    const angle = blade * Math.PI / 4;
+    path.moveTo(Math.cos(angle) * 0.1, Math.sin(angle) * 0.1);
+    path.lineTo(Math.cos(angle - 0.26) * 0.27, Math.sin(angle - 0.26) * 0.27);
+    path.lineTo(Math.cos(angle + 0.17) * 0.39, Math.sin(angle + 0.17) * 0.39);
+    path.lineTo(Math.cos(angle + 0.13) * 0.23, Math.sin(angle + 0.13) * 0.23);
+    path.lineTo(Math.cos(angle + 0.42) * 0.1, Math.sin(angle + 0.42) * 0.1);
+    path.closePath();
+  }
+  destroyerBlades = path;
+  return path;
+}
+
 /** Cells and vertices are keyed on a fixed grid stride; supports coordinates up to 4095. */
 const KEY_STRIDE = 4096;
 
@@ -1109,6 +1128,37 @@ function drawDecoration(
       ];
       context.beginPath();
       drawDot(context, 0, size * 0.2, Math.max(1.5, size * 0.065));
+      context.fill();
+      context.restore();
+      break;
+    }
+    case TileDecorationStyle.Destroyer: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.scale(size, size);
+      context.fillStyle = "#292522";
+      context.beginPath();
+      context.arc(0, 0, 0.29, 0, Math.PI * 2);
+      context.fill();
+      context.save();
+      context.rotate((animationTime % 1800) * Math.PI / 900);
+      context.fillStyle = definition.decorationColor;
+      context.strokeStyle = "#392e29";
+      context.lineWidth = 0.018;
+      const blades = destroyerBladePath();
+      context.fill(blades);
+      context.stroke(blades);
+      context.restore();
+      context.beginPath();
+      context.arc(0, 0, 0.105, 0, Math.PI * 2);
+      context.fillStyle = "#d8a15b";
+      context.fill();
+      context.strokeStyle = "#392e29";
+      context.lineWidth = 0.03;
+      context.stroke();
+      context.beginPath();
+      context.arc(0, 0, 0.035, 0, Math.PI * 2);
+      context.fillStyle = "#392e29";
       context.fill();
       context.restore();
       break;

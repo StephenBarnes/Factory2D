@@ -28,6 +28,8 @@ import { isCharge, type Charge } from "./circuit";
 import { isProcessingMachine, processingRecipeFor } from "./furnace";
 import { PuzzleResult } from "./puzzle-result";
 import { recordProcessingAnimation } from "./processing-animation";
+import { ContactDestruction, contactDestruction } from "./motion-contact";
+import { recordShatterEffects } from "./shatter-animation";
 import { validateTextBoxes, type TextBox } from "./text-box";
 import {
   requireRuneArrayDimension,
@@ -70,6 +72,8 @@ export class World {
   private puzzleResultValue = PuzzleResult.InProgress;
   private textBoxesValue: readonly TextBox[] = Object.freeze([]);
   private readonly featureIndex: WorldFeatureIndex;
+  /** Allocated only after the first destructive motion contact; keyed by source cell. */
+  private motionVictims: Map<number, number> | undefined;
 
   constructor(width: number, height: number) {
     if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
@@ -1820,13 +1824,21 @@ export class World {
       const headWelded = expectDefined(headWelds[base], "piston head weld") === 1;
 
       if (action === 1) {
-        if (this.cells.kinds[base] !== TileKind.Piston || this.cells.kinds[arm] !== TileKind.Empty) {
+        const contact = contactDestruction(TileKind.PistonArm, this.kindAtIndex(arm));
+        if (this.cells.kinds[base] !== TileKind.Piston ||
+            this.cells.kinds[arm] !== TileKind.Empty && contact === ContactDestruction.None) {
           throw new Error(`Invalid piston extension at index ${base}`);
         }
         const movingArmId = expectDefined(this.cells.ids[base], "retracted piston ID");
         this.replaceKindAtIndex(base, TileKind.PistonBase);
         this.cells.ids[base] = this.nextTileId;
         this.nextTileId += 1;
+        if (contact & ContactDestruction.Source) {
+          // The stroke completes, but its newly extended arm is cut off immediately.
+          recordShatterEffects(this, arm, arm, TileKind.PistonArm);
+          transitionCount += 1;
+          continue;
+        }
         this.replaceKindAtIndex(arm, TileKind.PistonArm);
         this.cells.ids[arm] = movingArmId;
         this.cells.orientations[arm] = orientation;
@@ -1851,7 +1863,7 @@ export class World {
             throw new Error(`Retracting piston at index ${base} lost its welded target`);
           }
           this.setWeldAtIndices(base, arm, 1);
-        } else if (!baseRetracted) {
+        } else if (!baseRetracted && this.cells.ids[arm] === movingArmId) {
           this.clearIndex(arm);
         }
         this.clearDisallowedWeldsAtIndex(base);
@@ -1871,11 +1883,13 @@ export class World {
     bodyRoots: Int32Array,
     horizontalMoves: Int8Array | Int16Array,
     verticalMoves: Int8Array | Int16Array,
+    retiringCells?: Uint8Array,
   ): number {
     if (
       bodyRoots.length !== this.cellCount ||
       horizontalMoves.length !== this.cellCount ||
-      verticalMoves.length !== this.cellCount
+      verticalMoves.length !== this.cellCount ||
+      retiringCells !== undefined && retiringCells.length !== this.cellCount
     ) {
       throw new RangeError("Movement buffers must match the world cell count");
     }
@@ -1909,6 +1923,26 @@ export class World {
     if (movementCount === 0) {
       return 0;
     }
+
+    this.motionVictims?.clear();
+    for (let source = this.hasFeature(WorldFeature.Destroyer) ? this.firstFeatureIndex(WorldFeature.Occupied) : -1; source >= 0;
+      source = this.nextFeatureIndex(WorldFeature.Occupied, source)) {
+      const root = expectDefined(bodyRoots[source], "contact body root");
+      const dx = expectDefined(horizontalMoves[root], "contact horizontal movement");
+      const dy = expectDefined(verticalMoves[root], "contact vertical movement");
+      if (dx === 0 && dy === 0) continue;
+      const destination = source + dx + dy * this.width;
+      if (this.kindAtIndex(destination) === TileKind.Empty) continue;
+      if (retiringCells?.[destination] === 1) continue;
+      const other = expectDefined(bodyRoots[destination], "contact target root");
+      const otherX = expectDefined(horizontalMoves[other], "contact target horizontal movement");
+      const otherY = expectDefined(verticalMoves[other], "contact target vertical movement");
+      // Departing tiles do not overlap; opposing moves crossing the same edge do.
+      if ((otherX !== 0 || otherY !== 0) &&
+          destination + otherX + otherY * this.width !== source) continue;
+      this.collectMotionContact(source, destination);
+    }
+    this.destroyMotionVictims();
 
     const moved = this.movedCells;
     moved.copyFrom(this.cells);
@@ -1998,7 +2032,8 @@ export class World {
       if (destination < 0) {
         throw new Error(`Transform from index ${source} leaves the world`);
       }
-      if (this.cells.kinds[destination] !== TileKind.Empty && selected[destination] === 0) {
+      if (this.cells.kinds[destination] !== TileKind.Empty && selected[destination] === 0 &&
+          contactDestruction(this.kindAtIndex(source), this.kindAtIndex(destination)) === ContactDestruction.None) {
         throw new Error(`Transform from index ${source} collides at index ${destination}`);
       }
       const x = source % this.width;
@@ -2028,6 +2063,19 @@ export class World {
     }
     if (transformedCellCount === 0) {
       return 0;
+    }
+
+    this.motionVictims?.clear();
+    for (let source = this.hasFeature(WorldFeature.Destroyer) ? 0 : this.cellCount;
+      source < this.cellCount; source += 1) {
+      if (selected[source] === 1) {
+        const destination = destinationFor(source);
+        if (selected[destination] === 0) this.collectMotionContact(source, destination);
+      }
+    }
+    this.destroyMotionVictims();
+    if (this.motionVictims !== undefined) {
+      for (const source of this.motionVictims.keys()) selected[source] = 0;
     }
 
     const moved = this.movedCells;
@@ -2111,6 +2159,22 @@ export class World {
     this.featureIndex.rebuild(this.cells.kinds);
     this.touchGeometryRevision();
     return transformedCellCount;
+  }
+
+  private collectMotionContact(source: number, destination: number): void {
+    const contact = contactDestruction(this.kindAtIndex(source), this.kindAtIndex(destination));
+    if (contact === ContactDestruction.None) return;
+    const victims = this.motionVictims ??= new Map<number, number>();
+    if (contact & ContactDestruction.Source) victims.set(source, destination);
+    if (contact & ContactDestruction.Target) victims.set(destination, destination);
+  }
+
+  private destroyMotionVictims(): void {
+    if (this.motionVictims === undefined) return;
+    for (const [source, site] of this.motionVictims) {
+      recordShatterEffects(this, source, site);
+      this.clearIndex(source);
+    }
   }
 
 

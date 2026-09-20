@@ -1,5 +1,6 @@
 import { expectDefined } from "../util/assert";
 import { magicLinksFor } from "./magic-link";
+import { ContactDestruction, contactDestruction } from "./motion-contact";
 import { recordShatterEffects } from "./shatter-animation";
 import { Direction, directionX, directionY, oppositeDirection, TILE_DEFINITIONS, TileKind } from "./tile";
 import { World } from "./world";
@@ -7,11 +8,14 @@ import { WorldFeature } from "./world-features";
 
 interface Stroke {
   base: number;
+  baseId: number;
   arm: number;
   action: -1 | 1;
   direction: Direction;
+  orientation: Direction;
   recoil: boolean;
   headWelded: boolean;
+  headId: number;
   valid: boolean;
   ready: boolean;
   parent: number;
@@ -42,6 +46,7 @@ export class PistonResolver {
   private readonly headWelds: Uint8Array;
   private readonly armIds: Uint32Array;
   private readonly retractingBases: Uint8Array;
+  private readonly retiringArms: Uint8Array;
   private readonly breakingFasteners: number[] = [];
   private readonly dependencyPath: number[] = [];
   private readonly dependencyStack: number[] = [];
@@ -59,6 +64,7 @@ export class PistonResolver {
     this.headWelds = new Uint8Array(world.cellCount);
     this.armIds = new Uint32Array(world.cellCount);
     this.retractingBases = new Uint8Array(world.cellCount);
+    this.retiringArms = new Uint8Array(world.cellCount);
   }
 
   resolve(): number {
@@ -110,18 +116,23 @@ export class PistonResolver {
       const index = this.strokeCount++;
       let stroke = this.strokes[index];
       if (stroke === undefined) {
-        stroke = { base, arm, action, direction, recoil: false, headWelded: false,
+        stroke = { base, baseId: 0, arm, action, direction, orientation: direction,
+          recoil: false, headWelded: false, headId: 0,
           valid: false, ready: false, parent: index, jammed: false, cells: [], partners: [],
           dependencies: [], dependencyIndex: -1, dependencyLow: -1,
           dependencyComponent: -1, dependencyCursor: 0 };
         this.strokes.push(stroke);
       }
       stroke.base = base;
+      stroke.baseId = this.world.idAtIndex(base);
+      stroke.orientation = direction;
       stroke.arm = arm;
       stroke.action = action;
       stroke.recoil = action === -1 && direction === Direction.Down;
       stroke.direction = action === 1 || stroke.recoil ? direction : oppositeDirection(direction);
       stroke.headWelded = this.world.hasWeldAtIndex(action === 1 ? base : arm, direction);
+      const head = this.neighbor(action === 1 ? base : arm, direction);
+      stroke.headId = stroke.headWelded && head >= 0 ? this.world.idAtIndex(head) : 0;
       stroke.ready = false;
       this.strokeAt[base] = index;
     }
@@ -192,10 +203,12 @@ export class PistonResolver {
     }
     const head = arm < 0 ? -1 : this.neighbor(arm, this.world.orientationAtIndex(base));
     const seed = recoil ? base : action === 1 ? arm : stroke.headWelded ? head : -1;
-    if (seed >= 0 && this.world.kindAtIndex(seed) !== TileKind.Empty) {
+    if (seed >= 0 && this.world.kindAtIndex(seed) !== TileKind.Empty &&
+        !(action === 1 && !recoil && !stroke.headWelded &&
+          contactDestruction(TileKind.PistonArm, this.world.kindAtIndex(seed)) !== ContactDestruction.None)) {
       this.enqueue(stroke, seed);
     }
-    // Every moving body pushes contact chains, including a retracting welded load.
+    // Welded members always travel together; destructive contact does not push its victim.
     for (let cursor = 0; cursor < stroke.cells.length; cursor += 1) {
       const cell = expectDefined(stroke.cells[cursor], "piston proposal cell");
       const definition = TILE_DEFINITIONS[this.world.kindAtIndex(cell)];
@@ -234,6 +247,8 @@ export class PistonResolver {
         return false;
       }
       if (this.world.kindAtIndex(destination) !== TileKind.Empty &&
+          contactDestruction(this.world.kindAtIndex(cell), this.world.kindAtIndex(destination)) ===
+            ContactDestruction.None &&
           !(action === -1 &&
             (destination === arm || this.partnerAt(stroke, cell, destination) >= 0))) {
         this.enqueue(stroke, destination);
@@ -517,6 +532,7 @@ export class PistonResolver {
     this.headWelds.fill(0);
     this.armIds.fill(0);
     this.retractingBases.fill(0);
+    this.retiringArms.fill(0);
     let accepted = 0;
     for (let index = 0; index < this.strokeCount; index += 1) {
       const stroke = expectDefined(this.strokes[index], "committing piston proposal");
@@ -534,6 +550,7 @@ export class PistonResolver {
       if (stroke.action === -1) {
         this.armIds[base] = this.world.idAtIndex(stroke.arm);
         this.retractingBases[base] = stroke.recoil ? 1 : 0;
+        this.retiringArms[stroke.arm] = 1;
       }
     }
     if (accepted === 0) {
@@ -560,13 +577,32 @@ export class PistonResolver {
         this.breakingFasteners.push(cell + dx + dy * this.world.width);
       }
     }
-    const movements = this.world.moveBodies(this.cellRoots, this.moveX, this.moveY);
+    const movements = this.world.moveBodies(this.cellRoots, this.moveX, this.moveY, this.retiringArms);
+    for (let index = 0; index < this.strokeCount; index += 1) {
+      const stroke = expectDefined(this.strokes[index], "surviving piston head");
+      if (!stroke.ready || this.group(index).jammed) {
+        continue;
+      }
+      const base = stroke.recoil ? this.neighbor(stroke.base, stroke.direction) : stroke.base;
+      if (this.world.idAtIndex(base) !== stroke.baseId) {
+        this.actions[base] = 0;
+        continue;
+      }
+      if (!stroke.headWelded) {
+        continue;
+      }
+      const orientation = stroke.orientation;
+      const arm = this.neighbor(base, orientation);
+      const head = stroke.action === 1 && arm >= 0 ? this.neighbor(arm, orientation) : arm;
+      this.headWelds[base] = head >= 0 && this.world.idAtIndex(head) === stroke.headId ? 1 : 0;
+    }
     const transitions = this.world.applyPistonTransitions(
       this.actions, this.headWelds, this.armIds, this.retractingBases,
     );
     for (const cell of this.breakingFasteners) {
       if (this.world.kindAtIndex(cell) !== TileKind.Fastener) {
-        throw new Error(`Moved fastener missing at index ${cell}`);
+        // Accepted destructive contact may already have consumed this carried fastener.
+        continue;
       }
       recordShatterEffects(this.world, cell);
       this.world.place(cell % this.world.width, Math.floor(cell / this.world.width), TileKind.Empty);

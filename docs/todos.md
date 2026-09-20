@@ -7,10 +7,7 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 # New non-circuit components
 
-* Destroyer block that destroys any blocks moved onto its tile cell, in the same tick they attempt to move onto it. For example, a 5x5 body falling onto one of these blocks, or moved past it by a conveyor, should be cut in half. Also allow flipping bodies onto this block, which destroys the blocks that overlap it. Unclear what behavior we should have when rotating bodies onto it; maybe count it as colliding / preventing rotation onto it, or find all tiles that would intersect the destroyer's center when rotated through it. Visually, make them look like a spinning wheel of blades.
-	* Also the inverse: a destroyer can move/flip/rotate onto another block, destroying it. If a destroyer moves onto another destroyer, both are destroyed.
-	* When destroying, play the animation for blocks fracturing (used for drills, fasteners, and fragile glass), and play that sound.
-	* As follow-up, add a lava block that behaves the same way, for e.g. puzzles about crossing a lava chasm.
+* Add a lava block using the destroyer's movement-contact destruction rules, for e.g. puzzles about crossing a lava chasm.
 * Add a dwarf block which is breakable - anything falling onto the dwarf block should destroy it. Anything pushing the dwarf block should push it, unless the push is blocked by something on the other side like a wall, in which case that should also crush the dwarf. Use the shattering animation for this.
 * Add a swapper block that swaps its front and rear neighbors when it receives a +1 charge on either side. Keep welds the same - if the front block is a stone block with two sides welded, and rear is a lore rune with no sides welded, after the swap, the front block should be a lore rune (with the original rear neighbor's configuration and rotation/mirroring) but with the welds the stone block had, and vice versa. Except if that would break rules (non-weldable blocks, non-weldable sides of e.g. rotator blocks, and weld-protected blocks). Do not allow swapping with immovable or indestructible blocks. Allow swapping with empty blocks.
 * Add a gravity stone that changes its welded body's gravity to point in the gravity stone's forward direction, instead of downward.
@@ -41,12 +38,14 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
 * Implement limited undo/redo in the workshops (when editing puzzle solutions, or editing a sandbox). Probably keep a few previous states in memory. Running/testing should not write to these; it's for undoing modifications. (For sandbox running while editing, it's a bit unclear what the behavior should be. Maybe just advance the ring buffer / list of previous states whenever they edit.) Ideally click-and-drag should count as one action, so can be undone all at once.
+* Modify how we store text-boxes in scene and puzzle files. Currently we store them with width, height, x, and y. This is a remnant of when we allowed resizing text-boxes in-game, but we no longer allow that - after editing they're always sized to fit the text. Rather store coordinates of the center only, and recompute sizes when a scene or puzzle is loaded.
+* Center text in text-boxes horizontally.
 
 # Visuals
 
 ## Animations
 
-* Add animation for the delivery box, assembler, duplicator, lock gate. When they consume a body, animate the body shrinking, moving towards the block, and lowering opacity until it vanishes. When they produce a body, animate the opposite.
+* Add animation for the delivery box, assembler, and duplicator. When they consume a body, animate the body shrinking, moving towards the block, and lowering opacity until it vanishes. When they produce a body, animate the opposite - body expanding and moving out of the block.
 
 # Content
 
