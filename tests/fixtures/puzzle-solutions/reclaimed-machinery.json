@@ -1,0 +1,82 @@
+{
+  "format": "factory2d-board",
+  "version": 15,
+  "width": 15,
+  "height": 12,
+  "tick": 0,
+  "result": "in-progress",
+  "grid": [
+    "===============",
+    "=.............=",
+    "=...Q.........=",
+    "=..uY.........=",
+    "=.............=",
+    "=.............=",
+    "=.............=",
+    "=.............=",
+    "=.1...........=",
+    "=.=..........{{",
+    "=..=1BBBBBBBD{N",
+    "============u=V"
+  ],
+  "orientations": [
+    {
+      "x": 4,
+      "y": 2,
+      "direction": "left"
+    },
+    {
+      "x": 4,
+      "y": 3,
+      "direction": "right"
+    },
+    {
+      "x": 14,
+      "y": 10,
+      "direction": "down"
+    }
+  ],
+  "components": [
+    {
+      "x": 14,
+      "y": 10,
+      "type": "counter",
+      "threshold": 6,
+      "count": 0
+    }
+  ],
+  "textBoxes": [
+    {
+      "id": "salvage",
+      "x": 1,
+      "y": 1,
+      "width": 5,
+      "height": 1,
+      "text": "Salvage: one ruby and one duplicator.",
+      "owner": "author"
+    },
+    {
+      "id": "receiver",
+      "x": 7,
+      "y": 1,
+      "width": 6,
+      "height": 3,
+      "text": "Deliver six separate rubies.\n\nThe salvaged charge sensor is already wired to the duplicator.",
+      "owner": "author"
+    }
+  ],
+  "welds": [
+    "...............",
+    "...............",
+    "....|..........",
+    "...............",
+    "...............",
+    "...............",
+    "...............",
+    "...............",
+    "..............|",
+    ".............+|",
+    "....-------|-.|",
+    "..............."
+  ]
+}

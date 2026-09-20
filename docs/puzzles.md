@@ -1,4 +1,4 @@
-Current shipped catalog: **22 puzzles — 7 tutorials and 15 non-tutorials**. Each entry below links to its definition in `src/game/puzzles/`; names, groups, and ordering follow those files.
+Current shipped catalog: **24 puzzles — 7 tutorials and 17 non-tutorials**. Each entry below links to its definition in `src/game/puzzles/`; names, groups, and ordering follow those files.
 
 # Tutorial puzzles
 
@@ -40,6 +40,7 @@ The puzzle set we ship on first release should focus more on mechanical puzzles.
 ## Manufacturing
 
 * [Glass blocks](glass-blocks.json) (Easy): sand falls from above. It must be smelted into glass blocks and delivered. Introduces furnaces and fragile blocks. Solution is easy, but leaves some room for optimizing cycles or price by several means (moving/modifying the sand dispenser, dropping glass directly on delivery to avoid shattering, grinding the stone ceiling/walls for more sand, or using advanced blocks in palette).
+* [Reclaimed machinery](../src/game/puzzles/reclaimed-machinery.json) (Easy): catch a falling duplicator, its attached charge sensor, and a single ruby, then deliver six separate rubies. Neither duplicators nor rubies are available in the palette. The reference solution catches the template and machine at the same height, powers the surviving sensor remotely, and carries the copies to the receiver on conveyors.
 * [Copperworks](../src/game/puzzles/copperworks.json) (Intermediate): smelt a finite supply of six copper ore blocks beside wood, then deliver all six copper blocks. The compact lower workshop requires coordinating six-tick processing with transport; wood is reusable, but there is no replacement ore and duplicators are unavailable. The reference solution uses a timed force projector to pull finished copper from a furnace onto a conveyor line.
 * [Iron plates](../src/game/puzzles/iron-plates.json) (Hard): duplicate iron ore, smelt it, and weld three iron blocks in a row; deliver ten plates. Two duplicators offer tradeoffs between cycles, footprint, cost, and complexity. Exploits may also be possible, such as drilling away a duplicator and duplicating entire plates.
 * [Pickaxes to hammers](../src/game/puzzles/pickaxes-to-hammers.json) (Hard): produce five warhammers by reforging supplied pickaxes or smelting supplied ore. Separate duplicators provide the two feedstocks; drills, splitters, welders, and furnaces support different production routes. Delivered hammers must match the template with their heads facing left.
@@ -100,7 +101,6 @@ Mining is basically transport/vehicles plus extraction, and could involve e.g. d
 	* Add variants: different sets of products, different degree of overlap, different number of options.
 	* Variant with 2-dimensional signals, e.g. "make a {gold, silver, copper} ring with a {ruby, diamond, sapphire, nothing} on top".
 * Multidirectional vehicle. Player's vehicle starts in the center; must travel in a direction given by circuit signal (one signal for each test case). Travel left/right on ground, up (by reaching up to a hanging ladder), or down (via digging or fitting through a small hole). To ensure they don't just build 4 separate small vehicles, we let them start with one diamond gemstone in the center, and this must be delivered to the endpoint.
-* Puzzle that requires picking up a component and integrating it into a machine. For example, there's 1 duplicator lying on the ground, and the player cannot place duplicators; solution needs to produce N gemstones, by connecting to the duplicator and using it to duplicate a gemstone repeatedly.
 * Race track: there's a central floating body with beam block type sensors checking for diamonds in 4 cardinal directions. Around that there's a ring of empty space, then around that a solid border. The player must build a vehicle around a single diamond block. Then the vehicle must activate all 4 sensors, by travelling around the entire ring. Requires building a multi-purpose vehicle that can travel right, upward (similar to Chasm Climber puzzle), left, and then fall down past the last sensor.
 	* Could have arbitrary race-track shapes with beam block sensors checking they visit all checkpoints.
 	* Could have a relay race variant - partway through the track there's a 1-wide window through which they have to pass the diamond to a separate vehicle which does the rest of the race.
@@ -110,3 +110,4 @@ Mining is basically transport/vehicles plus extraction, and could involve e.g. d
 * Carving up arbitrary input shapes into individual blocks. The player is given a polyomino fitting inside a 5x5 box. They must chop it up into individual blocks and deliver those. Each test case has a different input shape.
 * Polyomino packing: set up sensors to detect various polyominoes inside the player-modifiable region. Victory iff all of them are detected. Entirely ignores 90% of our game mechanics (anything that happens over multiple ticks is irrelevant), but might still be fun.
 	* Then a follow-up puzzle that gives them too little space to actually fit all the shapes; so they have to build a machine that creates all necessary shapes in sequence, by welding and unwelding, etc. over multiple ticks.
+* Harder variants of "Reclaimed machinery", e.g. needing to pick up the components lying on the ground.

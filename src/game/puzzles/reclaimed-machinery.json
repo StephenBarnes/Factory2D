@@ -1,0 +1,183 @@
+{
+  "format": "factory2d-puzzle",
+  "version": 5,
+  "width": 15,
+  "height": 12,
+  "id": "reclaimed-machinery",
+  "group": "manufacturing",
+  "order": 0.25,
+  "name": "Reclaimed machinery",
+  "difficulty": 1,
+  "description": "The old gemworks has been dismantled, but its duplicator still works. Catch the falling machine and its lone ruby, then turn the salvage into a production line. The charge sensor attached to the duplicator survived too. No replacement duplicators or rubies are available.",
+  "goal": "Deliver six separate ruby blocks.",
+  "cycleLimit": 500,
+  "components": [
+    {
+      "code": "#",
+      "price": 1
+    },
+    {
+      "code": "=",
+      "price": 10
+    },
+    {
+      "code": "B",
+      "price": 5
+    },
+    {
+      "code": "L",
+      "price": 10
+    },
+    {
+      "code": "P",
+      "price": 10
+    },
+    {
+      "code": "r",
+      "price": 15
+    },
+    {
+      "code": "J",
+      "price": 10
+    },
+    {
+      "code": "X",
+      "price": 10
+    },
+    {
+      "code": "C",
+      "price": 2
+    },
+    {
+      "code": "1",
+      "price": 5
+    },
+    {
+      "code": "K",
+      "price": 3
+    },
+    {
+      "code": "S",
+      "price": 10
+    },
+    {
+      "code": "Q",
+      "price": 15
+    },
+    {
+      "code": "I",
+      "price": 10
+    },
+    {
+      "code": "+",
+      "price": 10
+    },
+    {
+      "code": ";",
+      "price": 3
+    },
+    {
+      "code": "Z",
+      "price": 30
+    },
+    {
+      "code": "N",
+      "price": 20
+    },
+    {
+      "code": "m",
+      "price": 0
+    }
+  ],
+  "editableRegions": [
+    {
+      "x": 1,
+      "y": 5,
+      "width": 11,
+      "height": 6
+    }
+  ],
+  "initialBoard": {
+    "format": "factory2d-board",
+    "version": 15,
+    "width": 15,
+    "height": 12,
+    "tick": 0,
+    "result": "in-progress",
+    "grid": [
+      "===============",
+      "=.............=",
+      "=...Q.........=",
+      "=..uY.........=",
+      "=.............=",
+      "=.............=",
+      "=.............=",
+      "=.............=",
+      "=.............=",
+      "=............{{",
+      "=...........D{N",
+      "============u=V"
+    ],
+    "orientations": [
+      {
+        "x": 4,
+        "y": 2,
+        "direction": "left"
+      },
+      {
+        "x": 4,
+        "y": 3,
+        "direction": "right"
+      },
+      {
+        "x": 14,
+        "y": 10,
+        "direction": "down"
+      }
+    ],
+    "components": [
+      {
+        "x": 14,
+        "y": 10,
+        "type": "counter",
+        "threshold": 6,
+        "count": 0
+      }
+    ],
+    "textBoxes": [
+      {
+        "id": "salvage",
+        "x": 1,
+        "y": 1,
+        "width": 5,
+        "height": 1,
+        "text": "Salvage: one ruby and one duplicator.",
+        "owner": "author"
+      },
+      {
+        "id": "receiver",
+        "x": 7,
+        "y": 1,
+        "width": 6,
+        "height": 3,
+        "text": "Deliver six separate rubies.\n\nThe salvaged charge sensor is already wired to the duplicator.",
+        "owner": "author"
+      }
+    ],
+    "welds": [
+      "...............",
+      "...............",
+      "....|..........",
+      "...............",
+      "...............",
+      "...............",
+      "...............",
+      "...............",
+      "..............|",
+      ".............+|",
+      "............-.|",
+      "..............."
+    ]
+  },
+  "testCases": []
+}
