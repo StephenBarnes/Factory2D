@@ -39,7 +39,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
 * Implement limited undo/redo in the workshops (when editing puzzle solutions, or editing a sandbox). Probably keep a few previous states in memory. Running/testing should not write to these; it's for undoing modifications. (For sandbox running while editing, it's a bit unclear what the behavior should be. Maybe just advance the ring buffer / list of previous states whenever they edit.) Ideally click-and-drag should count as one action, so can be undone all at once.
 * Modify how we store text-boxes in scene and puzzle files. Currently we store them with width, height, x, and y. This is a remnant of when we allowed resizing text-boxes in-game, but we no longer allow that - after editing they're always sized to fit the text. Rather store coordinates of the center only, and recompute sizes when a scene or puzzle is loaded.
-* Center text in text-boxes horizontally.
 
 # Visuals
 

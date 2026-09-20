@@ -542,7 +542,7 @@ export class CanvasRenderer {
     context.scale(this.cellSize, this.cellSize);
     context.font = TEXT_BOX_FONT;
     context.textBaseline = "alphabetic";
-    context.textAlign = "left";
+    context.textAlign = "center";
     for (const box of this.world.textBoxes) {
       if (box.id !== this.textBoxPreview?.id) this.drawTextBox(box, false);
     }
@@ -577,7 +577,7 @@ export class CanvasRenderer {
       if (top >= box.y + box.height - paddingBottom) break;
       context.fillText(
         expectDefined(layout.lines[index], "Text box line is missing"),
-        (box.x + paddingX) * TEXT_BOX_FONT_SCALE,
+        (box.x + box.width / 2) * TEXT_BOX_FONT_SCALE,
         (top + layout.ascent) * TEXT_BOX_FONT_SCALE,
       );
     }
