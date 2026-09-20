@@ -78,6 +78,16 @@ interface AuthoredPuzzleTestCase {
   world: World;
 }
 
+interface SandboxPuzzleAuthoringSnapshot {
+  readonly properties: SandboxPuzzleProperties;
+  readonly testCases: readonly {
+    readonly id: string;
+    readonly name: string;
+    readonly cycleLimit: number | null;
+    readonly board: string;
+  }[];
+}
+
 export interface SandboxPuzzleTestCaseSummary {
   readonly id: string;
   readonly name: string;
@@ -205,6 +215,34 @@ export class SandboxPuzzleAuthoringState {
       parsed.availableComponents.entries,
       authoredTestCases,
     );
+  }
+
+  /** Restores an internal editing snapshot without puzzle-import normalization. */
+  static fromSnapshot(source: string, selectedTestCaseId: string): SandboxPuzzleAuthoringState {
+    const snapshot = JSON.parse(source) as SandboxPuzzleAuthoringSnapshot;
+    const properties = snapshot.properties;
+    const authoring = new SandboxPuzzleAuthoringState(
+      {
+        id: properties.id,
+        groupId: properties.groupId,
+        order: properties.order,
+        difficulty: properties.difficulty,
+        goal: properties.goal,
+        cycleLimit: properties.cycleLimit,
+      },
+      properties.name,
+      properties.description,
+      properties.components.filter(({ enabled }) => enabled),
+      snapshot.testCases.map(({ board, ...testCase }) => ({
+        ...testCase,
+        world: deserializeBoard(board).world,
+      })),
+    );
+    for (const { kind, price } of properties.components) {
+      authoring.pricesByKind[kind] = price;
+    }
+    authoring.selectedTestCaseIdValue = authoring.testCase(selectedTestCaseId).id;
+    return authoring;
   }
 
   get fileName(): string {
@@ -427,6 +465,19 @@ export class SandboxPuzzleAuthoringState {
     for (const kind of PALETTE_KINDS) {
       this.pricesByKind[kind] = nextPrices[kind];
     }
+  }
+
+  /** Keeps disabled prices and text ownership, unlike the exported puzzle format. */
+  serializeSnapshot(): string {
+    const standard = expectDefined(this.authoredTestCases[0], "Sandbox standard case is missing");
+    const snapshot: SandboxPuzzleAuthoringSnapshot = {
+      properties: this.properties(standard.world.width, standard.world.height),
+      testCases: this.authoredTestCases.map(({ world, ...testCase }) => ({
+        ...testCase,
+        board: serializeBoard(world, 0),
+      })),
+    };
+    return JSON.stringify(snapshot);
   }
 
   serialize(editableRegion: GridRegion): string {

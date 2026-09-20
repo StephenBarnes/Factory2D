@@ -52,7 +52,8 @@ export interface CanvasInteractionCallbacks {
   readonly refreshHover: () => void;
   readonly pickTile: (cell: GridCell) => void;
   readonly openConfiguration: (cell: GridCell) => void;
-  readonly commitEditTransaction: () => void;
+  readonly commitEditTransaction: (group?: object) => void;
+  readonly commitAuthoringTransaction?: (group?: object) => void;
   readonly rejectLockedEdit: () => void;
 }
 
@@ -89,6 +90,7 @@ interface PanGesture extends GestureBase {
 
 interface EditGesture extends GestureBase {
   readonly kind: "edit";
+  readonly group: object;
   readonly tool: BuildTool;
   readonly erase: boolean;
   readonly weldPlacedTiles: boolean;
@@ -190,6 +192,7 @@ export class CanvasInteractionController {
       cell !== null &&
       this.surface.world.kindAt(cell.x, cell.y) !== selectedKind &&
       componentConfigurationForKind(selectedKind)?.configureOnPlacement === true;
+    const group = {};
     let changed = false;
     let lastEditedCell: GridCell | null = null;
     let pendingConfigurationCell: GridCell | null = null;
@@ -210,7 +213,8 @@ export class CanvasInteractionController {
     } else if (tool === "editable-region" && cell !== null) {
       const authoring = this.editableRegionAuthoring(session);
       if (erase) {
-        authoring.removeRectanglesAt(cell.x, cell.y);
+        const removed = authoring.removeRectanglesAt(cell.x, cell.y);
+        if (removed) this.callbacks.commitAuthoringTransaction?.(group);
       } else {
         authoring.beginRectangle(cell.x, cell.y);
       }
@@ -219,6 +223,7 @@ export class CanvasInteractionController {
 
     this.active = {
       kind: "edit",
+      group,
       pointerId: event.pointerId,
       buttonMask,
       session,
@@ -372,7 +377,8 @@ export class CanvasInteractionController {
     if (active.kind === "edit" && active.tool === "editable-region") {
       const authoring = this.editableRegionAuthoring(active.session);
       if (event.type === "pointerup" && !active.erase) {
-        authoring.commitRectangle();
+        const committed = authoring.commitRectangle();
+        if (committed) this.callbacks.commitAuthoringTransaction?.(active.group);
       } else {
         authoring.cancelRectangle();
       }
@@ -398,7 +404,7 @@ export class CanvasInteractionController {
     const changed = active.kind === "edit" && active.changed;
     this.resetActiveState();
     if (changed) {
-      this.callbacks.commitEditTransaction();
+      this.callbacks.commitEditTransaction(active.group);
     }
     if (configurationCell !== null) {
       this.callbacks.openConfiguration(configurationCell);
@@ -424,7 +430,7 @@ export class CanvasInteractionController {
     ) {
       this.active = { ...active, changed: false };
       if (active.changed) {
-        this.callbacks.commitEditTransaction();
+        this.callbacks.commitEditTransaction(active.group);
       }
       return;
     }
@@ -452,7 +458,7 @@ export class CanvasInteractionController {
     const changed = active.kind === "edit" && active.changed;
     this.resetActiveState();
     if (changed) {
-      this.callbacks.commitEditTransaction();
+      this.callbacks.commitEditTransaction(active.group);
     }
     return changed;
   }

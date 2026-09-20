@@ -189,6 +189,8 @@ const componentConfigurationDialogElement = requiredElement<HTMLDialogElement>(
 );
 const stepButton = requiredElement<HTMLButtonElement>("step-button");
 const resetButton = requiredElement<HTMLButtonElement>("reset-button");
+const undoButton = requiredElement<HTMLButtonElement>("undo-button");
+const redoButton = requiredElement<HTMLButtonElement>("redo-button");
 let resetFeedbackAnimation: Animation | null = null;
 const clearButton = requiredElement<HTMLButtonElement>("clear-button");
 const exportMenu = new DropupMenu(
@@ -375,6 +377,7 @@ function updateTransportState(): void {
     : running ? "SIMULATING" : editingEnabled ? "BUILD MODE" : "RESET TO EDIT";
   stepButton.disabled = running || (testingPuzzleSolution && !puzzleTests.manualStepping);
   clearButton.disabled = !editingEnabled || testingPuzzleSolution;
+  updateHistoryControls();
   transportShortcutLabel.textContent = puzzleWorkshop ? "TEST / PAUSE" : "RUN / PAUSE";
   for (const item of sidebarControls.querySelectorAll<HTMLButtonElement>(".palette-item")) {
     item.disabled = !editingEnabled || testingPuzzleSolution;
@@ -427,6 +430,47 @@ function commitTileSelection(): void {
     const site = expectDefined(rectangle, "Committed selection sound site");
     sounds.edit("place", site.x + site.width / 2, site.y + site.height / 2);
   }
+}
+
+function updateHistoryControls(): void {
+  const editable = surface.session.editingState.editable && !puzzleTests.testing;
+  undoButton.disabled = !editable || (!sessions.canUndo && !surface.selection.active);
+  redoButton.disabled = !editable || !sessions.canRedo;
+}
+
+function restoreEditHistory(redo: boolean): void {
+  if (!surface.session.editingState.editable || puzzleTests.testing) return;
+  cancelPalettePlacement();
+  finalizeActivePointerGesture();
+  commitTileSelection();
+  if (redo ? !sessions.canRedo : !sessions.canUndo) return;
+  setRunning(false);
+  const width = surface.session.world.width;
+  const height = surface.session.world.height;
+  surface.mountActiveSession({
+    fitBoard: false,
+    cancelInteraction: true,
+    updateSession: () => {
+      if (redo) sessions.redoEdit();
+      else sessions.undoEdit();
+    },
+  });
+  if (navigation.screen.kind === "puzzle") {
+    puzzleTests.reset();
+  } else {
+    configureSandboxTestCaseMenu();
+    if (surface.world.width !== width || surface.world.height !== height) {
+      surface.renderer.fitBoardToViewport();
+    }
+  }
+  configureComponentPalette();
+  syncEditableRegionAuthoringOverlay();
+  finishAnimation();
+  navigation.markActiveWorkshopDirty();
+  navigation.persistActiveWorkshop();
+  refreshPuzzleMetrics(true);
+  updateTransportState();
+  refreshPointerHover();
 }
 
 function setRunning(nextRunning: boolean): void {
@@ -669,6 +713,7 @@ function syncTileSelectionOverlay(): void {
     ? "First select one configurable component and copy its configuration"
     : `Paste ${TILE_DEFINITIONS[copied.kind].name} settings into matching selected components. ` +
       "Copies E-dialog settings only; rune-array resizing may crop contents.";
+  updateHistoryControls();
 }
 
 function positionSelectionActions(): void {
@@ -1102,15 +1147,16 @@ function releaseTemporaryWeld(): void {
   }
 }
 
-function commitEditedWorld(): void {
+function commitEditedWorld(group?: object): void {
   if (surface.viewDepth > 0) {
     surface.session.world.touchRevision();
   }
-  sessions.saveEditedBaseline();
+  sessions.saveEditedBaseline(group);
   finishAnimation();
   navigation.markActiveWorkshopDirty();
   navigation.persistActiveWorkshop();
   refreshPuzzleMetrics(true);
+  updateHistoryControls();
 }
 
 function componentIsAvailable(kind: TileKind): boolean {
@@ -1419,6 +1465,12 @@ const canvasInteraction = new CanvasInteractionController(surface, {
   pickTile: pickTileAt,
   openConfiguration: openComponentConfiguration,
   commitEditTransaction: commitEditedWorld,
+  commitAuthoringTransaction: (group) => {
+    sessions.recordSandboxEdit(group);
+    navigation.markActiveWorkshopDirty();
+    navigation.persistActiveWorkshop();
+    updateHistoryControls();
+  },
   rejectLockedEdit,
 });
 surface.setInteractionCanceler(() => {
@@ -1654,6 +1706,7 @@ const navigation = new NavigationController(
         sessions.updateActiveSandboxProperties(properties);
         navigation.markActiveWorkshopDirty();
         navigation.persistActiveWorkshop();
+        updateHistoryControls();
         return;
       }
       stopWorkshopActivity();
@@ -2181,6 +2234,8 @@ function resetSimulation(): void {
 }
 
 resetButton.addEventListener("click", resetSimulation);
+undoButton.addEventListener("click", () => restoreEditHistory(false));
+redoButton.addEventListener("click", () => restoreEditHistory(true));
 
 clearButton.addEventListener("click", () => {
   if (!surface.session.editingState.editable) {
@@ -2470,6 +2525,15 @@ document.addEventListener("keydown", (event) => {
     testReportDialog.open ||
     componentConfigurationView.open
   ) {
+    return;
+  }
+  if (
+    (event.ctrlKey || event.metaKey) && !event.altKey && !textEntryTarget &&
+    (event.code === "KeyZ" || (event.code === "KeyY" && !event.shiftKey))
+  ) {
+    if (event.defaultPrevented) return;
+    event.preventDefault();
+    if (!event.repeat) restoreEditHistory(event.code === "KeyY" || event.shiftKey);
     return;
   }
   if (event.key === "Control") {
