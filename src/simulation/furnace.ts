@@ -7,8 +7,11 @@ export interface FurnaceRecipe {
   readonly bakeTime: number;
   /** Neighbor kinds after all cooking transformations that the finished product joins. */
   readonly weldTo?: readonly TileKind[];
-  /** Each listed kind must touch the target orthogonally; neighbors are not consumed. */
-  readonly requiredNeighbors?: readonly TileKind[];
+  /** Each kind must touch the target orthogonally; completion transforms all matches if output is set. */
+  readonly requiredNeighbors?: readonly {
+    readonly kind: TileKind;
+    readonly output?: TileKind;
+  }[];
 }
 
 /** Furnace recipes and their required active ticks. */
@@ -25,7 +28,7 @@ export const FURNACE_RECIPES: readonly FurnaceRecipe[] = Object.freeze([
     input: TileKind.CopperOre,
     output: TileKind.Copper,
     bakeTime: 6,
-    requiredNeighbors: Object.freeze([TileKind.Wood]),
+    requiredNeighbors: Object.freeze([Object.freeze({ kind: TileKind.Wood, output: TileKind.Fire })]),
   }),
 ]);
 
@@ -69,7 +72,7 @@ export function furnaceNeighborsPresent(
 ): boolean {
   if (recipe.requiredNeighbors === undefined) return true;
   const x = targetIndex % world.width;
-  for (const kind of recipe.requiredNeighbors) {
+  for (const { kind } of recipe.requiredNeighbors) {
     if (targetIndex >= world.width && world.kindAtIndex(targetIndex - world.width) === kind) continue;
     if (x + 1 < world.width && world.kindAtIndex(targetIndex + 1) === kind) continue;
     if (targetIndex + world.width < world.cellCount && world.kindAtIndex(targetIndex + world.width) === kind) continue;

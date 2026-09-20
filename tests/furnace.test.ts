@@ -96,10 +96,59 @@ describe("directional furnaces", () => {
     expect(world.kindAt(1, 0)).toBe(TileKind.CopperOre);
     simulation.step();
     expect(world.kindAt(1, 0)).toBe(TileKind.Copper);
-    expect(world.kindAt(2, 0)).toBe(TileKind.Wood);
+    expect(world.kindAt(2, 0)).toBe(TileKind.Fire);
     expect(world.chargeAtPort(0, 0, Direction.Left)).toBe(1);
     simulation.step();
     expect(world.chargeAtPort(0, 0, Direction.Left)).toBe(0);
+  });
+
+  it("ignites every adjacent catalyst only on completion and spreads fire on the next tick", () => {
+    const world = new World(4, 3);
+    world.place(0, 2, TileKind.Furnace, Direction.Right);
+    world.place(1, 2, TileKind.CopperOre);
+    const woodId = world.place(2, 2, TileKind.Wood);
+    world.place(3, 2, TileKind.Wood);
+    world.place(1, 1, TileKind.Wood);
+    world.setWeld(1, 1, 1, 2, true);
+    world.setWeld(1, 2, 2, 2, true);
+    world.setWeld(2, 2, 3, 2, true);
+    const simulation = new Simulation(world);
+
+    for (let tick = 0; tick < 5; tick += 1) simulation.step();
+    expect(world.kindAt(1, 1)).toBe(TileKind.Wood);
+    expect(world.kindAt(2, 2)).toBe(TileKind.Wood);
+    expect(world.isWelded(1, 2, 2, 2)).toBe(true);
+    simulation.step();
+    expect(world.kindAt(1, 2)).toBe(TileKind.Copper);
+    expect(world.kindAt(1, 1)).toBe(TileKind.Fire);
+    expect(world.kindAt(2, 2)).toBe(TileKind.Fire);
+    expect(world.idAt(2, 2)).not.toBe(woodId);
+    expect(world.isWelded(1, 1, 1, 2)).toBe(false);
+    expect(world.isWelded(1, 2, 2, 2)).toBe(false);
+    expect(world.isWelded(2, 2, 3, 2)).toBe(false);
+    expect(world.kindAt(3, 2)).toBe(TileKind.Wood);
+
+    simulation.step();
+    expect(world.kindAt(1, 1)).toBe(TileKind.Empty);
+    expect(world.kindAt(2, 2)).toBe(TileKind.Empty);
+    expect(world.kindAt(3, 2)).toBe(TileKind.Fire);
+  });
+
+  it("lets simultaneous copper products share a catalyst without furnace-order bias", () => {
+    const world = new World(5, 1);
+    world.place(0, 0, TileKind.Furnace, Direction.Right);
+    world.place(1, 0, TileKind.CopperOre);
+    world.place(2, 0, TileKind.Wood);
+    world.place(3, 0, TileKind.CopperOre);
+    world.place(4, 0, TileKind.Furnace, Direction.Left);
+    const simulation = new Simulation(world);
+
+    for (let tick = 0; tick < 6; tick += 1) simulation.step();
+    expect(world.kindAt(1, 0)).toBe(TileKind.Copper);
+    expect(world.kindAt(3, 0)).toBe(TileKind.Copper);
+    expect(world.kindAt(2, 0)).toBe(TileKind.Fire);
+    expect(world.chargeAtPort(0, 0, Direction.Left)).toBe(1);
+    expect(world.chargeAtPort(4, 0, Direction.Right)).toBe(1);
   });
 
   it("does not treat diagonal or row-wrapped wood as adjacent to copper ore", () => {

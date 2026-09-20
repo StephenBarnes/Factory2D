@@ -380,7 +380,7 @@ export class TileInspector {
         const status = recipe.requiredNeighbors !== undefined && !furnaceNeighborsPresent(
           this.world, targetY * this.world.width + targetX, recipe,
         )
-          ? `WAITING FOR ${recipe.requiredNeighbors.map((kind) => TILE_DEFINITIONS[kind].name.toUpperCase()).join(" + ")} BESIDE TARGET`
+          ? `WAITING FOR ${recipe.requiredNeighbors.map(({ kind }) => TILE_DEFINITIONS[kind].name.toUpperCase()).join(" + ")} BESIDE TARGET`
           : progress === 0
             ? "READY"
             : this.world.chargeAtPort(position.x, position.y, ((orientation + 2) & 3) as Direction) === 1

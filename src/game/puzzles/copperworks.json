@@ -8,7 +8,7 @@
   "order": 0.5,
   "name": "Copperworks",
   "difficulty": 2,
-  "description": "The brewers need copper for their new stills. Six blocks of copper ore are waiting above the workshop. Smelt them and deliver the copper below. A furnace needs six active ticks with wood touching the ore orthogonally; the wood is not consumed.",
+  "description": "The brewers need copper for their new stills. Six blocks of copper ore are waiting above the workshop. Smelt them and deliver the copper below. A furnace needs six active ticks with wood touching the ore orthogonally. All wood touching the ore becomes fire when smelting finishes, so arrange fresh fuel and protect it from spreading flames.",
   "goal": "Smelt and deliver six copper blocks.",
   "cycleLimit": 1000,
   "components": [
@@ -184,11 +184,11 @@
     "textBoxes": [
       {
         "id": "smelting",
-        "x": 9.756484635913644,
-        "y": 1.4862596351681767,
-        "width": 3.6599999999999997,
+        "x": 9.627477747793414,
+        "y": 1.4564885729141812,
+        "width": 3.9299999999999997,
         "height": 1,
-        "text": "Smelt copper ore in front of a furnace for\n6 ticks, with wood touching the ore.\nThe wood is not consumed.",
+        "text": "Smelt copper ore in front of a furnace for\n6 ticks, with wood touching the ore.\nTouching wood becomes fire on completion.",
         "owner": "author"
       }
     ],

@@ -12,6 +12,9 @@ export class FurnaceResolver {
   private readonly transformTargetIndices: Int32Array;
   private readonly transformKinds: Uint8Array;
   private readonly transformInputs: Uint8Array;
+  private readonly neighborTargets: number[] = [];
+  private readonly neighborInputs: TileKind[] = [];
+  private readonly neighborOutputs: TileKind[] = [];
 
   constructor(world: World) {
     this.world = world;
@@ -23,6 +26,7 @@ export class FurnaceResolver {
   }
 
   resolve(disabledFurnaces: Uint8Array): void {
+    let neighborCount = 0;
 
     for (
       let index = this.world.firstFeatureIndex(WorldFeature.Furnace);
@@ -62,6 +66,19 @@ export class FurnaceResolver {
       this.transformTargetIndices[index] = targetIndex;
       this.transformKinds[index] = recipe.output;
       this.transformInputs[index] = recipe.input;
+      // Capture catalysts before any product changes the surrounding material.
+      if (recipe.requiredNeighbors === undefined) continue;
+      for (const requirement of recipe.requiredNeighbors) {
+        if (requirement.output === undefined) continue;
+        for (let direction = Direction.Up; direction <= Direction.Left; direction += 1) {
+          const neighbor = this.neighborIndex(targetIndex, direction);
+          if (neighbor < 0 || this.world.kindAtIndex(neighbor) !== requirement.kind) continue;
+          this.neighborTargets[neighborCount] = neighbor;
+          this.neighborInputs[neighborCount] = requirement.kind;
+          this.neighborOutputs[neighborCount] = requirement.output;
+          neighborCount += 1;
+        }
+      }
     }
 
     this.world.applyFurnaceResults(
@@ -70,6 +87,15 @@ export class FurnaceResolver {
       this.transformTargetIndices,
       this.transformKinds,
     );
+
+    for (let position = 0; position < neighborCount; position += 1) {
+      const target = expectDefined(this.neighborTargets[position], "furnace catalyst target");
+      const input = expectDefined(this.neighborInputs[position], "furnace catalyst input");
+      // Shared catalysts and directly cooked wood may already have transformed.
+      if (this.world.kindAtIndex(target) !== input) continue;
+      const output = expectDefined(this.neighborOutputs[position], "furnace catalyst output");
+      this.world.place(target % this.world.width, Math.floor(target / this.world.width), output);
+    }
 
     // Observe neighbors after every transformation, so simultaneous products join
     // independently of furnace order, but only on their completion tick.
