@@ -121,7 +121,7 @@ describe("directional furnaces", () => {
     expect(world.kindAt(0, 1)).toBe(TileKind.Copper);
   });
 
-  it("welds cooked glass only to existing adjacent glass on completion", () => {
+  it("welds cooked glass only to adjacent glass on completion", () => {
     const world = new World(3, 3);
     world.place(1, 0, TileKind.Furnace, Direction.Down);
     world.place(1, 1, TileKind.Sand);
@@ -152,18 +152,49 @@ describe("directional furnaces", () => {
     expect(restored.isWelded(1, 1, 1, 2)).toBe(true);
   });
 
-  it("does not weld simultaneously cooked neighbors or add welds on later ticks", () => {
+  it("welds simultaneously cooked glass across both axes without restoring later cuts", () => {
+    const world = new World(4, 2);
+    for (let y = 0; y < 2; y += 1) {
+      world.place(0, y, TileKind.Furnace, Direction.Right);
+      world.place(1, y, TileKind.Sand);
+      world.place(2, y, TileKind.Sand);
+      world.place(3, y, TileKind.Furnace, Direction.Left);
+    }
+    const simulation = new Simulation(world);
+    for (let tick = 0; tick < 4; tick += 1) simulation.step();
+
+    for (let y = 0; y < 2; y += 1) {
+      expect(world.kindAt(1, y)).toBe(TileKind.Glass);
+      expect(world.kindAt(2, y)).toBe(TileKind.Glass);
+      expect(world.isWelded(1, y, 2, y)).toBe(true);
+    }
+    expect(world.isWelded(1, 0, 1, 1)).toBe(true);
+    expect(world.isWelded(2, 0, 2, 1)).toBe(true);
+
+    world.setWeld(1, 0, 2, 0, false);
+    simulation.step();
+    expect(world.isWelded(1, 0, 2, 0)).toBe(false);
+  });
+
+  it("waits for a paused neighboring sand block to finish before welding", () => {
     const world = new World(2, 2);
     for (let x = 0; x < 2; x += 1) {
       world.place(x, 0, TileKind.Furnace, Direction.Down);
       world.place(x, 1, TileKind.Sand);
     }
     const simulation = new Simulation(world);
-    for (let tick = 0; tick < 5; tick += 1) simulation.step();
+    for (let tick = 0; tick < 3; tick += 1) simulation.step();
+    world.setCharge(1, 0, -1);
+    simulation.step();
 
     expect(world.kindAt(0, 1)).toBe(TileKind.Glass);
-    expect(world.kindAt(1, 1)).toBe(TileKind.Glass);
+    expect(world.kindAt(1, 1)).toBe(TileKind.Sand);
     expect(world.isWelded(0, 1, 1, 1)).toBe(false);
+
+    world.setCharge(1, 0, 0);
+    simulation.step();
+    expect(world.kindAt(1, 1)).toBe(TileKind.Glass);
+    expect(world.isWelded(0, 1, 1, 1)).toBe(true);
   });
 
   it("leaves iron smelting unwelded next to iron and glass", () => {

@@ -5,7 +5,7 @@ export interface FurnaceRecipe {
   readonly input: TileKind;
   readonly output: TileKind;
   readonly bakeTime: number;
-  /** Neighbor kinds observed before cooking that the finished product joins. */
+  /** Neighbor kinds after all cooking transformations that the finished product joins. */
   readonly weldTo?: readonly TileKind[];
   /** Each listed kind must touch the target orthogonally; neighbors are not consumed. */
   readonly requiredNeighbors?: readonly TileKind[];

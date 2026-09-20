@@ -11,7 +11,7 @@ export class FurnaceResolver {
   private readonly nextTargetIds: Uint32Array;
   private readonly transformTargetIndices: Int32Array;
   private readonly transformKinds: Uint8Array;
-  private readonly weldMasks: Uint8Array;
+  private readonly transformInputs: Uint8Array;
 
   constructor(world: World) {
     this.world = world;
@@ -19,7 +19,7 @@ export class FurnaceResolver {
     this.nextTargetIds = new Uint32Array(world.cellCount);
     this.transformTargetIndices = new Int32Array(world.cellCount);
     this.transformKinds = new Uint8Array(world.cellCount);
-    this.weldMasks = new Uint8Array(world.cellCount);
+    this.transformInputs = new Uint8Array(world.cellCount);
   }
 
   resolve(disabledFurnaces: Uint8Array): void {
@@ -33,7 +33,6 @@ export class FurnaceResolver {
       this.nextTargetIds[index] = 0;
       this.transformTargetIndices[index] = -1;
       this.transformKinds[index] = TileKind.Empty;
-      this.weldMasks[index] = 0;
 
       const targetIndex = this.neighborIndex(index, this.world.orientationAtIndex(index));
       if (targetIndex < 0) {
@@ -62,16 +61,7 @@ export class FurnaceResolver {
       }
       this.transformTargetIndices[index] = targetIndex;
       this.transformKinds[index] = recipe.output;
-      if (recipe.weldTo !== undefined) {
-        let mask = 0;
-        for (let direction = Direction.Up; direction <= Direction.Left; direction += 1) {
-          const neighbor = this.neighborIndex(targetIndex, direction);
-          if (neighbor >= 0 && recipe.weldTo.includes(this.world.kindAtIndex(neighbor))) {
-            mask |= 1 << direction;
-          }
-        }
-        this.weldMasks[index] = mask;
-      }
+      this.transformInputs[index] = recipe.input;
     }
 
     this.world.applyFurnaceResults(
@@ -81,19 +71,24 @@ export class FurnaceResolver {
       this.transformKinds,
     );
 
-    // Commit only after every transformation, so weld eligibility uses the product.
-    // The neighbor-kind decision above uses the same pre-cooking state for all furnaces.
+    // Observe neighbors after every transformation, so simultaneous products join
+    // independently of furnace order, but only on their completion tick.
     for (
       let index = this.world.firstFeatureIndex(WorldFeature.Furnace);
       index >= 0;
       index = this.world.nextFeatureIndex(WorldFeature.Furnace, index)
     ) {
-      const mask = expectDefined(this.weldMasks[index], "furnace weld mask");
-      if (mask === 0) continue;
       const target = expectDefined(this.transformTargetIndices[index], "furnace weld target");
+      if (target < 0) continue;
+      const input = expectDefined(this.transformInputs[index], "furnace transform input");
+      const recipe = expectDefined(
+        processingRecipeFor(this.world.kindAtIndex(index), input),
+        "completed furnace recipe",
+      );
+      if (recipe.weldTo === undefined) continue;
       for (let direction = Direction.Up; direction <= Direction.Left; direction += 1) {
-        if ((mask & (1 << direction)) === 0) continue;
         const neighbor = this.neighborIndex(target, direction);
+        if (neighbor < 0 || !recipe.weldTo.includes(this.world.kindAtIndex(neighbor))) continue;
         this.world.setWeld(
           target % this.world.width,
           Math.floor(target / this.world.width),
