@@ -186,6 +186,31 @@ export class WorkshopSounds {
         case "furnace":
           this.noise("lowpass", 450, 0.18, 0.5);
           break;
+        case "welder":
+          this.noise("highpass", 2800, 0.08, 0.3);
+          this.tone(620, 180, "triangle", 0, 0.10, 0.25);
+          break;
+        case "splitter":
+          this.noise("highpass", 1800, 0.05, 0.4);
+          this.tone(240, 80, "triangle", 0, 0.07, 0.35);
+          break;
+        case "laserSplitter":
+          this.tone(1800, 450, "sawtooth", 0, 0.10, 0.08);
+          this.noise("bandpass", 3200, 0.08, 0.2);
+          break;
+        case "dismantler":
+          this.noise("bandpass", 1100, 0.14, 0.4);
+          this.tone(180, 55, "triangle", 0.02, 0.10, 0.35);
+          break;
+        case "duplicator":
+          this.tone(220, 660, "sine", 0, 0.12, 0.35);
+          this.tone(440, 880, "sine", 0.04, 0.10, 0.2);
+          break;
+        case "assembler":
+          this.noise("bandpass", 750, 0.07, 0.3);
+          this.tone(130, 70, "triangle", 0, 0.08, 0.4);
+          this.tone(390, 260, "sine", 0.06, 0.08, 0.2);
+          break;
       }
     }
   }

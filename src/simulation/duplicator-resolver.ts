@@ -1,4 +1,5 @@
 import { expectDefined } from "../util/assert";
+import { recordProductionActivity } from "./production-activity";
 import {
   Direction,
   oppositeDirection,
@@ -123,6 +124,7 @@ export class DuplicatorResolver {
       this.destinationOwners,
     );
     this.world.applyDuplications(this.sourceForDestination, this.destinationOwners);
+    recordProductionActivity(this.world, "duplicator");
   }
 
   private isPoweredDuplicator(index: number): boolean {

@@ -1,14 +1,20 @@
+import { watchProductionActivity, type ProductionActivity } from "../simulation/production-activity";
 import { directionX, directionY, oppositeDirection, TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
 import { WorldFeature } from "../simulation/world-features";
 
-export type MachinerySound = "extend" | "retract" | "drill" | "grinder" | "furnace";
+export type MachinerySound = ProductionActivity |
+  "extend" | "retract" | "drill" | "grinder" | "furnace" |
+  "welder" | "splitter" | "laserSplitter" | "dismantler";
 
-const MACHINE_FEATURES = [WorldFeature.Piston, WorldFeature.Drill, WorldFeature.Furnace] as const;
+const MACHINE_FEATURES = [
+  WorldFeature.Piston, WorldFeature.Drill, WorldFeature.Furnace, WorldFeature.WeldOperator,
+] as const;
 
 interface MachineryObservation {
   capture: number;
   readonly kinds: Map<number, TileKind>;
+  production: ReadonlySet<ProductionActivity> | null;
 }
 
 /** An extended piston keeps its original identity in its arm, not its new base. */
@@ -50,15 +56,20 @@ export class MachineryObserver {
 
   private visitWorld(world: World, capture: boolean): void {
     let observation = this.observations.get(world);
-    if (capture && MACHINE_FEATURES.some((feature) => world.hasFeature(feature))) {
+    const hasProduction = world.hasFeature(WorldFeature.Duplicator) || world.hasFeature(WorldFeature.Assembler);
+    if (capture && (hasProduction || MACHINE_FEATURES.some((feature) => world.hasFeature(feature)))) {
       if (observation === undefined) {
-        observation = { capture: this.captureNumber, kinds: new Map() };
+        observation = { capture: this.captureNumber, kinds: new Map(), production: null };
         this.observations.set(world, observation);
       }
       observation.capture = this.captureNumber;
       observation.kinds.clear();
+      observation.production = hasProduction ? watchProductionActivity(world) : null;
     }
     if (observation?.capture === this.captureNumber) {
+      if (!capture && observation.production !== null) {
+        for (const activity of observation.production) this.sounds.add(activity);
+      }
       for (const feature of MACHINE_FEATURES) {
         for (
           let index = world.firstFeatureIndex(feature);
@@ -80,10 +91,14 @@ export class MachineryObserver {
             this.sounds.add("retract");
           } else if (kind === previousKind &&
               world.chargeAtPortIndex(index, oppositeDirection(world.orientationAtIndex(index))) === 1) {
-            // Processing rear outputs include completion ticks and exclude paused/jammed work.
+            // Isolated rear outputs report active processing or successful weld changes.
             if (kind === TileKind.Drill) this.sounds.add("drill");
             else if (kind === TileKind.Grinder) this.sounds.add("grinder");
             else if (kind === TileKind.Furnace) this.sounds.add("furnace");
+            else if (kind === TileKind.Welder) this.sounds.add("welder");
+            else if (kind === TileKind.Splitter) this.sounds.add("splitter");
+            else if (kind === TileKind.LaserSplitter) this.sounds.add("laserSplitter");
+            else if (kind === TileKind.Dismantler) this.sounds.add("dismantler");
           }
         }
       }
