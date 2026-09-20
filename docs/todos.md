@@ -25,9 +25,14 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 # Audio-related
 
 * Add a resonator rune that emits a charge when a bell with matching pitch rings, anywhere on the grid; decide resonator's pitch in the same way as bells do, by counting its body's number of blocks. This functions as dwarven radio/wireless signaling.
-* Potentially add variants of bell blocks - maybe silver bells that sound different, or chimes. Decide pitch the same way, but modify the partials to give the sounds different character.
-* Maybe make sound effects directional based on camera position, and volume slightly dependent on zoom level.
-* Add sound effects for a few blocks, e.g. pistons that extend or retract, drills, grinders, furnaces. These shouldn't behave like bells (pitch doesn't depend on body size, and sounds don't trigger resonators).
+* Add some more sound effects for welders, splitters, laser splitters, dismantlers, duplicators, assemblers. Could probably reuse the system we already have in `src/ui/machinery-observer.ts` and `src/ui/workshop-sounds.ts`.
+* Add sound effects for blocks breaking - by drill, or fragile blocks shattering, or fasteners breaking.
+* Make sound effects directional based on camera position and zoom. Also adjust volume by distance and zoom level.
+* Add a mallet or beater block. When it's moved in a direction, it checks the block one further in that direction. If that block is nonempty and belongs to a different body to the beater block, play a sound with pitch dependent on the size of that body. Similar to our current bell block, except the sound depends on the neighboring body.
+	* Apply the same expanding-rings animation (implemented for bells) when playing a sound.
+	* Once resonator blocks are present, make them also sense sounds from beaters/mallets.
+	* As a large follow-up, define a different character of sound for different materials - metals could sound like our bells currently do, but different sound classes for other types like stone, wood, glass.
+	* Once this is present, potentially remove the bell blocks entirely - since we can instead build bells in-world from metal blocks, or build other instruments like lithophones.
 
 # Performance
 

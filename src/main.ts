@@ -39,6 +39,7 @@ import type { GridCell, GridEdge, GridPoint } from "./render/grid-drag";
 import { drawTile } from "./render/tile-renderer";
 import { recordBellRing } from "./render/bell-rings";
 import { BellObserver } from "./ui/bell-observer";
+import { MachineryObserver } from "./ui/machinery-observer";
 import { componentConfigurationForKind } from "./simulation/configurable-components";
 import { serializeBoard } from "./simulation/board-export";
 import { PuzzleResult } from "./simulation/puzzle-result";
@@ -141,6 +142,7 @@ const sounds = new WorkshopSounds(
   },
 );
 const bells = new BellObserver(recordBellRing);
+const machinery = new MachineryObserver();
 const exportPlayerDataButton = requiredElement<HTMLButtonElement>("export-player-data-button");
 const importPlayerDataButton = requiredElement<HTMLButtonElement>("import-player-data-button");
 const importPlayerDataFile = requiredElement<HTMLInputElement>("import-player-data-file");
@@ -514,9 +516,13 @@ function advanceSimulation(duration: number, startedAt = performance.now()): voi
   }
   const session = surface.session;
   session.previousWorld.copyFrom(session.world);
-  if (!clock.running || clock.ticksPerSecond < 15) bells.capture(session.world);
+  if (!clock.running || clock.ticksPerSecond < 15) {
+    bells.capture(session.world);
+    machinery.capture(session.world);
+  }
   surface.simulation.step(duration > 0 ? session.previousWorld : undefined);
   sounds.playBells(bells.collectPitches(session.world));
+  sounds.playMachinery(machinery.collectSounds(session.world));
   signalTraces.sync(session.world, surface.simulation.tick);
   if (session.world.puzzleResult === PuzzleResult.Won) {
     sounds.victory();
@@ -1444,7 +1450,10 @@ const puzzleTests = new PuzzleTestController(
       });
     },
     beforeStep: (world, ticksPerSecond, interpolate) => {
-      if (ticksPerSecond < 15) bells.capture(world);
+      if (ticksPerSecond < 15) {
+        bells.capture(world);
+        machinery.capture(world);
+      }
       if (!interpolate) return undefined;
       const session = surface.session;
       session.previousWorld.copyFrom(session.world);
@@ -1452,6 +1461,7 @@ const puzzleTests = new PuzzleTestController(
     },
     afterStep: (world, tick) => {
       sounds.playBells(bells.collectPitches(world));
+      sounds.playMachinery(machinery.collectSounds(world));
       signalTraces.sync(world, tick);
     },
     onSuccess: () => sounds.victory(),

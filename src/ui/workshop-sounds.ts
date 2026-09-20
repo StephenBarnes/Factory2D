@@ -3,6 +3,7 @@ import {
   BELL_STEPS_PER_OCTAVE,
   bellFrequencyForPitch,
 } from "./bell-observer";
+import type { MachinerySound } from "./machinery-observer";
 
 type EditSound = "place" | "remove" | "weld" | "unweld";
 
@@ -49,6 +50,7 @@ export class WorkshopSounds {
   private context: AudioContext | null = null;
   private output: GainNode | null = null;
   private bellOutput: GainNode | null = null;
+  private machineryNoise: AudioBuffer | null = null;
   private masterVolume = 100;
   private bellVolume = 100;
   private lastEditTime = -Infinity;
@@ -159,6 +161,65 @@ export class WorkshopSounds {
       if (!pitches.has(pitch)) continue;
       this.bell(pitch);
     }
+  }
+
+  playMachinery(sounds: ReadonlySet<MachinerySound>): void {
+    if (!this.canPlay()) return;
+    for (const sound of sounds) {
+      switch (sound) {
+        case "extend":
+          this.noise("bandpass", 900, 0.12, 0.35);
+          this.tone(160, 65, "triangle", 0.07, 0.08, 0.45);
+          break;
+        case "retract":
+          this.noise("bandpass", 600, 0.10, 0.3);
+          this.tone(110, 55, "triangle", 0.05, 0.07, 0.4);
+          break;
+        case "drill":
+          this.noise("bandpass", 2200, 0.12, 0.3);
+          this.tone(95, 80, "sawtooth", 0, 0.10, 0.06);
+          break;
+        case "grinder":
+          this.noise("lowpass", 1400, 0.14, 0.35);
+          this.tone(55, 40, "triangle", 0, 0.12, 0.2);
+          break;
+        case "furnace":
+          this.noise("lowpass", 450, 0.18, 0.5);
+          break;
+      }
+    }
+  }
+
+  private noise(type: BiquadFilterType, frequency: number, duration: number, volume: number): void {
+    const context = this.context;
+    const output = this.output;
+    if (context === null || output === null) throw new Error("Workshop audio is not initialized");
+    if (this.machineryNoise === null) {
+      this.machineryNoise = context.createBuffer(1, Math.ceil(context.sampleRate * 0.2), context.sampleRate);
+      const samples = this.machineryNoise.getChannelData(0);
+      for (let index = 0; index < samples.length; index += 1) samples[index] = Math.random() * 2 - 1;
+    }
+    const at = context.currentTime;
+    const source = context.createBufferSource();
+    const filter = context.createBiquadFilter();
+    const envelope = context.createGain();
+    source.buffer = this.machineryNoise;
+    filter.type = type;
+    filter.frequency.setValueAtTime(frequency, at);
+    filter.Q.setValueAtTime(0.7, at);
+    envelope.gain.setValueAtTime(0, at);
+    envelope.gain.linearRampToValueAtTime(volume, at + 0.008);
+    envelope.gain.exponentialRampToValueAtTime(0.001, at + duration);
+    source.connect(filter);
+    filter.connect(envelope);
+    envelope.connect(output);
+    source.onended = () => {
+      source.disconnect();
+      filter.disconnect();
+      envelope.disconnect();
+    };
+    source.start(at);
+    source.stop(at + duration);
   }
 
   private bell(pitch: number): void {
