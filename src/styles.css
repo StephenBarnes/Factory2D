@@ -11,7 +11,7 @@
   /* Dwarven mine palette: dark stone, bronze, gilded gold, ember lava, gem accents. */
   --bg-deep: #0b0806;
   --bg-cavern: #171009;
-  --panel-bg: rgb(29 22 15 / 94%);
+  --panel-bg: rgb(29 22 15);
   --panel-border: #4b3d29;
   --border-strong: #635134;
   --border-faint: #33291a;
@@ -43,9 +43,9 @@
   --selection-hover-bg: #22271f;
   --palette-selected-bg: #2d2310;
   --dialog-bg: #1a130c;
-  --puzzle-group-bg: rgb(21 16 10 / 88%);
+  --puzzle-group-bg: rgb(21 16 10);
   --shortcut-bg: rgb(24 16 8 / 92%);
-  --unlocked-wash: rgb(84 58 25 / 70%);
+  --unlocked-wash: rgb(84 58 25);
   --best-score-wash: rgb(84 62 24 / 60%);
   --action-hover-text: #ffe9bb;
   --solution-primary-text: #f0cf8a;
@@ -76,7 +76,7 @@
   color-scheme: light;
   --bg-deep: #e6dcc9;
   --bg-cavern: #f4eddf;
-  --panel-bg: rgb(250 245 233 / 96%);
+  --panel-bg: rgb(250 245 233);
   --panel-border: #b5a184;
   --border-strong: #917951;
   --border-faint: #cfc0a7;
@@ -144,7 +144,7 @@ body {
 }
 
 body {
-  background: var(--bg-deep);
+  background: var(--bg-deep) url("./assets/background.webp") center / cover no-repeat;
 }
 
 button,
@@ -286,10 +286,6 @@ body:has(dialog[open]) .tool-cursor {
   z-index: 4;
   inset: 0;
   overflow-y: auto;
-  background:
-    radial-gradient(circle at 72% 18%, rgb(226 179 87 / 9%), transparent 32rem),
-    radial-gradient(circle at 22% 88%, rgb(255 110 40 / 7%), transparent 30rem),
-    linear-gradient(135deg, var(--bg-cavern) 0%, var(--bg-deep) 68%);
 }
 
 .main-menu-content {
@@ -301,8 +297,8 @@ body:has(dialog[open]) .tool-cursor {
 }
 
 .main-menu-header {
-  max-width: 680px;
   margin-bottom: 36px;
+  text-align: center;
 }
 
 .eyebrow {
@@ -315,13 +311,15 @@ body:has(dialog[open]) .tool-cursor {
 }
 
 .main-menu-header h1 {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.22em;
+  max-width: 100%;
   margin: 0;
+  padding: 0.25em 0.35em;
   color: var(--text-bright);
   font-family: var(--font-display);
-  font-size: clamp(2.3rem, 7vw, 4.8rem);
+  font-size: clamp(1.8rem, 7vw, 4.8rem);
   line-height: 0.95;
   letter-spacing: 0.03em;
   text-shadow: 0 2px 22px rgb(226 179 87 / 22%);
@@ -331,8 +329,12 @@ body:has(dialog[open]) .tool-cursor {
   flex: none;
   width: 0.85em;
   height: 0.85em;
-  translate: 0.05em 0.08em;
+  translate: 0 0.07em;
   filter: var(--title-icon-filter);
+}
+
+#main-menu-title {
+  padding: 0.2em 0.4em 0.35em 0.4em;
 }
 
 .sandbox-node,
@@ -369,6 +371,9 @@ body:has(dialog[open]) .tool-cursor {
 
 /* Stepped corner inlays, adapted from temp/artdeco.txt without extra markup. */
 .puzzle-node[data-state="unlocked"]::after,
+.main-menu-header h1::after,
+.puzzle-info-header::after,
+#briefing-score-histograms::after,
 .puzzle-brief::after,
 .solutions-panel::after,
 .tile-inspector::after,
@@ -621,10 +626,6 @@ body:has(dialog[open]) .tool-cursor {
   z-index: 4;
   inset: 0;
   overflow-y: auto;
-  background:
-    radial-gradient(circle at 18% 16%, rgb(198 146 60 / 13%), transparent 30rem),
-    radial-gradient(circle at 82% 72%, rgb(255 110 40 / 8%), transparent 34rem),
-    linear-gradient(135deg, var(--bg-cavern) 0%, var(--bg-deep) 72%);
 }
 
 .puzzle-info-content {
@@ -651,6 +652,9 @@ body:has(dialog[open]) .tool-cursor {
 }
 
 .puzzle-info-header {
+  width: fit-content;
+  max-width: 100%;
+  padding: clamp(9px, 2.0vw, 28px) clamp(18px, 3vw, 28px);
   margin: clamp(28px, 6vh, 60px) 0 32px;
 }
 
@@ -661,6 +665,7 @@ body:has(dialog[open]) .tool-cursor {
   font-size: clamp(2.2rem, 6vw, 4.6rem);
   line-height: 0.95;
   letter-spacing: 0.03em;
+  overflow-wrap: anywhere;
   text-shadow: 0 2px 22px rgb(226 179 87 / 22%);
 }
 
@@ -671,6 +676,9 @@ body:has(dialog[open]) .tool-cursor {
   gap: clamp(20px, 4vw, 48px);
 }
 
+.main-menu-header h1,
+.puzzle-info-header,
+#briefing-score-histograms,
 .puzzle-brief,
 .solutions-panel {
   position: relative;
@@ -713,6 +721,23 @@ body:has(dialog[open]) .tool-cursor {
   font-size: 0.85rem;
   line-height: 1.5;
   font-family: var(--font-display);
+}
+
+.puzzle-test-case-warning {
+  margin: 18px 0 0;
+  padding: 12px;
+  border-left: 2px solid var(--gold);
+  background: var(--goal-bg);
+  color: var(--text-body);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.puzzle-test-case-warning strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--gold);
+  font-family: var(--font-mono);
 }
 
 .puzzle-info-description {
@@ -925,11 +950,19 @@ body:has(dialog[open]) .tool-cursor {
     grid-template-columns: minmax(130px, 1fr) auto auto;
   }
 
-  .sandbox-row {
+  .solution-row:not(.sandbox-row) .solution-row-actions {
+    grid-column: auto;
+    padding-top: 0;
+    border-top: 0;
+  }
+}
+
+@container solutions (min-width: 440px) {
+  .solution-row.sandbox-row {
     grid-template-columns: minmax(130px, 1fr) auto;
   }
 
-  .solution-row .solution-row-actions {
+  .sandbox-row .solution-row-actions {
     grid-column: auto;
     padding-top: 0;
     border-top: 0;
@@ -2027,7 +2060,6 @@ kbd {
 }
 
 .controls button {
-  min-width: 72px;
   padding: 0 13px;
 }
 
@@ -2065,7 +2097,6 @@ kbd {
 
 .controls .primary-control,
 .controls #fast-forward-button {
-  min-width: 80px;
   border-color: var(--gild);
   color: #f6cf7e;
   background: linear-gradient(180deg, #70502a, #392713);
@@ -3235,12 +3266,7 @@ kbd {
   }
 
   .controls button {
-    min-width: 58px;
     padding: 0 9px;
-  }
-
-  .controls .primary-control {
-    min-width: 84px;
   }
 
   .simulation-state {

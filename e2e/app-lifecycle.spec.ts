@@ -766,7 +766,7 @@ test("commits multi-event tile drags once on pointer up or cancellation", async 
   expect(storedGrid[5]?.slice(2, 6)).toBe("####");
 });
 
-test("renders puzzle cases and leaves the failed case paused on the board", async ({ page }) => {
+test("hides the single-case selector and leaves a failed puzzle paused on the board", async ({ page }) => {
   await seedBrowserStorage(page, "populated");
   await page.goto("/#/puzzles/stone-drop/solutions/solution-1");
   const testCase = expectDefined(
@@ -781,13 +781,7 @@ test("renders puzzle cases and leaves the failed case paused on the board", asyn
   const report = page.locator("#test-report-dialog");
   await expect(testButton).toBeVisible();
   await expect(page.getByRole("button", { name: /RUN/ })).toHaveCount(0);
-  const caseButton = page.locator("#test-case-button");
-  await expect(caseButton).toHaveText(`CASE: ${testCase.name}`);
-  await caseButton.click();
-  const caseOption = page.locator("#test-case-options")
-    .locator(`[data-test-case-id="${testCase.id}"]`);
-  await expect(caseOption).toHaveText(testCase.name);
-  await caseOption.click();
+  await expect(page.locator("#test-case-button")).toBeHidden();
   const stone = page.getByRole("button", { name: /^Stone/ });
   await stone.click();
   await testButton.click();
@@ -1193,4 +1187,29 @@ test("puzzle info remains horizontally contained and vertically reachable", asyn
   expect(overflow.horizontal).toBeLessThanOrEqual(1);
   expect(overflow.canScroll).toBe(true);
   expect(overflow.deleteButtonBelowViewport).toBeLessThanOrEqual(1);
+});
+
+test("sandbox rows keep actions beside the name until the panel needs to wrap", async ({ page }) => {
+  await seedBrowserStorage(page, "empty");
+  await page.setViewportSize({ width: 960, height: 800 });
+  await page.goto("/#/sandbox");
+  await page.getByRole("button", { name: "+ NEW SANDBOX" }).click();
+  await expect(page.locator("#game-screen")).toBeVisible();
+  await page.goto("/#/sandbox");
+  const row = page.locator(".sandbox-row").first();
+  const identity = row.locator(".solution-identity");
+  const actions = row.locator(".solution-row-actions");
+  const wideIdentity = expectDefined(await identity.boundingBox(), "Sandbox identity is missing");
+  const wideActions = expectDefined(await actions.boundingBox(), "Sandbox actions are missing");
+  expect(wideActions.x).toBeGreaterThanOrEqual(wideIdentity.x + wideIdentity.width);
+  expect(Math.abs(
+    wideActions.y + wideActions.height / 2 - wideIdentity.y - wideIdentity.height / 2,
+  )).toBeLessThanOrEqual(1);
+
+  await page.setViewportSize({ width: 390, height: 800 });
+  const narrowIdentity = expectDefined(await identity.boundingBox(), "Sandbox identity is missing");
+  const narrowActions = expectDefined(await actions.boundingBox(), "Sandbox actions are missing");
+  expect(narrowActions.y).toBeGreaterThanOrEqual(narrowIdentity.y + narrowIdentity.height);
+  const rowBounds = expectDefined(await row.boundingBox(), "Sandbox row is missing");
+  expect(narrowActions.x + narrowActions.width).toBeLessThanOrEqual(rowBounds.x + rowBounds.width);
 });

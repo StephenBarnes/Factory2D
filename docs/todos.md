@@ -30,7 +30,8 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 # UI
 
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
-* For puzzles with multiple test cases, in the puzzle briefing screen, show a warning symbol plus "(number) test cases". To avoid a situation where somebody designs a solution assuming one specific case because they didn't check the test-cases drop-up button.
+* Modify our game's color scheme, for both light and dark mode. Sample colors from the background image and use those.
+* Add some decoration for the puzzle workshop screens where blocks are placed. Maybe a different background, or some other kind of decoration.
 
 # Content
 

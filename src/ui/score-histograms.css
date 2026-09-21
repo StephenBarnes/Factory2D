@@ -18,6 +18,7 @@
 
 #briefing-score-histograms {
   margin-top: 24px;
+  padding: clamp(18px, 3vw, 28px);
 }
 
 #report-score-histograms {

@@ -28,6 +28,8 @@ export class PuzzleInfoView {
   private readonly title: HTMLElement;
   private readonly description: HTMLElement;
   private readonly difficulty: HTMLElement;
+  private readonly testCaseWarning: HTMLElement;
+  private readonly testCaseCount: HTMLElement;
   private readonly goal: HTMLElement;
   private readonly solutionList: HTMLElement;
   private readonly emptySolutions: HTMLElement;
@@ -39,6 +41,8 @@ export class PuzzleInfoView {
     this.title = requiredDescendant(root, "#puzzle-info-title");
     this.description = requiredDescendant(root, "#puzzle-info-description");
     this.difficulty = requiredDescendant(root, "#puzzle-briefing-difficulty");
+    this.testCaseWarning = requiredDescendant(root, "#puzzle-test-case-warning");
+    this.testCaseCount = requiredDescendant(root, "#puzzle-test-case-count");
     this.goal = requiredDescendant(root, "#puzzle-info-goal");
     this.solutionList = requiredDescendant(root, "#solution-list");
     this.emptySolutions = requiredDescendant(root, "#empty-solutions");
@@ -55,6 +59,8 @@ export class PuzzleInfoView {
       ? `${rating.label} puzzle`
       : `${rating.label} — ${options.puzzle.difficulty} of 5 stars`;
     this.difficulty.title = this.difficulty.ariaLabel;
+    this.testCaseWarning.hidden = options.puzzle.testCases.length <= 1;
+    this.testCaseCount.textContent = `${options.puzzle.testCases.length} test cases`;
     this.goal.textContent = options.puzzle.goal;
 
     const bestScores = bestPuzzleScores(options.solutions.map((solution) => solution.scores));

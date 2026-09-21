@@ -29,6 +29,8 @@ Sandboxes use the same algorithm from `saved-design-names.ts`, with `Sandbox` in
 
 Puzzle briefing solution rows display newest-created first, including duplicates. Editing an existing solution does not move it; stored model order is unchanged.
 
+Sandbox briefing rows use their panel's available width rather than the puzzle score-row breakpoint: names and actions share a row from 440 CSS pixels of panel content width, and stack below that. Puzzle rows retain room for their four scores.
+
 A session has four related runtime references:
 
 * `world`: current mutable simulation state.
@@ -105,6 +107,7 @@ Drag a trace header horizontally to reorder its category, with a highlighted liv
 * Mechanical puzzles use Transport, Extraction, Manufacturing, and Mining groups; unlock thresholds and initial availability live in `puzzle-groups.ts`. Empty groups remain available in authoring but are hidden from the puzzle map. Puzzle IDs, saved solutions, and completion records are independent of category assignments.
 * Puzzle `difficulty` is `"tutorial"` or an integer from 1–5 (Easy, Intermediate, Difficult, Expert, Masterwork); omission and new sandboxes default to 1. Shipped puzzles specify it explicitly. Puzzle properties edit the rating, and puzzle export/import and saved-sandbox snapshots preserve it. Main-menu cards show a graduation cap for tutorials or the corresponding number of stars; the puzzle briefing also shows the difficulty name. Both provide explanatory hover text and accessible labels, including the numeric rating out of five for starred puzzles, independent of completion/unlock state.
 * Every puzzle has a validated priced component catalog, editable regions, explicit board dimensions, at least one victory block in every resolved case, and an implicit `standard` case. Additional named stable-ID cases apply sparse board-field overrides and must match base dimensions. Cycle limits default to 1,000 and cannot exceed 10,000.
+* Briefings warn when a puzzle has multiple test cases, including the standard case in the displayed count. Puzzle workshops hide the CASE selector for single-case puzzles; multi-case puzzles retain selection, and sandboxes always retain the menu for case authoring.
 * `sandbox-puzzle-authoring.ts` owns scene/puzzle import, metadata, independent case boards, case duplication/deletion, selected case, and board resizing/cropping. Properties resize from the top-left; edge controls support padding/cropping any side; selection cropping translates a chosen rectangle to the new origin across all cases. `puzzle-export.ts` serializes authored puzzles. Scene import and new sandbox catalogs start disabled; saved/imported enabled prices remain explicit. Puzzle imports restore metadata, catalog, regions, and all cases, not just tiles.
 * Authored additional-case exports contain only board fields that differ from the standard case; identical cases use empty overrides. Comparison is field-level, including complete nested component state. Empty arrays remain explicit when needed to clear inherited state, and each case retains its own identity and cycle-limit override.
 * `editable-solution.ts` transfers the shared editable design into each isolated fixed-case world. Catalog restrictions are enforced at placement as well as palette/shortcut selection. Puzzle clearing/import paths must preserve fixed terrain.

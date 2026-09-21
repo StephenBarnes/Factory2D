@@ -507,7 +507,7 @@ class DomPuzzleTestControllerView implements PuzzleTestControllerView {
       });
       this.elements.caseMenu.options.append(option);
     }
-    this.elements.caseMenu.container.hidden = false;
+    this.elements.caseMenu.container.hidden = puzzle.testCases.length <= 1;
     if (selectedCaseId !== null) {
       this.selectCase(selectedCaseId);
     }
