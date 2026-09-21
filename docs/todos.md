@@ -9,12 +9,18 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 * Add a dwarf block which is breakable - anything falling onto the dwarf block should destroy it. Anything pushing the dwarf block should push it, unless the push is blocked by something on the other side like a wall, in which case that should also crush the dwarf. Use the shattering animation for this.
 * Add a gravity stone that changes its welded body's gravity to point in the gravity stone's forward direction, instead of downward.
+* Add a molten copper block, which is unweldable and falls diagonally like sand. Make the furnace convert copper blocks to molten copper after a delay. Molten copper that stays unmoving for say 3 ticks converts back to copper blocks, and welds itself to all neighboring copper blocks (or other copper that was created by molten copper solidifying in the same tick). Requires a new mechanism for tracking blocks that convert to other blocks when stationary; a bit like how fragile blocks can shatter if they fall a certain distance onto ground. This allows for interesting puzzles based on pouring copper into molds to create complex shapes. As follow-up, add the same mechanism to other metals - probably gold/tin/silver can melt, but not iron/steel/bronze/mithril, so each metal has different constraints.
+* Add a riveter block. Similar to a welder block, but welds the one edge between its two front neighbors.
+* Add a gate block. When it receives a charge on left/right side, it moves the body above it to below it, mirrored. We have this functionality already with the duplicator block; the only difference is that it also consumes the body above it, unlike the duplicator. (And different visuals.) Useful for puzzles where the player has to build intermediates in different isolated compartments.
+* Add a forced-flipper block. Similar to the existing flipper block, but instead of checking for collisions and then blocking the flip, it instead always flips, destroying any blocks that would collide with the flip. Useful for creating some puzzle infrastructure.
+* Add a bomb block. When it receives a circuit charge, it detonates, filling the 3x3 region around itself with fire blocks, replacing whatever blocks are there currently. Except don't replace indestructible blocks.
 
 # Component behaviors
 
 * Modify the assembler to add a pushing force for output: When it has a pending output, but no space to output, attempt to push the blocks away so that it can produce output; failing that, try to push the assembler itself in its forwards direction, so the product can be emitted out the back (at assembler's pre-movement position) in the same tick.
 * Modify the duplicator in the same way as assembler above - make it also attempt to push itself away from the output side, if it's trying to duplicate a single-tile body but there's something blocking the output. When duplicating multi-tile bodies, don't do this - require already empty space for the whole body.
 * Potentially allow configuring the initial state of stateful blocks like the rotator (initial head facing) and piston (whether to start expanded or retracted), maybe using some hotkey to toggle. The rotator's initial head direction determines which side can be welded to. For the piston, things like the cost of all placed components is a bit weird; may have to add a special case like piston heads and bodies each having half the price of ordinary retracted body-and-head piston blocks, but still hide body and arm separate blocks from the palette.
+* Bug: currently a magnet cannot pick up an iron block, and a metallic arm cannot pick up a magnet. Magnets only seem to prevent falling. They should behave more like there's a weld between two blocks if one is a magnet and the other is magnetic. (But not exactly like a weld; for example a vehicle should be able to stick to a metal wall using a magnet, while also driving up and down using a conveyor; or stick to the bottom of a ceiling and drive left and right.) Similarly a magnet stuck to the top of a horizontal iron bar should move with the iron bar if the bar moves left and right, or move with a wall that moves up and down. General rule is probably: act like a weld, except if there's a non-gravity force trying to move it along the axis perpendicular to its facing, in which case it should still be movable along that axis.
 
 # Performance
 
@@ -24,6 +30,7 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 # UI
 
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
+* For puzzles with multiple test cases, in the puzzle briefing screen, show a warning symbol plus "(number) test cases". To avoid a situation where somebody designs a solution assuming one specific case because they didn't check the test-cases drop-up button.
 
 # Content
 
