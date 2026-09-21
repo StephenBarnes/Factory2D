@@ -141,3 +141,5 @@ Mining puzzles will involve transport/vehicles plus extraction, e.g. drilling th
 * Receive a mixture of gemstones from one dispenser. Deliver all of the rubies first, then all the emeralds, then all the sapphires.
 * Add a bronze-smelting puzzle. Tinworks covers tin's lateral-fuel rule; Steelworks covers steel's two-sided fuel rule and includes working/nonworking hearths behind an indestructible wall. Bronze's three-sided tin catalyst requirement should similarly have sealed examples.
 * Add a separate section for advanced manufacturing, which requires producing large structures from basic parts, e.g. making a complex steel-and-bronze structure given only ore block dispensers.
+* Crystal cavern puzzle? Cavern with crystals on the sides, must be unwelded and shipped.
+* Agriculture section. Can have various puzzles, e.g. dirt in a stepped hill so harvesting trees or mushrooms is inconvenient.
