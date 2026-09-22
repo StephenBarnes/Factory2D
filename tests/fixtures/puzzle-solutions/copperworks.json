@@ -1,0 +1,116 @@
+{
+  "format": "factory2d-board",
+  "version": 15,
+  "width": 21,
+  "height": 15,
+  "tick": 0,
+  "result": "in-progress",
+  "grid": [
+    "##############=######",
+    "#.............=...w.#",
+    "#..ooo........=.o.o.#",
+    "#..ooo........=.F.F.#",
+    "#.............=######",
+    "#.............=.....#",
+    "#.............=.owoF#",
+    "#.....FFFFFF#.=.F##.#",
+    "#...........#.=######",
+    "#..BBBwwwwww##=oww.o#",
+    "#....C........=.wow.#",
+    "#....C........=F.F#F#",
+    "#....1BBBBBB.===#####",
+    "#..........=DNV=#####",
+    "###########=c===#####"
+  ],
+  "orientations": [
+    {
+      "x": 19,
+      "y": 6,
+      "direction": "left"
+    },
+    {
+      "x": 6,
+      "y": 7,
+      "direction": "down"
+    },
+    {
+      "x": 7,
+      "y": 7,
+      "direction": "down"
+    },
+    {
+      "x": 8,
+      "y": 7,
+      "direction": "down"
+    },
+    {
+      "x": 9,
+      "y": 7,
+      "direction": "down"
+    },
+    {
+      "x": 10,
+      "y": 7,
+      "direction": "down"
+    },
+    {
+      "x": 11,
+      "y": 7,
+      "direction": "down"
+    },
+    {
+      "x": 13,
+      "y": 13,
+      "direction": "right"
+    }
+  ],
+  "components": [
+    {
+      "x": 13,
+      "y": 13,
+      "type": "counter",
+      "threshold": 6,
+      "count": 0
+    }
+  ],
+  "textBoxes": [
+    {
+      "id": "f1674fe4-1b9e-4111-90fe-e3268aaca512",
+      "centerX": 17.521662730766707,
+      "centerY": 4.501522793937664,
+      "text": "To smelt copper ore, there must be wood\nin a cell adjacent to the copper.",
+      "owner": "author"
+    },
+    {
+      "id": "344b78ae-032b-4c9d-8da0-b52763b7c90a",
+      "centerX": 17.54506951626463,
+      "centerY": 12.817673256778386,
+      "text": "The wood becomes fire as soon as the copper\nsmelts. Fire spreads to neighboring wood.\nFire is immovable and does not fall.",
+      "owner": "author"
+    },
+    {
+      "id": "ab0fd14b-20f8-4cac-a0a1-4138b3fe9f49",
+      "centerX": 17.559154293750804,
+      "centerY": 8.495691074915966,
+      "text": "Smelting takes 6 ticks.",
+      "owner": "author"
+    }
+  ],
+  "welds": [
+    "+-------------+-----|",
+    "|.............|.....|",
+    "|.............|.....|",
+    "|.............|.....|",
+    "|.............+-----|",
+    "|.............|.....|",
+    "|.............|....-|",
+    "|.....------|.|..+|.|",
+    "|...........|.+-----|",
+    "|..--+--------|.+...|",
+    "|....|........|.....|",
+    "|....|........|...|.|",
+    "|....------|.+++++++|",
+    "|..........+-+++++++|",
+    "-----------..-------."
+  ]
+}

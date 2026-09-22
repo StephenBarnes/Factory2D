@@ -21,6 +21,7 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Modify the duplicator in the same way as assembler above - make it also attempt to push itself away from the output side, if it's trying to duplicate a single-tile body but there's something blocking the output. When duplicating multi-tile bodies, don't do this - require already empty space for the whole body.
 * Potentially allow configuring the initial state of stateful blocks like the rotator (initial head facing) and piston (whether to start expanded or retracted), maybe using some hotkey to toggle. The rotator's initial head direction determines which side can be welded to. For the piston, things like the cost of all placed components is a bit weird; may have to add a special case like piston heads and bodies each having half the price of ordinary retracted body-and-head piston blocks, but still hide body and arm separate blocks from the palette.
 * Bug: currently a magnet cannot pick up an iron block, and a metallic arm cannot pick up a magnet. Magnets only seem to prevent falling. They should behave more like there's a weld between two blocks if one is a magnet and the other is magnetic. (But not exactly like a weld; for example a vehicle should be able to stick to a metal wall using a magnet, while also driving up and down using a conveyor; or stick to the bottom of a ceiling and drive left and right.) Similarly a magnet stuck to the top of a horizontal iron bar should move with the iron bar if the bar moves left and right, or move with a wall that moves up and down. General rule is probably: act like a weld, except if there's a non-gravity force trying to move it along the axis perpendicular to its facing, in which case it should still be movable along that axis.
+* Modify splitter, welder, laser splitter, and dismantler: only split/weld on +1 signal, instead of being enabled by default and disabling on -1. May break some current reference solutions.
 
 # Performance
 
@@ -29,9 +30,11 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 # UI
 
+* When using the "download scene file" and "download image" buttons in the puzzle workshop, give the downloaded file a name matching the puzzle's name or ID, instead of `factory2d-scene.json` and `factory2d-grid.png`.
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
 * Modify our game's color scheme, for both light and dark mode. Sample colors from the background image and use those.
 * Add some decoration for the puzzle workshop screens where blocks are placed. Maybe a different background, or some other kind of decoration.
+* On mouseover of a rotator block, if its head is welded to something, show visualization of how it would move under +1 and -1 pulses, in place of the current mouseover visualization (which shows movement for a 1x1 block).
 
 # Content
 

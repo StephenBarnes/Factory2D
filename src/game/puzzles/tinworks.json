@@ -1,15 +1,15 @@
 {
   "format": "factory2d-puzzle",
   "version": 5,
-  "width": 15,
-  "height": 15,
+  "width": 20,
+  "height": 17,
   "id": "tinworks",
   "group": "manufacturing",
   "order": 0.75,
   "name": "Tinworks",
   "difficulty": 2,
-  "description": "The bronze foundry is short of tin. Six blocks of tin ore are falling into your workshop; smelt them and deliver every block. Tin takes six active furnace ticks with wood touching either lateral side of the ore: the furnace, ore, and wood must form a right-angle bend, not a straight line. All wood touching the ore ignites when smelting finishes. There is no replacement ore. Build separate hearths or bring the scattered supply into one production line.",
-  "goal": "Smelt and deliver six separate tin blocks.",
+  "description": "The bronze foundry is short of tin. Smelt four blocks of tin ore and deliver every block. Tin smelting needs wood touching either lateral side of the ore: the furnace, ore, and wood must form a right-angle bend, not a straight line. All wood touching the ore ignites when smelting finishes.",
+  "goal": "Smelt and deliver 4 tin blocks.",
   "cycleLimit": 1000,
   "components": [
     {
@@ -117,86 +117,90 @@
       "price": 15
     },
     {
-      "code": "~",
-      "price": 20
+      "code": "8",
+      "price": 15
     }
   ],
   "editableRegions": [
     {
+      "x": 12,
+      "y": 14,
+      "width": 2,
+      "height": 1
+    },
+    {
       "x": 1,
       "y": 5,
-      "width": 10,
+      "width": 11,
+      "height": 11
+    },
+    {
+      "x": 12,
+      "y": 5,
+      "width": 3,
       "height": 9
-    },
-    {
-      "x": 11,
-      "y": 5,
-      "width": 2,
-      "height": 8
-    },
-    {
-      "x": 13,
-      "y": 5,
-      "width": 1,
-      "height": 7
     }
   ],
   "initialBoard": {
     "format": "factory2d-board",
     "version": 15,
-    "width": 15,
-    "height": 15,
+    "width": 20,
+    "height": 17,
     "tick": 0,
     "result": "in-progress",
     "grid": [
-      "###############",
-      "#.............#",
-      "#.[.[.[.[.[.[.#",
-      "#.............#",
-      "#.............#",
-      "#.............#",
-      "#.............#",
-      "#.............#",
-      "#.............#",
-      "#.............#",
-      "#.............#",
-      "#.............#",
-      "#............==",
-      "#..........=DNV",
-      "###########=]=="
+      "###############=####",
+      "#..............=.w.#",
+      "#.[.[.[.[.[....=.[.#",
+      "#..............=.F.#",
+      "#..............=####",
+      "#..............=...#",
+      "#..............=.[w#",
+      "#..............=.F##",
+      "#..............=####",
+      "#..............=...#",
+      "#..............=[w[#",
+      "#..............=F#F#",
+      "#..............=####",
+      "#..............=[..#",
+      "#.............==.w[#",
+      "#...........=DNVF#F#",
+      "############=]===###"
     ],
     "orientations": [
       {
-        "x": 13,
-        "y": 13,
+        "x": 14,
+        "y": 15,
         "direction": "right"
       }
     ],
     "components": [
       {
-        "x": 13,
-        "y": 13,
+        "x": 14,
+        "y": 15,
         "type": "counter",
-        "threshold": 6,
+        "threshold": 5,
         "count": 0
       }
     ],
     "welds": [
-      "+-------------|",
-      "|.............|",
-      "|.............|",
-      "|.............|",
-      "|.............|",
-      "|.............|",
-      "|.............|",
-      "|.............|",
-      "|.............|",
-      "|.............|",
-      "|.............|",
-      "|.............|",
-      "|............+|",
-      "|..........+-+|",
-      "-----------..-."
+      "+--------------+---|",
+      "|..............|...|",
+      "|..............|...|",
+      "|..............|...|",
+      "|..............+---|",
+      "|..............|...|",
+      "|..............|...|",
+      "|..............|..+|",
+      "|..............+---|",
+      "|..............|...|",
+      "|..............|...|",
+      "|..............|.|.|",
+      "|..............+---|",
+      "|..............|...|",
+      "|.............+|...|",
+      "|...........+-+|.|.|",
+      "------------..-----."
     ]
   },
   "testCases": []

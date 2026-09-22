@@ -1,7 +1,7 @@
 {
   "format": "factory2d-puzzle",
   "version": 5,
-  "width": 9,
+  "width": 10,
   "height": 11,
   "id": "iron-plates",
   "group": "manufacturing",
@@ -12,28 +12,32 @@
   "goal": "Create and deliver 10 iron plates.",
   "components": [
     {
-      "code": "F",
+      "code": "B",
+      "price": 5
+    },
+    {
+      "code": "f",
       "price": 15
     },
     {
-      "code": "B",
-      "price": 5
+      "code": "P",
+      "price": 10
     },
     {
       "code": "C",
       "price": 2
     },
     {
-      "code": "S",
+      "code": ";",
+      "price": 3
+    },
+    {
+      "code": "W",
       "price": 10
     },
     {
       "code": "1",
       "price": 5
-    },
-    {
-      "code": "K",
-      "price": 3
     },
     {
       "code": "I",
@@ -56,8 +60,8 @@
       "price": 15
     },
     {
-      "code": "Q",
-      "price": 15
+      "code": "K",
+      "price": 3
     },
     {
       "code": "T",
@@ -76,20 +80,12 @@
       "price": 10
     },
     {
-      "code": "M",
+      "code": "S",
       "price": 10
     },
     {
-      "code": "P",
-      "price": 10
-    },
-    {
-      "code": "Z",
-      "price": 30
-    },
-    {
-      "code": "N",
-      "price": 20
+      "code": "m",
+      "price": 0
     },
     {
       "code": "U",
@@ -104,36 +100,40 @@
       "price": 15
     },
     {
-      "code": "?",
-      "price": 15
+      "code": "p",
+      "price": 20
     },
     {
-      "code": "m",
-      "price": 0
+      "code": "Z",
+      "price": 30
     },
     {
-      "code": "#",
-      "price": 1
-    },
-    {
-      "code": "f",
-      "price": 15
+      "code": "N",
+      "price": 20
     },
     {
       "code": "n",
       "price": 20
     },
     {
-      "code": "p",
-      "price": 20
+      "code": "#",
+      "price": 1
     },
     {
-      "code": "W",
+      "code": "F",
+      "price": 15
+    },
+    {
+      "code": "?",
+      "price": 15
+    },
+    {
+      "code": "Q",
+      "price": 15
+    },
+    {
+      "code": "M",
       "price": 10
-    },
-    {
-      "code": ";",
-      "price": 3
     },
     {
       "code": "@",
@@ -151,22 +151,22 @@
   "initialBoard": {
     "format": "factory2d-board",
     "version": 15,
-    "width": 9,
+    "width": 10,
     "height": 11,
     "tick": 0,
     "result": "in-progress",
     "grid": [
-      "###O#O###",
-      "##QY#YQ##",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "i.......O",
-      "i.......O",
-      "#.......#",
-      "#.......#",
-      "###=D{{==",
-      "###iii{NV"
+      "###O#O####",
+      "##QY#YQ###",
+      "#.......##",
+      "#.......##",
+      "#.......##",
+      "i.......O#",
+      "i.......O#",
+      "#.......##",
+      "#.......==",
+      "####===DN{",
+      "####=iii=V"
     ],
     "orientations": [
       {
@@ -190,32 +190,32 @@
         "direction": "down"
       },
       {
-        "x": 7,
-        "y": 10,
+        "x": 8,
+        "y": 9,
         "direction": "right"
       }
     ],
     "components": [
       {
-        "x": 7,
-        "y": 10,
+        "x": 8,
+        "y": 9,
         "type": "counter",
         "threshold": 10,
         "count": 0
       }
     ],
     "welds": [
-      "++|.|.++|",
-      "+-------|",
-      "|.......|",
-      "|.......|",
-      "|.......|",
-      "|.......|",
-      "|.......|",
-      "|.......|",
-      "|.......|",
-      "+++---++|",
-      "--.--.--."
+      "++|.|.+++|",
+      "+-------+|",
+      "|.......+|",
+      "|.......+|",
+      "|.......+|",
+      "|.......+|",
+      "|.......+|",
+      "|.......+|",
+      "|.......+|",
+      "+++++---+|",
+      "----.--.-."
     ]
   },
   "testCases": []

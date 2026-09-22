@@ -81,10 +81,6 @@
       "price": 10
     },
     {
-      "code": "L",
-      "price": 10
-    },
-    {
       "code": "m",
       "price": 0
     },
@@ -131,6 +127,10 @@
     {
       "code": "M",
       "price": 10
+    },
+    {
+      "code": "8",
+      "price": 15
     }
   ],
   "editableRegions": [
