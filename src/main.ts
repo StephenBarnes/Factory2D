@@ -2287,7 +2287,9 @@ exportMenu.button.addEventListener("click", () => {
 downloadSceneButton.addEventListener("click", () => {
   exportMenu.close();
   const source = serializeBoard(surface.session.world, surface.simulation.tick);
-  downloadBlob(new Blob([source], { type: "application/json" }), "factory2d-scene.json");
+  const screen = navigation.screen;
+  const filename = screen.kind === "puzzle" ? `${screen.puzzleId}.json` : "factory2d-scene.json";
+  downloadBlob(new Blob([source], { type: "application/json" }), filename);
 });
 
 copySceneButton.addEventListener("click", () => {
@@ -2306,6 +2308,8 @@ copySceneButton.addEventListener("click", () => {
 
 downloadImageButton.addEventListener("click", () => {
   exportMenu.close();
+  const screen = navigation.screen;
+  const filename = screen.kind === "puzzle" ? `${screen.puzzleId}.png` : "factory2d-grid.png";
   surface.renderer.render(
     surface.previousWorld, 1, performance.now(), theme.isLight,
     animationToggle.checked, blockAnimationsEnabled(),
@@ -2314,7 +2318,7 @@ downloadImageButton.addEventListener("click", () => {
     if (blob === null) {
       throw new Error("Could not encode the grid image as PNG");
     }
-    downloadBlob(blob, "factory2d-grid.png");
+    downloadBlob(blob, filename);
   }, "image/png");
 });
 

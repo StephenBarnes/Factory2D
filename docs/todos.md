@@ -30,7 +30,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 # UI
 
-* When using the "download scene file" and "download image" buttons in the puzzle workshop, give the downloaded file a name matching the puzzle's name or ID, instead of `factory2d-scene.json` and `factory2d-grid.png`.
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
 * Modify our game's color scheme, for both light and dark mode. Sample colors from the background image and use those.
 * Add some decoration for the puzzle workshop screens where blocks are placed. Maybe a different background, or some other kind of decoration.
