@@ -514,7 +514,7 @@ describe("dependency-ordered piston strokes", () => {
     }
   });
 
-  it("retracts a distal head even when a blocked carried source prevents the remaining retractions", () => {
+  it("retracts either end of a tower while a source blocks both motions of the middle piston", () => {
     const world = new World(5, 7);
     const stack = [2, 4, 6].map((y) => {
       const baseId = world.place(1, y, TileKind.PistonBase, Direction.Up);
@@ -540,18 +540,23 @@ describe("dependency-ordered piston strokes", () => {
     expect(world.tileAt(1, 2)).toEqual({ kind: TileKind.Piston, id: expectDefined(stack[0], "distal piston").armId });
     expect(world.isWelded(1, 2, 1, 1)).toBe(true);
     for (const { y, baseId, armId, inverterId, sourceId } of stack) {
-      if (y !== 2) {
+      if (y === 4) {
         expect(world.tileAt(1, y)).toEqual({ kind: TileKind.PistonBase, id: baseId });
         expect(world.tileAt(1, y - 1)).toEqual({ kind: TileKind.PistonArm, id: armId });
         expect(world.isWelded(1, y, 1, y - 1)).toBe(true);
         expect(world.isWelded(1, y - 1, 1, y - 2)).toBe(true);
+      } else {
+        expect(world.tileAt(1, y === 6 ? 5 : y)).toEqual({ kind: TileKind.Piston, id: armId });
       }
-      expect(world.chargeAt(1, y)).toBe(-1);
-      expect(world.tileAt(2, y)).toEqual({ kind: TileKind.Inverter, id: inverterId });
-      expect(world.tileAt(3, y)).toEqual({ kind: TileKind.FixedCharge, id: sourceId });
-      expect(world.isWelded(1, y, 2, y)).toBe(true);
-      expect(world.isWelded(2, y, 3, y)).toBe(true);
+      const destinationY = y === 6 ? 5 : y;
+      expect(world.chargeAt(1, destinationY)).toBe(-1);
+      expect(world.tileAt(2, destinationY)).toEqual({ kind: TileKind.Inverter, id: inverterId });
+      expect(world.tileAt(3, destinationY)).toEqual({ kind: TileKind.FixedCharge, id: sourceId });
+      expect(world.isWelded(1, destinationY, 2, destinationY)).toBe(true);
+      expect(world.isWelded(2, destinationY, 3, destinationY)).toBe(true);
     }
+    expect(world.isWelded(1, 5, 1, 4)).toBe(true);
+    expect(world.kindAt(1, 6)).toBe(TileKind.Empty);
     expect(world.tileAt(3, 3)).toEqual({ kind: TileKind.Platform, id: blockerId });
   });
 

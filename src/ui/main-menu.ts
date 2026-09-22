@@ -115,7 +115,7 @@ export function populatePuzzleMap(container: HTMLElement, options: MainMenuOptio
           if (standing === null) return;
           button.dataset.scoreMineral = standing.mineral;
           status.textContent = `✓ ${standing.mineral.toUpperCase()}`;
-          button.title = `Complete · Best combined score: ${standing.mineral} · Percentile ${formatPuzzleScore(standing.percentile)}${standing.players < 10 ? " · provisional" : ""}. Based on the last loaded community scores; open the briefing to refresh.`;
+          button.title = `Complete · Best combined score: ${standing.mineral} · Percentile ${formatPuzzleScore(standing.percentile)}`;
         }).catch((error: unknown) => {
           console.error("Could not load puzzle menu grade:", error);
         });

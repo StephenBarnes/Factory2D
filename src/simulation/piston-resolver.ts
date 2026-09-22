@@ -141,19 +141,18 @@ export class PistonResolver {
       stroke.valid = this.propose(stroke);
     }
     this.rejectInvalidPartners();
-    // Retraction prefers downward motion: lower a downward-facing base onto
-    // its arm, falling back to lifting the head if the base cannot move.
+    // Retraction prefers downward motion vertically and head motion horizontally.
+    // Switch every blocked stroke before proposing again so shared bases cooperate.
     for (let index = 0; index < this.strokeCount; index += 1) {
-      const stroke = expectDefined(this.strokes[index], "lowering piston stroke");
-      if (!stroke.valid && stroke.action === -1 && stroke.recoil) {
-        stroke.recoil = false;
+      const stroke = expectDefined(this.strokes[index], "blocked piston retraction");
+      if (!stroke.valid && stroke.action === -1) {
+        stroke.recoil = !stroke.recoil;
         stroke.direction = oppositeDirection(stroke.direction);
       }
     }
     for (let index = 0; index < this.strokeCount; index += 1) {
       const stroke = expectDefined(this.strokes[index], "fallback piston pull");
-      if (!stroke.valid && stroke.action === -1 &&
-          this.world.orientationAtIndex(stroke.base) === Direction.Down) {
+      if (!stroke.valid && stroke.action === -1) {
         stroke.valid = this.propose(stroke);
       }
     }
@@ -257,7 +256,7 @@ export class PistonResolver {
     return true;
   }
 
-  /** Split matching actuators approached from a shared load or lowering base. */
+  /** Split matching actuators approached from a shared load or moving base. */
   private partnerAt(stroke: Stroke, head: number, connection: number): number {
     const orientation = this.world.orientationAtIndex(stroke.base);
     let base: number;
