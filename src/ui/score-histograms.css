@@ -82,20 +82,49 @@
   background: var(--inset);
 }
 
+.score-histogram-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
 .score-histogram-title {
-  margin: 0 0 10px;
+  min-width: 0;
+  margin: 0;
   color: var(--text-bright);
   font-family: var(--font-mono);
   font-size: 0.73rem;
   letter-spacing: 0.09em;
   text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
 .score-histogram-locals {
+  display: grid;
+  flex: 0 1 auto;
+  min-width: 0;
+  gap: 4px;
+  margin: 0;
+  text-align: right;
+}
+
+.score-histogram-local {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 24px;
-  margin: 0 0 10px;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.score-histogram-local--best dt {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .score-histogram-local dt {
@@ -104,7 +133,8 @@
 }
 
 .score-histogram-local dd {
-  margin: 3px 0 0;
+  min-width: 0;
+  margin: 0;
   font-family: var(--font-mono);
   font-size: 1rem;
   font-weight: 700;
@@ -203,12 +233,10 @@
   border-top: 1px solid var(--gild);
 }
 
-.score-histogram-bucket:hover,
 .score-histogram-bucket[aria-pressed="true"] {
   background: var(--raised-hover);
 }
 
-.score-histogram-bucket:hover .score-histogram-bar,
 .score-histogram-bucket[aria-pressed="true"] .score-histogram-bar {
   background: var(--gild);
 }
@@ -290,19 +318,6 @@
   overflow-wrap: anywhere;
 }
 
-.score-histogram-record {
-  margin: 10px 0 0;
-  color: var(--text-body);
-  font-size: 0.72rem;
-  line-height: 1.5;
-}
-
-.score-histogram-record > span {
-  display: block;
-  color: var(--text-muted);
-  font-size: 0.65rem;
-}
-
 .score-histogram-empty,
 .score-histogram-unranked {
   margin: 0 0 12px;
@@ -331,6 +346,43 @@
 
 .score-histograms-policy p {
   margin: 4px 0 0;
+}
+
+#report-score-histograms .score-histograms-heading {
+  margin-bottom: 8px;
+}
+
+#report-score-histograms .score-histograms-grid {
+  gap: 8px;
+}
+
+#report-score-histograms .score-histogram-card {
+  padding: 10px;
+}
+
+#report-score-histograms .score-histogram-header,
+#report-score-histograms .score-histogram-standing {
+  margin-bottom: 6px;
+}
+
+#report-score-histograms .score-histogram-plot {
+  height: 60px;
+  margin-top: 13px;
+  margin-bottom: 13px;
+}
+
+#report-score-histograms .score-histogram-inspection {
+  min-height: 1.5em;
+  margin-top: 4px;
+}
+
+#report-score-histograms .score-histogram-empty,
+#report-score-histograms .score-histogram-unranked {
+  margin-bottom: 6px;
+}
+
+#report-score-histograms .score-histograms-policy {
+  margin-top: 8px;
 }
 
 @container (max-width: 500px) {

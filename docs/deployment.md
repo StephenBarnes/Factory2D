@@ -68,6 +68,8 @@ Cloudflare API tokens belong only in the deployment environment, never in `VITE_
 
 Retain numbered SQL migrations in `backend/migrations/` and add new ones rather than editing applied migrations. Before a schema change, take a backup as below and coordinate the migration with the Worker revision. Apply remote migrations, then deploy the compatible Worker. If a change cannot safely coexist with the running revision, stop writes for the transition. See [HTTP contracts](community-backend.md#http-contracts) for API/scoring-version boundaries.
 
+If a successful test receives HTTP 400 with `Submitted combined score is inconsistent`, an older deployed Worker may still require equality between combined and the other three metrics. The current Worker accepts independent minima (`combined >= price + cycles + footprint`), because the metrics can come from different saved solutions. Deploy it with `npm run deploy:backend`; no database migration is needed for this validation fix. Updating the static game alone does not update the Worker. After deployment, another successful puzzle test resubmits confirmed local minima; there is no automatic historical upload.
+
 ### Backups and manual rollback
 
 Before a remote schema change, record a D1 bookmark and keep an exported backup outside the repository. Replace `/safe/backup/factory2d.sql` with your backup location:

@@ -27,10 +27,9 @@ function playerCount(count: number): string {
   return `${count} ${count === 1 ? "player" : "players"}`;
 }
 
-// Bucket boundaries must retain precision even when ordinary score labels round.
 function bucketBound(value: number): string {
   const formatted = formatPuzzleScore(value);
-  return Number(formatted) === value ? formatted : String(value);
+  return `${Number(formatted) === value ? "" : "≈"}${formatted}`;
 }
 
 function markerKey(kind: "best" | "current", label: string): HTMLElement {
@@ -51,6 +50,14 @@ function appendLocalScore(
   const value = element("dd", "", formatPuzzleScore(score));
   const standing = frequencies === undefined ? null : scoreStanding(frequencies, score);
   if (standing !== null) value.dataset.scoreMineral = standing.mineral;
+  if (kind === "best") {
+    let lowest = Infinity;
+    for (const frequency of frequencies ?? []) {
+      if (frequency.count > 0) lowest = Math.min(lowest, frequency.value);
+    }
+    const globalBest = frequencies === undefined ? "unavailable" : Number.isFinite(lowest) ? formatPuzzleScore(lowest) : "no submissions";
+    value.title = `Your best: ${formatPuzzleScore(score)}. Global best: ${globalBest}.`;
+  }
   entry.append(
     element("dt", "", kind === "best" ? "Local best" : "This run"),
     value,
@@ -70,40 +77,52 @@ function appendChart(
   if (current !== undefined) markers.push(current);
   const histogram = buildScoreHistogram(frequencies, markers);
   if (histogram.bins.length === 0) {
-    card.append(element("p", "score-histogram-empty", "No community submissions yet. Chart and rank unavailable."));
+    card.append(element("p", "score-histogram-empty", "No submissions yet. Unranked."));
     return;
   }
 
   let peak = 0;
   let players = 0;
-  let lowest = Infinity;
   for (const bin of histogram.bins) peak = Math.max(peak, bin.count);
   for (const frequency of frequencies) {
     players += frequency.count;
-    if (frequency.count > 0) lowest = Math.min(lowest, frequency.value);
   }
 
   const figure = element("figure", "score-histogram-figure");
   figure.setAttribute("aria-label", `${label} community score distribution`);
   const scale = element("div", "score-histogram-scale");
   scale.append(
-    element("span", "", `Players per bucket · 0–${peak}`),
-    element("span", "", `${playerCount(players)} total`),
+    element("span", "", `Players/bucket · 0–${peak}`),
+    element("span", "", playerCount(players)),
   );
   const plot = element("div", "score-histogram-plot");
   const bars = element("div", "score-histogram-bars");
-  const inspection = element("figcaption", "score-histogram-inspection", "Hover or focus to inspect a bucket.");
+  const inspectionHint = "Hover, tap or focus a bar.";
+  const inspection = element("figcaption", "score-histogram-inspection", inspectionHint);
   inspection.setAttribute("role", "status");
   inspection.setAttribute("aria-live", "polite");
   inspection.setAttribute("aria-atomic", "true");
   const buttons: HTMLButtonElement[] = [];
-  let selected: HTMLButtonElement | null = null;
+  let tabStop: HTMLButtonElement | null = null;
+  let hovered: HTMLButtonElement | null = null;
+  let focused: HTMLButtonElement | null = null;
+  let inspected: HTMLButtonElement | null = null;
+  const updateInspection = (): void => {
+    const next = hovered ?? focused;
+    if (inspected === next) return;
+    inspected?.setAttribute("aria-pressed", "false");
+    inspected = next;
+    inspected?.setAttribute("aria-pressed", "true");
+    inspection.textContent = inspected?.title ?? inspectionHint;
+  };
+  bars.setAttribute("role", "group");
+  bars.setAttribute("aria-label", "Score buckets. Use arrow keys, Home or End to inspect.");
 
   histogram.bins.forEach((bin, index) => {
-    const exactRange = histogram.bins.length === 1 && bin.lower === bin.upper
-      ? `Score = ${bucketBound(bin.lower)}`
-      : `Score ≥ ${bucketBound(bin.lower)} and ${index === histogram.bins.length - 1 ? "≤" : "<"} ${bucketBound(bin.upper)}`;
-    const description = `${exactRange}: ${playerCount(bin.count)}.`;
+    const range = histogram.bins.length === 1 && bin.lower === bin.upper
+      ? bucketBound(bin.lower)
+      : `${bucketBound(bin.lower)}–${index === histogram.bins.length - 1 ? "" : "<"}${bucketBound(bin.upper)}`;
+    const description = `Score ${range} · ${playerCount(bin.count)}`;
     const button = element("button", "score-histogram-bucket");
     button.type = "button";
     button.tabIndex = index === 0 ? 0 : -1;
@@ -114,20 +133,28 @@ function appendChart(
     bar.style.height = `${peak === 0 ? 0 : 100 * bin.count / peak}%`;
     bar.setAttribute("aria-hidden", "true");
     if (bin.count > 0) button.append(bar);
-    if (index === 0) selected = button;
-    const inspect = (): void => {
-      inspection.textContent = description;
-      if (selected !== null) {
-        selected.setAttribute("aria-pressed", "false");
-        selected.tabIndex = -1;
-      }
-      selected = button;
+    if (index === 0) tabStop = button;
+    button.addEventListener("pointerenter", (event) => {
+      if (event.pointerType === "touch") return;
+      hovered = button;
+      updateInspection();
+    });
+    button.addEventListener("pointerleave", () => {
+      if (hovered === button) hovered = null;
+      updateInspection();
+    });
+    button.addEventListener("focus", () => {
+      if (tabStop !== null) tabStop.tabIndex = -1;
+      tabStop = button;
       button.tabIndex = 0;
-      button.setAttribute("aria-pressed", "true");
-    };
-    button.addEventListener("pointerenter", inspect);
-    button.addEventListener("focus", inspect);
-    button.addEventListener("click", inspect);
+      focused = button;
+      updateInspection();
+    });
+    button.addEventListener("blur", () => {
+      if (focused === button) focused = null;
+      updateInspection();
+    });
+    button.addEventListener("click", () => button.focus());
     button.addEventListener("keydown", (event) => {
       let next: number;
       switch (event.key) {
@@ -141,6 +168,8 @@ function appendChart(
       }
       event.preventDefault();
       event.stopPropagation();
+      hovered = null;
+      updateInspection();
       expectDefined(buttons[next], "Histogram bucket must exist").focus();
     });
     buttons.push(button);
@@ -166,8 +195,6 @@ function appendChart(
   );
   figure.append(scale, plot, axis, inspection);
   card.append(figure);
-  const record = element("p", "score-histogram-record", `Lowest submitted: ${formatPuzzleScore(lowest)}`);
-  card.append(record);
 }
 
 /** Replace only this root; lifecycle and community-fetch status belong to the caller. */
@@ -193,19 +220,20 @@ export function renderScoreHistograms(
   const grid = element("div", "score-histograms-grid");
   for (const metric of SCORE_METRICS) {
     const card = element("section", "score-histogram-card");
-    card.append(element("h4", "score-histogram-title", METRIC_LABELS[metric]));
+    const header = element("div", "score-histogram-header");
+    header.append(element("h4", "score-histogram-title", METRIC_LABELS[metric]));
     const local = element("dl", "score-histogram-locals");
     if (best !== null) appendLocalScore(local, "best", best[metric], data?.metrics[metric]);
     if (current !== null) appendLocalScore(local, "current", current[metric], data?.metrics[metric]);
+    header.append(local);
+    card.append(header);
     if (best === null && current === null) {
       card.append(element("p", "score-histogram-unranked", "No confirmed local score."));
-    } else {
-      card.append(local);
     }
 
     const score = current?.[metric] ?? best?.[metric];
     if (data === null) {
-      card.append(element("p", "score-histogram-empty", "Community chart and rank unavailable. Local scores remain available offline."));
+      card.append(element("p", "score-histogram-empty", "Community scores unavailable."));
     } else {
       const frequencies = data.metrics[metric];
       const standing = score === undefined ? null : scoreStanding(frequencies, score);

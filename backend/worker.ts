@@ -1,3 +1,4 @@
+import type { D1Database } from "@cloudflare/workers-types";
 import {
   API_SCORING_VERSION,
   type PuzzleHistograms,
