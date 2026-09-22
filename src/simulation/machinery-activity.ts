@@ -1,6 +1,6 @@
 import type { World } from "./world";
 
-export type MachineryActivity = "duplicator" | "assembler" | "break" | "shatter" | "snap";
+export type MachineryActivity = "duplicator" | "assembler" | "break" | "shatter" | "snap" | "bomb";
 
 export interface MachineryActivityEvent {
   readonly voice: MachineryActivity;

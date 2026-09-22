@@ -76,6 +76,8 @@ Raw-material artwork uses colored rivets for metals and platforms, round grains 
 
 Fire uses a burnt-orange slab with a bright orange flame and pale-yellow core, shared by the board, palette, and placement/selection previews. It has no orientation or render-clock animation; simulation replaces burning wood and expires old fire in discrete ticks.
 
+Bombs use a rust-red slab with a dark round shell, pale rim, curled fuse, and orange sparks. The non-directional artwork is shared by the board, palette, and placement/selection previews; no looping animation is needed.
+
 Raw-material ordering is shared by the palette and authoring cost controls through tile metadata: basic structural materials, sand/glass, iron ore/iron/steel, copper ore/copper, tin ore/tin/bronze, remaining metals, then gemstones.
 
 ## Board, camera, and caches

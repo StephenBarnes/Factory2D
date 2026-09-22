@@ -660,6 +660,33 @@ function drawDecoration(
         size * 0.14, size * 0.07, 0, 0, Math.PI * 2);
       context.stroke();
       break;
+    case TileDecorationStyle.Bomb:
+      context.lineWidth = Math.max(1, size * 0.045);
+      context.strokeStyle = definition.decorationColor;
+      context.lineCap = "round";
+      context.beginPath();
+      context.moveTo(left + size * 0.54, top + size * 0.34);
+      context.bezierCurveTo(left + size * 0.51, top + size * 0.14,
+        left + size * 0.73, top + size * 0.31, left + size * 0.72, top + size * 0.16);
+      context.stroke();
+      context.fillStyle = "#262630";
+      context.beginPath();
+      context.arc(left + size * 0.47, top + size * 0.58, size * 0.25, 0, Math.PI * 2);
+      context.fill();
+      context.stroke();
+      context.beginPath();
+      context.arc(left + size * 0.47, top + size * 0.58, size * 0.16, Math.PI * 1.08, Math.PI * 1.5);
+      context.stroke();
+      context.strokeStyle = "#ffab55";
+      context.beginPath();
+      context.moveTo(left + size * 0.65, top + size * 0.13);
+      context.lineTo(left + size * 0.62, top + size * 0.1);
+      context.moveTo(left + size * 0.77, top + size * 0.12);
+      context.lineTo(left + size * 0.81, top + size * 0.08);
+      context.moveTo(left + size * 0.79, top + size * 0.22);
+      context.lineTo(left + size * 0.85, top + size * 0.23);
+      context.stroke();
+      break;
     case TileDecorationStyle.Fire:
       context.fillStyle = definition.decorationColor;
       context.beginPath();

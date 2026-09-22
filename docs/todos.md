@@ -13,7 +13,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Add a riveter block. Similar to a welder block, but welds the one edge between its two front neighbors.
 * Add a gate block. When it receives a charge on left/right side, it moves the body above it to below it, mirrored. We have this functionality already with the duplicator block; the only difference is that it also consumes the body above it, unlike the duplicator. (And different visuals.) Useful for puzzles where the player has to build intermediates in different isolated compartments.
 * Add a forced-flipper block. Similar to the existing flipper block, but instead of checking for collisions and then blocking the flip, it instead always flips, destroying any blocks that would collide with the flip. Useful for creating some puzzle infrastructure.
-* Add a bomb block. When it receives a circuit charge, it detonates, filling the 3x3 region around itself with fire blocks, replacing whatever blocks are there currently. Except don't replace indestructible blocks.
 
 # Component behaviors
 
@@ -30,6 +29,7 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 # UI
 
+* Add settings-menu options to (1) display histograms, and (2) to toggle whether scores are uploaded. Both enabled by default.
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
 * Modify our game's color scheme, for both light and dark mode. Sample colors from the background image and use those.
 * Add some decoration for the puzzle workshop screens where blocks are placed. Maybe a different background, or some other kind of decoration.

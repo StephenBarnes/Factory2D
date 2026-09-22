@@ -1,4 +1,5 @@
 import { AssemblerResolver } from "./assembler-resolver";
+import { BombResolver } from "./bomb-resolver";
 import { BELL_PITCH_COUNT, bellPitchForBodySize } from "./bell-pitch";
 import { DeliveryResolver } from "./delivery-resolver";
 import { DuplicatorResolver } from "./duplicator-resolver";
@@ -32,6 +33,7 @@ export class WorldRuntime {
   private furnaceResolverValue: FurnaceResolver | undefined;
   private drillResolverValue: DrillResolver | undefined;
   private fireResolver: FireResolver | undefined;
+  private bombResolver: BombResolver | undefined;
   private motionWorkspaceValue: MotionWorkspace | undefined;
   private pistonResolverValue: PistonResolver | undefined;
   private rotatorResolverValue: RotatorResolver | undefined;
@@ -156,6 +158,10 @@ export class WorldRuntime {
       this.fireResolver ??= new FireResolver(world);
     }
     this.fireResolver?.collect();
+    if (world.hasFeature(WorldFeature.Bomb)) {
+      this.bombResolver ??= new BombResolver(world);
+    }
+    this.bombResolver?.collect();
     this.collectedDuplicators = world.hasFeature(WorldFeature.Duplicator);
     this.collectedWeldOperators = world.hasFeature(WorldFeature.WeldOperator);
     this.collectedDeliveries = world.hasFeature(WorldFeature.Delivery);
@@ -205,6 +211,7 @@ export class WorldRuntime {
       this.drillResolver.commit();
     }
     this.fireResolver?.commit();
+    this.bombResolver?.commit();
     let movementCount = this.swapperResolverValue?.commit() ?? 0;
     movementCount += this.world.hasFeature(WorldFeature.Gravity) ||
       this.world.hasFeature(WorldFeature.Thruster)

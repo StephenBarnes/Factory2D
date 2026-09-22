@@ -86,6 +86,7 @@ export const enum TileKind {
   Bronze = 84,
   Mallet = 85,
   Swapper = 86,
+  Bomb = 87,
 }
 
 export const enum Direction {
@@ -175,6 +176,7 @@ export const enum TileDecorationStyle {
   Lava = 67,
   Mallet = 68,
   Swapper = 69,
+  Bomb = 70,
 }
 
 export const enum PaletteCategory {
@@ -1593,6 +1595,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#55391f",
     decorationStyle: TileDecorationStyle.Wood,
     decorationColor: "#9a703f",
+  },
+  [TileKind.Bomb]: {
+    name: "Bomb",
+    boardCode: ")",
+    defaultPrice: 10,
+    palette: {
+      order: 90,
+      category: PaletteCategory.Transformation,
+      description: "Detonates on +1 or -1 charge, replacing its surrounding 3×3 region with fire.",
+      extendedDescription: ["Shares charge across all welded circuit ports. Any nonzero resolved charge detonates it before movement; neutral leaves it intact. Falls normally and can be welded on every side.", "The blast replaces itself, empty cells, and destructible blocks with fresh fire, removing their welds. Indestructible blocks survive. Blasts stop at board boundaries, not at intervening blocks.", "Charged bombs detonate simultaneously, even when their blasts overlap. Uncharged bombs caught in a blast become fire without detonating. New fire spreads and expires on the following tick."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: false,
+    circuitPorts: WeldSide.All,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.None,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#754438",
+    decorationStyle: TileDecorationStyle.Bomb,
+    decorationColor: "#efd29a",
   },
   [TileKind.Fire]: {
     name: "Fire",

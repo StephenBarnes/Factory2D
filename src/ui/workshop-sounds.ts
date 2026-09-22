@@ -258,6 +258,11 @@ export class WorkshopSounds {
           this.noise("bandpass", 2600, 0.055, 0.6, bus);
           this.tone(950, 320, "triangle", 0, 0.075, 0.4, bus);
           break;
+        case "bomb":
+          this.noise("allpass", 800, 0.5, 1, bus);
+          this.noise("allpass", 1000, 0.5, 1, bus);
+          this.tone(100, 28, "triangle", 0, 0.2, 1, bus);
+          break;
       }
     }
   }

@@ -4,8 +4,74 @@ import { Simulation } from "../src/simulation/simulation";
 import { Direction, TileKind } from "../src/simulation/tile";
 import { World } from "../src/simulation/world";
 import { MachineryObserver } from "../src/ui/machinery-observer";
+import { spatialSounds } from "../src/ui/spatial-sound";
 
 describe("machinery sound observations", () => {
+  it("keeps idle bombs silent and never replays consumed or unobserved detonations", () => {
+    const world = new World(3, 1);
+    world.place(1, 0, TileKind.Bomb);
+    const observer = new MachineryObserver();
+    const simulation = new Simulation(world);
+    observer.capture(world);
+    simulation.step();
+    expect(observer.collectSounds(world)).toEqual([]);
+
+    world.place(0, 0, TileKind.FixedCharge);
+    world.setWeld(0, 0, 1, 0, true);
+    observer.capture(world);
+    simulation.step();
+    expect(observer.collectSounds(world)).toEqual([{ voice: "bomb", world, index: 1 }]);
+    expect(observer.collectSounds(world)).toEqual([]);
+
+    world.place(0, 0, TileKind.FixedCharge);
+    world.place(1, 0, TileKind.Bomb);
+    world.place(2, 0, TileKind.Empty);
+    world.setWeld(0, 0, 1, 0, true);
+    simulation.step();
+    expect(world.kindAt(1, 0)).toBe(TileKind.Fire);
+    observer.capture(world);
+    simulation.step();
+    expect(observer.collectSounds(world)).toEqual([]);
+  });
+
+  it("coalesces simultaneous root and nested explosions without collapsing other machinery voices", () => {
+    const world = new World(10, 1);
+    world.place(8, 0, TileKind.RuneArray);
+    world.configureRuneArray(8, 0, 5, 1, "");
+    const inner = world.runeArrayWorldAt(8, 0);
+    for (const board of [world, inner]) {
+      board.place(0, 0, TileKind.FixedCharge);
+      board.place(1, 0, TileKind.Bomb);
+      board.place(2, 0, TileKind.Bomb);
+      board.setWeld(0, 0, 1, 0, true);
+      board.setWeld(1, 0, 2, 0, true);
+    }
+    world.place(6, 0, TileKind.Drill, Direction.Right);
+    world.place(7, 0, TileKind.Stone);
+    const observer = new MachineryObserver();
+    const simulation = new Simulation(world);
+    observer.capture(world);
+    simulation.step();
+    const sounds = observer.collectSounds(world);
+    expect(sounds).toEqual([
+      { voice: "bomb", world, index: 1 },
+      { voice: "bomb", world, index: 2 },
+      { voice: "drill", world, index: 6 },
+      { voice: "bomb", world: inner, index: 1 },
+      { voice: "bomb", world: inner, index: 2 },
+    ]);
+    const voices = spatialSounds(sounds, {
+      world, centerX: 8.5, centerY: 0.5, cellSize: 32, width: 320, height: 32,
+    });
+    expect([...voices.keys()]).toEqual(["bomb", "drill"]);
+    expect(voices.get("bomb")).toEqual({ pan: 0, gain: 1 });
+    const nestedVoices = spatialSounds(sounds, {
+      world: inner, centerX: 1.5, centerY: 0.5, cellSize: 32, width: 128, height: 32,
+    });
+    expect([...nestedVoices.keys()]).toEqual(["bomb"]);
+    expect(nestedVoices.get("bomb")).toEqual({ pan: 0, gain: 1 });
+  });
+
   it("follows piston head identity through extension and retraction, not held charge", () => {
     const world = new World(5, 1);
     world.place(0, 0, TileKind.FixedCharge);

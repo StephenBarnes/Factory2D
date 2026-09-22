@@ -72,7 +72,7 @@ export class MachineryObserver {
     let observation = this.observations.get(world);
     const hasActivity = world.hasFeature(WorldFeature.Duplicator) || world.hasFeature(WorldFeature.Assembler) ||
       world.hasFeature(WorldFeature.Drill) || world.hasFeature(WorldFeature.Fragile) ||
-      world.hasFeature(WorldFeature.Fastener);
+      world.hasFeature(WorldFeature.Fastener) || world.hasFeature(WorldFeature.Bomb);
     if (capture && (hasActivity || MACHINE_FEATURES.some((feature) => world.hasFeature(feature)))) {
       if (observation === undefined) {
         observation = { capture: this.captureNumber, kinds: new Map(), activity: null };
