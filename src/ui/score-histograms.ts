@@ -92,7 +92,7 @@ function appendChart(
   );
   const plot = element("div", "score-histogram-plot");
   const bars = element("div", "score-histogram-bars");
-  const inspection = element("figcaption", "score-histogram-inspection", "Inspect a bucket: hover, tap, or focus; use arrow keys to move.");
+  const inspection = element("figcaption", "score-histogram-inspection", "Hover or focus to inspect a bucket.");
   inspection.setAttribute("role", "status");
   inspection.setAttribute("aria-live", "polite");
   inspection.setAttribute("aria-atomic", "true");
@@ -162,13 +162,11 @@ function appendChart(
   const axis = element("div", "score-histogram-axis");
   axis.append(
     element("span", "", bucketBound(histogram.minimum)),
-    element("span", "score-histogram-axis-direction", "← Lower is better"),
     element("span", "", bucketBound(histogram.maximum)),
   );
   figure.append(scale, plot, axis, inspection);
   card.append(figure);
   const record = element("p", "score-histogram-record", `Lowest submitted: ${formatPuzzleScore(lowest)}`);
-  record.append(element("span", "", "Community record, not a proven optimum."));
   card.append(record);
 }
 

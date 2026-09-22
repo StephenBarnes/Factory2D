@@ -1199,17 +1199,26 @@ test("sandbox rows keep actions beside the name until the panel needs to wrap", 
   const row = page.locator(".sandbox-row").first();
   const identity = row.locator(".solution-identity");
   const actions = row.locator(".solution-row-actions");
-  const wideIdentity = expectDefined(await identity.boundingBox(), "Sandbox identity is missing");
-  const wideActions = expectDefined(await actions.boundingBox(), "Sandbox actions are missing");
+  const wideIdentity = await identity.boundingBox();
+  const wideActions = await actions.boundingBox();
+  if (wideIdentity === null || wideActions === null) {
+    throw new Error("Wide sandbox row layout is not visible");
+  }
   expect(wideActions.x).toBeGreaterThanOrEqual(wideIdentity.x + wideIdentity.width);
   expect(Math.abs(
     wideActions.y + wideActions.height / 2 - wideIdentity.y - wideIdentity.height / 2,
   )).toBeLessThanOrEqual(1);
 
   await page.setViewportSize({ width: 390, height: 800 });
-  const narrowIdentity = expectDefined(await identity.boundingBox(), "Sandbox identity is missing");
-  const narrowActions = expectDefined(await actions.boundingBox(), "Sandbox actions are missing");
+  const narrowIdentity = await identity.boundingBox();
+  const narrowActions = await actions.boundingBox();
+  if (narrowIdentity === null || narrowActions === null) {
+    throw new Error("Narrow sandbox row layout is not visible");
+  }
   expect(narrowActions.y).toBeGreaterThanOrEqual(narrowIdentity.y + narrowIdentity.height);
-  const rowBounds = expectDefined(await row.boundingBox(), "Sandbox row is missing");
+  const rowBounds = await row.boundingBox();
+  if (rowBounds === null) {
+    throw new Error("Sandbox row is not visible");
+  }
   expect(narrowActions.x + narrowActions.width).toBeLessThanOrEqual(rowBounds.x + rowBounds.width);
 });

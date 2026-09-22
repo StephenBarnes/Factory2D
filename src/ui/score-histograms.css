@@ -281,12 +281,6 @@
   text-align: right;
 }
 
-.score-histogram-axis-direction {
-  flex-shrink: 0;
-  color: var(--text-mid);
-  text-align: center;
-}
-
 .score-histogram-inspection {
   min-height: 3.1em;
   margin-top: 9px;
