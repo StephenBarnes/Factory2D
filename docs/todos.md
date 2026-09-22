@@ -36,6 +36,15 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Add some decoration for the puzzle workshop screens where blocks are placed. Maybe a different background, or some other kind of decoration.
 * On mouseover of a rotator block, if its head is welded to something, show visualization of how it would move under +1 and -1 pulses, in place of the current mouseover visualization (which shows movement for a 1x1 block).
 
+On score histograms
+* Bug: after mouseover of any bar, the mouseover data (like "Score = 36: 1 player.") never goes away - they never register as un-hovered. If there's one bar, this applies to 
+* The readouts like "Score ≥ 151.75 and < 151.83333333333334: 0 players." can be made more compact. Limit to say 2 digits after decimal point.
+* Currently "PRICE" is on a separate row from "Local best" which is on a separate line from "151" (the local best number). Change it to something more compact like "PRICE" and then at the right of that same row "151" (the local best number).
+* Remove the "Lowest submitted: 152" line. Maybe show it on title text of the player's best score like "Your best: 151. Global best: 152."
+* This example above also shows there's some bug with how we're computing or submitting histogram scores. Currently if I go to `https://stephen6174.itch.io/dwarfworks` in my Firefox window (with my UUID), and navigate to the Copperworks puzzle, it shows my local best price as 151 but histogram says it's 152; and for footprint it says my local best is 50, but histogram shows a bar (1 player only - me) in the 55 bucket, and lowest submitted as 55.
+	* On running the test, says "Saved locally; score not submitted. Complete another test run to try again. Community scores: — 1 player." This is probably the cause? Seems that submitting community scores gets HTTP 400 from the server. Specifically the response has error `error "Submitted combined score is inconsistent"`. Maybe the combined score submission is assuming a single solution provides all of the metrics' best, which isn't true.
+* In the `.test-report-dialog`, the score histograms take up a lot of space. Can we make all these histograms shorter vertically? They can still be verbose on the puzzle briefing page.
+
 # Content
 
 Ideas and puzzle list moved to `puzzles.md`. We have enough tutorial puzzles. We need to add more actual puzzles, at a range of difficulty levels. Before adding any puzzles, read that file, and keep it updated with new puzzles added.
