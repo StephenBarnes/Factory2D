@@ -12,6 +12,28 @@ function placeFloor(world: World, y: number): void {
 }
 
 describe("delivery boxes", () => {
+  it.each([
+    { orientation: Direction.Up, horizontalWelds: true },
+    { orientation: Direction.Right, horizontalWelds: false },
+    { orientation: Direction.Down, horizontalWelds: true },
+    { orientation: Direction.Left, horizontalWelds: false },
+  ])("allows only side welds when facing $orientation", ({ orientation, horizontalWelds }) => {
+    const world = new World(3, 3);
+    world.place(1, 1, TileKind.Delivery, orientation);
+    for (const [x, y] of [[0, 1], [2, 1], [1, 0], [1, 2]] as const) {
+      world.place(x, y, TileKind.Platform);
+      const allowed = y === 1 ? horizontalWelds : !horizontalWelds;
+      expect(world.canWeld(1, 1, x, y)).toBe(allowed);
+      expect(world.setWeld(1, 1, x, y, true)).toBe(allowed);
+      expect(world.isWelded(1, 1, x, y)).toBe(allowed);
+      if (allowed) {
+        expect(world.setWeld(1, 1, x, y, false)).toBe(true);
+      }
+      expect(world.setWeld(x, y, 1, 1, true)).toBe(allowed);
+      expect(world.isWelded(1, 1, x, y)).toBe(allowed);
+    }
+  });
+
   it("absorbs a matching front block and pulses its welded side network for one tick", () => {
     const world = new World(4, 3);
     world.place(0, 1, TileKind.Stone);

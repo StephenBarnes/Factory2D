@@ -371,7 +371,7 @@ describe("protected runtime weld edges", () => {
       const world = new World(5, 3);
       world.place(1, 1, TileKind.Platform);
       world.place(2, 1, TileKind.IndestructibleConduit);
-      world.place(3, 1, TileKind.Delivery, Direction.Right);
+      world.place(3, 1, TileKind.Delivery, Direction.Up);
       world.place(3, 2, TileKind.Platform);
       world.place(2, 2, kind, Direction.Up);
       const initiallyWelded = kind !== TileKind.Welder;

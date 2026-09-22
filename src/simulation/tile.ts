@@ -1755,7 +1755,7 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     indestructible: true,
     runtimeWeldProtected: true,
     slidesDiagonally: false,
-    weldableSides: WeldSide.All,
+    weldableSides: WeldSide.Left | WeldSide.Right,
     excludesFacingWeld: false,
     usesOrientation: true,
     circuitPorts: WeldSide.Right | WeldSide.Left,
