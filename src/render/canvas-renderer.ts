@@ -2042,6 +2042,7 @@ export class CanvasRenderer {
   private drawComponentOverlay(kind: TileKind, orientation: Direction, mirrored = false): void {
     switch (kind) {
       case TileKind.Welder:
+      case TileKind.Riveter:
       case TileKind.Splitter:
       case TileKind.Dismantler:
       case TileKind.LaserSplitter:
@@ -2143,7 +2144,7 @@ export class CanvasRenderer {
 
     const { context, cellSize } = this;
     context.save();
-    context.strokeStyle = kind === TileKind.Welder ? "#78dcca" : "#e15a4f";
+    context.strokeStyle = kind === TileKind.Welder || kind === TileKind.Riveter ? "#78dcca" : "#e15a4f";
     context.lineWidth = Math.max(2, cellSize * 0.07);
     context.lineCap = "round";
     context.globalAlpha = 0.8;
@@ -2177,6 +2178,20 @@ export class CanvasRenderer {
         }
         context.moveTo(this.originX + startX * cellSize, this.originY + startY * cellSize);
         context.lineTo(this.originX + endX * cellSize, this.originY + endY * cellSize);
+      }
+      context.stroke();
+      context.restore();
+      return;
+    }
+    if (kind === TileKind.Riveter) {
+      const secondX = targetX + forwardX;
+      const secondY = targetY + forwardY;
+      if (secondX >= 0 && secondX < this.world.width &&
+          secondY >= 0 && secondY < this.world.height) {
+        const centerX = this.originX + (targetX + 0.5 + forwardX / 2) * cellSize;
+        const centerY = this.originY + (targetY + 0.5 + forwardY / 2) * cellSize;
+        context.moveTo(centerX - forwardY * cellSize * 0.38, centerY + forwardX * cellSize * 0.38);
+        context.lineTo(centerX + forwardY * cellSize * 0.38, centerY - forwardX * cellSize * 0.38);
       }
       context.stroke();
       context.restore();

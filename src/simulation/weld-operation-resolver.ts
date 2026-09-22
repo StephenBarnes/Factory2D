@@ -135,8 +135,21 @@ export class WeldOperationResolver {
     const dismantler = kind === TileKind.Dismantler;
     const sideCount = laser ? 1 : dismantler ? 4 : 2;
     const sideStep = dismantler ? 1 : 2;
-    const intent = kind === TileKind.Welder ? EdgeIntent.Weld : EdgeIntent.Split;
+    const intent = kind === TileKind.Welder || kind === TileKind.Riveter
+      ? EdgeIntent.Weld : EdgeIntent.Split;
     let target = this.neighborIndex(index, orientation);
+    if (kind === TileKind.Riveter) {
+      if (target < 0) return;
+      const second = this.neighborIndex(target, orientation);
+      if (second < 0 || this.world.kindAtIndex(target) === TileKind.Empty) return;
+      const edge = this.edgeIndex(target, second);
+      if (collecting) {
+        this.requestEdge(edge, intent);
+      } else if (this.changedEdges[edge] === 1) {
+        this.successfulOperationIndices[index] = 1;
+      }
+      return;
+    }
     while (target >= 0) {
       if (laser || this.world.kindAtIndex(target) !== TileKind.Empty) {
         for (let side = 0; side < sideCount; side += 1) {

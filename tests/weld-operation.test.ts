@@ -177,6 +177,80 @@ describe("welder and splitter operations", () => {
   });
 });
 
+describe("riveter operations", () => {
+  it.each([Direction.Up, Direction.Right, Direction.Down, Direction.Left])(
+    "welds only the edge between the first two cells ahead, facing %s",
+    (orientation) => {
+      const world = new World(7, 7);
+      const x = 3;
+      const y = 3;
+      const dx = directionX(orientation);
+      const dy = directionY(orientation);
+      world.place(x, y, TileKind.Riveter, orientation);
+      world.place(x - dx, y - dy, TileKind.Platform);
+      world.setWeld(x, y, x - dx, y - dy, true);
+      world.place(x + dx, y + dy, TileKind.Floatstone);
+      world.place(x + 2 * dx, y + 2 * dy, TileKind.Platform);
+      const side = ((orientation + 1) & 3) as Direction;
+      world.place(x + dx + directionX(side), y + dy + directionY(side), TileKind.Platform);
+
+      new Simulation(world).step();
+
+      expect(world.isWelded(x + dx, y + dy, x + 2 * dx, y + 2 * dy)).toBe(true);
+      expect(world.isWelded(x + dx, y + dy,
+        x + dx + directionX(side), y + dy + directionY(side))).toBe(false);
+      expect(world.chargeAtPort(x, y, oppositeDirection(orientation))).toBe(1);
+    },
+  );
+
+  it("obeys disable and conflicting split requests", () => {
+    const world = new World(5, 5);
+    world.place(2, 3, TileKind.Riveter);
+    world.place(2, 4, TileKind.Platform);
+    world.setWeld(2, 3, 2, 4, true);
+    world.place(2, 2, TileKind.Floatstone);
+    world.place(2, 1, TileKind.Platform);
+    world.setCharge(2, 3, -1);
+    const simulation = new Simulation(world);
+    simulation.step();
+    expect(world.isWelded(2, 2, 2, 1)).toBe(false);
+    world.setCharge(2, 3, 0);
+    world.place(1, 2, TileKind.Splitter, Direction.Right);
+    world.place(0, 2, TileKind.Platform);
+    world.setWeld(0, 2, 1, 2, true);
+    simulation.step();
+    expect(world.isWelded(2, 2, 2, 1)).toBe(false);
+    expect(world.chargeAtPort(2, 3, Direction.Down)).toBe(0);
+    world.place(1, 2, TileKind.Empty);
+    simulation.step();
+    expect(world.isWelded(2, 2, 2, 1)).toBe(true);
+    expect(world.chargeAtPort(2, 3, Direction.Down)).toBe(1);
+    simulation.step();
+    expect(world.chargeAtPort(2, 3, Direction.Down)).toBe(0);
+  });
+
+  it("does not join two weld-protected blocks or pulse", () => {
+    const world = new World(3, 4);
+    world.place(1, 3, TileKind.Riveter);
+    world.place(1, 2, TileKind.Platform);
+    world.place(1, 1, TileKind.Platform);
+
+    new Simulation(world).step();
+
+    expect(world.isWelded(1, 2, 1, 1)).toBe(false);
+    expect(world.chargeAtPort(1, 3, Direction.Down)).toBe(0);
+  });
+
+  it("round-trips its isolated output through board JSON", () => {
+    const world = new World(3, 3);
+    world.place(1, 2, TileKind.Riveter);
+    world.setIsolatedOutputCharge(1, 2, 1);
+    const loaded = deserializeBoard(serializeBoard(world, 0)).world;
+    expect(loaded.kindAt(1, 2)).toBe(TileKind.Riveter);
+    expect(loaded.chargeAtPort(1, 2, Direction.Down)).toBe(1);
+  });
+});
+
 describe("dismantler operations", () => {
   it.each([Direction.Up, Direction.Right, Direction.Down, Direction.Left])(
     "cuts all four target welds, including its own front weld, facing %s",

@@ -87,6 +87,7 @@ export const enum TileKind {
   Mallet = 85,
   Swapper = 86,
   Bomb = 87,
+  Riveter = 88,
 }
 
 export const enum Direction {
@@ -177,6 +178,7 @@ export const enum TileDecorationStyle {
   Mallet = 68,
   Swapper = 69,
   Bomb = 70,
+  Riveter = 71,
 }
 
 export const enum PaletteCategory {
@@ -2059,6 +2061,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     attractionRange: 0,
     fill: "#6d5c4b",
     decorationStyle: TileDecorationStyle.Welder,
+    decorationColor: "#f0b85d",
+  },
+  [TileKind.Riveter]: {
+    name: "Riveter",
+    boardCode: ",",
+    defaultPrice: 10,
+    palette: {
+      order: 91,
+      category: PaletteCategory.Transformation,
+      description: "Welds the edge between the first two blocks ahead; -1 side charge disables it.",
+      extendedDescription: ["Joins only the first and second blocks in front when both permit welding. Shared side -1 disables it; the isolated rear output pulses +1 only when the weld changes.", "Cannot weld together two weld-protected blocks, such as platforms, delivery blocks, or judgment stones."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: true,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Right | WeldSide.Down | WeldSide.Left,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.Down,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#6d5c4b",
+    decorationStyle: TileDecorationStyle.Riveter,
     decorationColor: "#f0b85d",
   },
   [TileKind.Splitter]: {

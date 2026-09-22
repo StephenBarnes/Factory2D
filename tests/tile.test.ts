@@ -28,6 +28,7 @@ describe("tile orientation", () => {
     TileKind.Counter,
     TileKind.Rom,
     TileKind.Welder,
+    TileKind.Riveter,
     TileKind.Splitter,
   ])(
     "preserves the selected orientation for directional kind %s",

@@ -1132,6 +1132,7 @@ function drawDecoration(
       drawRivets(context, left, top, size);
       break;
     case TileDecorationStyle.Welder:
+    case TileDecorationStyle.Riveter:
     case TileDecorationStyle.Splitter:
     case TileDecorationStyle.Dismantler:
     case TileDecorationStyle.LaserSplitter: {
@@ -1153,7 +1154,12 @@ function drawDecoration(
       context.fill();
       context.stroke();
       context.beginPath();
-      if (definition.decorationStyle === TileDecorationStyle.Welder) {
+      if (definition.decorationStyle === TileDecorationStyle.Riveter) {
+        context.moveTo(0, -size * 0.34);
+        context.lineTo(0, -size * 0.12);
+        context.moveTo(-size * 0.2, -size * 0.3);
+        context.lineTo(size * 0.2, -size * 0.3);
+      } else if (definition.decorationStyle === TileDecorationStyle.Welder) {
         context.moveTo(-size * 0.28, -size * 0.2);
         context.lineTo(-size * 0.1, -size * 0.12);
         context.moveTo(size * 0.28, -size * 0.2);

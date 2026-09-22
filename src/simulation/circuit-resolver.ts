@@ -292,7 +292,7 @@ export class CircuitResolver {
         );
         continue;
       }
-      if (kind === TileKind.Welder || kind === TileKind.Splitter ||
+      if (kind === TileKind.Welder || kind === TileKind.Riveter || kind === TileKind.Splitter ||
           kind === TileKind.LaserSplitter || kind === TileKind.Dismantler || kind === TileKind.Assembler) {
         const outputCharge = (kind === TileKind.Assembler
           ? runtime.assemblerResolver.willEmit(index)
