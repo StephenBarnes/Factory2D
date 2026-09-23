@@ -197,6 +197,8 @@ export class CanvasRenderer {
   private hoverKind = TileKind.Empty;
   private hoverOrientation = Direction.Up;
   private hoverMirrored = false;
+  private rotatorPreviewVisited = new Uint8Array(0);
+  private rotatorPreviewStack = new Int32Array(0);
   private highlightedTileId: number | null = null;
   private highlightedTileIndex = -1;
   private highlightedGeometryRevision = -1;
@@ -2085,7 +2087,7 @@ export class CanvasRenderer {
         this.drawSensorObservation(oppositeDirection(orientation));
         break;
       case TileKind.Rotator:
-        this.drawRotatorReach(orientation, mirrored);
+        if (!this.drawWeldedRotatorReach()) this.drawRotatorReach(orientation, mirrored);
         break;
     }
   }
@@ -2288,6 +2290,87 @@ export class CanvasRenderer {
     }
     context.stroke();
     context.restore();
+  }
+
+  /** Preview the gripped welded body, not the rotator's stationary base or rear wiring. */
+  private drawWeldedRotatorReach(): boolean {
+    const { world, hoverX: pivotX, hoverY: pivotY } = this;
+    if (world.kindAt(pivotX, pivotY) !== TileKind.Rotator) return false;
+    const pivot = pivotY * world.width + pivotX;
+    const direction = world.rotatorDirectionAtIndex(pivot);
+    if (!world.hasWeldAtIndex(pivot, direction)) return false;
+    const headX = pivotX + directionX(direction);
+    const headY = pivotY + directionY(direction);
+    const head = headY * world.width + headX;
+    if (this.rotatorPreviewVisited.length !== world.cellCount) {
+      this.rotatorPreviewStack = new Int32Array(world.cellCount);
+      this.rotatorPreviewVisited = new Uint8Array(world.cellCount);
+    }
+    const bodyStack = this.rotatorPreviewStack;
+    const visited = this.rotatorPreviewVisited;
+    let count = 1;
+    bodyStack[0] = head;
+    visited[head] = 1;
+    for (let cursor = 0; cursor < count; cursor += 1) {
+      const index = expectDefined(bodyStack[cursor], "rotator preview cell");
+      const x = index % world.width;
+      const y = (index - x) / world.width;
+      for (let side = Direction.Up; side <= Direction.Left; side += 1) {
+        if (!world.hasWeldAtIndex(index, side)) continue;
+        const neighborX: number = x + directionX(side);
+        const neighborY: number = y + directionY(side);
+        if (neighborX < 0 || neighborX >= world.width ||
+            neighborY < 0 || neighborY >= world.height) continue;
+        const neighbor = neighborY * world.width + neighborX;
+        if (neighbor === pivot || visited[neighbor] !== 0) continue;
+        visited[neighbor] = 1;
+        bodyStack[count] = neighbor;
+        count += 1;
+      }
+    }
+
+    const { context, cellSize } = this;
+    context.save();
+    context.beginPath();
+    context.rect(this.originX, this.originY, world.width * cellSize, world.height * cellSize);
+    context.clip();
+    context.translate(
+      this.originX + (pivotX + 0.5) * cellSize,
+      this.originY + (pivotY + 0.5) * cellSize,
+    );
+    context.lineWidth = Math.max(1.5, cellSize * 0.045);
+    for (const sign of [1, -1] as const) {
+      const turn = world.mirroredAtIndex(pivot) ? -sign : sign;
+      if (((direction + turn + 4) & 3) === oppositeDirection(world.orientationAtIndex(pivot))) {
+        continue;
+      }
+      context.save();
+      context.rotate(turn * Math.PI / 2);
+      context.beginPath();
+      for (let cursor = 0; cursor < count; cursor += 1) {
+        const index = expectDefined(bodyStack[cursor], "rotator preview cell");
+        const x = index % world.width;
+        const y = (index - x) / world.width;
+        context.rect(
+          (x - pivotX - 0.44) * cellSize,
+          (y - pivotY - 0.44) * cellSize,
+          cellSize * 0.88,
+          cellSize * 0.88,
+        );
+      }
+      context.fillStyle = CIRCUIT_CHARGE_COLORS[sign];
+      context.strokeStyle = CIRCUIT_CHARGE_COLORS[sign];
+      context.globalAlpha = 0.18;
+      context.fill();
+      context.globalAlpha = 1;
+      context.stroke();
+      context.restore();
+    }
+    context.restore();
+    for (let cursor = 0; cursor < count; cursor += 1) {
+      visited[expectDefined(bodyStack[cursor], "rotator preview cell")] = 0;
+    }
+    return true;
   }
 
   private drawRotatorReach(orientation: Direction, mirrored: boolean): void {
