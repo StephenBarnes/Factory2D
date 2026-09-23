@@ -1,5 +1,6 @@
 import type { PuzzleComponents } from "../game/puzzle-components";
 import {
+  comparePaletteKinds,
   PaletteCategory,
   TILE_DEFINITIONS,
   TILE_KINDS,
@@ -39,18 +40,10 @@ export function populateComponentPalette(
       .filter((kind) => TILE_DEFINITIONS[kind].palette !== null)
       .map((kind) => ({ kind, price: null }))
     : [...availableComponents.entries];
-  paletteComponents.sort((left, right) => {
-    const leftPalette = TILE_DEFINITIONS[left.kind].palette;
-    const rightPalette = TILE_DEFINITIONS[right.kind].palette;
-    if (leftPalette === null || rightPalette === null) {
-      throw new Error("Palette kind is missing palette metadata");
-    }
-    return leftPalette.category - rightPalette.category ||
-      leftPalette.order - rightPalette.order;
-  });
+  paletteComponents.sort((left, right) => comparePaletteKinds(left.kind, right.kind));
 
   const shortcutKinds = Object.create(null) as Record<string, TileKind | undefined>;
-  const usedOrders = new Set<number>();
+  const usedOrders = new Set<string>();
   const grids = new Map<PaletteCategory, HTMLElement>();
   container.replaceChildren();
 
@@ -86,10 +79,11 @@ export function populateComponentPalette(
     if (!Number.isSafeInteger(palette.order) || palette.order < 0) {
       throw new Error(`Palette order for ${definition.name} must be a non-negative integer`);
     }
-    if (usedOrders.has(palette.order)) {
-      throw new Error(`Duplicate component palette order ${palette.order}`);
+    const orderKey = `${palette.category}:${palette.order}`;
+    if (usedOrders.has(orderKey)) {
+      throw new Error(`Duplicate component palette order ${orderKey}`);
     }
-    usedOrders.add(palette.order);
+    usedOrders.add(orderKey);
 
     const button = document.createElement("button");
     button.className = "palette-item palette-tile";

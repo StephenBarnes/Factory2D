@@ -1,15 +1,15 @@
 import type { GridRegion } from "./grid-region";
 import { PUZZLE_FORMAT, PUZZLE_VERSION } from "./puzzle-format";
 import { serializeBoard } from "../simulation/board-export";
-import { TILE_DEFINITIONS, type TileKind } from "../simulation/tile";
+import { comparePaletteKinds, TILE_DEFINITIONS, type TileKind } from "../simulation/tile";
 import type { World } from "../simulation/world";
 import type { TextBox } from "../simulation/text-box";
 import type { PuzzleDifficulty } from "./puzzle-difficulty";
 
 interface PuzzleTemplateComponent {
+  readonly kind: TileKind;
   readonly code: string;
   readonly price: number;
-  readonly order: number;
 }
 
 export interface PuzzleExportMetadata {
@@ -34,12 +34,12 @@ function componentEntries(
       throw new Error(`Tile kind ${kind} cannot be exported as a puzzle component`);
     }
     return {
+      kind,
       code: definition.boardCode,
       price,
-      order: definition.palette.order,
     };
   });
-  entries.sort((left, right) => left.order - right.order);
+  entries.sort((left, right) => comparePaletteKinds(left.kind, right.kind));
   return entries.map(({ code, price }) => ({ code, price }));
 }
 

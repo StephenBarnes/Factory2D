@@ -22,6 +22,7 @@ import {
   serializeBoard,
 } from "../simulation/board-export";
 import {
+  comparePaletteKinds,
   directionX,
   directionY,
   TILE_DEFINITIONS,
@@ -118,14 +119,7 @@ interface MutableSerializedBoard {
 
 const PALETTE_KINDS = TILE_KINDS
   .filter((kind) => TILE_DEFINITIONS[kind].palette !== null)
-  .sort((left, right) => {
-    const leftPalette = TILE_DEFINITIONS[left].palette;
-    const rightPalette = TILE_DEFINITIONS[right].palette;
-    if (leftPalette === null || rightPalette === null) {
-      throw new Error("Puzzle component palette metadata is missing");
-    }
-    return leftPalette.order - rightPalette.order;
-  });
+  .sort(comparePaletteKinds);
 
 export class SandboxPuzzleAuthoringState {
   private nameValue: string;

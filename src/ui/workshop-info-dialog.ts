@@ -18,7 +18,7 @@ import {
   MIN_BOARD_HEIGHT,
   MIN_BOARD_WIDTH,
 } from "../simulation/board-export";
-import { TILE_DEFINITIONS, TILE_KINDS, type TileKind } from "../simulation/tile";
+import { comparePaletteKinds, TILE_DEFINITIONS, TILE_KINDS, type TileKind } from "../simulation/tile";
 import { PALETTE_CATEGORIES } from "./component-palette";
 
 export interface WorkshopInformation {
@@ -177,15 +177,7 @@ export class WorkshopInfoDialog {
   private buildComponentControls(container: HTMLElement): void {
     const kinds = TILE_KINDS
       .filter((kind) => TILE_DEFINITIONS[kind].palette !== null)
-      .sort((left, right) => {
-        const leftPalette = TILE_DEFINITIONS[left].palette;
-        const rightPalette = TILE_DEFINITIONS[right].palette;
-        if (leftPalette === null || rightPalette === null) {
-          throw new Error("Puzzle component palette metadata is missing");
-        }
-        return leftPalette.category - rightPalette.category ||
-          leftPalette.order - rightPalette.order;
-      });
+      .sort(comparePaletteKinds);
 
     for (const categoryDefinition of PALETTE_CATEGORIES) {
       const categoryKinds = kinds.filter(

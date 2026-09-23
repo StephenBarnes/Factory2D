@@ -32,11 +32,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Add settings-menu options to (1) display histograms, and (2) to toggle whether scores are uploaded. Both enabled by default.
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
 * Add some decoration for the puzzle workshop screens where blocks are placed. Maybe a different background, or some other kind of decoration.
-* Reorder palette slightly. Maybe modify it to specify the order inside its one palette group, and then global order is `(palette group's order, order in group)` rather than a single global number, since that's inconvenient. Then, some changes:
-	* The swapper should be moved to the motion group.
-	* The splitter/welder variants (splitter, welder, laser splitter, dismantler, riveter, grabber) should be placed consecutively in the transformation group.
-	* In the transformation group, after the splitters/welders, group all the destruction blocks consecutively: the drill, destroyer, fire, and bomb.
-	* Move bell and mallet to the end of the rune components group, after the resonator.
 
 # Content
 

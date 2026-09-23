@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PuzzleComponents } from "../src/game/puzzle-components";
-import { TileKind } from "../src/simulation/tile";
+import { PaletteCategory, TileKind } from "../src/simulation/tile";
 import { populateComponentPalette } from "../src/ui/component-palette";
+import { expectDefined } from "../src/util/assert";
 
 class FakeClassList {
   readonly values = new Set<string>();
@@ -108,5 +109,30 @@ describe("component palette shortcuts", () => {
       Digit2: TileKind.Conveyor,
       Digit3: TileKind.FixedCharge,
     });
+  });
+
+  it("groups motion, welders, destruction, and tonal components in palette order", () => {
+    const palette = createPalette();
+    populateComponentPalette(palette as unknown as HTMLElement, null);
+
+    const kindsIn = (category: PaletteCategory): TileKind[] => {
+      const section = paletteSections(palette).find(
+        (entry) => entry.dataset.paletteCategory === String(category),
+      );
+      const grid = expectDefined(section?.children[1], `Missing ${category} palette grid`);
+      return grid.children.map((button) => Number(button.dataset.tile) as TileKind);
+    };
+
+    expect(kindsIn(PaletteCategory.Motion).at(-1)).toBe(TileKind.Swapper);
+    const transformation = kindsIn(PaletteCategory.Transformation);
+    const splitterIndex = transformation.indexOf(TileKind.Splitter);
+    expect(transformation.slice(splitterIndex, splitterIndex + 10)).toEqual([
+      TileKind.Splitter, TileKind.Welder, TileKind.LaserSplitter,
+      TileKind.Dismantler, TileKind.Riveter, TileKind.Grabber,
+      TileKind.Drill, TileKind.Destroyer, TileKind.Fire, TileKind.Bomb,
+    ]);
+    expect(kindsIn(PaletteCategory.CircuitBasic).slice(-3)).toEqual([
+      TileKind.Resonator, TileKind.Bell, TileKind.Mallet,
+    ]);
   });
 });

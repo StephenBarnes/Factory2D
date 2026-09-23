@@ -80,4 +80,31 @@ describe("puzzle export", () => {
     expect(exported.editableRegions).toEqual([]);
     expect(parsePuzzleFile(exported, "empty-region.json").editableRegion.rectangles).toEqual([]);
   });
+
+  it("exports components in palette group order rather than global numeric order", () => {
+    const world = new World(2, 2);
+    world.place(0, 0, TileKind.Victory);
+    const metadata = {
+      id: "palette-order",
+      groupId: "basics",
+      order: 0,
+      name: "Palette Order",
+      difficulty: 1 as const,
+      description: "",
+      goal: "",
+      cycleLimit: null,
+      components: [
+        { kind: TileKind.Bomb, price: 4 },
+        { kind: TileKind.Bell, price: 3 },
+        { kind: TileKind.Swapper, price: 2 },
+        { kind: TileKind.Splitter, price: 1 },
+      ],
+      testCases: [],
+    };
+    const exported = JSON.parse(serializePuzzleTemplate(world, new GridRegion([]), metadata)) as {
+      readonly components: readonly { readonly code: string }[];
+    };
+
+    expect(exported.components.map(({ code }) => code)).toEqual(["(", "X", ")", "5"]);
+  });
 });
