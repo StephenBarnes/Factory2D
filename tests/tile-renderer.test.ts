@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { tileAppearance } from "../src/render/appearance";
 import {
   createBodyPath,
   drawBody,
@@ -21,6 +22,7 @@ interface ArcCommand {
 type PathCommand =
   | ArcCommand
   | { readonly type: "moveTo"; readonly x: number; readonly y: number }
+  | { readonly type: "lineTo"; readonly x: number; readonly y: number }
   | { readonly type: "closePath" };
 
 class RecordingPath2D {
@@ -28,6 +30,9 @@ class RecordingPath2D {
 
   moveTo(x: number, y: number): void {
     this.commands.push({ type: "moveTo", x, y });
+  }
+  lineTo(x: number, y: number): void {
+    this.commands.push({ type: "lineTo", x, y });
   }
 
   arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): void {
@@ -173,6 +178,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  tileAppearance.angularOutlines = false;
 });
 
 describe("body drawing", () => {
@@ -706,5 +712,21 @@ describe("body outline tracing", () => {
       expect(corners).not.toContain("32,32");
       expect(corners).toEqual(expect.arrayContaining(fixture.capCorners));
     }
+  });
+
+  it("chamfers body corners without losing welded joins, seam gaps, or bevel strokes", () => {
+    tileAppearance.angularOutlines = true;
+    const welded = pathFor([stone(0, 0), stone(1, 0)]);
+    const separated = pathFor([stone(0, 0, true), stone(1, 0)]);
+    expect(welded.commands.filter((command) => command.type === "moveTo")).toHaveLength(1);
+    expect(separated.commands.filter((command) => command.type === "moveTo")).toHaveLength(2);
+    expect(welded.commands.some((command) => command.type === "arcTo")).toBe(false);
+    expect(welded.commands.some((command) => command.type === "lineTo")).toBe(true);
+    expect(separated.commands.some((command) => command.type === "arcTo")).toBe(false);
+    const context = new RecordingCanvasContext();
+    drawBody(context as unknown as CanvasRenderingContext2D, 0, 0, 32,
+      [stone(0, 0), stone(1, 0)], 2, welded as unknown as Path2D);
+    expect(context.strokeStyles).toContain("rgba(255, 255, 255, 0.15)");
+    expect(context.strokeStyles).toContain("rgba(0, 0, 0, 0.18)");
   });
 });

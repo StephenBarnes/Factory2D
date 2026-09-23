@@ -170,6 +170,7 @@ export class CanvasRenderer {
   private cachedWorldGeometryRevision = -1;
   private cachedCellSize = 0;
   private renderedBevels = tileAppearance.bevels;
+  private renderedAngularOutlines = tileAppearance.angularOutlines;
   private readonly cachedBodies: Array<CachedBody | null> = [];
   private readonly freeCachedBodyIndices: number[] = [];
   private readonly cachedSelectionBodies: CachedBodyGeometry[] = [];
@@ -391,6 +392,12 @@ export class CanvasRenderer {
   ): void {
     if (this.renderedBevels !== tileAppearance.bevels) {
       this.renderedBevels = tileAppearance.bevels;
+      this.renderInvalidated = true;
+    }
+    if (this.renderedAngularOutlines !== tileAppearance.angularOutlines) {
+      this.renderedAngularOutlines = tileAppearance.angularOutlines;
+      this.cachedCellSize = 0;
+      this.cachedSelectionCellSize = 0;
       this.renderInvalidated = true;
     }
     if (this.lightMode !== lightMode) {

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, type Mock, vi } from "vitest";
 
 import { TileSelectionState } from "../src/game/tile-selection";
 import { CanvasRenderer } from "../src/render/canvas-renderer";
+import { tileAppearance } from "../src/render/appearance";
 import { CIRCUIT_CHARGE_COLORS } from "../src/simulation/circuit";
 import { Simulation } from "../src/simulation/simulation";
 import { World } from "../src/simulation/world";
@@ -342,6 +343,26 @@ describe("CanvasRenderer scalable tile rendering", () => {
     world.place(0, 0, TileKind.Platform);
     renderer.render();
     expect(pathConstructionCount).toBeGreaterThan(initialPathCount);
+  });
+
+  it("rebuilds cached outlines and repaints when angular outlines change", () => {
+    vi.stubGlobal("window", { devicePixelRatio: 1 });
+    vi.stubGlobal("Path2D", RecordingPath2D);
+    const world = new World(1, 1);
+    world.place(0, 0, TileKind.Platform);
+    const { canvas, context } = createRecordingCanvas(100, 100);
+    const renderer = new CanvasRenderer(canvas, world);
+    const previous = tileAppearance.angularOutlines;
+    try {
+      renderer.render();
+      const pathCount = pathConstructionCount;
+      tileAppearance.angularOutlines = !previous;
+      renderer.render();
+      expect(pathConstructionCount).toBeGreaterThan(pathCount);
+      expect(context.clearRect).toHaveBeenCalledTimes(2);
+    } finally {
+      tileAppearance.angularOutlines = previous;
+    }
   });
 
   it("rebuilds only bodies neighboring a changed geometry cell", () => {

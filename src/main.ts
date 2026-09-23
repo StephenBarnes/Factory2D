@@ -79,6 +79,7 @@ import { TextBoxTool } from "./ui/text-box-tool";
 import { populateComponentPalette } from "./ui/component-palette";
 import { initializeTheme } from "./ui/theme";
 import { initializeBevelSetting } from "./ui/bevel-setting";
+import { initializeOutlineSetting } from "./ui/outline-setting";
 import { initializeAnimationSettings } from "./ui/animation-settings";
 import { WorkshopSounds } from "./ui/workshop-sounds";
 import { initializePaletteResize } from "./ui/palette-resize";
@@ -130,6 +131,7 @@ const theme = initializeTheme(
   requiredElement<HTMLButtonElement>("workshop-theme-button"),
 );
 initializeBevelSetting(requiredElement<HTMLButtonElement>("bevels-button"), renderPalettePreviews);
+initializeOutlineSetting(requiredElement<HTMLButtonElement>("angular-outlines-button"), renderPalettePreviews);
 const sounds = new WorkshopSounds(
   requiredElement<HTMLButtonElement>("sounds-button"),
   requiredElement<HTMLButtonElement>("workshop-mute-button"),

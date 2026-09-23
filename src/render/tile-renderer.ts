@@ -131,8 +131,8 @@ function rotateClockwise(direction: Direction): Direction {
 }
 
 /**
- * Draws one welded body as rounded slabs whose shared edges merge only where
- * welded: drop shadow, per-cell fill and decorations clipped to the outline,
+ * Draws one welded body as inset slabs with either curved or chamfered corners:
+ * drop shadow, per-cell fill and decorations clipped to the outline,
  * top-left/bottom-right bevel lighting, and a dark rim.
  */
 export function drawBody(
@@ -288,15 +288,13 @@ export function drawTile(
 }
 
 /**
- * Traces the boundary of a cell set into a rounded outline path. Occupied
+ * Traces the boundary of a cell set into an inset outline path. Occupied
  * neighbors merge only across welded edges, so an unwelded edge has the same
  * local geometry whether or not another weld path still connects the cells.
  *
- * Boundary edges are directed so the body interior lies to their right, which
- * makes outer loops wind clockwise and hole loops counterclockwise; nonzero
- * winding then fills holes correctly. Edges are inset toward the interior so
- * separate slabs never touch, and every corner is rounded with `arcTo`, which
- * yields convex rounding and concave weld fillets from the same construction.
+ * Boundary edges keep the interior on their right: outer loops wind clockwise
+ * and holes counterclockwise. Straight chamfers replace arcTo curves when
+ * angular outlines are enabled, retaining gaps and closed seam endpoints.
  */
 export function createBodyPath(
   originX: number,
@@ -386,7 +384,7 @@ export function createBodyPath(
       edge = next;
     }
 
-    appendLoop(path, corners, cornerRadius);
+    appendLoop(path, corners, cornerRadius, tileAppearance.angularOutlines);
   }
 
   return path;
@@ -459,7 +457,12 @@ function appendCorner(
   });
 }
 
-function appendLoop(path: Path2D, corners: OutlineCorner[], cornerRadius: number): void {
+function appendLoop(
+  path: Path2D,
+  corners: OutlineCorner[],
+  cornerRadius: number,
+  angular: boolean,
+): void {
   const count = corners.length;
   if (count < 4) {
     return;
@@ -475,13 +478,34 @@ function appendLoop(path: Path2D, corners: OutlineCorner[], cornerRadius: number
     current.radius = Math.min(cornerRadius, incomingLength / 2, outgoingLength / 2);
   }
 
-  const last = expectDefined(corners[count - 1], "outline corner");
   const first = expectDefined(corners[0], "outline corner");
-  path.moveTo((last.x + first.x) / 2, (last.y + first.y) / 2);
-  for (let i = 0; i < count; i += 1) {
-    const current = expectDefined(corners[i], "outline corner");
-    const next = expectDefined(corners[(i + 1) % count], "outline corner");
-    path.arcTo(current.x, current.y, next.x, next.y, current.radius);
+  if (angular) {
+    const last = expectDefined(corners[count - 1], "outline corner");
+    path.moveTo((last.x + first.x) / 2, (last.y + first.y) / 2);
+    for (let i = 0; i < count; i += 1) {
+      const before = expectDefined(corners[(i + count - 1) % count], "outline corner");
+      const current = expectDefined(corners[i], "outline corner");
+      const next = expectDefined(corners[(i + 1) % count], "outline corner");
+      const incoming = Math.hypot(current.x - before.x, current.y - before.y);
+      const outgoing = Math.hypot(next.x - current.x, next.y - current.y);
+      const cut = Math.min(current.radius, incoming / 2, outgoing / 2);
+      path.lineTo(
+        current.x - (current.x - before.x) * cut / incoming,
+        current.y - (current.y - before.y) * cut / incoming,
+      );
+      path.lineTo(
+        current.x + (next.x - current.x) * cut / outgoing,
+        current.y + (next.y - current.y) * cut / outgoing,
+      );
+    }
+  } else {
+    const last = expectDefined(corners[count - 1], "outline corner");
+    path.moveTo((last.x + first.x) / 2, (last.y + first.y) / 2);
+    for (let i = 0; i < count; i += 1) {
+      const current = expectDefined(corners[i], "outline corner");
+      const next = expectDefined(corners[(i + 1) % count], "outline corner");
+      path.arcTo(current.x, current.y, next.x, next.y, current.radius);
+    }
   }
   path.closePath();
 }

@@ -6,6 +6,7 @@ import {
 import { WorldFeature } from "../simulation/world-features";
 import type { World } from "../simulation/world";
 import { createBodyCell, populateBodyCell } from "./body-cells";
+import { tileAppearance } from "./appearance";
 import { createBodyPath, drawBody, type BodyCell } from "./tile-renderer";
 
 interface MachineOrigin {
@@ -21,6 +22,7 @@ interface ConsumedBody {
   readonly cells: BodyCell[];
   path: Path2D | null;
   cellSize: number;
+  angularOutlines: boolean;
 }
 
 /** Artwork and paths exist only in the mounted view, never in simulation snapshots. */
@@ -60,7 +62,7 @@ export class ProductionInterpolation implements ProductionAnimationObserver {
     }
     let body = this.consumed.get(machineId);
     if (body === undefined) {
-      body = { origin, cells: [], path: null, cellSize: -1 };
+      body = { origin, cells: [], path: null, cellSize: -1, angularOutlines: tileAppearance.angularOutlines };
       this.consumed.set(machineId, body);
     }
     const cell = createBodyCell();
@@ -102,9 +104,11 @@ export class ProductionInterpolation implements ProductionAnimationObserver {
     context.rect(originX, originY, this.world.width * cellSize, this.world.height * cellSize);
     context.clip();
     for (const body of this.consumed.values()) {
-      if (body.path === null || body.cellSize !== cellSize) {
+      if (body.path === null || body.cellSize !== cellSize ||
+        body.angularOutlines !== tileAppearance.angularOutlines) {
         body.path = createBodyPath(0, 0, cellSize, body.cells, body.cells.length);
         body.cellSize = cellSize;
+        body.angularOutlines = tileAppearance.angularOutlines;
       }
       const origin = body.origin;
       context.save();
