@@ -27,6 +27,8 @@ type PathCommand =
 
 class RecordingPath2D {
   readonly commands: PathCommand[] = [];
+  rect(_x: number, _y: number, _width: number, _height: number): void {}
+  addPath(_path: Path2D, _transform: DOMMatrix): void {}
 
   moveTo(x: number, y: number): void {
     this.commands.push({ type: "moveTo", x, y });
@@ -174,6 +176,9 @@ function cornersNearFirstCut(paths: readonly RecordingPath2D[]): string[] {
 
 beforeEach(() => {
   vi.stubGlobal("Path2D", RecordingPath2D);
+  vi.stubGlobal("DOMMatrix", class {
+    constructor(_values: number[]) {}
+  });
 });
 
 afterEach(() => {
@@ -248,7 +253,7 @@ describe("circuit rendering", () => {
       new RecordingPath2D() as unknown as Path2D,
     );
 
-    expect(context.fillStyles.at(-1)).toBe(CIRCUIT_CHARGE_COLORS[-1]);
+    expect(context.fillStyles).toContain(CIRCUIT_CHARGE_COLORS[-1]);
   });
 
 
@@ -276,7 +281,7 @@ describe("circuit rendering", () => {
       new RecordingPath2D() as unknown as Path2D,
     );
 
-    expect(context.fillStyles.at(-1)).toBe(CIRCUIT_CHARGE_COLORS[1]);
+    expect(context.fillStyles).toContain(CIRCUIT_CHARGE_COLORS[1]);
   });
 
   it("colors sensor wires by network charge and its arrow by sensed output", () => {
@@ -726,8 +731,8 @@ describe("body outline tracing", () => {
     const context = new RecordingCanvasContext();
     drawBody(context as unknown as CanvasRenderingContext2D, 0, 0, 32,
       [stone(0, 0), stone(1, 0)], 2, welded as unknown as Path2D);
-    expect(context.strokeStyles).toContain("rgba(255, 255, 255, 0.15)");
-    expect(context.strokeStyles).toContain("rgba(0, 0, 0, 0.18)");
+    expect(context.fillStyles).toContain("rgba(255, 255, 255, 0.15)");
+    expect(context.fillStyles).toContain("rgba(0, 0, 0, 0.18)");
   });
 
   it("keeps an L body's inside corner within painted cells", () => {

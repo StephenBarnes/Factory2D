@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, type Mock, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 
 import { TileSelectionState } from "../src/game/tile-selection";
 import { CanvasRenderer } from "../src/render/canvas-renderer";
@@ -37,22 +37,32 @@ interface PathRectangle {
 }
 
 let pathConstructionCount = 0;
+let bodyOutlineCount = 0;
 
 class RecordingPath2D {
   readonly rectangles: PathRectangle[] = [];
+  private outlined = false;
   constructor() {
     pathConstructionCount += 1;
   }
 
 
   moveTo(_x: number, _y: number): void {}
-  lineTo(_x: number, _y: number): void {}
+  lineTo(_x: number, _y: number): void { this.markOutline(); }
   roundRect(_x: number, _y: number, _width: number, _height: number, _radius: number): void {}
-  arcTo(_x1: number, _y1: number, _x2: number, _y2: number, _radius: number): void {}
+  arcTo(_x1: number, _y1: number, _x2: number, _y2: number, _radius: number): void {
+    this.markOutline();
+  }
   closePath(): void {}
+  addPath(_path: Path2D, _transform: DOMMatrix): void {}
 
   rect(x: number, y: number, width: number, height: number): void {
     this.rectangles.push({ x, y, width, height });
+  }
+  private markOutline(): void {
+    if (this.outlined) return;
+    this.outlined = true;
+    bodyOutlineCount += 1;
   }
 }
 interface RecordingCanvas extends FakeCanvas {
@@ -145,9 +155,16 @@ function createMotionCanvas(width: number, height: number): RecordingCanvas & {
   return { ...recording, rectangles };
 }
 
+beforeEach(() => {
+  vi.stubGlobal("DOMMatrix", class {
+    constructor(_values: number[]) {}
+  });
+});
+
 afterEach(() => {
   vi.unstubAllGlobals();
   pathConstructionCount = 0;
+  bodyOutlineCount = 0;
 });
 
 describe("CanvasRenderer viewport fitting", () => {
@@ -376,12 +393,12 @@ describe("CanvasRenderer scalable tile rendering", () => {
     const renderer = new CanvasRenderer(canvas, world);
 
     renderer.render();
-    const initialPathCount = pathConstructionCount;
+    const initialOutlineCount = bodyOutlineCount;
 
     world.place(2, 0, TileKind.Stone);
     renderer.render();
 
-    expect(pathConstructionCount).toBe(initialPathCount + 1);
+    expect(bodyOutlineCount).toBe(initialOutlineCount + 1);
   });
 
   it("does not repaint stationary snapshots just because tick progress advances", () => {
@@ -579,8 +596,8 @@ describe("CanvasRenderer coupled piston interpolation", () => {
           );
         }
       }
-      if (progress === 0) animatedPathCount = pathConstructionCount;
-      else expect(pathConstructionCount).toBe(animatedPathCount);
+      if (progress === 0) animatedPathCount = bodyOutlineCount;
+      else expect(bodyOutlineCount).toBe(animatedPathCount);
     }
   });
 

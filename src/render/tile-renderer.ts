@@ -86,6 +86,60 @@ const BEVEL_CELL_SIZE = 24;
 const HIGHLIGHT_STYLE = "rgba(255, 255, 255, 0.15)";
 const SHADE_STYLE = "rgba(0, 0, 0, 0.18)";
 
+interface BodyPathBounds {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+interface BevelMasks {
+  bevel: number;
+  highlight: Path2D;
+  shade: Path2D;
+}
+
+const bodyPathBounds = new WeakMap<Path2D, BodyPathBounds>();
+const bevelMaskCache = new WeakMap<Path2D, BevelMasks>();
+
+function bevelMasks(
+  path: Path2D,
+  originX: number,
+  originY: number,
+  cellSize: number,
+  cells: readonly BodyCell[],
+  cellCount: number,
+  bevel: number,
+): BevelMasks {
+  const cached = bevelMaskCache.get(path);
+  if (cached?.bevel === bevel) return cached;
+
+  let bounds = bodyPathBounds.get(path);
+  if (bounds === undefined) {
+    let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+    for (let i = 0; i < cellCount; i += 1) {
+      const cell = expectDefined(cells[i], "body cell");
+      left = Math.min(left, originX + cell.x * cellSize);
+      top = Math.min(top, originY + cell.y * cellSize);
+      right = Math.max(right, originX + (cell.x + 1) * cellSize);
+      bottom = Math.max(bottom, originY + (cell.y + 1) * cellSize);
+    }
+    bounds = { left, top, right, bottom };
+  }
+  const padding = bevel * 2;
+  const makeMask = (offset: number): Path2D => {
+    const mask = new Path2D();
+    mask.rect(bounds.left - padding, bounds.top - padding,
+      bounds.right - bounds.left + padding * 2,
+      bounds.bottom - bounds.top + padding * 2);
+    mask.addPath(path, new DOMMatrix([1, 0, 0, 1, offset, offset]));
+    return mask;
+  };
+  const masks = { bevel, highlight: makeMask(bevel), shade: makeMask(-bevel) };
+  bevelMaskCache.set(path, masks);
+  return masks;
+}
+
 // Unit-sized blade geometry is shared across tiles and scales; animation only rotates it.
 let destroyerBlades: Path2D | undefined;
 
@@ -178,13 +232,13 @@ export function drawBody(
 
   if (phase !== "decoration" && tileAppearance.bevels && cellSize >= BEVEL_CELL_SIZE) {
     const bevel = Math.max(1.5, cellSize * BEVEL_RATIO);
-    context.lineWidth = bevel * 2;
-    context.translate(bevel - 0.2, bevel - 0.2); // Ad-hoc manually tuned -0.2 to reduce corner artifacts
-    context.strokeStyle = HIGHLIGHT_STYLE;
-    context.stroke(bodyPath);
-    context.translate(-2 * bevel + 0.5, -2 * bevel + 0.5); // Same with +0.5
-    context.strokeStyle = SHADE_STYLE;
-    context.stroke(bodyPath);
+    const masks = bevelMasks(bodyPath, originX, originY, cellSize, cells, cellCount, bevel);
+    // The body minus its shifted silhouette lights only northwest-facing edges;
+    // the opposite shift shades southeast-facing edges, including their corners.
+    context.fillStyle = HIGHLIGHT_STYLE;
+    context.fill(masks.highlight, "evenodd");
+    context.fillStyle = SHADE_STYLE;
+    context.fill(masks.shade, "evenodd");
   }
 
   context.restore();
@@ -305,9 +359,14 @@ export function createBodyPath(
   cellCount: number,
 ): Path2D {
   const bodyCells = new Map<number, BodyCell>();
+  let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
   for (let i = 0; i < cellCount; i += 1) {
     const cell = expectDefined(cells[i], "body cell");
     bodyCells.set(pointKey(cell.x, cell.y), cell);
+    left = Math.min(left, originX + cell.x * cellSize);
+    top = Math.min(top, originY + cell.y * cellSize);
+    right = Math.max(right, originX + (cell.x + 1) * cellSize);
+    bottom = Math.max(bottom, originY + (cell.y + 1) * cellSize);
   }
 
   const edges: BoundaryEdge[] = [];
@@ -388,6 +447,7 @@ export function createBodyPath(
     appendLoop(path, corners, cornerRadius, tileAppearance.angularOutlines);
   }
 
+  bodyPathBounds.set(path, { left, top, right, bottom });
   return path;
 }
 
