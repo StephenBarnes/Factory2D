@@ -881,7 +881,7 @@ export class CanvasRenderer {
     const boardHeight = this.world.height * this.cellSize;
     const { context } = this;
 
-    context.fillStyle = this.lightMode ? "#fff5db" : "#2d1a11";
+    context.fillStyle = this.lightMode ? "#fff5db" : "#211611";
     context.fillRect(this.originX, this.originY, boardWidth, boardHeight);
     context.strokeStyle = this.lightMode ? "#ddc8a7" : "#503a30";
     context.lineWidth = 1;

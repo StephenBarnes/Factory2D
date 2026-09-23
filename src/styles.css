@@ -16,16 +16,17 @@
   --border-strong: #a46e49;
   --border-faint: #60463a;
   --raised: #34241f;
-  --raised-hover: #5c4440;
+  --raised-hover: #4e3734;
   --inset: #2d1a11;
-  --text-bright: #fbf0b3;
+  --text-title: #fcc572;
+  --text-bright: #fee4b6;
   --text-body: #eee0c8;
   --text-mid: #d1baa3;
   --text-muted: #bca18b;
   --text-faint: #ad927f;
   --gild: #f2ae55;
   --gold: #e9b374;
-  --gold-bright: #fbda9a;
+  --gold-bright: #f6c16c;
   --score-iron: #c4cbd4;
   --score-mithril: #83bcff;
   --bronze: #b47a4f;
@@ -101,6 +102,7 @@
   --raised: #f2e1c5;
   --raised-hover: #e9d1ad;
   --inset: #fff9e9;
+  --text-title: #552809;
   --text-bright: #27160b;
   --text-body: #3e2c25;
   --text-mid: #624332;
@@ -353,7 +355,7 @@ body:has(dialog[open]) .tool-cursor {
   max-width: 100%;
   margin: 0;
   padding: 0.25em 0.35em;
-  color: var(--text-bright);
+  color: var(--text-title);
   font-family: var(--font-display);
   font-size: clamp(1.8rem, 7vw, 4.8rem);
   line-height: 0.95;
@@ -454,7 +456,7 @@ body:has(dialog[open]) .tool-cursor {
 
 .gemstone-count {
   position: absolute;
-  top: clamp(42px, 11.5vh, 92px);
+  top: clamp(42px, 10.4vh, 92px);
   right: 0;
   width: fit-content;
   margin: 0;
@@ -524,6 +526,7 @@ body:has(dialog[open]) .tool-cursor {
   font-weight: 700;
   letter-spacing: 0.07em;
   text-align: right;
+  margin-right: 2em;
 }
 
 .puzzle-group[data-state="completed"],
@@ -703,7 +706,7 @@ body:has(dialog[open]) .tool-cursor {
 
 .puzzle-info-header h1 {
   margin: 0;
-  color: var(--text-bright);
+  color: var(--text-title);
   font-family: var(--font-display);
   font-size: clamp(2.2rem, 6vw, 4.6rem);
   line-height: 0.95;
@@ -725,7 +728,7 @@ body:has(dialog[open]) .tool-cursor {
 .puzzle-brief,
 .solutions-panel {
   position: relative;
-  border: 1px solid var(--panel-border);
+  border: 1px solid var(--gold-bright);
   background: var(--panel-bg);
   box-shadow: 0 18px 50px rgb(0 0 0 / 24%);
 }
@@ -3257,7 +3260,7 @@ kbd {
   color: var(--text-body);
   background: var(--raised);
   font-family: var(--font-mono);
-  font-size: 0.66rem;
+  font-size: 1.0rem;
   font-weight: 700;
   letter-spacing: 0.05em;
 }
