@@ -292,8 +292,9 @@ export class CircuitResolver {
         );
         continue;
       }
-      if (kind === TileKind.Welder || kind === TileKind.Riveter || kind === TileKind.Splitter ||
-          kind === TileKind.LaserSplitter || kind === TileKind.Dismantler || kind === TileKind.Assembler) {
+      if (kind === TileKind.Welder || kind === TileKind.Riveter || kind === TileKind.Grabber ||
+          kind === TileKind.Splitter || kind === TileKind.LaserSplitter ||
+          kind === TileKind.Dismantler || kind === TileKind.Assembler) {
         const outputCharge = (kind === TileKind.Assembler
           ? runtime.assemblerResolver.willEmit(index)
           : runtime.weldOperationResolver.successfulOperationIndices[index] === 1) ? 1 : 0;

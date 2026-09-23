@@ -14,7 +14,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Add a gate block. When it receives a charge on left/right side, it moves the body above it to below it, mirrored. We have this functionality already with the duplicator block; the only difference is that it also consumes the body above it, unlike the duplicator. (And different visuals.) Useful for puzzles where the player has to build intermediates in different isolated compartments.
 * Add a forced-flipper block. Similar to the existing flipper block, but instead of checking for collisions and then blocking the flip, it instead always flips, destroying any blocks that would collide with the flip. Useful for creating some puzzle infrastructure.
 * Distance sensor block. Configurable threshold number. Checks distance to nearest block in its forward direction which is not empty or transparent (glass). Outputs +1 if this distance is greater than the threshold, 0 if equal, -1 if below.
-* Add a grabber block, similar to the welder/riveter and splitter. When it receives a +1 side charge, it welds itself to the block right in front of it. When it receives a -1 side charge, it splits the one edge between itself and the block right in front of itself. Useful for grabbing things, moving them, and then dropping them again. Give it an isolated rear output that pulses +1 when it's changed any welds, similar to existing splitters and welders.
 
 # Component behaviors
 

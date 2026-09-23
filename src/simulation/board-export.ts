@@ -367,7 +367,8 @@ function exportBoardContents(world: World): ExportedBoardContents {
           charges.push({ x, y, charge });
         }
       }
-      if (kind === TileKind.Welder || kind === TileKind.Riveter || kind === TileKind.Splitter || kind === TileKind.LaserSplitter ||
+      if (kind === TileKind.Welder || kind === TileKind.Riveter || kind === TileKind.Grabber ||
+          kind === TileKind.Splitter || kind === TileKind.LaserSplitter ||
           kind === TileKind.Dismantler || kind === TileKind.Assembler || isProcessingMachine(kind)) {
         const outputCharge = world.chargeAtPort(
           x,
@@ -763,7 +764,8 @@ function importBoardContents(
       throw new Error(`${chargeLabel} duplicates cell (${x}, ${y})`);
     }
     const kind = expectDefined(kinds[cellIndex], `tile kind at (${x}, ${y})`) as TileKind;
-    if (kind !== TileKind.Welder && kind !== TileKind.Riveter && kind !== TileKind.Splitter && kind !== TileKind.LaserSplitter &&
+    if (kind !== TileKind.Welder && kind !== TileKind.Riveter && kind !== TileKind.Grabber &&
+        kind !== TileKind.Splitter && kind !== TileKind.LaserSplitter &&
         kind !== TileKind.Dismantler && kind !== TileKind.Assembler && !isProcessingMachine(kind)) {
       throw new Error(`${chargeLabel} targets a tile without a separate isolated output`);
     }

@@ -10,6 +10,7 @@ import {
   directionX,
   directionY,
   mirroringForKind,
+  oppositeDirection,
   orientedDirection,
   orientedSides,
   TILE_DEFINITIONS,
@@ -77,7 +78,7 @@ const CORNER_RADIUS_RATIO = 0.15;
 /** Gap between a body outline and its cell boundary, so unwelded neighbors stay visually separate. */
 const INSET_RATIO = 0.05;
 /** Thickness of the top-left highlight and bottom-right shade bands. */
-const BEVEL_RATIO = 0.05;
+const BEVEL_RATIO = 0.07;
 
 /** Logical pixels: supersampling must not change which details are visible. */
 export const DECORATION_CELL_SIZE = 12;
@@ -1224,6 +1225,45 @@ function drawDecoration(
     case TileDecorationStyle.Iron:
       drawRivets(context, left, top, size);
       break;
+    case TileDecorationStyle.Grabber: {
+      context.save();
+      context.translate(left + size / 2, top + size / 2);
+      context.rotate(orientation * Math.PI / 2);
+      // The two jaws open toward the front edge. Unlike the remote weld tools,
+      // their shaft runs back into this tile: the grabber itself holds its load.
+      const leftInput = orientedDirection(Direction.Left, orientation, mirrored);
+      //const rightInput = orientedDirection(Direction.Right, orientation, mirrored);
+      const inputCharge = circuitPortCharge(circuitPortCharges, leftInput);
+      context.fillStyle = "#211a16";
+      context.strokeStyle = definition.decorationColor;
+      context.lineWidth = Math.max(1.5, size * 0.055);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.fillRect(-size * 0.11, -size * 0.14, size * 0.22, size * 0.36);
+      context.strokeRect(-size * 0.11, -size * 0.14, size * 0.22, size * 0.36);
+      context.strokeStyle = inputCharge === 0
+        ? definition.decorationColor : CIRCUIT_CHARGE_COLORS[inputCharge];
+      context.lineWidth = Math.max(1.5, size * 0.075);
+      context.beginPath();
+      context.moveTo(-size * 0.11, -size * 0.09);
+      context.lineTo(-size * 0.27, -size * 0.14);
+      context.lineTo(-size * 0.27, -size * 0.36);
+      context.lineTo(-size * 0.12, -size * 0.36);
+      context.lineTo(-size * 0.12, -size * 0.29);
+      context.moveTo(size * 0.11, -size * 0.09);
+      context.lineTo(size * 0.27, -size * 0.14);
+      context.lineTo(size * 0.27, -size * 0.36);
+      context.lineTo(size * 0.12, -size * 0.36);
+      context.lineTo(size * 0.12, -size * 0.29);
+      context.stroke();
+      const rear = oppositeDirection(orientation);
+      context.fillStyle = CIRCUIT_CHARGE_COLORS[circuitPortCharge(circuitPortCharges, rear)];
+      context.beginPath();
+      drawDot(context, 0, size * 0.22, Math.max(1.5, size * 0.065));
+      context.fill();
+      context.restore();
+      break;
+    }
     case TileDecorationStyle.Welder:
     case TileDecorationStyle.Riveter:
     case TileDecorationStyle.Splitter:

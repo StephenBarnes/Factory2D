@@ -2050,6 +2050,7 @@ export class CanvasRenderer {
 
   private drawComponentOverlay(kind: TileKind, orientation: Direction, mirrored = false): void {
     switch (kind) {
+      case TileKind.Grabber:
       case TileKind.Welder:
       case TileKind.Riveter:
       case TileKind.Splitter:
@@ -2151,6 +2152,35 @@ export class CanvasRenderer {
       return;
     }
 
+    if (kind === TileKind.Grabber) {
+      // This operator changes its own facing edge, not an edge beyond its target.
+      const { context, cellSize } = this;
+      const charge = this.world.kindAt(this.hoverX, this.hoverY) === TileKind.Grabber
+        ? this.world.chargeAtPort(
+          this.hoverX, this.hoverY, orientedDirection(Direction.Left, orientation, mirrored),
+        )
+        : 0;
+      const centerX = this.originX + (this.hoverX + 0.5 + forwardX / 2) * cellSize;
+      const centerY = this.originY + (this.hoverY + 0.5 + forwardY / 2) * cellSize;
+      context.save();
+      context.strokeStyle = charge === 0
+        ? TILE_DEFINITIONS[kind].decorationColor : CIRCUIT_CHARGE_COLORS[charge];
+      context.lineWidth = Math.max(2, cellSize * 0.07);
+      context.lineCap = "round";
+      context.globalAlpha = 0.8;
+      context.beginPath();
+      context.moveTo(
+        centerX - forwardY * cellSize * 0.38,
+        centerY + forwardX * cellSize * 0.38,
+      );
+      context.lineTo(
+        centerX + forwardY * cellSize * 0.38,
+        centerY - forwardX * cellSize * 0.38,
+      );
+      context.stroke();
+      context.restore();
+      return;
+    }
     const { context, cellSize } = this;
     context.save();
     context.strokeStyle = kind === TileKind.Welder || kind === TileKind.Riveter ? "#78dcca" : "#e15a4f";

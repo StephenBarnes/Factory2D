@@ -88,6 +88,7 @@ export const enum TileKind {
   Swapper = 86,
   Bomb = 87,
   Riveter = 88,
+  Grabber = 89,
 }
 
 export const enum Direction {
@@ -179,6 +180,7 @@ export const enum TileDecorationStyle {
   Swapper = 69,
   Bomb = 70,
   Riveter = 71,
+  Grabber = 72,
 }
 
 export const enum PaletteCategory {
@@ -2086,6 +2088,30 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     fill: "#6d5c4b",
     decorationStyle: TileDecorationStyle.Riveter,
     decorationColor: "#f0b85d",
+  },
+  [TileKind.Grabber]: {
+    name: "Grabber",
+    boardCode: "'",
+    defaultPrice: 10,
+    palette: {
+      order: 92,
+      category: PaletteCategory.Transformation,
+      description: "Welds to the block immediately ahead with side +1; releases it with side -1. Emits back +1 on changes.",
+      extendedDescription: ["Welds its own front edge to an adjacent weldable block on shared side +1; shared side -1 cuts that same edge. Neutral charge leaves it unchanged. The isolated rear output pulses +1 only when the weld changes.", "Opposing weld and split commands on the edge jam. Cannot change an edge between two weld-protected blocks."],
+    },
+    affectedByGravity: true,
+    slidesDiagonally: false,
+    weldableSides: WeldSide.All,
+    excludesFacingWeld: false,
+    usesOrientation: true,
+    circuitPorts: WeldSide.Right | WeldSide.Down | WeldSide.Left,
+    circuitInputPorts: WeldSide.None,
+    circuitOutputPorts: WeldSide.Down,
+    magnetic: false,
+    attractionRange: 0,
+    fill: "#665b52",
+    decorationStyle: TileDecorationStyle.Grabber,
+    decorationColor: "#e9c896",
   },
   [TileKind.Splitter]: {
     name: "Splitter",

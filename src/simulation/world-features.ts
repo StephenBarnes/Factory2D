@@ -68,6 +68,7 @@ for (const kind of TILE_KINDS) {
     kind === TileKind.BeamBodySensor ||
     kind === TileKind.Assembler ||
     kind === TileKind.Welder ||
+    kind === TileKind.Grabber ||
     kind === TileKind.Riveter ||
     kind === TileKind.Splitter ||
     kind === TileKind.LaserSplitter ||
@@ -94,8 +95,8 @@ for (const kind of TILE_KINDS) {
   if (kind === TileKind.Assembler) {
     mask |= 1 << WorldFeature.Assembler | 1 << WorldFeature.WeldedBodyObserver;
   }
-  if (kind === TileKind.Welder || kind === TileKind.Riveter || kind === TileKind.Splitter ||
-      kind === TileKind.LaserSplitter || kind === TileKind.Dismantler) {
+  if (kind === TileKind.Welder || kind === TileKind.Riveter || kind === TileKind.Grabber ||
+      kind === TileKind.Splitter || kind === TileKind.LaserSplitter || kind === TileKind.Dismantler) {
     mask |= 1 << WorldFeature.WeldOperator;
   }
   if (kind === TileKind.Furnace || kind === TileKind.Grinder) {

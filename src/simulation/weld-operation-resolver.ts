@@ -128,16 +128,42 @@ export class WeldOperationResolver {
     const leftSide = orientedDirection(
       Direction.Left, orientation, this.world.mirroredAtIndex(index),
     );
-    if (this.world.chargeAtPortIndex(index, leftSide) !== 1) {
-      return;
+    const charge = this.world.chargeAtPortIndex(index, leftSide);
+    let intent: EdgeIntent.Weld | EdgeIntent.Split;
+    switch (kind) {
+      case TileKind.Grabber:
+        if (charge === 0) return;
+        intent = charge === 1 ? EdgeIntent.Weld : EdgeIntent.Split;
+        break;
+      case TileKind.Welder:
+      case TileKind.Riveter:
+        if (charge !== 1) return;
+        intent = EdgeIntent.Weld;
+        break;
+      case TileKind.Splitter:
+      case TileKind.LaserSplitter:
+      case TileKind.Dismantler:
+        if (charge !== 1) return;
+        intent = EdgeIntent.Split;
+        break;
+      default:
+        throw new Error(`Unexpected weld operator kind ${kind}`);
     }
     const laser = kind === TileKind.LaserSplitter;
     const dismantler = kind === TileKind.Dismantler;
     const sideCount = laser ? 1 : dismantler ? 4 : 2;
     const sideStep = dismantler ? 1 : 2;
-    const intent = kind === TileKind.Welder || kind === TileKind.Riveter
-      ? EdgeIntent.Weld : EdgeIntent.Split;
     let target = this.neighborIndex(index, orientation);
+    if (kind === TileKind.Grabber) {
+      if (target < 0) return;
+      const edge = this.edgeIndex(index, target);
+      if (collecting) {
+        this.requestEdge(edge, intent);
+      } else if (this.changedEdges[edge] === 1) {
+        this.successfulOperationIndices[index] = 1;
+      }
+      return;
+    }
     if (kind === TileKind.Riveter) {
       if (target < 0) return;
       const second = this.neighborIndex(target, orientation);

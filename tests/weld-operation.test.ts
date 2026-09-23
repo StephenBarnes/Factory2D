@@ -219,6 +219,171 @@ describe("welder and splitter operations", () => {
   });
 });
 
+describe("grabber operations", () => {
+  it.each([Direction.Up, Direction.Right, Direction.Down, Direction.Left])(
+    "welds and splits only its own front edge facing %s, pulsing only on a change",
+    (orientation) => {
+      const world = new World(5, 5);
+      const frontX = 2 + directionX(orientation);
+      const frontY = 2 + directionY(orientation);
+      const rearX = 2 - directionX(orientation);
+      const rearY = 2 - directionY(orientation);
+      world.place(2, 2, TileKind.Grabber, orientation);
+      world.place(frontX, frontY, TileKind.Floatstone);
+      world.place(rearX, rearY, TileKind.Platform);
+      world.setWeld(2, 2, rearX, rearY, true);
+      const simulation = new Simulation(world);
+
+      simulation.step();
+      expect(world.isWelded(2, 2, frontX, frontY)).toBe(false);
+      expect(world.chargeAtPort(2, 2, oppositeDirection(orientation))).toBe(0);
+
+      world.setCharge(2, 2, 1);
+      simulation.step();
+      expect(world.isWelded(2, 2, frontX, frontY)).toBe(true);
+      expect(world.chargeAtPort(2, 2, oppositeDirection(orientation))).toBe(1);
+      simulation.step();
+      expect(world.isWelded(2, 2, frontX, frontY)).toBe(true);
+      expect(world.chargeAtPort(2, 2, oppositeDirection(orientation))).toBe(0);
+
+      world.setCharge(2, 2, -1);
+      simulation.step();
+      expect(world.isWelded(2, 2, frontX, frontY)).toBe(false);
+      expect(world.chargeAtPort(2, 2, oppositeDirection(orientation))).toBe(1);
+      simulation.step();
+      expect(world.isWelded(2, 2, frontX, frontY)).toBe(false);
+      expect(world.chargeAtPort(2, 2, oppositeDirection(orientation))).toBe(0);
+
+      world.setCharge(2, 2, 0);
+      simulation.step();
+      expect(world.isWelded(2, 2, frontX, frontY)).toBe(false);
+      expect(world.chargeAtPort(2, 2, oppositeDirection(orientation))).toBe(0);
+    },
+  );
+
+  it("shares its side charge without shorting it to the isolated rear pulse", () => {
+    const world = new World(5, 5);
+    world.place(1, 2, TileKind.FixedCharge);
+    world.place(2, 2, TileKind.Grabber, Direction.Up);
+    world.place(3, 2, TileKind.Conduit);
+    world.place(2, 3, TileKind.Conduit);
+    world.place(2, 4, TileKind.Platform);
+    world.setWeld(1, 2, 2, 2, true);
+    world.setWeld(2, 2, 3, 2, true);
+    world.setWeld(2, 2, 2, 3, true);
+    world.setWeld(2, 3, 2, 4, true);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+    expect(world.chargeAtPort(2, 2, Direction.Left)).toBe(1);
+    expect(world.chargeAtPort(2, 2, Direction.Right)).toBe(1);
+    expect(world.chargeAt(3, 2)).toBe(1);
+    expect(world.chargeAtPort(2, 2, Direction.Down)).toBe(0);
+    expect(world.chargeAt(2, 3)).toBe(0);
+
+    world.place(2, 1, TileKind.Floatstone);
+    simulation.step();
+    expect(world.isWelded(2, 1, 2, 2)).toBe(true);
+    expect(world.chargeAt(2, 3)).toBe(1);
+    simulation.step();
+    expect(world.chargeAtPort(2, 2, Direction.Left)).toBe(1);
+    expect(world.chargeAt(2, 3)).toBe(0);
+  });
+
+  it("does not change a neighboring protected seam or attach to non-weldable material", () => {
+    const world = new World(5, 5);
+    world.place(1, 1, TileKind.Platform);
+    world.place(2, 1, TileKind.IndestructibleConduit);
+    world.setWeld(1, 1, 2, 1, true);
+    world.place(2, 2, TileKind.Grabber, Direction.Up);
+    world.place(2, 3, TileKind.Platform);
+    world.setWeld(2, 2, 2, 3, true);
+    world.setCharge(2, 2, 1);
+    world.place(0, 1, TileKind.Dismantler, Direction.Right);
+    world.setCharge(0, 1, 1);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+    expect(world.isWelded(2, 1, 2, 2)).toBe(true);
+    expect(world.isWelded(1, 1, 2, 1)).toBe(true);
+    world.setCharge(2, 2, -1);
+    simulation.step();
+    expect(world.isWelded(2, 1, 2, 2)).toBe(false);
+    expect(world.isWelded(1, 1, 2, 1)).toBe(true);
+
+    world.place(2, 1, TileKind.Sand);
+    world.setCharge(2, 2, 1);
+    simulation.step();
+    expect(world.isWelded(2, 1, 2, 2)).toBe(false);
+    expect(world.chargeAtPort(2, 2, Direction.Down)).toBe(0);
+  });
+
+  it.each([
+    { charge: 1 as const, opponent: TileKind.Dismantler, opponentY: 0, welded: false },
+    { charge: -1 as const, opponent: TileKind.Riveter, opponentY: 3, welded: true },
+  ])("jams an opposing request on its front edge at charge $charge", ({
+    charge, opponent, opponentY, welded,
+  }) => {
+    const world = new World(5, 5);
+    world.place(2, 1, TileKind.Floatstone);
+    world.place(2, 2, TileKind.Grabber, Direction.Up);
+    world.place(2, opponentY, opponent, opponent === TileKind.Dismantler
+      ? Direction.Down : Direction.Up);
+    world.place(2, 4, TileKind.Platform);
+    world.setWeld(2, opponentY === 0 ? 2 : 3, 2, opponentY === 0 ? 3 : 4, true);
+    if (welded) world.setWeld(2, 1, 2, 2, true);
+    world.setCharge(2, 2, charge);
+    world.setCharge(2, opponentY, 1);
+
+    new Simulation(world).step();
+
+    expect(world.isWelded(2, 1, 2, 2)).toBe(welded);
+    expect(world.chargeAtPort(2, 2, Direction.Down)).toBe(0);
+    expect(world.chargeAtPort(2, opponentY, opponent === TileKind.Dismantler
+      ? Direction.Up : Direction.Down)).toBe(0);
+  });
+
+  it("holds a falling load when grabbing and releases it before gravity on drop", () => {
+    const world = new World(5, 6);
+    world.place(2, 0, TileKind.Platform);
+    world.place(2, 1, TileKind.Grabber, Direction.Down);
+    world.setWeld(2, 0, 2, 1, true);
+    const load = world.place(2, 2, TileKind.Stone);
+    world.setCharge(2, 1, 1);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+    expect(world.idAt(2, 2)).toBe(load);
+    expect(world.isWelded(2, 1, 2, 2)).toBe(true);
+    world.setCharge(2, 1, -1);
+    simulation.step();
+    expect(world.isWelded(2, 1, 2, 2)).toBe(false);
+    expect(world.idAt(2, 3)).toBe(load);
+    expect(world.chargeAtPort(2, 1, Direction.Up)).toBe(1);
+  });
+
+  it("round-trips signed input, facing, and the isolated rear charge", () => {
+    const world = new World(3, 3);
+    world.place(1, 1, TileKind.Grabber, Direction.Right);
+    world.place(2, 1, TileKind.Floatstone);
+    world.setWeld(1, 1, 2, 1, true);
+    world.setCharge(1, 1, -1);
+    world.setIsolatedOutputCharge(1, 1, 1);
+
+    const serialized = serializeBoard(world, 4);
+    const imported = deserializeBoard(serialized).world;
+    expect(JSON.parse(serialized)).toMatchObject({
+      grid: ["...", ".'z", "..."],
+      isolatedOutputCharges: [{ x: 1, y: 1, charge: 1 }],
+    });
+    expect(imported.kindAt(1, 1)).toBe(TileKind.Grabber);
+    expect(imported.orientationAt(1, 1)).toBe(Direction.Right);
+    expect(imported.chargeAtPort(1, 1, Direction.Up)).toBe(-1);
+    expect(imported.chargeAtPort(1, 1, Direction.Left)).toBe(1);
+    expect(imported.isWelded(1, 1, 2, 1)).toBe(true);
+  });
+});
+
 describe("riveter operations", () => {
   it.each([Direction.Up, Direction.Right, Direction.Down, Direction.Left])(
     "welds only the edge between the first two cells ahead, facing %s",

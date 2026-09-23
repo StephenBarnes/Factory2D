@@ -113,7 +113,8 @@ export class MachineryObserver {
             if (kind === TileKind.Drill) voice = "drill";
             else if (kind === TileKind.Grinder) voice = "grinder";
             else if (kind === TileKind.Furnace) voice = "furnace";
-            else if (kind === TileKind.Welder || kind === TileKind.Riveter) voice = "welder";
+            else if (kind === TileKind.Welder || kind === TileKind.Riveter ||
+                kind === TileKind.Grabber) voice = "welder";
             else if (kind === TileKind.Splitter) voice = "splitter";
             else if (kind === TileKind.LaserSplitter) voice = "laserSplitter";
             else if (kind === TileKind.Dismantler) voice = "dismantler";
