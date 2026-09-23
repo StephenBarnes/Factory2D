@@ -16,7 +16,7 @@ export function initializeTheme(
     button.setAttribute("aria-pressed", String(theme === "light"));
     const action = theme === "light" ? "Switch to dark mode" : "Switch to light mode";
     for (const shortcut of shortcuts) {
-      shortcut.textContent = theme === "light" ? "☾" : "☀";
+      shortcut.textContent = theme === "light" ? "☀" : "☾";
       shortcut.setAttribute("aria-label", action);
       shortcut.title = action;
     }
