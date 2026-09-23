@@ -729,4 +729,15 @@ describe("body outline tracing", () => {
     expect(context.strokeStyles).toContain("rgba(255, 255, 255, 0.15)");
     expect(context.strokeStyles).toContain("rgba(0, 0, 0, 0.18)");
   });
+
+  it("keeps an L body's inside corner within painted cells", () => {
+    tileAppearance.angularOutlines = true;
+    const path = pathFor([stone(0, 0), stone(1, 0), stone(0, 1)]);
+    const vertices = path.commands.filter((command) => command.type === "lineTo");
+
+    // The inset intersection lies inside the elbow. Chamfering this reflex
+    // corner would cross the empty fourth cell, which no cell fill paints.
+    expect(vertices).toContainEqual({ type: "lineTo", x: 30.4, y: 30.4 });
+    expect(path.commands.some((command) => command.type === "arcTo")).toBe(false);
+  });
 });

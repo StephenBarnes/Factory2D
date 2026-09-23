@@ -119,6 +119,7 @@ interface OutlineCorner {
   x: number;
   y: number;
   radius: number;
+  concave: boolean;
 }
 
 function pointKey(x: number, y: number): number {
@@ -442,11 +443,13 @@ function appendCorner(
       x: vertexScreenX + directionX(inwardIncoming) * inset,
       y: vertexScreenY + directionY(inwardIncoming) * inset,
       radius: 0,
+      concave: false,
     });
     corners.push({
       x: vertexScreenX + directionX(inwardOutgoing) * inset,
       y: vertexScreenY + directionY(inwardOutgoing) * inset,
       radius: 0,
+      concave: false,
     });
     return;
   }
@@ -454,6 +457,7 @@ function appendCorner(
     x: vertexScreenX + (directionX(inwardIncoming) + directionX(inwardOutgoing)) * inset,
     y: vertexScreenY + (directionY(inwardIncoming) + directionY(inwardOutgoing)) * inset,
     radius: 0,
+    concave: outgoingDirection === ((incomingDirection + 3) & 3),
   });
 }
 
@@ -475,7 +479,10 @@ function appendLoop(
     const incomingLength =
       Math.abs(current.x - previous.x) + Math.abs(current.y - previous.y);
     const outgoingLength = Math.abs(next.x - current.x) + Math.abs(next.y - current.y);
-    current.radius = Math.min(cornerRadius, incomingLength / 2, outgoingLength / 2);
+    // A concave chamfer would enter an empty cell, outside the per-cell fill.
+    current.radius = angular && current.concave
+      ? 0
+      : Math.min(cornerRadius, incomingLength / 2, outgoingLength / 2);
   }
 
   const first = expectDefined(corners[0], "outline corner");
@@ -493,10 +500,12 @@ function appendLoop(
         current.x - (current.x - before.x) * cut / incoming,
         current.y - (current.y - before.y) * cut / incoming,
       );
-      path.lineTo(
-        current.x + (next.x - current.x) * cut / outgoing,
-        current.y + (next.y - current.y) * cut / outgoing,
-      );
+      if (cut > 0) {
+        path.lineTo(
+          current.x + (next.x - current.x) * cut / outgoing,
+          current.y + (next.y - current.y) * cut / outgoing,
+        );
+      }
     }
   } else {
     const last = expectDefined(corners[count - 1], "outline corner");
