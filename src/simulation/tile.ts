@@ -653,8 +653,8 @@ export const TILE_DEFINITIONS: Readonly<Record<TileKind, TileDefinition>> = {
     palette: {
       order: 26,
       category: PaletteCategory.Motion,
-      description: "Holds magnetic blocks on its pointed side.",
-      extendedDescription: ["Acts on the immediately adjacent magnetic block on its pointed side, holding the attached bodies against gravity. The pointed side cannot be welded. It needs no circuit charge."],
+      description: "Grips magnetic blocks on its pointed side.",
+      extendedDescription: ["Grips the immediately adjacent magnetic block on its pointed side. The contact holds both bodies against gravity and carries either body when pushed or pulled along the pointed axis. Freely moving bodies follow sideways motion, but an independently driven body can slide along the contact. The pointed side cannot be welded. It needs no circuit charge."],
     },
     affectedByGravity: true,
     slidesDiagonally: false,

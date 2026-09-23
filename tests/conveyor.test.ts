@@ -365,6 +365,66 @@ describe("conveyor belt forces", () => {
     expect(world.idAt(4, 3)).toBe(ironId);
   });
 
+  it.each([
+    { facing: Direction.Up, motion: Direction.Right, magnet: [2, 3], metal: [2, 2] },
+    { facing: Direction.Right, motion: Direction.Up, magnet: [2, 2], metal: [3, 2] },
+  ])("carries a passive magnet with a tangentially moving metal body ($facing)", ({ facing, motion, magnet, metal }) => {
+    const world = new World(7, 6);
+    const magnetId = world.place(magnet[0]!, magnet[1]!, TileKind.Magnet, facing);
+    const ironId = world.place(metal[0]!, metal[1]!, TileKind.Iron);
+    const thrusterX = metal[0]! + DIRECTION_X[motion === Direction.Up ? Direction.Down : Direction.Left];
+    const thrusterY = metal[1]! + DIRECTION_Y[motion === Direction.Up ? Direction.Down : Direction.Left];
+    world.place(thrusterX, thrusterY, TileKind.Thruster, motion);
+    world.setWeld(metal[0]!, metal[1]!, thrusterX, thrusterY, true);
+
+    expect(new Simulation(world).step()).toBe(3);
+    expect(world.idAt(magnet[0]! + DIRECTION_X[motion], magnet[1]! + DIRECTION_Y[motion])).toBe(magnetId);
+    expect(world.idAt(metal[0]! + DIRECTION_X[motion], metal[1]! + DIRECTION_Y[motion])).toBe(ironId);
+  });
+
+  it.each([
+    { driveMetal: false, facing: Direction.Right, motion: Direction.Left },
+    { driveMetal: true, facing: Direction.Right, motion: Direction.Right },
+  ])("keeps a magnetic grip under normal pulling (metal driven: $driveMetal)", ({ driveMetal, facing, motion }) => {
+    const world = new World(8, 5);
+    const magnetId = world.place(3, 1, TileKind.Magnet, facing);
+    const ironId = world.place(4, 1, TileKind.Iron);
+    const thrusterX = driveMetal ? 5 : 2;
+    world.place(thrusterX, 1, TileKind.Thruster, motion);
+    world.setWeld(thrusterX, 1, driveMetal ? 4 : 3, 1, true);
+
+    expect(new Simulation(world).step()).toBe(3);
+    expect(world.idAt(3 + DIRECTION_X[motion], 1)).toBe(magnetId);
+    expect(world.idAt(4 + DIRECTION_X[motion], 1)).toBe(ironId);
+  });
+
+  it("carries passive iron along a magnet's tangent without welding it", () => {
+    const world = new World(7, 6);
+    const magnetId = world.place(2, 2, TileKind.Magnet, Direction.Up);
+    const ironId = world.place(2, 1, TileKind.Iron);
+    world.place(1, 2, TileKind.Thruster, Direction.Right);
+    world.setWeld(1, 2, 2, 2, true);
+
+    expect(new Simulation(world).step()).toBe(3);
+    expect(world.idAt(3, 2)).toBe(magnetId);
+    expect(world.idAt(3, 1)).toBe(ironId);
+    expect(world.isWelded(3, 2, 3, 1)).toBe(false);
+  });
+
+  it("lets independently driven magnetic bodies slide in opposite tangential directions", () => {
+    const world = new World(7, 6);
+    const magnetId = world.place(3, 2, TileKind.Magnet, Direction.Up);
+    const ironId = world.place(3, 1, TileKind.Iron);
+    world.place(3, 3, TileKind.Thruster, Direction.Left);
+    world.setWeld(3, 2, 3, 3, true);
+    world.place(3, 0, TileKind.Thruster, Direction.Right);
+    world.setWeld(3, 1, 3, 0, true);
+
+    expect(new Simulation(world).step()).toBe(4);
+    expect(world.idAt(2, 2)).toBe(magnetId);
+    expect(world.idAt(4, 1)).toBe(ironId);
+  });
+
   it("blocks conveyor movement normal to a fixed magnetic contact", () => {
     const world = new World(9, 9);
     placeFixedPoweredConveyor(world, 4, 4, -1, Direction.Down);

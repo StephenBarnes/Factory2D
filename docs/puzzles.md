@@ -204,3 +204,7 @@ Dependencies below refer to [near-term components](todos.md#new-non-circuit-comp
 * **The rescue lift** (Intermediate; planned crushing-sensitive dwarf): bring a dwarf upward through staggered landings using a lift that cannot press them against the ceiling or drop a counterweight onto them. Require the original dwarf to reach the exit, with death latching failure. Unlike cave-in removal, the main problem is providing clearance throughout the passenger's route; the death signal/judge must accompany the dwarf mechanic.
 * **Shutters at the border** (Hard; deferred elf archers): transport a convoy past several firing slits, opening one protective shutter at a time. Archer phases vary by test case but are deterministic, and the solution must shelter every marked cargo block. Use a protected cargo-count objective initially, or add dwarves later; arrow trajectories and collision rules need to exist before setting safe timing windows.
 * **The previous shift's handiwork** (Intermediate–Expert; deferred repair-puzzle mode): start with a nearly working factory that mishandles one observable case, such as simultaneous arrivals, the last item in a batch, or a carrier's return journey. Ask for the smallest repair, not a replacement factory. Provide cases that expose the fault and cases that already work; this needs modified-tile scoring and a clear distinction between repairable machinery and protected judging machinery.
+
+# More misc ideas
+
+* Build a splitter. 20 inputs come from one dispenser above. Need to route 10 to a left output and 10 to a right output.

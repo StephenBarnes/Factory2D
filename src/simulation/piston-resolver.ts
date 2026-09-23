@@ -50,6 +50,11 @@ export class PistonResolver {
   private readonly breakingFasteners: number[] = [];
   private readonly dependencyPath: number[] = [];
   private readonly dependencyStack: number[] = [];
+  private magneticHeads?: Int32Array;
+  private magneticTargets?: Int32Array;
+  private magneticNext?: Int32Array;
+  private magneticAxes?: Uint8Array;
+  private magneticCount = 0;
 
   constructor(private readonly world: World) {
     this.strokeAt = new Int32Array(world.cellCount);
@@ -136,6 +141,9 @@ export class PistonResolver {
       stroke.ready = false;
       this.strokeAt[base] = index;
     }
+    if (this.strokeCount > 0) {
+      this.collectMagneticContacts();
+    }
     for (let index = 0; index < this.strokeCount; index += 1) {
       const stroke = expectDefined(this.strokes[index], "observed piston stroke");
       stroke.valid = this.propose(stroke);
@@ -165,6 +173,53 @@ export class PistonResolver {
         stroke.valid = this.propose(stroke);
       }
     }
+  }
+
+  /** Contacts are sampled from the current geometry, not projected through the stroke. */
+  private collectMagneticContacts(): void {
+    this.magneticCount = 0;
+    const first = this.world.firstFeatureIndex(WorldFeature.Magnet);
+    if (first < 0) {
+      return;
+    }
+    this.magneticHeads ??= new Int32Array(this.world.cellCount);
+    this.magneticTargets ??= new Int32Array(this.world.cellCount * 2);
+    this.magneticNext ??= new Int32Array(this.world.cellCount * 2);
+    this.magneticAxes ??= new Uint8Array(this.world.cellCount * 2);
+    const heads = this.magneticHeads;
+    heads.fill(-1);
+    for (let magnet = first; magnet >= 0;
+      magnet = this.world.nextFeatureIndex(WorldFeature.Magnet, magnet)) {
+      const range = TILE_DEFINITIONS[this.world.kindAtIndex(magnet)].attractionRange;
+      const orientation = this.world.orientationAtIndex(magnet);
+      let target = magnet;
+      for (let distance = 1; distance <= range; distance += 1) {
+        target = this.neighbor(target, orientation);
+        if (target < 0) {
+          break;
+        }
+        const kind = this.world.kindAtIndex(target);
+        if (kind === TileKind.Empty) {
+          continue;
+        }
+        if (TILE_DEFINITIONS[kind].magnetic &&
+            !(distance === 1 && this.world.hasWeldAtIndex(magnet, orientation))) {
+          this.addMagneticContact(magnet, target, orientation & 1);
+          this.addMagneticContact(target, magnet, orientation & 1);
+        }
+        break;
+      }
+    }
+  }
+
+  private addMagneticContact(cell: number, other: number, axis: number): void {
+    const edge = this.magneticCount++;
+    const heads = expectDefined(this.magneticHeads, "piston magnetic contact heads");
+    expectDefined(this.magneticTargets, "piston magnetic contact targets")[edge] = other;
+    expectDefined(this.magneticAxes, "piston magnetic contact axes")[edge] = axis;
+    expectDefined(this.magneticNext, "piston magnetic contact links")[edge] =
+      expectDefined(heads[cell], "piston magnetic contact head");
+    heads[cell] = edge;
   }
 
   private rejectInvalidPartners(): void {
@@ -239,6 +294,18 @@ export class PistonResolver {
       if (links !== undefined && this.world.kindAtIndex(cell) === TileKind.MagicLink) {
         for (let edge = links.firstEdgeAt(cell); edge >= 0; edge = links.nextEdge(edge)) {
           this.enqueue(stroke, links.targetAt(edge));
+        }
+      }
+      const heads = this.magneticHeads;
+      if (this.magneticCount > 0 && heads !== undefined) {
+        const axes = expectDefined(this.magneticAxes, "piston magnetic contact axes");
+        const targets = expectDefined(this.magneticTargets, "piston magnetic contact targets");
+        const next = expectDefined(this.magneticNext, "piston magnetic contact links");
+        for (let edge = expectDefined(heads[cell], "piston magnetic contact head"); edge >= 0;
+          edge = expectDefined(next[edge], "next piston magnetic contact")) {
+          if (axes[edge] === (direction & 1)) {
+            this.enqueue(stroke, expectDefined(targets[edge], "piston magnetic counterpart"));
+          }
         }
       }
       const destination = this.neighbor(cell, direction);

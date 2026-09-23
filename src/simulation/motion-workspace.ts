@@ -292,9 +292,9 @@ export class MotionWorkspace {
   }
 
   /**
-   * Magnetic contacts group bodies for gravity, preserving their existing
-   * ability to hold one another up. Conveyor movement later uses the recorded
-   * contact axis so tangential movement can slide without moving the target.
+   * Magnetic contacts group bodies for gravity. Driven movement along the
+   * contact normal is rigid; along the tangent, a freely moving passive body
+   * follows, while a braced or independently driven body permits sliding.
    */
   private connectMagneticallyAttractedBodies(): void {
     this.magneticConstraintCount = 0;
@@ -827,14 +827,26 @@ export class MotionWorkspace {
             magnetic.isVertical[constraint],
             "magnetic constraint axis",
           ) === 1;
-        if (isVertical ? moveY === 0 : moveX === 0) {
-          continue;
-        }
-
+        const alongNormal = isVertical ? moveY !== 0 : moveX !== 0;
         const otherBody = expectDefined(
           magnetic.otherBodies[constraint],
           "magnetically constrained body",
         );
+        if (!alongNormal) {
+          const tangentialForce = isVertical
+            ? expectDefined(this.bodyForceX[otherBody], "magnetic tangential force")
+            : expectDefined(this.bodyForceY[otherBody], "magnetic tangential force");
+          const direction = moveX !== 0
+            ? moveX < 0 ? Direction.Left : Direction.Right
+            : moveY < 0 ? Direction.Up : Direction.Down;
+          if (
+            tangentialForce !== 0 ||
+            (this.verticalMoves[otherBody] === 1 && this.drivenBodies[otherBody] === 0) ||
+            !this.canPushAlongAxis(otherBody, direction)
+          ) {
+            continue;
+          }
+        }
         if (this.drivenBodies[otherBody] === 0) {
           if (this.verticalMoves[otherBody] === 1) {
             throw new Error(

@@ -255,6 +255,123 @@ describe("pistons", () => {
     expect(world.isWelded(3, 3, 3, 2)).toBe(true);
   });
 
+  it.each([TileKind.Iron, TileKind.Steel])(
+    "pulls an unwelded magnet with %s welded to its retracting arm",
+    (metal) => {
+      const world = new World(7, 7);
+      placeNegativelyPoweredFixedBase(world, 3, 4);
+      const armId = world.idAt(3, 3);
+      const metalId = world.place(3, 2, metal);
+      const magnetId = world.place(3, 1, TileKind.Magnet, Direction.Down);
+      world.setWeld(3, 3, 3, 2, true);
+      const simulation = new Simulation(world);
+
+      simulation.step();
+      simulation.step();
+
+      expect(world.tileAt(3, 4)).toEqual({ kind: TileKind.Piston, id: armId });
+      expect(world.idAt(3, 3)).toBe(metalId);
+      expect(world.idAt(3, 2)).toBe(magnetId);
+      expect(world.kindAt(3, 1)).toBe(TileKind.Empty);
+      expect(world.isWelded(3, 4, 3, 3)).toBe(true);
+      expect(world.isWelded(3, 3, 3, 2)).toBe(false);
+    },
+  );
+
+  it("recoils while keeping iron gripped by a magnet welded to its base", () => {
+    const world = new World(5, 6);
+    const pistonId = world.place(2, 3, TileKind.Piston, Direction.Down);
+    world.place(1, 3, TileKind.FixedCharge);
+    world.place(2, 4, TileKind.Platform);
+    const magnetId = world.place(2, 2, TileKind.Magnet, Direction.Up);
+    const ironId = world.place(2, 1, TileKind.Iron);
+    world.setWeld(2, 3, 1, 3, true);
+    world.setWeld(2, 3, 2, 2, true);
+
+    new Simulation(world).step();
+
+    expect(world.kindAt(2, 2)).toBe(TileKind.PistonBase);
+    expect(world.tileAt(2, 3)).toEqual({ kind: TileKind.PistonArm, id: pistonId });
+    expect(world.idAt(2, 1)).toBe(magnetId);
+    expect(world.idAt(2, 0)).toBe(ironId);
+    expect(world.isWelded(2, 2, 2, 1)).toBe(true);
+    expect(world.isWelded(2, 1, 2, 0)).toBe(false);
+  });
+
+  it.each([TileKind.Iron, TileKind.Steel])(
+    "pushes a magnet while extending its %s head without losing the contact",
+    (metal) => {
+      const world = new World(7, 8);
+      placePoweredFixedPiston(world, 3, 4);
+      const headId = world.place(3, 3, metal);
+      const magnetId = world.place(3, 2, TileKind.Magnet, Direction.Down);
+      world.setWeld(3, 4, 3, 3, true);
+
+      new Simulation(world).step();
+
+      expect(world.kindAt(3, 4)).toBe(TileKind.PistonBase);
+      expect(world.kindAt(3, 3)).toBe(TileKind.PistonArm);
+      expect(world.idAt(3, 2)).toBe(headId);
+      expect(world.idAt(3, 1)).toBe(magnetId);
+      expect(world.isWelded(3, 3, 3, 2)).toBe(true);
+      expect(world.isWelded(3, 2, 3, 1)).toBe(false);
+    },
+  );
+
+  it("lifts loose iron with a magnet welded to its extending arm", () => {
+    const world = new World(7, 8);
+    placePoweredFixedPiston(world, 3, 4);
+    const magnetId = world.place(3, 3, TileKind.Magnet, Direction.Up);
+    const ironId = world.place(3, 2, TileKind.Iron);
+    world.setWeld(3, 4, 3, 3, true);
+
+    new Simulation(world).step();
+
+    expect(world.kindAt(3, 4)).toBe(TileKind.PistonBase);
+    expect(world.kindAt(3, 3)).toBe(TileKind.PistonArm);
+    expect(world.idAt(3, 2)).toBe(magnetId);
+    expect(world.idAt(3, 1)).toBe(ironId);
+    expect(world.kindAt(3, 0)).toBe(TileKind.Empty);
+    expect(world.isWelded(3, 3, 3, 2)).toBe(true);
+    expect(world.isWelded(3, 2, 3, 1)).toBe(false);
+  });
+
+  it("retracts a magnet and the unwelded iron it grips", () => {
+    const world = new World(7, 7);
+    placeNegativelyPoweredFixedBase(world, 3, 4);
+    const armId = world.idAt(3, 3);
+    const magnetId = world.place(3, 2, TileKind.Magnet, Direction.Up);
+    const ironId = world.place(3, 1, TileKind.Iron);
+    world.setWeld(3, 3, 3, 2, true);
+    const simulation = new Simulation(world);
+
+    simulation.step();
+    simulation.step();
+
+    expect(world.tileAt(3, 4)).toEqual({ kind: TileKind.Piston, id: armId });
+    expect(world.idAt(3, 3)).toBe(magnetId);
+    expect(world.idAt(3, 2)).toBe(ironId);
+    expect(world.kindAt(3, 1)).toBe(TileKind.Empty);
+    expect(world.isWelded(3, 4, 3, 3)).toBe(true);
+    expect(world.isWelded(3, 3, 3, 2)).toBe(false);
+  });
+
+  it("slides a magnet sideways past iron instead of carrying it across the contact", () => {
+    const world = new World(7, 8);
+    placePoweredFixedPiston(world, 3, 4);
+    const magnetId = world.place(3, 3, TileKind.Magnet, Direction.Right);
+    const ironId = world.place(4, 3, TileKind.Iron);
+    world.setWeld(3, 4, 3, 3, true);
+
+    new Simulation(world).step();
+
+    expect(world.kindAt(3, 4)).toBe(TileKind.PistonBase);
+    expect(world.kindAt(3, 3)).toBe(TileKind.PistonArm);
+    expect(world.idAt(3, 2)).toBe(magnetId);
+    expect(world.idAt(4, 3)).toBe(ironId);
+    expect(world.kindAt(4, 2)).toBe(TileKind.Empty);
+  });
+
   it("repeatedly retracts a welded cup while pushing its loose contents", () => {
     const { world } = deserializeBoard(JSON.stringify({
       format: "factory2d-board", version: 15, width: 10, height: 6, tick: 0,
