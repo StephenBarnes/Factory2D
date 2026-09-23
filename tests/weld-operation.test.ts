@@ -35,6 +35,41 @@ function operatorPosition(orientation: Direction): readonly [number, number] {
   }
 }
 
+describe("weld operator control", () => {
+  it.each([
+    TileKind.Welder,
+    TileKind.Splitter,
+    TileKind.LaserSplitter,
+    TileKind.Dismantler,
+    TileKind.Riveter,
+  ])("operates only on +1 for kind %s", (kind) => {
+    const world = new World(5, 5);
+    world.place(2, 3, kind, Direction.Up);
+    world.place(2, 4, TileKind.Platform);
+    world.setWeld(2, 3, 2, 4, true);
+    world.place(2, 2, TileKind.Floatstone);
+    world.place(1, 2, TileKind.Platform);
+    world.place(2, 1, TileKind.Platform);
+    const weld = kind === TileKind.Welder || kind === TileKind.Riveter;
+    const [firstX, firstY, secondX, secondY] = kind === TileKind.Riveter
+      ? [2, 2, 2, 1]
+      : [2, 2, 1, 2];
+    world.setWeld(firstX, firstY, secondX, secondY, !weld);
+    const simulation = new Simulation(world);
+
+    for (const charge of [0, -1] as const) {
+      world.setCharge(2, 3, charge);
+      simulation.step();
+      expect(world.isWelded(firstX, firstY, secondX, secondY)).toBe(!weld);
+      expect(world.chargeAtPort(2, 3, Direction.Down)).toBe(0);
+    }
+    world.setCharge(2, 3, 1);
+    simulation.step();
+    expect(world.isWelded(firstX, firstY, secondX, secondY)).toBe(weld);
+    expect(world.chargeAtPort(2, 3, Direction.Down)).toBe(1);
+  });
+});
+
 describe("welder and splitter operations", () => {
   it.each([
     Direction.Up,
@@ -46,6 +81,7 @@ describe("welder and splitter operations", () => {
     placeTransverseTargets(world, orientation);
     const [operatorX, operatorY] = operatorPosition(orientation);
     world.place(operatorX, operatorY, TileKind.Welder, orientation);
+    world.setCharge(operatorX, operatorY, 1);
 
     new Simulation(world).step();
 
@@ -62,6 +98,7 @@ describe("welder and splitter operations", () => {
     const world = new World(5, 5);
     placeTransverseTargets(world, Direction.Up);
     world.place(2, 3, TileKind.Splitter, Direction.Up);
+    world.setCharge(2, 3, 1);
     world.place(2, 4, TileKind.Platform);
     world.setWeld(1, 2, 2, 2, true);
     world.setWeld(2, 2, 3, 2, true);
@@ -79,6 +116,8 @@ describe("welder and splitter operations", () => {
     world.place(3, 2, TileKind.Platform);
     world.place(2, 3, TileKind.Welder, Direction.Up);
     world.place(3, 1, TileKind.Splitter, Direction.Down);
+    world.setCharge(2, 3, 1);
+    world.setCharge(3, 1, 1);
 
     new Simulation(world).step();
 
@@ -93,6 +132,7 @@ describe("welder and splitter operations", () => {
     world.place(2, 2, TileKind.Sand);
     world.place(3, 2, TileKind.Platform);
     world.place(2, 3, TileKind.Welder, Direction.Up);
+    world.setCharge(2, 3, 1);
 
     new Simulation(world).step();
 
@@ -100,7 +140,7 @@ describe("welder and splitter operations", () => {
     expect(world.isWelded(2, 2, 3, 2)).toBe(false);
   });
 
-  it("reads one shared side network and disables only on -1", () => {
+  it("shares the two side ports without connecting the rear output", () => {
     const disabled = new World(5, 4);
     placeTransverseTargets(disabled, Direction.Up);
     disabled.place(2, 3, TileKind.Welder, Direction.Up);
@@ -129,6 +169,7 @@ describe("welder and splitter operations", () => {
     const world = new World(4, 4);
     world.place(0, 3, TileKind.Conduit);
     world.place(1, 3, TileKind.Welder, Direction.Right);
+    world.setCharge(1, 3, 1);
     world.place(2, 2, TileKind.Platform);
     world.place(2, 3, TileKind.Stone);
     world.setWeld(0, 3, 1, 3, true);
@@ -151,6 +192,7 @@ describe("welder and splitter operations", () => {
     world.place(1, 1, TileKind.Platform);
     world.place(2, 1, TileKind.Stone);
     world.place(2, 2, TileKind.Welder, Direction.Up);
+    world.setCharge(2, 2, 1);
     world.place(2, 3, TileKind.Platform);
 
     new Simulation(world).step();
@@ -187,6 +229,7 @@ describe("riveter operations", () => {
       const dx = directionX(orientation);
       const dy = directionY(orientation);
       world.place(x, y, TileKind.Riveter, orientation);
+      world.setCharge(x, y, 1);
       world.place(x - dx, y - dy, TileKind.Platform);
       world.setWeld(x, y, x - dx, y - dy, true);
       world.place(x + dx, y + dy, TileKind.Floatstone);
@@ -203,7 +246,7 @@ describe("riveter operations", () => {
     },
   );
 
-  it("obeys disable and conflicting split requests", () => {
+  it("requires +1 and jams conflicting split requests", () => {
     const world = new World(5, 5);
     world.place(2, 3, TileKind.Riveter);
     world.place(2, 4, TileKind.Platform);
@@ -214,14 +257,16 @@ describe("riveter operations", () => {
     const simulation = new Simulation(world);
     simulation.step();
     expect(world.isWelded(2, 2, 2, 1)).toBe(false);
-    world.setCharge(2, 3, 0);
+    world.setCharge(2, 3, 1);
     world.place(1, 2, TileKind.Splitter, Direction.Right);
+    world.setCharge(1, 2, 1);
     world.place(0, 2, TileKind.Platform);
     world.setWeld(0, 2, 1, 2, true);
     simulation.step();
     expect(world.isWelded(2, 2, 2, 1)).toBe(false);
     expect(world.chargeAtPort(2, 3, Direction.Down)).toBe(0);
     world.place(1, 2, TileKind.Empty);
+    world.setCharge(2, 3, 1);
     simulation.step();
     expect(world.isWelded(2, 2, 2, 1)).toBe(true);
     expect(world.chargeAtPort(2, 3, Direction.Down)).toBe(1);
@@ -232,6 +277,7 @@ describe("riveter operations", () => {
   it("does not join two weld-protected blocks or pulse", () => {
     const world = new World(3, 4);
     world.place(1, 3, TileKind.Riveter);
+    world.setCharge(1, 3, 1);
     world.place(1, 2, TileKind.Platform);
     world.place(1, 1, TileKind.Platform);
 
@@ -262,6 +308,7 @@ describe("dismantler operations", () => {
       }
       const [x, y] = operatorPosition(orientation);
       world.place(x, y, TileKind.Dismantler, orientation);
+      world.setCharge(x, y, 1);
       const rear = oppositeDirection(orientation);
       world.place(x + directionX(rear), y + directionY(rear), TileKind.Platform);
       world.setWeld(x, y, x + directionX(rear), y + directionY(rear), true);
@@ -283,7 +330,7 @@ describe("dismantler operations", () => {
     },
   );
 
-  it("preserves disable and isolated output across saving, then resumes when neutral", () => {
+  it("preserves idle control and isolated output across saving, then resumes on +1", () => {
     const world = new World(3, 3);
     world.place(1, 0, TileKind.Platform);
     world.place(1, 1, TileKind.Floatstone);
@@ -298,6 +345,7 @@ describe("dismantler operations", () => {
     simulation.step();
     expect(loaded.isWelded(1, 0, 1, 1)).toBe(true);
     expect(loaded.chargeAtPort(1, 2, Direction.Down)).toBe(0);
+    loaded.setCharge(1, 2, 1);
 
     simulation.step();
     expect(loaded.isWelded(1, 0, 1, 1)).toBe(false);
@@ -310,8 +358,10 @@ describe("dismantler operations", () => {
     world.place(2, 1, TileKind.Platform);
     world.place(3, 2, TileKind.Platform);
     world.place(2, 3, TileKind.Dismantler);
+    world.setCharge(2, 3, 1);
     world.place(2, 4, TileKind.Platform);
     world.place(1, 1, TileKind.Welder, Direction.Right);
+    world.setCharge(1, 1, 1);
     world.place(1, 2, TileKind.Platform);
     world.setWeld(2, 2, 2, 1, true);
     world.setWeld(2, 2, 3, 2, true);
@@ -340,6 +390,7 @@ describe("laser splitter operations", () => {
       const lx = directionX(left);
       const ly = directionY(left);
       world.place(4, 4, TileKind.LaserSplitter, orientation, mirrored);
+      world.setCharge(4, 4, 1);
       world.place(4 - dx, 4 - dy, TileKind.Platform);
       world.setWeld(4, 4, 4 - dx, 4 - dy, true);
       for (const distance of [1, 3, 4]) {
@@ -370,11 +421,13 @@ describe("laser splitter operations", () => {
   it("stops at an unwelded protected seam without claiming cuts from a beam beyond it", () => {
     const world = new World(5, 7);
     world.place(2, 5, TileKind.LaserSplitter, Direction.Up);
+    world.setCharge(2, 5, 1);
     world.place(2, 6, TileKind.Platform);
     world.setWeld(2, 5, 2, 6, true);
     world.place(1, 3, TileKind.Platform);
     world.place(2, 3, TileKind.Platform);
     world.place(2, 2, TileKind.LaserSplitter, Direction.Up);
+    world.setCharge(2, 2, 1);
     world.setWeld(2, 2, 2, 3, true);
     world.place(1, 1, TileKind.Floatstone);
     world.place(2, 1, TileKind.Platform);
@@ -396,8 +449,10 @@ describe("laser splitter operations", () => {
       world.setWeld(2, y, 3, y, true);
     }
     world.place(3, 2, TileKind.Welder, Direction.Up);
+    world.setCharge(3, 2, 1);
     for (const y of [4, 6]) {
       world.place(3, y, TileKind.LaserSplitter, Direction.Up);
+      world.setCharge(3, y, 1);
     }
     for (const y of [2, 4, 6]) {
       world.place(3, y + 1, TileKind.Platform);
@@ -416,7 +471,7 @@ describe("laser splitter operations", () => {
     expect(world.chargeAtPort(3, 6, Direction.Down)).toBe(0);
   });
 
-  it("preserves independent disable and output charges on import, then resumes cutting", () => {
+  it("preserves independent idle control and output charges on import, then resumes on +1", () => {
     const world = new World(4, 4);
     world.place(1, 0, TileKind.Floatstone);
     world.place(2, 0, TileKind.Platform);
@@ -432,6 +487,7 @@ describe("laser splitter operations", () => {
     simulation.step();
     expect(imported.isWelded(1, 0, 2, 0)).toBe(true);
     expect(imported.chargeAtPort(2, 3, Direction.Down)).toBe(0);
+    imported.setCharge(2, 3, 1);
     simulation.step();
     expect(imported.isWelded(1, 0, 2, 0)).toBe(false);
     expect(imported.chargeAtPort(2, 3, Direction.Down)).toBe(1);
@@ -448,6 +504,7 @@ describe("protected runtime weld edges", () => {
       world.place(3, 1, TileKind.Delivery, Direction.Up);
       world.place(3, 2, TileKind.Platform);
       world.place(2, 2, kind, Direction.Up);
+      world.setCharge(2, 2, 1);
       const initiallyWelded = kind !== TileKind.Welder;
       for (const neighborX of [1, 3]) {
         expect(world.setWeld(2, 1, neighborX, 1, true)).toBe(true);

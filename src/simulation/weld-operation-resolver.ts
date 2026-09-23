@@ -128,7 +128,7 @@ export class WeldOperationResolver {
     const leftSide = orientedDirection(
       Direction.Left, orientation, this.world.mirroredAtIndex(index),
     );
-    if (this.world.chargeAtPortIndex(index, leftSide) === -1) {
+    if (this.world.chargeAtPortIndex(index, leftSide) !== 1) {
       return;
     }
     const laser = kind === TileKind.LaserSplitter;
