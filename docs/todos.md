@@ -31,7 +31,6 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 * Add settings-menu options to (1) display histograms, and (2) to toggle whether scores are uploaded. Both enabled by default.
 * Add support for mobile and touch screens. Figure out what changes we need and break this up into more actionable tasks. (For example rotation and configuration currently require keyboard. And in the workshop, the palette panel takes up the entire left half of a vertical screen - move to top of vertical screens, maybe make it collapsible.)
-* Modify our game's color scheme, for both light and dark mode. Sample colors from the background image and use those.
 * Add some decoration for the puzzle workshop screens where blocks are placed. Maybe a different background, or some other kind of decoration.
 * On mouseover of a rotator block, if its head is welded to something, show visualization/outline of how it would be placed after +1 and -1 pulses, in place of the current mouseover visualization (which shows movement for a 1x1 block).
 
