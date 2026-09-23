@@ -27,6 +27,8 @@ const view = process.env.BENCH_VIEW ?? "fitted";
 if (view !== "fitted" && view !== "zoomed") throw new Error("BENCH_VIEW must be fitted or zoomed");
 const animate = process.env.BENCH_ANIMATE ?? "1";
 if (animate !== "1" && animate !== "0") throw new Error("BENCH_ANIMATE must be 1 or 0");
+const outlines = process.env.BENCH_OUTLINES ?? "0";
+if (outlines !== "1" && outlines !== "0") throw new Error("BENCH_OUTLINES must be 1 or 0");
 const captureTrace = process.env.BENCH_TRACE === "1";
 const fixtures = benchmarkFixtures();
 const requested = process.env.BENCH_FIXTURES?.split(",");
@@ -106,9 +108,10 @@ for (const fixture of selected) {
       errors.push(`${dialog.type()}: ${dialog.message()}`);
       await dialog.dismiss();
     });
-    await page.addInitScript(() => {
+    await page.addInitScript((angularOutlines) => {
       localStorage.setItem("factory2d.sounds", "false");
-    });
+      localStorage.setItem("factory2d.angular-outlines", String(angularOutlines));
+    }, outlines === "1");
     const browserCdp = await browser.newBrowserCDPSession();
     const graphics = await browserCdp.send("SystemInfo.getInfo");
     await browserCdp.detach();
@@ -116,6 +119,7 @@ for (const fixture of selected) {
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: throttle });
     await page.goto("/#/sandbox");
     await page.locator("#new-sandbox-button").click();
+    await expect(page.locator("#angular-outlines-button")).toHaveAttribute("aria-pressed", String(outlines === "1"));
     await expect(page).toHaveURL(/\/#\/sandbox\/sandbox-\d+$/);
     await installMeasurements(page);
     const windows: { phase: string; measurement: unknown; actionToTwoRafsMs?: number }[] = [];
@@ -201,7 +205,7 @@ for (const fixture of selected) {
         const options: ReplayOptions = {
           scene: fixture.scene, ticks: replayTicks, runs: replayRuns,
           cssWidth: bounds.width, cssHeight: bounds.height,
-          speed, animate: animate === "1", zoomed: view === "zoomed",
+          speed, animate: animate === "1", zoomed: view === "zoomed", angularOutlines: outlines === "1",
         };
         isolated = await page.evaluate((options) => window.runSceneBenchmark(options), options);
         await page.screenshot({ path: testInfo.outputPath("isolated.png") });
@@ -227,7 +231,7 @@ for (const fixture of selected) {
         },
         workload: { id: fixture.id, sceneSha256: createHash("sha256").update(fixture.scene).digest("hex"),
           ...fixture.metadata, metadataScope: "initial root board", view, requestedZoomFactor: view === "zoomed" ? 8 : 1,
-          ticksPerSecond: speed, animations: animate === "1", initialTick, finalTick },
+          ticksPerSecond: speed, animations: animate === "1", angularOutlines: outlines === "1", initialTick, finalTick },
         method: {
           requestedFrameIntervals: samples, warmupRafs: warmup,
           activeWindow: fixture.id === "geode"

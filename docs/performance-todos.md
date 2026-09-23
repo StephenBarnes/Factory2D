@@ -136,7 +136,7 @@ BENCH_FIXTURES=geode npm run benchmark -- --output temp/geode-baseline
 BENCH_FIXTURES=geode BENCH_HEADED=1 npm run benchmark -- --output temp/geode-gpu
 ```
 
-`BENCH_SAMPLES` and `BENCH_WARMUP` override frame counts; use enough samples to observe committed ticks. `BENCH_SPEED` accepts 5/60, `BENCH_THROTTLE` accepts 1/4, and `BENCH_VIEW` accepts fitted/zoomed (requests 8× center zoom, subject to the normal cell-size cap). A 4× throttle is only a relative proxy. Headed mode does not guarantee hardware acceleration: inspect `environment.graphics`. Playwright clears the selected output directory on the next run; use distinct `--output` paths to preserve comparisons.
+`BENCH_SAMPLES` and `BENCH_WARMUP` override frame counts; use enough samples to observe committed ticks. `BENCH_SPEED` accepts 5/60, `BENCH_THROTTLE` accepts 1/4, and `BENCH_VIEW` accepts fitted/zoomed (requests 8× center zoom, subject to the normal cell-size cap). `BENCH_OUTLINES=0` (default) or `1` selects rounded or angular body outlines in both the workshop and isolated replay; the chosen value is saved in `workload.angularOutlines`. A 4× throttle is only a relative proxy. Headed mode does not guarantee hardware acceleration: inspect `environment.graphics`. Playwright clears the selected output directory on the next run; use distinct `--output` paths to preserve comparisons.
 
 For `geode`, `BENCH_TICKS` defaults to 50 and controls both the active workshop tick advancement and the isolated replay length; `BENCH_RUNS` defaults to 3 fresh tick-zero replay pairs. These are positive integers. `BENCH_SAMPLES` still controls geode's idle window. The isolated page uses the workshop's canvas CSS dimensions, DPR, view and animation/speed settings, recording its results under `result.json.isolated` and a final `isolated.png` screenshot.
 
@@ -242,6 +242,25 @@ The final `result.json` contains raw call timings and serialized final state; sc
 A separate hardware trace passed with workshop RAF p95 **16.8 ms**, max **33.3 ms**, and zero long tasks. In its active window, `FireAnimationFrame` slices covered 549.3 ms (max 4.7 ms), Canvas resource production 193.5 ms (max 1.1 ms), and recorded major/minor GC slices 7.0/5.6 ms. These groups overlap and are not exclusive render/CPU totals; tracing perturbs timings. The offline summary covers workshop windows, while raw `benchmark:isolated-*` marks locate the replay in the full trace. This capture likewise does not identify a sustained stall.
 
 Option smoke coverage also passed for `empty,geode` with `BENCH_SPEED=60 BENCH_ANIMATE=0 BENCH_VIEW=zoomed BENCH_THROTTLE=4 BENCH_RUNS=1 BENCH_SAMPLES=30`, saved under `temp/geode-options-smoke`. It exercises the single-committed-frame replay and existing fixture path; its throttled zoomed timings are not the fitted 5-tick/s baseline above.
+
+#### Angular outlines: matched geode comparison
+
+Measured 2026-09-23 from the same source revision and benchmark-tool diff, with the same geode scene hash, 1008×687 CSS canvas at DPR 1.25, fitted view, bevels and animations on, and 5 ticks/s. Four untraced production Chromium runs used `BENCH_FIXTURES=geode BENCH_RUNS=3 BENCH_SAMPLES=90`, varying only `BENCH_OUTLINES=0/1` and headless SwiftShader versus headed RTX 4060. Each run completed a 50-tick workshop window and three fresh 0→50 isolated replays (600 timed renders per replay). Final scenes and per-tick movement sequences matched across all four captures; validity checks passed.
+
+| Backend | Rounded 600-render totals (ms) | Angular 600-render totals (ms) | Workshop active RAF p95, rounded / angular | Long tasks |
+|---|---:|---:|---:|---:|
+| SwiftShader | 256.2 / 295.6 / 280.5 | 265.5 / 299.6 / 301.9 | 16.7 / 16.8 ms | 0 / 0 |
+| RTX 4060 | 301.7 / 255.2 / 236.9 | 292.3 / 256.3 / 260.9 | 16.8 / 16.8 ms | 0 / 0 |
+
+Angular outlines did **not** materially improve this workload: totals overlap run-to-run variability, and workshop cadence is unchanged. Keep rounded outlines as the default; the angular option remains available for visual preference. These synchronous `render()` totals exclude raster completion, and 60 Hz RAF cadence does not establish lower CPU use, especially in Firefox or on low-end hardware. This comparison cannot resolve the reported high-CPU Firefox session.
+
+Captures: `temp/geode-rounded-compare`, `temp/geode-angular-compare`, `temp/geode-rounded-gpu-compare`, and `temp/geode-angular-gpu-compare`. Reproduce each pair with distinct output directories:
+
+```sh
+BENCH_FIXTURES=geode BENCH_RUNS=3 BENCH_SAMPLES=90 BENCH_OUTLINES=0 npm run benchmark -- --output temp/geode-rounded-compare
+BENCH_FIXTURES=geode BENCH_RUNS=3 BENCH_SAMPLES=90 BENCH_OUTLINES=1 npm run benchmark -- --output temp/geode-angular-compare
+# Repeat both commands with BENCH_HEADED=1 for the GPU comparison; inspect environment.graphics.
+```
 
 ### 2. Investigate fitted active rendering
 

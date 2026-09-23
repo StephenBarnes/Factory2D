@@ -1,4 +1,5 @@
 import { CanvasRenderer } from "../../src/render/canvas-renderer";
+import { tileAppearance } from "../../src/render/appearance";
 import { SimulationClock } from "../../src/game/simulation-clock";
 import { deserializeBoard, serializeBoard } from "../../src/simulation/board-export";
 import { Simulation } from "../../src/simulation/simulation";
@@ -13,6 +14,7 @@ export interface ReplayOptions {
   readonly speed: 5 | 60;
   readonly animate: boolean;
   readonly zoomed: boolean;
+  readonly angularOutlines: boolean;
 }
 
 function summary(samplesMs: number[]) {
@@ -31,6 +33,7 @@ const nextFrame = () => new Promise<number>((resolve) => requestAnimationFrame(r
 
 async function replay(options: ReplayOptions) {
   const canvas = document.getElementById("benchmark-canvas");
+  tileAppearance.angularOutlines = options.angularOutlines;
   if (!(canvas instanceof HTMLCanvasElement)) throw new Error("Missing benchmark canvas");
   canvas.style.width = `${options.cssWidth}px`;
   canvas.style.height = `${options.cssHeight}px`;

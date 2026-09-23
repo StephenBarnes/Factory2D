@@ -1,8 +1,9 @@
 Tasks that are not actionable yet / lower priority / speculative have been moved to todos-deferred.md, along with notes about features we've decided not to add.
 
-# Authoring tools and player-created puzzles
+# Player-created puzzles, player scores, backend
 
 * Add community puzzle browsing and solution-mode play of downloaded shared puzzles. Published files can currently be downloaded and imported into sandboxes.
+* Allow voting the built-in puzzles up or down. Display the votes (maybe "5 up 3 down" but with unicode thumbs-up and thumbs-down or similar) and voting buttons in the puzzle briefing page. One vote per install/UUID.
 * Allow voting community-created puzzles up and down. Assume users aren't malicious; we'll upgrade to a more secure backend if it's ever necessary. Use the existing installation UUID. Browser-level site-data deletion can still create another identity, but the game's clear button preserves it and full player-data import/export transfers it.
 
 # New non-circuit components
@@ -33,6 +34,7 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 * Modify our game's color scheme, for both light and dark mode. Sample colors from the background image and use those.
 * Add some decoration for the puzzle workshop screens where blocks are placed. Maybe a different background, or some other kind of decoration.
 * On mouseover of a rotator block, if its head is welded to something, show visualization/outline of how it would be placed after +1 and -1 pulses, in place of the current mouseover visualization (which shows movement for a 1x1 block).
+* Add single-character buttons for light mode and sound-off on the main menu. Similar to the buttons in the workshop (`#workshop-theme-button` and `#workshop-mute-button`), but as additional buttons in `nav.main-menu-actions`.
 
 # Content
 
