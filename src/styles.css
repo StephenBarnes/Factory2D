@@ -608,6 +608,13 @@ body:has(dialog[open]) .tool-cursor {
   letter-spacing: 0.06em;
 }
 
+.main-menu-actions .main-menu-preference-button {
+  width: 36px;
+  padding: 0;
+  font-size: 1.25rem;
+  letter-spacing: 0;
+}
+
 .main-menu-action-icon {
   display: inline-grid;
   place-items: center;

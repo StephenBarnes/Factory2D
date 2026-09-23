@@ -129,12 +129,14 @@ const settingsDialog = requiredElement<HTMLDialogElement>("settings-dialog");
 const theme = initializeTheme(
   requiredElement<HTMLButtonElement>("light-theme-button"),
   requiredElement<HTMLButtonElement>("workshop-theme-button"),
+  requiredElement<HTMLButtonElement>("main-menu-theme-button"),
 );
 initializeBevelSetting(requiredElement<HTMLButtonElement>("bevels-button"), renderPalettePreviews);
 initializeOutlineSetting(requiredElement<HTMLButtonElement>("angular-outlines-button"), renderPalettePreviews);
 const sounds = new WorkshopSounds(
   requiredElement<HTMLButtonElement>("sounds-button"),
   requiredElement<HTMLButtonElement>("workshop-mute-button"),
+  requiredElement<HTMLButtonElement>("main-menu-mute-button"),
   {
     input: requiredElement<HTMLInputElement>("master-volume"),
     output: requiredElement<HTMLOutputElement>("master-volume-value"),

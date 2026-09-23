@@ -77,17 +77,23 @@ export class WorkshopSounds {
   constructor(
     button: HTMLButtonElement,
     muteButton: HTMLButtonElement,
+    menuMuteButton: HTMLButtonElement,
     master: VolumeControl,
     bells: VolumeControl,
     private readonly getView: () => SoundView | null,
   ) {
     this.bindVolume(master, "masterVolume", "factory2d.master-volume");
     this.bindVolume(bells, "bellVolume", "factory2d.bell-volume");
+    const muteShortcuts = [muteButton, menuMuteButton];
     const syncButtons = (): void => {
       button.setAttribute("aria-pressed", String(this.enabled));
-      muteButton.setAttribute("aria-pressed", String(!this.enabled));
-      muteButton.textContent = this.enabled ? "♪" : "×";
-      muteButton.title = this.enabled ? "Mute sound effects" : "Unmute sound effects";
+      const action = this.enabled ? "Mute sound effects" : "Unmute sound effects";
+      for (const shortcut of muteShortcuts) {
+        shortcut.setAttribute("aria-pressed", String(!this.enabled));
+        shortcut.textContent = this.enabled ? "♪" : "×";
+        shortcut.setAttribute("aria-label", action);
+        shortcut.title = action;
+      }
     };
     syncButtons();
     const toggle = (): void => {
@@ -106,6 +112,7 @@ export class WorkshopSounds {
     };
     button.addEventListener("click", toggle);
     muteButton.addEventListener("click", toggle);
+    menuMuteButton.addEventListener("click", toggle);
     // Resume during an actual user gesture, before edits or automatic test ticks.
     document.addEventListener("pointerdown", () => this.unlock(), { capture: true });
     document.addEventListener("keydown", () => this.unlock(), { capture: true });
