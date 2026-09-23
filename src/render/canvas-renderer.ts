@@ -452,7 +452,7 @@ export class CanvasRenderer {
     this.hasTimeDependentVisuals = false;
     const { context } = this;
     context.clearRect(0, 0, this.viewportWidth, this.viewportHeight);
-    context.fillStyle = this.lightMode ? "#decbb0" : "#1a0501";
+    context.fillStyle = this.lightMode ? "#decbb0" : "#1a0804";
     context.fillRect(0, 0, this.viewportWidth, this.viewportHeight);
 
     this.drawGrid();

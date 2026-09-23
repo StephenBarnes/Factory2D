@@ -2,6 +2,7 @@ Tasks that are not actionable yet / lower priority / speculative have been moved
 
 # Player-created puzzles, player scores, backend
 
+* For puzzles with only one test case, the scores are guaranteed to be integers (for all 4 metrics: price, average cycles, footprint, and combined). But our histograms still have buckets with fractional bounds, for example price bucket 55 to 55.83. Change it to instead show integer bounds.
 * Add community puzzle browsing and solution-mode play of downloaded shared puzzles. Published files can currently be downloaded and imported into sandboxes.
 * Allow voting the built-in puzzles up or down. Display the votes (maybe "5 up 3 down" but with unicode thumbs-up and thumbs-down or similar) and voting buttons in the puzzle briefing page. One vote per install/UUID.
 * Allow voting community-created puzzles up and down. Assume users aren't malicious; we'll upgrade to a more secure backend if it's ever necessary. Use the existing installation UUID. Browser-level site-data deletion can still create another identity, but the game's clear button preserves it and full player-data import/export transfers it.
